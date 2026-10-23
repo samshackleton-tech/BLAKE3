@@ -644,7 +644,7 @@ mod test {
     #[cfg(all(blake3_avx512_ffi, target_os = "linux"))]
     fn wide_self_test_rejects_corruption() {
         let previous = chain(into(reference), |i, folded| assert_eq!(folded, EXPECTED[i]));
-        for bad in 0..2 {
+        for bad in 0..crate::avx512_32::SELF_TEST_EXPECTED.len() {
             let mut calls = 0;
             let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 crate::avx512_32::self_test_chain(
@@ -654,13 +654,19 @@ mod test {
                         let index = calls;
                         calls += 1;
                         if index == bad {
-                            out[32 * crate::OUT_LEN - 1] ^= 1;
+                            *out.last_mut().expect("a nonempty self-test output") ^= 1;
                         }
                     },
                     crate::avx512_32::check_self_test,
                 );
             }));
-            assert!(result.is_err(), "corruption in case {bad} went unnoticed");
+            let failure = result.expect_err("corruption went unnoticed");
+            let message = failure
+                .downcast_ref::<std::string::String>()
+                .map(std::string::String::as_str)
+                .or_else(|| failure.downcast_ref::<&str>().copied())
+                .unwrap_or("");
+            assert!(message.contains("blake3-servil startup self-test failed"), "wrong failure for case {bad}: {message}");
             assert_eq!(calls, bad + 1, "a case ran after the failed one");
         }
     }

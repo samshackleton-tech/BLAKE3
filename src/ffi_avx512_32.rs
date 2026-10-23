@@ -37,8 +37,8 @@ pub(crate) unsafe fn hash32<const N: usize>(
 
 /// Experimental fixed-counter entry. Same bounds and raw ABI as hash32,
 /// but exactly sixteen inputs. Production experimentation is parents only.
-/// Caller detected AVX-512F. Startup entry coverage must be extended before
-/// adopting this prototype; direct/reference/bounds controls run first.
+/// Caller detected AVX-512F. Startup uses the same chained control as
+/// the other wide entries, with a sixteen-output final case.
 pub(crate) unsafe fn hash16<const N: usize>(inputs: &[&[u8; N]], key: &CVWords, counter: u64, flags: u8, start: u8, end: u8, out: &mut [u8]) {
     const {
         assert!(N > 0 && N <= 1024 && N % BLOCK_LEN == 0);
@@ -54,14 +54,14 @@ pub(crate) unsafe fn hash16<const N: usize>(inputs: &[&[u8; N]], key: &CVWords, 
 
 // Filled from the independent portable compression callback in the
 // reference-table test, never from these assembly kernels' output.
-pub(crate) const SELF_TEST_EXPECTED: [u64; 2] = [0x8418db51e3b4a019, 0x675dde19182e7dd6];
+pub(crate) const SELF_TEST_EXPECTED: [u64; 3] = [0x8418db51e3b4a019, 0x675dde19182e7dd6, 0xc1b6cd25e25d91f8];
 
 pub(crate) fn check_self_test(index: usize, folded: u64) {
-    let entry = ["AVX-512 k32", "AVX-512 p32"][index];
+    let entry = ["AVX-512 k32", "AVX-512 p32", "AVX-512 p16"][index];
     assert_eq!(folded, SELF_TEST_EXPECTED[index], "blake3-servil startup self-test failed: {entry}: this build or CPU computes wrong digests");
 }
 
-/// Two chained startup cases, without a 32 KiB input allocation. Distinct,
+/// Three chained startup cases, without a 32 KiB input allocation. Distinct,
 /// unaligned, overlapping windows fit in 512 bytes; all are keyed by the
 /// previous case's output. Three blocks exercise first, middle and last.
 pub(crate) fn self_test_chain(
@@ -74,10 +74,11 @@ pub(crate) fn self_test_chain(
     input[..32].copy_from_slice(previous);
     let mut key = crate::platform::words_from_le_bytes_32(previous);
     let mut out = [0u8; 32 * OUT_LEN];
-    for (index, increment) in [IncrementCounter::Yes, IncrementCounter::No].into_iter().enumerate() {
+    for (index, (width, increment)) in [(32, IncrementCounter::Yes), (32, IncrementCounter::No), (16, IncrementCounter::No)].into_iter().enumerate() {
         let inputs: [&[u8; 192]; 32] = core::array::from_fn(|i| input[1 + 8 * i..][..192].try_into().unwrap());
-        hash(&inputs, &key, u64::MAX - 15, increment, &mut out);
-        check(index, crate::self_test::fold(&out));
+        let out = &mut out[..width * OUT_LEN];
+        hash(&inputs[..width], &key, u64::MAX - 15, increment, out);
+        check(index, crate::self_test::fold(out));
         input[..32].copy_from_slice(&out[..32]);
         key = crate::platform::words_from_le_bytes_32(out[..32].try_into().unwrap());
     }
@@ -91,7 +92,12 @@ pub(crate) unsafe fn self_test(previous: &[u8; 32]) -> usize {
     self_test_chain(
         previous,
         |inputs, key, counter, increment, out| unsafe {
-            hash32(inputs, key, counter, increment, crate::KEYED_HASH, crate::CHUNK_START, crate::CHUNK_END, out);
+            if inputs.len() == 16 {
+                assert!(!increment.yes(), "the p16 self-test uses a fixed counter");
+                hash16(inputs, key, counter, crate::KEYED_HASH, crate::CHUNK_START, crate::CHUNK_END, out);
+            } else {
+                hash32(inputs, key, counter, increment, crate::KEYED_HASH, crate::CHUNK_START, crate::CHUNK_END, out);
+            }
         },
         |index, folded| {
             check_self_test(index, folded);
@@ -107,8 +113,8 @@ pub(crate) fn parent_entry() -> *const () {
 }
 
 #[cfg(all(test, feature = "std"))]
-pub(crate) fn entries() -> [(&'static str, *const ()); 2] {
-    [("AVX-512 k32", blake3_avx512_k32 as *const ()), ("AVX-512 p32", blake3_avx512_p32 as *const ())]
+pub(crate) fn entries() -> [(&'static str, *const ()); 3] {
+    [("AVX-512 k32", blake3_avx512_k32 as *const ()), ("AVX-512 p32", blake3_avx512_p32 as *const ()), ("AVX-512 p16", blake3_avx512_p16 as *const ())]
 }
 
 #[cfg(test)]
