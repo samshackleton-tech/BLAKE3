@@ -30,6 +30,19 @@ pub unsafe fn hash_many<const N: usize>(
         // array, but the C implementations don't. Even though this is an unsafe
         // function, assert the bounds here.
         assert!(out.len() >= inputs.len() * OUT_LEN);
+        #[cfg(target_os = "linux")]
+        let (inputs, counter, out) = {
+            let mut done = 0;
+            if N == crate::CHUNK_LEN {
+                while inputs.len() - done >= 32 {
+                    crate::avx512_32::hash32(&inputs[done..done+32], key,
+                        counter.wrapping_add(if increment_counter.yes() { done as u64 } else { 0 }),
+                        increment_counter, flags, flags_start, flags_end, &mut out[done*OUT_LEN..]);
+                    done += 32;
+                }
+            }
+            (&inputs[done..], counter.wrapping_add(if increment_counter.yes() { done as u64 } else { 0 }), &mut out[done*OUT_LEN..])
+        };
         ffi::blake3_hash_many_avx512(
             inputs.as_ptr() as *const *const u8,
             inputs.len(),

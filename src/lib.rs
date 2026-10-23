@@ -198,6 +198,9 @@ mod avx2;
 #[cfg(blake3_avx512_ffi)]
 #[path = "ffi_avx512.rs"]
 mod avx512;
+#[cfg(all(blake3_avx512_ffi, target_os = "linux"))]
+#[path = "ffi_avx512_32.rs"]
+mod avx512_32;
 #[cfg(blake3_neon)]
 #[path = "ffi_neon_hybrid.rs"]
 mod neon_hybrid;
