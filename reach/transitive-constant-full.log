@@ -1,0 +1,31 @@
+    Finished `release` profile [optimized] target(s) in 0.00s
+────────────
+ Nextest run ID 4236b036-7d1d-4cea-aff7-86f36b1be558 with nextest profile: default
+    Starting 2 tests across 1 binary
+        PASS [   0.002s] (1/2) reach-fixture-transitive-constant direct_low_byte
+        FAIL [   0.002s] (2/2) reach-fixture-transitive-constant indirect_full_width
+  stdout ───
+
+    running 1 test
+    test indirect_full_width ... FAILED
+
+    failures:
+
+    failures:
+        indirect_full_width
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'indirect_full_width' (2608893) panicked at src/lib.rs:15:5:
+    assertion `left == right` failed
+      left: 259
+     right: 3
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+  Cancelling due to test failure
+────────────
+     Summary [   0.003s] 2 tests run: 1 passed, 1 failed, 0 skipped
+        FAIL [   0.002s] (2/2) reach-fixture-transitive-constant indirect_full_width
+error: test run failed

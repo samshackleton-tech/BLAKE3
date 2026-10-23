@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+"""replace: exact-text file editing that fails loudly (a safer sed -i).
+
+    replace FILE OLD NEW                 OLD and NEW given literally
+    replace FILE -f OLD_FILE NEW_FILE    OLD and NEW read from files ('-' = stdin for one of them)
+options:
+    -n, --count N   require exactly N matches (default 1); 'all' = at least 1, replace every one
+    --dry-run       show the diff, write nothing
+    -q, --quiet     no diff
+
+Rules: OLD is plain text, never a regex, and may span lines. If the number of
+matches is not what was required, nothing is written and the exit status is 1.
+If OLD equals NEW, that's an error too. The file is replaced atomically, with
+its permissions kept. The diff of what changed is printed (unless -q).
+For several edits, run it several times: each one is checked on its own.
+
+Exit status: 0 = edited, 1 = match count wrong (file unchanged), 2 = usage error.
+"""
+import argparse
+import difflib
+import os
+import sys
+import tempfile
+
+
+def read(path):
+    if path == "-":
+        return sys.stdin.read()
+    with open(path, encoding="utf-8", newline="") as f:
+        return f.read()
+
+
+def main():
+    ap = argparse.ArgumentParser(add_help=True, description="exact-text replace that fails loudly")
+    ap.add_argument("file")
+    ap.add_argument("old")
+    ap.add_argument("new")
+    ap.add_argument("-f", "--from-files", action="store_true", help="OLD and NEW are file paths ('-' = stdin)")
+    ap.add_argument("-n", "--count", default="1")
+    ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("-q", "--quiet", action="store_true")
+    a = ap.parse_args()
+
+    try:
+        old, new = (read(a.old), read(a.new)) if a.from_files else (a.old, a.new)
+        text = read(a.file)
+    except OSError as e:
+        print(f"replace: {e}", file=sys.stderr)
+        return 2
+    if not old:
+        print("replace: OLD is empty", file=sys.stderr)
+        return 2
+    if old == new:
+        print("replace: OLD and NEW are the same", file=sys.stderr)
+        return 2
+
+    found = text.count(old)
+    want_all = a.count == "all"
+    if want_all:
+        ok = found >= 1
+    else:
+        try:
+            want = int(a.count)
+        except ValueError:
+            print("replace: --count takes a number or 'all'", file=sys.stderr)
+            return 2
+        ok = found == want
+    if not ok:
+        need = "at least 1" if want_all else str(want)
+        print(f"replace: {a.file}: OLD found {found} time(s), need {need}; file unchanged", file=sys.stderr)
+        if found == 0:
+            # Help find near misses: the first line of OLD, stripped, if it occurs.
+            first = old.strip().splitlines()[0].strip() if old.strip() else ""
+            if first and first in text:
+                line = text[: text.index(first)].count("\n") + 1
+                print(f"replace: hint: OLD's first line occurs at line {line}; whitespace or a later line differs", file=sys.stderr)
+        return 1
+
+    result = text.replace(old, new)
+    if not a.quiet:
+        sys.stdout.writelines(difflib.unified_diff(text.splitlines(True), result.splitlines(True), a.file, a.file + " (new)"))
+    if a.dry_run:
+        return 0
+    st = os.stat(a.file)
+    d = os.path.dirname(os.path.abspath(a.file))
+    fd, tmp = tempfile.mkstemp(dir=d, prefix=".replace-")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="") as f:
+            f.write(result)
+        os.chmod(tmp, st.st_mode & 0o7777)
+        os.replace(tmp, a.file)
+    except BaseException:
+        os.unlink(tmp)
+        raise
+    print(f"replace: {a.file}: {found} replacement(s)", file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
