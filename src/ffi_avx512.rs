@@ -35,17 +35,26 @@ pub unsafe fn hash_many<const N: usize>(
             let mut done = 0;
             if N == crate::CHUNK_LEN {
                 while inputs.len() - done >= 32 {
-                    crate::avx512_32::hash32(&inputs[done..done+32], key,
+                    crate::avx512_32::hash32(
+                        &inputs[done..done + 32],
+                        key,
                         counter.wrapping_add(if increment_counter.yes() { done as u64 } else { 0 }),
-                        increment_counter, flags, flags_start, flags_end, &mut out[done*OUT_LEN..]);
+                        increment_counter,
+                        flags,
+                        flags_start,
+                        flags_end,
+                        &mut out[done * OUT_LEN..],
+                    );
                     done += 32;
                 }
                 // The old assembly's zero-input path still initializes counters
                 // and visits its smaller-width entry points. Do not enter it
                 // when the new kernel has already consumed the entire slice.
-                if done == inputs.len() { return; }
+                if done == inputs.len() {
+                    return;
+                }
             }
-            (&inputs[done..], counter.wrapping_add(if increment_counter.yes() { done as u64 } else { 0 }), &mut out[done*OUT_LEN..])
+            (&inputs[done..], counter.wrapping_add(if increment_counter.yes() { done as u64 } else { 0 }), &mut out[done * OUT_LEN..])
         };
         ffi::blake3_hash_many_avx512(
             inputs.as_ptr() as *const *const u8,

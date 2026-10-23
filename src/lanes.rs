@@ -203,12 +203,24 @@ fn spare_pool() -> Option<(&'static Pool, Caller<'static>)> {
     (callers < pool.threads).then_some((pool, caller))
 }
 
+/// Experimental budget for Linux AVX-512 whole-message trees: one
+/// maximum-sized piece per participant, at least two participants when
+/// available. Use the same budget to cut pieces and to request wakeups.
+/// Other kernels and work kinds retain their existing policy.
+fn tree_threads(len: usize, available: usize, degree: usize) -> usize {
+    if cfg!(all(target_arch = "x86_64", target_os = "linux", not(miri))) && degree >= 16 {
+        len.div_ceil(MAX_PIECE_LEN).max(2).min(available)
+    } else {
+        available
+    }
+}
+
 /// The subtree pieces of `input` at chunk `counter` and their chaining
 /// values, hashed over the pool (the SME2 thread's prefix first, where it
 /// takes one).
 fn tree_cvs(pool: &Pool, input: &[u8], key: &crate::CVWords, counter: u64, flags: u8) -> (Vec<Piece>, Vec<ChainingValue>) {
-    let threads = pool.threads;
     let turn = crate::platform::Sme2Turn::take(Platform::detect(), true);
+    let threads = tree_threads(input.len(), pool.threads, turn.platform().simd_degree());
     let (pieces, own) = cut_with_prefix(input.len(), threads, prefix_for(&turn, input.len(), threads));
     let mut cvs = vec![ChainingValue::default(); pieces.len()];
     let work = Work::Tree { input, pieces: &pieces, cvs: cvs.as_mut_ptr(), key: *key, counter, flags };
@@ -710,7 +722,11 @@ impl Pool {
         let published = AbortOnUnwind;
         let target = source.publish_job(ptr, pieces, own);
         if slot.is_some() && pieces > own + 1 {
-            self.wake_for(pieces - own - 1);
+            let budget = match &job.work {
+                Work::Tree { input, .. } => tree_threads(input.len(), self.threads, own_platform.simd_degree()).saturating_sub(1),
+                _ => pieces - own - 1,
+            };
+            self.wake_for((pieces - own - 1).min(budget));
         }
         for index in 0..own {
             // Sound: the workers' pieces start past these.
@@ -1556,6 +1572,24 @@ mod test {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    #[test]
+    fn test_tree_thread_budget() {
+        let enabled = cfg!(all(target_arch = "x86_64", target_os = "linux", not(miri)));
+        for degree in [1, 8, 16, 32] {
+            for (len, available, budget) in [
+                (512 * CHUNK_LEN, 48, 4),
+                (1024 * CHUNK_LEN, 48, 8),
+                (8192 * CHUNK_LEN, 48, 48),
+                (1024 * CHUNK_LEN, 2, 2),
+                (1024 * CHUNK_LEN, 1, 1),
+                (MAX_PIECE_LEN + 1, 48, 2),
+                (2 * MAX_PIECE_LEN + 1, 48, 3),
+            ] {
+                assert_eq!(tree_threads(len, available, degree), if enabled && degree >= 16 { budget } else { available });
             }
         }
     }
