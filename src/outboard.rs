@@ -266,10 +266,10 @@ impl Verifier {
             if pooled {
                 crate::lanes::group_cvs(&groups, g0, &self.key, self.flags, &mut cvs);
             } else {
-                groups_cvs_into(&groups, g0, &self.key, self.flags, platform, &mut cvs);
+                groups_cvs_into(&groups, g0, &self.key, self.flags, platform, &mut cvs, false);
             }
             #[cfg(not(feature = "std"))]
-            groups_cvs_into(&groups, g0, &self.key, self.flags, platform, &mut cvs);
+            groups_cvs_into(&groups, g0, &self.key, self.flags, platform, &mut cvs, false);
         }
         let mut cvs = cvs.iter();
         for &((_, size, expected), bytes) in nodes {
@@ -393,7 +393,7 @@ fn group_cvs(input: &[u8], first_group: u64, key: &CVWords, flags: u8, platform:
 
 /// [`group_cvs`] into `cvs`, one per group.
 pub(crate) fn group_cvs_into(input: &[u8], first_group: u64, key: &CVWords, flags: u8, platform: Platform, cvs: &mut [CVBytes]) {
-    groups_cvs_into(&groups_of_input(input), first_group, key, flags, platform, cvs);
+    groups_cvs_into(&groups_of_input(input), first_group, key, flags, platform, cvs, false);
 }
 
 /// `input`'s groups, in order; `input` is nonempty.
@@ -407,7 +407,7 @@ fn groups_of_input(input: &[u8]) -> Vec<&[u8]> {
 /// last. Whole groups go in batches through the many-inputs kernels, back
 /// to back, their chunks from wherever each group lies; a last, shorter
 /// group alone.
-pub(crate) fn groups_cvs_into(groups: &[&[u8]], first_group: u64, key: &CVWords, flags: u8, platform: Platform, cvs: &mut [CVBytes]) {
+pub(crate) fn groups_cvs_into(groups: &[&[u8]], first_group: u64, key: &CVWords, flags: u8, platform: Platform, cvs: &mut [CVBytes], pooled: bool) {
     let full = groups.iter().take_while(|g| g.len() == GROUP_LEN).count();
     assert!(full + 1 >= groups.len(), "whole groups but the last");
     let mut done = 0;
@@ -423,16 +423,7 @@ pub(crate) fn groups_cvs_into(groups: &[&[u8]], first_group: u64, key: &CVWords,
         chunk_refs.clear();
         chunk_refs.extend(groups[first..first + n].iter().flat_map(|g| g.chunks_exact(CHUNK_LEN)).map(|c| <&[u8; CHUNK_LEN]>::try_from(c).unwrap()));
         let mut values = chunk_refs.len();
-        platform.hash_many(
-            &chunk_refs,
-            key,
-            (first_group + first as u64) * GROUP_CHUNKS,
-            IncrementCounter::Yes,
-            flags,
-            CHUNK_START,
-            CHUNK_END,
-            &mut level[..values * 32],
-        );
+        hash_group_chunks(&chunk_refs, key, (first_group + first as u64) * GROUP_CHUNKS, flags, platform, pooled, &mut level[..values * 32]);
         // Four levels of parents: a group's 16 chunk values down to one.
         while values > n {
             let blocks: Vec<&[u8; 64]> = level[..values * 32].chunks_exact(64).map(|b| <&[u8; 64]>::try_from(b).unwrap()).collect();
@@ -449,6 +440,20 @@ pub(crate) fn groups_cvs_into(groups: &[&[u8]], first_group: u64, key: &CVWords,
     if full < groups.len() {
         cvs[done] = group_cv(groups[full], (first_group + full as u64) * GROUP_CHUNKS, key, flags);
     }
+}
+
+// Experiment: retain register-message chunk hashing for parallel groups.
+// The wide memory-message kernel helps one thread, but its advantage
+// disappears at high concurrency on the measured host. This fallback
+// applies to pooled group work, not to a particular benchmark input size.
+fn hash_group_chunks(inputs: &[&[u8; CHUNK_LEN]], key: &CVWords, counter: u64, flags: u8, platform: Platform, pooled: bool, out: &mut [u8]) {
+    #[cfg(all(target_arch = "x86_64", target_os = "linux", blake3_avx512_ffi))]
+    if pooled && matches!(platform, Platform::AVX512) {
+        unsafe { crate::avx512::hash_chunks_legacy(inputs, key, counter, flags, out) };
+        return;
+    }
+    let _ = pooled;
+    platform.hash_many(inputs, key, counter, IncrementCounter::Yes, flags, CHUNK_START, CHUNK_END, out);
 }
 
 /// A group's chaining value as a non-root subtree at chunk `start`.
@@ -477,6 +482,32 @@ fn left_chunks(size: u64) -> u64 {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    #[cfg(all(feature = "std", target_os = "linux", target_arch = "x86_64", blake3_avx512_ffi))]
+    fn pooled_group_chunks_keep_the_narrow_route() {
+        if !crate::platform::avx512_detected() {
+            return;
+        }
+        let mut input = vec![0u8; 9 * GROUP_LEN + 123];
+        crate::test::paint_test_input(&mut input);
+        let wide = crate::avx512_32::entries()[0].1 as usize;
+        for len in [2 * GROUP_LEN, 8 * GROUP_LEN, input.len()] {
+            let groups = groups_of_input(&input[..len]);
+            for flags in [0, crate::KEYED_HASH] {
+                let mut want = vec![[0u8; 32]; groups.len()];
+                groups_cvs_into(&groups, 7, crate::IV, flags, Platform::Portable, &mut want, false);
+                for pooled in [false, true] {
+                    let mut got = vec![[0xa5u8; 32]; groups.len() + 1];
+                    crate::RAN_ENTRIES.with(|r| r.borrow_mut().clear());
+                    groups_cvs_into(&groups, 7, crate::IV, flags, Platform::AVX512, &mut got[..groups.len()], pooled);
+                    assert_eq!(&got[..groups.len()], &want);
+                    assert_eq!(got[groups.len()], [0xa5; 32]);
+                    assert_eq!(crate::RAN_ENTRIES.with(|r| r.borrow().contains(&wide)), !pooled, "pooled={pooled}, len={len}");
+                }
+            }
+        }
+    }
 
     /// A message of one group (its root hashed whole) and one of three
     /// groups and five bytes: each one's encoding through a Verifier in

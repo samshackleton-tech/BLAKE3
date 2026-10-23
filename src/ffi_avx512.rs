@@ -87,6 +87,28 @@ pub unsafe fn hash_many<const N: usize>(
     }
 }
 
+/// Existing register-message kernel for pooled group chunks.
+/// Caller detected AVX-512 F+VL. No new assembly or counter convention.
+#[cfg(target_os = "linux")]
+pub(crate) unsafe fn hash_chunks_legacy(inputs: &[&[u8; crate::CHUNK_LEN]], key: &CVWords, counter: u64, flags: u8, out: &mut [u8]) {
+    assert!(out.len() / OUT_LEN >= inputs.len(), "output buffer too short");
+    crate::ran_kernel(ffi::blake3_hash_many_avx512 as *const ());
+    unsafe {
+        ffi::blake3_hash_many_avx512(
+            inputs.as_ptr().cast(),
+            inputs.len(),
+            crate::CHUNK_LEN / BLOCK_LEN,
+            key.as_ptr(),
+            counter,
+            true,
+            flags,
+            crate::CHUNK_START,
+            crate::CHUNK_END,
+            out.as_mut_ptr(),
+        )
+    };
+}
+
 // Unsafe because this may only be called on platforms supporting AVX-512.
 #[cfg(unix)]
 pub unsafe fn xof_many(cv: &CVWords, block: &[u8; BLOCK_LEN], block_len: u8, counter: u64, flags: u8, out: &mut [u8]) {
@@ -225,6 +247,23 @@ mod test {
                 assert_eq!(out[n * OUT_LEN], 0xa5);
             }
         }
+    }
+
+    #[test]
+    #[cfg(all(target_os = "linux", feature = "std"))]
+    fn test_legacy_group_output_bound_precedes_assembly() {
+        if !crate::platform::avx512_detected() {
+            return;
+        }
+        let input = [0u8; crate::CHUNK_LEN];
+        let mut out = [0xa5u8; OUT_LEN - 1];
+        crate::RAN_ENTRIES.with(|r| r.borrow_mut().clear());
+        let rejected = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| unsafe {
+            hash_chunks_legacy(&[&input], crate::IV, 0, 0, &mut out);
+        }));
+        assert!(rejected.is_err());
+        assert_eq!(out, [0xa5; OUT_LEN - 1]);
+        assert!(crate::RAN_ENTRIES.with(|r| r.borrow().is_empty()));
     }
 
     #[test]

@@ -306,10 +306,10 @@ pub(crate) fn hash_each(key: &crate::CVWords, flags: u8, items: &[&[u8]], out: &
 pub(crate) fn group_cvs(groups: &[&[u8]], first_group: u64, key: &crate::CVWords, flags: u8, cvs: &mut [ChainingValue]) {
     assert_eq!(groups.len(), cvs.len(), "a chaining value for each group");
     if groups.len() * crate::outboard::GROUP_LEN < MIN_SPLIT_LEN {
-        return crate::outboard::groups_cvs_into(groups, first_group, key, flags, Platform::detect(), cvs);
+        return crate::outboard::groups_cvs_into(groups, first_group, key, flags, Platform::detect(), cvs, false);
     }
     let Some((pool, _caller)) = spare_pool() else {
-        return crate::outboard::groups_cvs_into(groups, first_group, key, flags, Platform::detect(), cvs);
+        return crate::outboard::groups_cvs_into(groups, first_group, key, flags, Platform::detect(), cvs, false);
     };
     let pieces = cut_messages(groups.len(), crate::outboard::GROUP_LEN, pool.threads);
     let work = Work::Groups { groups, first_group, pieces: &pieces, key: *key, flags, cvs: cvs.as_mut_ptr() };
@@ -415,7 +415,7 @@ impl Job<'_> {
                 let piece = pieces[index];
                 // Sound: this range of chaining values belongs to piece `index` alone.
                 let out = unsafe { core::slice::from_raw_parts_mut(cvs.add(piece.offset), piece.len) };
-                crate::outboard::groups_cvs_into(&groups[piece.offset..][..piece.len], first_group + piece.offset as u64, key, *flags, platform, out);
+                crate::outboard::groups_cvs_into(&groups[piece.offset..][..piece.len], first_group + piece.offset as u64, key, *flags, platform, out, true);
             }
             Work::Messages { input, message_len, key, flags, pieces, outputs } => {
                 let piece = pieces[index];
