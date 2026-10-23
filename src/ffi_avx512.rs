@@ -40,6 +40,10 @@ pub unsafe fn hash_many<const N: usize>(
                         increment_counter, flags, flags_start, flags_end, &mut out[done*OUT_LEN..]);
                     done += 32;
                 }
+                // The old assembly's zero-input path still initializes counters
+                // and visits its smaller-width entry points. Do not enter it
+                // when the new kernel has already consumed the entire slice.
+                if done == inputs.len() { return; }
             }
             (&inputs[done..], counter.wrapping_add(if increment_counter.yes() { done as u64 } else { 0 }), &mut out[done*OUT_LEN..])
         };
