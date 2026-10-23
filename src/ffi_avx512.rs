@@ -56,6 +56,16 @@ pub unsafe fn hash_many<const N: usize>(
                     return;
                 }
                 done
+            } else if N == BLOCK_LEN && !increment_counter.yes() && flags & crate::PARENT != 0 {
+                // Experiment only on parent nodes, not batches of short roots.
+                for (batch, outputs) in inputs.chunks_exact(16).zip(out.chunks_exact_mut(16 * OUT_LEN)) {
+                    crate::avx512_32::hash16(batch, key, counter, flags, flags_start, flags_end, outputs);
+                }
+                let done = inputs.len() / 16 * 16;
+                if done == inputs.len() {
+                    return;
+                }
+                done
             } else {
                 0
             };
@@ -175,6 +185,46 @@ mod test {
         let mut expected = [0u8; OUT_LEN];
         crate::portable::hash1(&blocks[0], key, 0, 0, crate::CHUNK_START, crate::CHUNK_END | crate::ROOT, &mut expected);
         assert!(out.chunks_exact(OUT_LEN).all(|bytes| bytes == expected));
+    }
+
+    #[test]
+    #[cfg(all(target_os = "linux", feature = "std"))]
+    fn test_parent16_dispatch_and_legacy_incrementing_route() {
+        if !crate::platform::avx512_detected() {
+            return;
+        }
+        let mut data = std::vec![[0u8; BLOCK_LEN]; 33];
+        crate::test::paint_test_input(data.as_flattened_mut());
+        let inputs: std::vec::Vec<_> = data.iter().collect();
+        let legacy = ffi::blake3_hash_many_avx512 as *const () as usize;
+        let parent = crate::avx512_32::parent_entry() as usize;
+        let counter = u64::MAX - 7;
+        let flags = crate::PARENT | crate::KEYED_HASH;
+        for increment in [IncrementCounter::No, IncrementCounter::Yes] {
+            for n in [0, 1, 15, 16, 17, 32, 33] {
+                let mut out = std::vec![0xa5u8; n * OUT_LEN + 1];
+                crate::RAN_ENTRIES.with(|r| r.borrow_mut().clear());
+                unsafe { hash_many(&inputs[..n], crate::IV, counter, increment, flags, 0, 0, &mut out) };
+                let mut expected_entries = std::collections::BTreeSet::new();
+                if increment.yes() {
+                    expected_entries.insert(legacy);
+                } else {
+                    if n >= 16 {
+                        expected_entries.insert(parent);
+                    }
+                    if n % 16 != 0 {
+                        expected_entries.insert(legacy);
+                    }
+                }
+                assert_eq!(crate::RAN_ENTRIES.with(|r| r.borrow().clone()), expected_entries);
+                for (i, &input) in inputs[..n].iter().enumerate() {
+                    let mut expected = [0u8; OUT_LEN];
+                    crate::portable::hash1(input, crate::IV, counter.wrapping_add(if increment.yes() { i as u64 } else { 0 }), flags, 0, 0, &mut expected);
+                    assert_eq!(&out[i * OUT_LEN..][..OUT_LEN], &expected);
+                }
+                assert_eq!(out[n * OUT_LEN], 0xa5);
+            }
+        }
     }
 
     #[test]

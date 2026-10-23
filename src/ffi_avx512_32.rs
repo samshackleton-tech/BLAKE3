@@ -1,4 +1,4 @@
-//! FFI for the 32-input AVX-512 kernels. Arithmetic, transposition,
+//! FFI for wide AVX-512 kernels (including the private p16 experiment). Arithmetic, transposition,
 //! counter setup and output stores are all in generated assembly.
 //! The ABI matches the AArch64 kernel family; see the generator's contract.
 use crate::{BLOCK_LEN, CVWords, IncrementCounter, OUT_LEN};
@@ -6,6 +6,7 @@ use crate::{BLOCK_LEN, CVWords, IncrementCounter, OUT_LEN};
 unsafe extern "C" {
     fn blake3_avx512_k32(inputs: *const *const u8, blocks: u64, key: *const u32, counter: u64, packed_flags: u64, out: *mut u8);
     fn blake3_avx512_p32(inputs: *const *const u8, blocks: u64, key: *const u32, counter: u64, packed_flags: u64, out: *mut u8);
+    fn blake3_avx512_p16(inputs: *const *const u8, blocks: u64, key: *const u32, counter: u64, packed_flags: u64, out: *mut u8);
 }
 
 /// Exactly 32 inputs, each 1..=16 whole blocks, and space for their CVs.
@@ -32,6 +33,23 @@ pub(crate) unsafe fn hash32<const N: usize>(
     // Sound: every input points at N readable bytes, the key has 8 words,
     // and the bounds above provide 32 outputs. The caller detected AVX-512.
     unsafe { kernel(inputs.as_ptr().cast(), (N / BLOCK_LEN) as u64, key.as_ptr(), counter, packed, out.as_mut_ptr()) };
+}
+
+/// Experimental fixed-counter entry. Same bounds and raw ABI as hash32,
+/// but exactly sixteen inputs. Production experimentation is parents only.
+/// Caller detected AVX-512F. Startup entry coverage must be extended before
+/// adopting this prototype; direct/reference/bounds controls run first.
+pub(crate) unsafe fn hash16<const N: usize>(inputs: &[&[u8; N]], key: &CVWords, counter: u64, flags: u8, start: u8, end: u8, out: &mut [u8]) {
+    const {
+        assert!(N > 0 && N <= 1024 && N % BLOCK_LEN == 0);
+    }
+    assert_eq!(inputs.len(), 16);
+    assert!(out.len() >= 16 * OUT_LEN);
+    let packed = flags as u64 | (start as u64) << 8 | (end as u64) << 16 | (BLOCK_LEN as u64) << 24;
+    crate::ran_kernel(blake3_avx512_p16 as *const ());
+    // Sound: exactly sixteen readable inputs and room for sixteen CVs;
+    // the caller supplies the ISA and the key's eight words.
+    unsafe { blake3_avx512_p16(inputs.as_ptr().cast(), (N / BLOCK_LEN) as u64, key.as_ptr(), counter, packed, out.as_mut_ptr()) };
 }
 
 // Filled from the independent portable compression callback in the
@@ -84,6 +102,11 @@ pub(crate) unsafe fn self_test(previous: &[u8; 32]) -> usize {
 }
 
 #[cfg(all(test, feature = "std"))]
+pub(crate) fn parent_entry() -> *const () {
+    blake3_avx512_p16 as *const ()
+}
+
+#[cfg(all(test, feature = "std"))]
 pub(crate) fn entries() -> [(&'static str, *const ()); 2] {
     [("AVX-512 k32", blake3_avx512_k32 as *const ()), ("AVX-512 p32", blake3_avx512_p32 as *const ())]
 }
@@ -112,6 +135,12 @@ mod tests {
                     let mut got = [0xa5u8; 32 * OUT_LEN + 1];
                     unsafe {
                         hash32(&refs, &key, counter, inc, flags, start, end, &mut got);
+                    }
+                    if !inc.yes() {
+                        let mut got16 = [0xa5u8; 16 * OUT_LEN + 1];
+                        unsafe { hash16(&refs[..16], &key, counter, flags, start, end, &mut got16) };
+                        assert_eq!(&got16[..16 * OUT_LEN], &got[..16 * OUT_LEN], "p16 N={N} counter={counter} flags={flags}");
+                        assert_eq!(got16[16 * OUT_LEN], 0xa5, "p16 output canary");
                     }
                     for (i, input) in refs.iter().enumerate() {
                         let mut cv = key;
@@ -156,6 +185,45 @@ mod tests {
         check::<896>();
         check::<960>();
         check::<1024>();
+    }
+
+    #[test]
+    fn parent16_unaligned_overlapping_output() {
+        if !crate::platform::avx512_detected() {
+            return;
+        }
+        for blocks in [1, 16] {
+            let n = blocks * BLOCK_LEN;
+            let mut input = vec![0u8; 1 + 16 * n];
+            crate::test::paint_test_input(&mut input[1..]);
+            let original = input.clone();
+            let key = *crate::IV;
+            let counter = u64::MAX;
+            let mut want = [0u8; 16 * OUT_LEN];
+            for i in 0..16 {
+                let mut cv = key;
+                for b in 0..blocks {
+                    let at = 1 + i * n + b * BLOCK_LEN;
+                    crate::portable::compress_in_place(
+                        &mut cv,
+                        input[at..at + BLOCK_LEN].try_into().unwrap(),
+                        BLOCK_LEN as u8,
+                        counter,
+                        16 | if b == 0 { 1 } else { 0 } | if b + 1 == blocks { 2 } else { 0 },
+                    );
+                }
+                for w in 0..8 {
+                    want[i * OUT_LEN + 4 * w..][..4].copy_from_slice(&cv[w].to_le_bytes());
+                }
+            }
+            let pointers: [*const u8; 16] = core::array::from_fn(|i| input[1 + i * n..].as_ptr());
+            unsafe {
+                blake3_avx512_p16(pointers.as_ptr(), blocks as u64, key.as_ptr(), counter, 16 | (1 << 8) | (2 << 16) | (64 << 24), input.as_mut_ptr().add(1))
+            };
+            assert_eq!(&input[1..1 + 16 * OUT_LEN], &want);
+            assert_eq!(input[0], original[0]);
+            assert_eq!(&input[1 + 16 * OUT_LEN..], &original[1 + 16 * OUT_LEN..]);
+        }
     }
 
     #[test]

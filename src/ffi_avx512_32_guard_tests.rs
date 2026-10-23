@@ -55,11 +55,18 @@ fn guarded_input_key_pointer_table_and_output_bounds() {
     if !crate::platform::avx512_detected() {
         return;
     }
+    for width in [16, 32] {
+        guarded_kernel_bounds(width);
+    }
+}
+
+fn guarded_kernel_bounds(width: usize) {
+    assert!(crate::platform::avx512_detected() && matches!(width, 16 | 32));
     for at_end in [false, true] {
         for blocks in [1, 16] {
             for last_len in [0, 63, 64] {
                 let n = blocks * BLOCK_LEN;
-                let inputs: Vec<_> = (0..32)
+                let inputs: Vec<_> = (0..width)
                     .map(|i| {
                         let mut input = Guarded::new(n, at_end);
                         let bytes = unsafe { core::slice::from_raw_parts_mut(input.ptr(), n) };
@@ -71,7 +78,7 @@ fn guarded_input_key_pointer_table_and_output_bounds() {
                         input
                     })
                     .collect();
-                let mut table = Guarded::new(32 * core::mem::size_of::<*const u8>(), at_end);
+                let mut table = Guarded::new(width * core::mem::size_of::<*const u8>(), at_end);
                 for (i, input) in inputs.iter().enumerate() {
                     unsafe { table.ptr().cast::<*const u8>().add(i).write(input.ptr()) };
                 }
@@ -79,11 +86,14 @@ fn guarded_input_key_pointer_table_and_output_bounds() {
                 let mut key = Guarded::new(32, at_end);
                 unsafe { core::ptr::copy_nonoverlapping(crate::IV.as_ptr().cast::<u8>(), key.ptr(), 32) };
                 key.read_only();
-                let out = Guarded::new(32 * OUT_LEN, at_end);
+                let out = Guarded::new(width * OUT_LEN, at_end);
                 let counter = u64::MAX - 15;
                 let packed = 16 | (1 << 8) | (2 << 16) | ((last_len as u64) << 24);
                 for inc in [false, true] {
-                    let mut want = [0u8; 32 * OUT_LEN];
+                    if width == 16 && inc {
+                        continue;
+                    }
+                    let mut want = vec![0u8; width * OUT_LEN];
                     for (i, input) in inputs.iter().enumerate() {
                         let mut cv = *crate::IV;
                         let c = counter.wrapping_add(if inc { i as u64 } else { 0 });
@@ -101,11 +111,17 @@ fn guarded_input_key_pointer_table_and_output_bounds() {
                         }
                     }
                     unsafe {
-                        core::ptr::write_bytes(out.ptr(), 0xa5, 32 * OUT_LEN);
-                        let kernel = if inc { blake3_avx512_k32 } else { blake3_avx512_p32 };
+                        core::ptr::write_bytes(out.ptr(), 0xa5, width * OUT_LEN);
+                        let kernel = if width == 16 {
+                            blake3_avx512_p16
+                        } else if inc {
+                            blake3_avx512_k32
+                        } else {
+                            blake3_avx512_p32
+                        };
                         kernel(table.ptr().cast(), blocks as u64, key.ptr().cast(), counter, packed, out.ptr());
                     }
-                    assert_eq!(out.bytes(), &want, "at_end={at_end} blocks={blocks} last_len={last_len} increment={inc}");
+                    assert_eq!(out.bytes(), &want, "width={width} at_end={at_end} blocks={blocks} last_len={last_len} increment={inc}");
                 }
             }
         }
