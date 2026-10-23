@@ -1,0 +1,11 @@
+replace: /root/results/peer-const-fn-review/native/fixture/src/lib.rs: 1 replacement(s)
+--- /root/results/peer-const-fn-review/native/fixture/src/lib.rs
++++ /root/results/peer-const-fn-review/native/fixture/src/lib.rs (new)
+@@ -1,6 +1,6 @@
+ #[inline(never)]
+ const fn base() -> u16 {
+-    3
++    259
+ }
+ const B: u16 = base();
+ pub fn direct() -> u8 {

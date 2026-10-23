@@ -42,7 +42,7 @@ fn indirect_full_width() {
 
 Change A from 3 to 259. The selector finds the executed line naming A and runs only the direct test, which still passes after truncation. The test using B is affected transitively, but is not selected and fails in the full suite. The selected check also writes a new successful map.
 
-Conservative interim behavior: do not equate missing coverage with uncompiled source; do not narrow changes to constants/types/imports solely by direct textual uses. Run all tests where dependencies or compilation status are not established. This does not require replacing the useful line-selection path inside known functions.
+Conservative interim behavior: do not equate missing coverage with uncompiled source; do not narrow changes to constants/types/imports solely by direct textual uses. Run all tests where dependencies or compilation status are not established. Runtime-only function bodies can still use line selection. The additional control below identifies a compile-time exception.
 
 ### Reproduce
 
@@ -54,6 +54,31 @@ python3 reach/reproduce-reach.py "$PWD/reach/reach-reviewed.py" /absolute/path/t
 ```
 
 The result directory must be fresh. The script generates and tracks Cargo.lock before mapping; otherwise an untracked lock forces all tests and masks the behavior. An initial local trial had that confound and was discarded as evidence for these cases. The recorded logs here are from the corrected run. Neither fixture changes the reviewed selector.
+
+## Additional control: a const function's compile-time consumer
+
+The unchanged published selector at `1232ed8c7d1bc160d61a6feb2c1031776a3871d8` also misses a compile-time consumer of a changed function body:
+
+```rust
+#[inline(never)]
+const fn base() -> u16 {
+    3
+}
+const B: u16 = base();
+pub fn direct() -> u8 { base() as u8 }
+pub fn indirect() -> u16 { B }
+```
+
+Two tests expect 3 from `direct()` and `indirect()`. Change only the body of `base()` from 3 to 259. Actual runtime coverage selects `direct_low_byte` for the changed body line. It passes after truncation, and the selector exits 0 and writes a new map. The full suite fails `indirect_full_width` (259 versus 3), exit 100. Logs are in `reach/const-fn/`.
+
+This fixture uses an instrumented function body. Its compile-time consumer leaves no runtime call edge in that coverage. A conservative selector should run all tests for changes to const functions unless it accounts for compile-time dependencies. Moving outside-function changes to all-tests selection does not cover this case by itself.
+
+Devon reports fixes for the first two cases and new controls. This third native run uses the older published source, rather than his unpublished fixes.
+
+```sh
+export PATH="$PWD/reach:$PATH"
+python3 reach/reproduce-reach-const-fn.py "$PWD/reach/reach-reviewed.py" /absolute/path/to/fresh-const-fn-results
+```
 
 ## PR #137: independent native instruction/memory model check
 
