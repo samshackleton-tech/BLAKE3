@@ -34,7 +34,7 @@ Full printed comparisons are in `gate/`, `threads-2/`, `threads-8/`, and `cli-{s
 
 ## What changed
 
-The generated x86-64 assembly keeps eight independent compression chains active across 32 inputs. A compact seven-round loop limits instruction footprint. The four-block message buffer uses a 2368-byte aligned frame; a nine-register output transpose packs adjacent chaining values into 64-byte stores. The k32/p32 pair occupies 4478 bytes of text. An experimental register-resident p16 parent entry brings the total to 7248 bytes. Its incremental benefit remains unresolved; a parent-routing ablation is in progress.
+The generated x86-64 assembly keeps eight independent compression chains active across 32 inputs. A compact seven-round loop limits instruction footprint. One flat block loop uses a 2368-byte aligned frame: 2048 bytes for the current transposed messages, 256 for counters, and a 64-byte CV spill; a nine-register output transpose packs adjacent chaining values into 64-byte stores. The k32/p32 pair occupies 4478 bytes of text. An experimental register-resident p16 parent entry brings the total to 7248 bytes. Its incremental benefit remains unresolved; a parent-routing ablation is in progress.
 
 Rust handles feature dispatch, bounds, tests, and a coherent tree-worker budget. Proposed compression arithmetic stays in assembly. Linux x86-64 dispatch retains the existing AVX-512 F+VL requirement, and existing kernels handle other supported systems, short routes, and tails. The proposed bodies use AVX-512F instructions. Proof sources are unchanged.
 
