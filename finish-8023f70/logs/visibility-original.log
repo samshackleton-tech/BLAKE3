@@ -1,0 +1,54 @@
+    Updating crates.io index
+     Locking 30 packages to highest Rust 1.99.1 compatible versions
+   Compiling rustversion v1.0.23
+   Compiling once_cell v1.21.4
+   Compiling shlex v2.0.1
+   Compiling find-msvc-tools v0.1.15
+   Compiling log v0.4.34
+   Compiling libc v0.2.191
+   Compiling regex-syntax v0.8.11
+   Compiling cfg-if v1.0.5
+   Compiling lazy_static v1.5.1
+   Compiling pin-project-lite v0.2.17
+   Compiling smallvec v1.16.4
+   Compiling nu-ansi-term v0.50.3
+   Compiling scoped-tls v1.0.1
+   Compiling thread_local v1.1.10
+   Compiling sharded-slab v0.1.7
+   Compiling cc v1.10.0
+   Compiling tracing-core v0.1.36
+   Compiling tracing-log v0.2.0
+   Compiling tracing v0.1.44
+   Compiling generator v0.8.11
+   Compiling regex-automata v0.4.18
+   Compiling matchers v0.2.0
+   Compiling tracing-subscriber v0.3.23
+   Compiling loom v0.7.2
+   Compiling finish-visibility-review v0.1.0 (/root/results/peer-finish-review-8023f70/fixture)
+    Finished `release` profile [optimized] target(s) in 4.79s
+     Running tests/visibility.rs (target/release/deps/visibility-f1b5de692541c9a6)
+
+running 2 tests
+test original_one_worker ... 
+thread 'original_one_worker' (3018657) panicked at tests/visibility.rs:47:1:
+assertion `left == right` failed: wait returned without publishing worker output 0
+  left: 0
+ right: 1
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+FAILED
+test original_two_workers ... 
+thread 'original_two_workers' (3018658) panicked at tests/visibility.rs:48:1:
+assertion `left == right` failed: wait returned without publishing worker output 0
+  left: 0
+ right: 1
+FAILED
+
+failures:
+
+failures:
+    original_one_worker
+    original_two_workers
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.02s
+
+error: test failed, to rerun pass `--test visibility`

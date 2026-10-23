@@ -1,0 +1,89 @@
+    Updating crates.io index
+     Locking 74 packages to highest Rust 1.99.1 compatible versions
+      Adding constant_time_eq v0.4.2 (available: v0.6.1)
+ Downloading crates ...
+  Downloaded log v0.4.34
+  Downloaded rustversion v1.0.23
+  Downloaded thread_local v1.1.10
+  Downloaded lazy_static v1.5.1
+  Downloaded scoped-tls v1.0.1
+  Downloaded loom v0.7.2
+  Downloaded smallvec v1.16.4
+  Downloaded generator v0.8.11
+  Downloaded nu-ansi-term v0.50.3
+   Compiling cfg-if v1.0.5
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.27
+   Compiling quote v1.0.47
+   Compiling shlex v2.0.1
+   Compiling find-msvc-tools v0.1.15
+   Compiling libc v0.2.191
+   Compiling once_cell v1.21.4
+   Compiling rustversion v1.0.23
+   Compiling serde_core v1.0.229
+   Compiling typenum v1.20.1
+   Compiling zerocopy v0.8.63
+   Compiling rand_core v0.10.1
+   Compiling getrandom v0.4.3
+   Compiling regex-syntax v0.8.11
+   Compiling log v0.4.34
+   Compiling lazy_static v1.5.1
+   Compiling pin-project-lite v0.2.17
+   Compiling cmov v0.5.4
+   Compiling zmij v1.0.23
+   Compiling rustix v1.1.5
+   Compiling serde v1.0.229
+   Compiling serde_json v1.0.154
+   Compiling bitflags v2.13.2
+   Compiling ciborium-io v0.2.2
+   Compiling linux-raw-sys v0.12.1
+   Compiling cpufeatures v0.3.1
+   Compiling smallvec v1.16.4
+   Compiling nu-ansi-term v0.50.3
+   Compiling constant_time_eq v0.4.2
+   Compiling arrayvec v0.7.8
+   Compiling itoa v1.0.18
+   Compiling fastrand v2.5.0
+   Compiling memchr v2.8.3
+   Compiling scoped-tls v1.0.1
+   Compiling reference_impl v0.0.0 (/root/BLAKE3-finish-review/reference_impl)
+   Compiling hex v0.4.3
+   Compiling clocks v0.1.0 (/root/BLAKE3-finish-review/clocks)
+   Compiling thread_local v1.1.10
+   Compiling sharded-slab v0.1.7
+   Compiling cc v1.10.0
+   Compiling tracing-core v0.1.36
+   Compiling chacha20 v0.10.2
+   Compiling ctutils v0.4.5
+   Compiling tracing-log v0.2.0
+   Compiling tracing v0.1.44
+   Compiling syn v2.0.119
+   Compiling syn v3.0.9
+   Compiling hybrid-array v0.4.15
+   Compiling generator v0.8.11
+   Compiling blake3-servil v0.3.0+2e4fa821f9db07b945dbb2b0d02eb76cb19617b5 (/root/BLAKE3-finish-review)
+   Compiling rand v0.10.3
+   Compiling crypto-common v0.2.2
+   Compiling block-buffer v0.12.1
+   Compiling regex-automata v0.4.18
+   Compiling digest v0.11.3
+   Compiling hmac v0.13.0
+   Compiling tempfile v3.27.0
+   Compiling serde_derive v1.0.229
+   Compiling zerocopy-derive v0.8.63
+   Compiling matchers v0.2.0
+   Compiling tracing-subscriber v0.3.23
+   Compiling loom v0.7.2
+   Compiling half v2.7.1
+   Compiling ciborium-ll v0.2.2
+   Compiling ciborium v0.2.2
+    Finished `release` profile [optimized] target(s) in 5.35s
+     Running tests/loom_finish.rs (target/release/deps/loom_finish-10c42c5a7cfdbd4b)
+
+running 3 tests
+test a_caller_polling_once_then_sleeping_is_woken ... ok
+test a_caller_sleeping_at_once_is_woken_by_the_last_piece ... ok
+test one_piece_one_worker ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+

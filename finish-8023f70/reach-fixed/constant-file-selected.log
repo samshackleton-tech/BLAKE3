@@ -1,0 +1,36 @@
+every test runs: src/constants.rs:1 is code outside any function (pub const ANSWER: u32 = 7;)
+run  reach-fixture-constant-file answer_is_seven: src/constants.rs:1 is code outside any function (pub const ANSWER: u32 = 7;)
+1 of 1 tests, against tree fc115bee77fb (1 files changed)
+FAIL reach-fixture-constant-file answer_is_seven
+   Compiling reach-fixture-constant-file v0.1.0 (/root/results/peer-finish-review-8023f70/reach-fixed/constant-file)
+    Finished `release` profile [optimized] target(s) in 0.03s
+────────────
+ Nextest run ID 9c446179-3904-47a3-bc65-213f1a56d3b9 with nextest profile: default
+    Starting 1 test across 1 binary
+        FAIL [   0.002s] (1/1) reach-fixture-constant-file answer_is_seven
+  stdout ───
+
+    running 1 test
+    test answer_is_seven ... FAILED
+
+    failures:
+
+    failures:
+        answer_is_seven
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'answer_is_seven' (3023073) panicked at src/lib.rs:7:5:
+    assertion `left == right` failed
+      left: 9
+     right: 7
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+  Cancelling due to test failure
+────────────
+     Summary [   0.003s] 1 test run: 0 passed, 1 failed, 0 skipped
+        FAIL [   0.002s] (1/1) reach-fixture-constant-file answer_is_seven
+error: test run failed
+

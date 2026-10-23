@@ -1,6 +1,6 @@
 # Independent public-source review — EPYC 9255, 2026-10-23
 
-Two small reviews, run serially on a native AMD EPYC 9255 (Linux x86-64, AVX-512). No optimization candidate or private performance results are included. Tool versions are in `tool-versions.txt`.
+Independent reviews, run serially on a native AMD EPYC 9255 (Linux x86-64, AVX-512). No optimization candidate or private performance results are included. Tool versions are in `tool-versions.txt`.
 
 ## Test selection: two false-green controls
 
@@ -73,7 +73,7 @@ Two tests expect 3 from `direct()` and `indirect()`. Change only the body of `ba
 
 This fixture uses an instrumented function body. Its compile-time consumer leaves no runtime call edge in that coverage. A conservative selector should run all tests for changes to const functions unless it accounts for compile-time dependencies. Moving outside-function changes to all-tests selection does not cover this case by itself.
 
-Devon reports fixes for the first two cases and new controls. This third native run uses the older published source, rather than his unpublished fixes.
+The initial third-case run uses `1232ed8`. A [followup on the updated #139 source, 8023f70](finish-8023f70/), independently confirms both earlier fixes and reproduces this const-function false green. It also supplies a separate Loom counterexample for output visibility in the new finish handshake, paired with an Acquire-load control.
 
 ```sh
 export PATH="$PWD/reach:$PATH"

@@ -1,0 +1,11 @@
+--- /root/results/peer-finish-review-8023f70/fixture/finish-acquire.rs
++++ /root/results/peer-finish-review-8023f70/fixture/finish-acquire.rs (new)
+@@ -55,7 +55,7 @@
+ 
+     /// The pieces finished so far.
+     pub(crate) fn finished_count(&self) -> usize {
+-        self.state.load(Ordering::Relaxed) & !SLEEPING
++        self.state.load(Ordering::Acquire) & !SLEEPING
+     }
+ 
+     /// The thread that waits on this source from now on.

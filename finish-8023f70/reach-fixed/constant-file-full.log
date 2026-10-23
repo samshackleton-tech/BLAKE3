@@ -1,0 +1,30 @@
+    Finished `release` profile [optimized] target(s) in 0.00s
+────────────
+ Nextest run ID 5e738bf4-dde1-45f7-8e84-e4d9ad1faee6 with nextest profile: default
+    Starting 1 test across 1 binary
+        FAIL [   0.002s] (1/1) reach-fixture-constant-file answer_is_seven
+  stdout ───
+
+    running 1 test
+    test answer_is_seven ... FAILED
+
+    failures:
+
+    failures:
+        answer_is_seven
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'answer_is_seven' (3023249) panicked at src/lib.rs:7:5:
+    assertion `left == right` failed
+      left: 9
+     right: 7
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+  Cancelling due to test failure
+────────────
+     Summary [   0.003s] 1 test run: 0 passed, 1 failed, 0 skipped
+        FAIL [   0.002s] (1/1) reach-fixture-constant-file answer_is_seven
+error: test run failed

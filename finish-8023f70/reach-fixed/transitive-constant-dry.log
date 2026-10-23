@@ -1,0 +1,4 @@
+every test runs: src/lib.rs:1 is code outside any function (const A: u16 = 3;)
+run  reach-fixture-transitive-constant direct_low_byte: src/lib.rs:1 is code outside any function (const A: u16 = 3;)
+run  reach-fixture-transitive-constant indirect_full_width: src/lib.rs:1 is code outside any function (const A: u16 = 3;)
+2 of 2 tests, against tree b25dca4ff1d5 (1 files changed)
