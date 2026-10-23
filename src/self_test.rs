@@ -13,9 +13,13 @@
 //! of it is running every assembly kernel, 390 KB of unrolled code, whose
 //! first fetch dominates the fresh-process cost (Zooko chose this budget
 //! over a smaller one that leaves kernels out, September 26, 2026).
-//! Elsewhere nine cases reach every x86 kernel: about 28 µs in a fresh
-//! process on an i7-12700K's performance core, 16 µs warm (47 on an
-//! efficiency core), from 109 and 90 (210) with the AArch64 list.
+//! Elsewhere eight shared cases cover the original x86 kernels: about
+//! 28 µs in a fresh process on an i7-12700K's performance core, 16 µs warm
+//! (47 on an efficiency core), from 109 and 90 (210) with the AArch64 list.
+//! Linux AVX-512 additionally checks the two 32-input entries, chained
+//! from the shared cases. Those checks use overlapping windows in a
+//! 512-byte input, not 32 KiB of message storage, and do not run on other
+//! platforms. Their startup cost is not included in the i7 figures above.
 //!
 //! As Niels Ferguson suggested, the cases chain: each writes the first 32
 //! bytes of its output over the start of the next case's input (and keys
@@ -199,8 +203,9 @@ pub(crate) fn fold(bytes: &[u8]) -> u64 {
 /// its input (of every message, in a batch), as much as it reads, and are
 /// the key a keyed case takes; so every output depends on every earlier
 /// one. `outputs` hashes one case into its buffer and returns how many
-/// bytes it wrote; `check` sees each case's fold as it comes.
-pub(crate) fn chain(mut outputs: impl FnMut(Case, &[u8], &[u8; 32], &mut [u8]) -> usize, mut check: impl FnMut(usize, u64)) {
+/// bytes it wrote; `check` sees each case's fold as it comes. Return the
+/// final chaining seed for any platform-specific checks that follow.
+pub(crate) fn chain(mut outputs: impl FnMut(Case, &[u8], &[u8; 32], &mut [u8]) -> usize, mut check: impl FnMut(usize, u64)) -> [u8; 32] {
     let mut input = [0u8; INPUT_LEN];
     fill(&mut input);
     let mut out = [0u8; OUTPUT_LEN];
@@ -221,6 +226,7 @@ pub(crate) fn chain(mut outputs: impl FnMut(Case, &[u8], &[u8; 32], &mut [u8]) -
         check(index, fold(output));
         previous.copy_from_slice(&output[..32]);
     }
+    previous
 }
 
 /// Each case's fold, from the reference implementation (the unit test
@@ -390,12 +396,12 @@ fn chunk_values(platform: Platform, input: &[u8], key: &[u8; 32], out: &mut [u8]
 }
 
 /// Run every case and panic on the first that differs from the reference;
-/// how many cases ran (every one of CASES).
+/// how many cases ran (CASES and the selected platform's extra entries).
 fn run() -> usize {
     compiled_features_present();
     let platform = Platform::detect_unchecked();
     let mut checked = 0;
-    chain(
+    let previous = chain(
         |case, input, previous, out| outputs(platform, case, input, previous, out),
         |index, folded| {
             checked += 1;
@@ -408,6 +414,13 @@ fn run() -> usize {
             );
         },
     );
+    #[cfg(all(blake3_avx512_ffi, target_os = "linux"))]
+    if matches!(platform, Platform::AVX512) {
+        // Sound: the detected platform has the new kernels' ISA. Their
+        // wrapper checks its bounds, and builds all arguments on the stack.
+        checked += unsafe { crate::avx512_32::self_test(&previous) };
+    }
+    let _ = previous;
     checked
 }
 
@@ -493,7 +506,19 @@ mod test {
     /// skipped them would pass by doing nothing).
     #[test]
     fn test_self_test_run_checks_every_case() {
-        assert_eq!(run(), CASES.len());
+        crate::RAN_ENTRIES.with(|r| r.borrow_mut().clear());
+        let checked = run();
+        let expected = CASES.len();
+        #[cfg(all(blake3_avx512_ffi, target_os = "linux"))]
+        let expected = if crate::platform::avx512_detected() {
+            for (name, entry) in crate::avx512_32::entries() {
+                assert!(crate::RAN_ENTRIES.with(|r| r.borrow().contains(&(entry as usize))), "startup left out {name}");
+            }
+            expected + crate::avx512_32::entries().len()
+        } else {
+            expected
+        };
+        assert_eq!(checked, expected);
     }
 
     /// The first call runs the self-test, which passes (each test runs in
@@ -578,6 +603,65 @@ mod test {
             Derive { len } => digest(reference_impl::Hasher::new_derive_key(CONTEXT), &input[..len], 0, 32),
             Incremental { len, .. } => digest(reference_impl::Hasher::new(), &input[..len], 0, 32),
             Xof { len, skip, out } => digest(reference_impl::Hasher::new(), &input[..len], skip as usize, out),
+        }
+    }
+
+    #[cfg(all(blake3_avx512_ffi, target_os = "linux"))]
+    fn wide_reference(inputs: &[&[u8; 192]], key: &crate::CVWords, counter: u64, increment: crate::IncrementCounter, out: &mut [u8]) {
+        for (i, &input) in inputs.iter().enumerate() {
+            // hash_many's increment is not wrapping; exercise the
+            // explicitly wrapping raw ABI with individual calls.
+            let c = counter.wrapping_add(if increment.yes() { i as u64 } else { 0 });
+            crate::portable::hash1(
+                input,
+                key,
+                c,
+                crate::KEYED_HASH,
+                crate::CHUNK_START,
+                crate::CHUNK_END,
+                (&mut out[i * crate::OUT_LEN..][..crate::OUT_LEN]).try_into().unwrap(),
+            );
+        }
+    }
+
+    /// The wide entries' constants come from the reference chain's seed
+    /// and the portable compression code, not the new assembly. A changed
+    /// table is printed for review, never accepted automatically.
+    #[test]
+    #[cfg(all(blake3_avx512_ffi, target_os = "linux"))]
+    fn wide_self_test_matches_reference() {
+        let previous = chain(into(reference), |i, folded| assert_eq!(folded, EXPECTED[i], "shared reference chain changed"));
+        let mut folds = std::vec::Vec::new();
+        crate::avx512_32::self_test_chain(&previous, wide_reference, |_, folded| folds.push(folded));
+        let table: std::string::String = folds.iter().map(|f| std::format!("    0x{f:016x},\n")).collect();
+        assert!(folds == crate::avx512_32::SELF_TEST_EXPECTED, "wide EXPECTED differs from the portable reference; its table:\n{table}");
+    }
+
+    /// Each new case detects corruption in its last output byte, not
+    /// merely the first CV used as the next seed, and stops before any
+    /// later case. Use the production checker with a portable callback.
+    #[test]
+    #[cfg(all(blake3_avx512_ffi, target_os = "linux"))]
+    fn wide_self_test_rejects_corruption() {
+        let previous = chain(into(reference), |i, folded| assert_eq!(folded, EXPECTED[i]));
+        for bad in 0..2 {
+            let mut calls = 0;
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                crate::avx512_32::self_test_chain(
+                    &previous,
+                    |inputs, key, counter, increment, out| {
+                        wide_reference(inputs, key, counter, increment, out);
+                        let index = calls;
+                        calls += 1;
+                        if index == bad {
+                            out[32 * crate::OUT_LEN - 1] ^= 1;
+                        }
+                    },
+                    crate::avx512_32::check_self_test,
+                );
+            }));
+            assert!(result.is_err(), "corruption in case {bad} went unnoticed");
+            assert_eq!(calls, bad + 1, "a case ran after the failed one");
         }
     }
 

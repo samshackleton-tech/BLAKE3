@@ -1586,6 +1586,8 @@ mod test {
                 (8192 * CHUNK_LEN, 48, 48),
                 (1024 * CHUNK_LEN, 2, 2),
                 (1024 * CHUNK_LEN, 1, 1),
+                (1, 48, 2),
+                (MAX_PIECE_LEN, 48, 2),
                 (MAX_PIECE_LEN + 1, 48, 2),
                 (2 * MAX_PIECE_LEN + 1, 48, 3),
             ] {

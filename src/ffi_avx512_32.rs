@@ -34,6 +34,60 @@ pub(crate) unsafe fn hash32<const N: usize>(
     unsafe { kernel(inputs.as_ptr().cast(), (N / BLOCK_LEN) as u64, key.as_ptr(), counter, packed, out.as_mut_ptr()) };
 }
 
+// Filled from the independent portable compression callback in the
+// reference-table test, never from these assembly kernels' output.
+pub(crate) const SELF_TEST_EXPECTED: [u64; 2] = [0x8418db51e3b4a019, 0x675dde19182e7dd6];
+
+pub(crate) fn check_self_test(index: usize, folded: u64) {
+    let entry = ["AVX-512 k32", "AVX-512 p32"][index];
+    assert_eq!(folded, SELF_TEST_EXPECTED[index], "blake3-servil startup self-test failed: {entry}: this build or CPU computes wrong digests");
+}
+
+/// Two chained startup cases, without a 32 KiB input allocation. Distinct,
+/// unaligned, overlapping windows fit in 512 bytes; all are keyed by the
+/// previous case's output. Three blocks exercise first, middle and last.
+pub(crate) fn self_test_chain(
+    previous: &[u8; 32],
+    mut hash: impl FnMut(&[&[u8; 192]], &CVWords, u64, IncrementCounter, &mut [u8]),
+    mut check: impl FnMut(usize, u64),
+) {
+    let mut input = [0u8; 512];
+    crate::self_test::fill(&mut input);
+    input[..32].copy_from_slice(previous);
+    let mut key = crate::platform::words_from_le_bytes_32(previous);
+    let mut out = [0u8; 32 * OUT_LEN];
+    for (index, increment) in [IncrementCounter::Yes, IncrementCounter::No].into_iter().enumerate() {
+        let inputs: [&[u8; 192]; 32] = core::array::from_fn(|i| input[1 + 8 * i..][..192].try_into().unwrap());
+        hash(&inputs, &key, u64::MAX - 15, increment, &mut out);
+        check(index, crate::self_test::fold(&out));
+        input[..32].copy_from_slice(&out[..32]);
+        key = crate::platform::words_from_le_bytes_32(out[..32].try_into().unwrap());
+    }
+}
+
+/// Caller detected AVX-512. Keep the additional startup workspace out of
+/// the shared startup frame and off machines that do not run these entries.
+#[inline(never)]
+pub(crate) unsafe fn self_test(previous: &[u8; 32]) -> usize {
+    let mut checked = 0;
+    self_test_chain(
+        previous,
+        |inputs, key, counter, increment, out| unsafe {
+            hash32(inputs, key, counter, increment, crate::KEYED_HASH, crate::CHUNK_START, crate::CHUNK_END, out);
+        },
+        |index, folded| {
+            check_self_test(index, folded);
+            checked += 1;
+        },
+    );
+    checked
+}
+
+#[cfg(all(test, feature = "std"))]
+pub(crate) fn entries() -> [(&'static str, *const ()); 2] {
+    [("AVX-512 k32", blake3_avx512_k32 as *const ()), ("AVX-512 p32", blake3_avx512_p32 as *const ())]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -53,7 +107,7 @@ mod tests {
         let refs: Vec<_> = data.iter().collect();
         for counter in [0, u32::MAX as u64 - 15, 1u64 << 32, u64::MAX - 15] {
             for inc in [IncrementCounter::No, IncrementCounter::Yes] {
-                for (flags, start, end) in [(0, 1, 2), (16, 1, 10), (4, 0, 8), (32, 1, 2), (64, 1, 10)] {
+                for (flags, start, end) in [(0, 1, 2), (16, 1, 10), (4, 0, 8), (32, 1, 2), (64, 1, 10), (0xa5, 0x5a, 0xff)] {
                     let key = [0x12345678, 0x87654321, 2, 3, 4, 5, 6, 0xfedcba98];
                     let mut got = [0xa5u8; 32 * OUT_LEN + 1];
                     unsafe {
