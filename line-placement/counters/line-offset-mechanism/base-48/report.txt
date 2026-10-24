@@ -1,0 +1,53 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 1K of event 'ls_misal_loads.ma64/period=1009/u'
+# Event count (approx.): 1620454
+#
+# Overhead       Samples  Symbol                                                                                                                                                       Source:Line                                                                                                                                                
+# ........  ............  ...........................................................................................................................................................  ...........................................................................................................................................................
+#
+    13.39%           215  [.] blake3_servil::hash_serial                                                                                                                               blake3_servil::hash_serial+950
+    12.02%           193  [.] _blake3_compress_in_place_avx512                                                                                                                         _blake3_compress_in_place_avx512+254
+     6.72%           108  [.] _blake3_compress_in_place_avx512                                                                                                                         _blake3_compress_in_place_avx512+173
+     6.54%           105  [.] _blake3_compress_in_place_avx512                                                                                                                         _blake3_compress_in_place_avx512+271
+     6.35%           102  [.] _blake3_compress_in_place_avx512                                                                                                                         _blake3_compress_in_place_avx512+241
+     4.73%            76  [.] _blake3_compress_in_place_avx512                                                                                                                         _blake3_compress_in_place_avx512+209
+     4.48%            72  [.] _blake3_compress_in_place_avx512                                                                                                                         _blake3_compress_in_place_avx512+167
+     4.23%            68  [.] blake3_servil::hash_serial                                                                                                                               blake3_servil::hash_serial+987
+     4.17%            67  [.] _blake3_compress_in_place_avx512                                                                                                                         _blake3_compress_in_place_avx512+367
+     4.05%            65  [.] _blake3_compress_in_place_avx512                                                                                                                         _blake3_compress_in_place_avx512+376
+     3.67%            59  [.] _blake3_compress_in_place_avx512                                                                                                                         _blake3_compress_in_place_avx512+163
+     3.61%            58  [.] _blake3_compress_in_place_avx512                                                                                                                         _blake3_compress_in_place_avx512+203
+     3.49%            56  [.] _blake3_compress_in_place_avx512                                                                                                                         _blake3_compress_in_place_avx512+216
+     2.93%            47  [.] bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>                                                                                            bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+7606
+     2.80%            45  [.] blake3_servil::hash_serial                                                                                                                               blake3_servil::hash_serial+958
+     2.30%            37  [.] _blake3_compress_in_place_avx512                                                                                                                         _blake3_compress_in_place_avx512+156
+     2.05%            33  [.] blake3_servil::hash_serial                                                                                                                               blake3_servil::hash_serial+966
+
+
+# Samples: 560  of event 'ls_bad_status2.stli_other/period=1009/u'
+# Event count (approx.): 565040
+#
+# Overhead       Samples  Symbol                                                             Source:Line                                                       
+# ........  ............  .................................................................  ..................................................................
+#
+    28.57%           160  [.] bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>  bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+7606
+     8.04%            45  [.] blake3_servil::hash_serial                                     blake3_servil::hash_serial+987
+     7.14%            40  [.] bench_hashes::hash_batch::<bench_hashes::use_digest>           bench_hashes::hash_batch::<bench_hashes::use_digest>+36454
+     5.89%            33  [.] bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>  bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+7646
+     5.36%            30  [.] blake3_servil::hash_serial                                     blake3_servil::hash_serial+995
+     5.36%            30  [.] blake3_servil::hash_serial                                     blake3_servil::hash_serial+999
+     5.00%            28  [.] bench_hashes::hash_batch::<bench_hashes::use_digest>           bench_hashes::hash_batch::<bench_hashes::use_digest>+36501
+     4.64%            26  [.] bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>  bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+7615
+     4.11%            23  [.] 0x00000000001b0a04                                             libc.so.6[1b0a04]
+     3.75%            21  [.] blake3_servil::hash_serial                                     blake3_servil::hash_serial+1016
+     3.21%            18  [.] bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>  bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+7575
+     2.86%            16  [.] bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>  bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+7621
+
+
+#
+# (Cannot load tips.txt file, please install perf!)
+#

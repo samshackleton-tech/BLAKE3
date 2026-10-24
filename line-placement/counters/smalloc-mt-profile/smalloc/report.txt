@@ -1,0 +1,49 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 5K of event 'cpu/cycles,period=200003/u'
+# Event count (approx.): 1112416686
+#
+# Overhead       Samples  Symbol                                                                                                                     
+# ........  ............  ...........................................................................................................................
+#
+    43.80%          2436  [.] _blake3_hash_many_avx512
+    18.93%          1053  [.] <blake3_servil::lanes::Pool>::serve
+    16.92%           941  [.] 0x00000000001b0cd4
+     2.18%           121  [.] 0x00000000001b0cab
+     1.69%            94  [.] 0x00000000001b0cbf
+     1.49%            83  [.] 0x00000000001b0cb2
+     1.38%            77  [.] 0x00000000001b0cb9
+     1.35%            75  [.] blake3_servil::outboard::groups_cvs_into
+     1.31%            73  [.] blake3_servil::tree::wide::<blake3_servil::tree::PlatformKernels>
+     1.11%            62  [.] bench_hashes::hash_continuous_messages::<bench_hashes::use_digest>
+     1.08%            60  [.] _blake3_compress_in_place_avx512
+
+
+# Samples: 823  of event 'ls_bad_status2.stli_other/period=2003/u'
+# Event count (approx.): 1648469
+#
+# Overhead       Samples  Symbol                                                                                                                     
+# ........  ............  ...........................................................................................................................
+#
+    32.20%           265  [.] _blake3_hash_many_avx512
+    13.85%           114  [.] blake3_servil::outboard::groups_cvs_into
+    10.45%            86  [.] <blake3_servil::lanes::Pool>::serve
+     7.78%            64  [.] __rustc::__rust_alloc_zeroed
+     5.95%            49  [.] _blake3_compress_in_place_avx512
+     4.74%            39  [.] bench_hashes::hash_continuous_messages::<bench_hashes::use_digest>
+     2.92%            24  [.] __rustc::__rust_alloc
+     2.31%            19  [.] <blake3_servil::lanes::Task>::run
+     1.82%            15  [.] 0x00000000001b0c06
+     1.46%            12  [.] 0x00000000001b0a13
+     1.22%            10  [.] <blake3_servil::lanes::Job>::hash_piece
+     1.22%            10  [.] blake3_servil::tree::children::<blake3_servil::tree::PlatformKernels>
+     1.09%             9  [.] blake3_servil::compress_parents_parallel
+     1.09%             9  [.] 0x00000000001b0c14
+
+
+#
+# (Cannot load tips.txt file, please install perf!)
+#

@@ -1,0 +1,49 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 514  of event 'ls_misal_loads.ma64/period=1009/u'
+# Event count (approx.): 518626
+#
+# Overhead       Samples  Symbol                                                                               Source:Line                                                                        
+# ........  ............  ...................................................................................  ...................................................................................
+#
+    32.30%           166  [.] _blake3_avx512_chunk_root                                                        _blake3_avx512_chunk_root+719
+    28.60%           147  [.] _blake3_avx512_chunk_root                                                        _blake3_avx512_chunk_root+704
+    14.59%            75  [.] blake3_servil::hash_serial                                                       blake3_servil::hash_serial+919
+     7.59%            39  [.] _blake3_avx512_chunk_root                                                        _blake3_avx512_chunk_root+689
+     7.00%            36  [.] _blake3_avx512_chunk_root                                                        _blake3_avx512_chunk_root+730
+     2.72%            14  [.] _blake3_avx512_chunk_root                                                        _blake3_avx512_chunk_root+838
+
+
+# Samples: 517  of event 'ls_bad_status2.stli_other/period=1009/u'
+# Event count (approx.): 521653
+#
+# Overhead       Samples  Symbol                                                                                                                                                       Source:Line                                                                                                                                                
+# ........  ............  ...........................................................................................................................................................  ...........................................................................................................................................................
+#
+    10.44%            54  [.] bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>                                                                                            bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+7606
+     8.32%            43  [.] bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>                                                                                            bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+7615
+     7.35%            38  [.] bench_hashes::hash_batch::<bench_hashes::use_digest>                                                                                                     bench_hashes::hash_batch::<bench_hashes::use_digest>+36454
+     5.80%            30  [.] bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>                                                                                            bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+41
+     5.61%            29  [.] 0x00000000001b0a36                                                                                                                                       libc.so.6[1b0a36]
+     5.42%            28  [.] _blake3_avx512_chunk_root                                                                                                                                _blake3_avx512_chunk_root+591
+     4.84%            25  [.] bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>                                                                                            bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+7646
+     4.64%            24  [.] _blake3_avx512_chunk_root                                                                                                                                _blake3_avx512_chunk_root+719
+     4.64%            24  [.] bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>                                                                                            bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+9
+     4.26%            22  [.] _blake3_avx512_chunk_root                                                                                                                                _blake3_avx512_chunk_root+602
+     4.06%            21  [.] bench_hashes::hash_batch::<bench_hashes::use_digest>                                                                                                     bench_hashes::hash_batch::<bench_hashes::use_digest>+36501
+     3.87%            20  [.] bench_hashes::hash_batch::<bench_hashes::use_digest>                                                                                                     bench_hashes::hash_batch::<bench_hashes::use_digest>+36426
+     3.48%            18  [.] 0x00000000001b0a04                                                                                                                                       libc.so.6[1b0a04]
+     3.09%            16  [.] bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>                                                                                            bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+2930
+     2.51%            13  [.] bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>                                                                                            bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+7575
+     2.51%            13  [.] bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>                                                                                            bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+7621
+     2.32%            12  [.] blake3_servil::hash_serial                                                                                                                               blake3_servil::hash_serial+1362
+     2.13%            11  [.] bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>                                                                                            bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+2979
+     2.13%            11  [.] blake3_servil::hash_serial                                                                                                                               blake3_servil::hash_serial+830
+
+
+#
+# (Cannot load tips.txt file, please install perf!)
+#

@@ -1,0 +1,43 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 5K of event 'cpu/cycles,period=200003/u'
+# Event count (approx.): 1168017520
+#
+# Overhead       Samples  Symbol                                                                                                                                                                  
+# ........  ............  ........................................................................................................................................................................
+#
+    45.26%          2643  [.] _blake3_hash_many_avx512
+    21.11%          1233  [.] <blake3_servil::lanes::Pool>::serve
+    15.31%           894  [.] 0x00000000001b0cd4
+     2.16%           126  [.] 0x00000000001b0cab
+     1.75%           102  [.] blake3_servil::tree::wide::<blake3_servil::tree::PlatformKernels>
+     1.58%            92  [.] 0x00000000001b0cb2
+     1.42%            83  [.] 0x00000000001b0cb9
+     1.40%            82  [.] 0x00000000001b0cbf
+     1.18%            69  [.] _blake3_compress_in_place_avx512
+
+
+# Samples: 724  of event 'ls_bad_status2.stli_other/period=2003/u'
+# Event count (approx.): 1450172
+#
+# Overhead       Samples  Symbol                                                                                                                     
+# ........  ............  ...........................................................................................................................
+#
+    40.61%           294  [.] _blake3_hash_many_avx512
+    13.67%            99  [.] <blake3_servil::lanes::Pool>::serve
+     8.56%            62  [.] 0x00000000001b0a13
+     5.52%            40  [.] _blake3_compress_in_place_avx512
+     4.42%            32  [.] 0x00000000001b0c06
+     4.01%            29  [.] bench_hashes::hash_continuous_messages::<bench_hashes::use_digest>
+     3.45%            25  [.] <blake3_servil::lanes::Task>::run
+     1.38%            10  [.] cfree
+     1.10%             8  [.] <blake3_servil::lanes::Job>::hash_piece
+     1.10%             8  [k] 0xffffffff81200b90
+
+
+#
+# (Cannot load tips.txt file, please install perf!)
+#
