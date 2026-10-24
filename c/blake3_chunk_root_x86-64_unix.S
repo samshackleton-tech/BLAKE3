@@ -270,14 +270,37 @@ _CET_ENDBR
         vmovq xmm9, rax
         vpxor xmm3, xmm3, xmm3
         vpunpcklqdq xmm3, xmm3, xmm9
+        mov rax, rdi
+        test al, 15
+        jnz 5f
+        test al, 16
+        jz 5f
+        test al, 32
+        jnz 6f
+        vmovdqa64 zmm10, zmmword ptr [rdi-16]
+        vmovdqa64 zmm11, zmmword ptr [rdi+48]
+        valignd zmm10, zmm11, zmm10, 4
+        jmp 7f
+6:
+        vmovdqa64 zmm10, zmmword ptr [rdi-48]
+        vmovdqa64 zmm11, zmmword ptr [rdi+16]
+        valignd zmm10, zmm11, zmm10, 12
+7:
+        vmovdqa xmm4, xmm10
+        vextracti32x4 xmm5, zmm10, 1
+        vextracti32x4 xmm6, zmm10, 2
+        vextracti32x4 xmm7, zmm10, 3
+        jmp 4f
+5:
         vmovups xmm4, xmmword ptr [rdi]
         vmovups xmm5, xmmword ptr [rdi+0x10]
+        vmovups xmm6, xmmword ptr [rdi+0x20]
+        vmovups xmm7, xmmword ptr [rdi+0x30]
+4:
         vmovaps xmm8, xmm4
         vshufps xmm4, xmm4, xmm5, 136
         vshufps xmm8, xmm8, xmm5, 221
         vmovaps xmm5, xmm8
-        vmovups xmm6, xmmword ptr [rdi+0x20]
-        vmovups xmm7, xmmword ptr [rdi+0x30]
         vmovaps xmm8, xmm6
         vshufps xmm6, xmm6, xmm7, 136
         vpshufd xmm6, xmm6, 0x93
@@ -358,14 +381,37 @@ _CET_ENDBR
         vmovq xmm9, rax
         vpxor xmm3, xmm3, xmm3
         vpunpcklqdq xmm3, xmm3, xmm9
+        mov rax, rdx
+        test al, 15
+        jnz 5f
+        test al, 16
+        jz 5f
+        test al, 32
+        jnz 6f
+        vmovdqa64 zmm10, zmmword ptr [rdx-16]
+        vmovdqa64 zmm11, zmmword ptr [rdx+48]
+        valignd zmm10, zmm11, zmm10, 4
+        jmp 7f
+6:
+        vmovdqa64 zmm10, zmmword ptr [rdx-48]
+        vmovdqa64 zmm11, zmmword ptr [rdx+16]
+        valignd zmm10, zmm11, zmm10, 12
+7:
+        vmovdqa xmm4, xmm10
+        vextracti32x4 xmm5, zmm10, 1
+        vextracti32x4 xmm6, zmm10, 2
+        vextracti32x4 xmm7, zmm10, 3
+        jmp 4f
+5:
         vmovups xmm4, xmmword ptr [rdx]
         vmovups xmm5, xmmword ptr [rdx+0x10]
+        vmovups xmm6, xmmword ptr [rdx+0x20]
+        vmovups xmm7, xmmword ptr [rdx+0x30]
+4:
         vmovaps xmm8, xmm4
         vshufps xmm4, xmm4, xmm5, 136
         vshufps xmm8, xmm8, xmm5, 221
         vmovaps xmm5, xmm8
-        vmovups xmm6, xmmword ptr [rdx+0x20]
-        vmovups xmm7, xmmword ptr [rdx+0x30]
         vmovaps xmm8, xmm6
         vshufps xmm6, xmm6, xmm7, 136
         vpshufd xmm6, xmm6, 0x93
@@ -431,4 +477,5 @@ _CET_ENDBR
         vpxor xmm1, xmm1, xmm3
         vmovups xmmword ptr [r8], xmm0
         vmovups xmmword ptr [r8+0x10], xmm1
+        vzeroupper
         ret

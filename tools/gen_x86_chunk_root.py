@@ -27,8 +27,11 @@ The chunk counter is 0. CHUNK_START goes on the first block, CHUNK_END and
 ROOT on the last. Only the arguments' memory is read or written: no push, no
 spill, no stack scratch, no constant loads (IV and shuffle masks are built
 from immediates). Clobbers rax, rcx, rdx, rdi, r9-r11, xmm0-xmm15 and flags,
-all caller-saved. The sse41 entry needs SSE4.1; the avx512 entry needs
-AVX-512F and AVX-512VL (vprord on xmm).
+all caller-saved (the avx512 entry also zmm10/zmm11, and ends with
+vzeroupper). The sse41 entry needs SSE4.1; the avx512 entry needs AVX-512F
+and AVX-512VL (vprord on xmm). The avx512 entry may read the whole cache
+lines holding a block 16 or 48 bytes into its line (aligned; never another
+page).
 
 The compression body is upstream BLAKE3's blake3_compress_in_place_sse41,
 instruction for instruction, with its rotations rendered per ISA. Proof
@@ -94,7 +97,28 @@ def render(isa, ins):
 def body(isa, block_ptr):
     """Compress xmm0..xmm3 with the block at block_ptr; CV out in xmm0/xmm1."""
     out = []
-    for ins in stream(LOAD.format(p=block_ptr)):
+    load = stream(LOAD.format(p=block_ptr))
+    if isa == 'avx512':
+        # Experiment (#141): with the block 16 or 48 bytes into a line, read
+        # the two whole lines that hold it with aligned 64-byte loads and
+        # splice the block out in registers (valignd), so that no load
+        # crosses a line. The lines never cross a page. Elsewhere four
+        # 16-byte loads, as upstream.
+        out += [f'mov rax, {block_ptr}', 'test al, 15', 'jnz 5f', 'test al, 16', 'jz 5f',
+                'test al, 32', 'jnz 6f',
+                f'vmovdqa64 zmm10, zmmword ptr [{block_ptr}-16]', f'vmovdqa64 zmm11, zmmword ptr [{block_ptr}+48]',
+                'valignd zmm10, zmm11, zmm10, 4', 'jmp 7f',
+                '6:', f'vmovdqa64 zmm10, zmmword ptr [{block_ptr}-48]', f'vmovdqa64 zmm11, zmmword ptr [{block_ptr}+16]',
+                'valignd zmm10, zmm11, zmm10, 12',
+                '7:', 'vmovdqa xmm4, xmm10', 'vextracti32x4 xmm5, zmm10, 1',
+                'vextracti32x4 xmm6, zmm10, 2', 'vextracti32x4 xmm7, zmm10, 3', 'jmp 4f',
+                '5:']
+        for ins in load:
+            if ins[0] == 'movups' and '[' in ins[2]:
+                out += render(isa, ins)
+        out.append('4:')
+        load = [ins for ins in load if not (ins[0] == 'movups' and '[' in ins[2])]
+    for ins in load:
         out += render(isa, ins)
     out.append('mov al, 7')
     out.append('9:')
@@ -143,7 +167,8 @@ def kernel(isa):
     out += qword_pair(isa, 'xmm2', IV)
     out += ['mov eax, r11d', 'or eax, ecx', f'or eax, {CHUNK_END | ROOT}', 'shl rax, 32', 'or rax, r10'] + row3(isa)
     out += body(isa, 'rdx')
-    out += [f'{x}movups xmmword ptr [r8], xmm0', f'{x}movups xmmword ptr [r8+0x10], xmm1', 'ret']
+    out += [f'{x}movups xmmword ptr [r8], xmm0', f'{x}movups xmmword ptr [r8+0x10], xmm1']
+    out += ['vzeroupper', 'ret'] if isa == 'avx512' else ['ret']
     return out
 
 
