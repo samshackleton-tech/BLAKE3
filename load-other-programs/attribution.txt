@@ -1,0 +1,15 @@
+load-attribution.py on the EPYC 9255 (October 24, 14:52 UTC): one contender run
+once per file over tree-1000x16384, as bench-hashes b3sum's "1000 x 16 KiB, a
+process each" cell does. /proc/stat sampled every 100 ms.
+
+official b3sum 1.8.2:
+  wall 2.53 s; busy 10.22 CPU-s: user 1.66, system 8.56, irq 0.00, softirq 0.00, steal 0.00
+  own (self + children) 8.68 CPU-s; kernel threads 0.45 CPU-s
+  unattributed (busy - own) 1.54 CPU-s = 0.61 CPUs; of it irq+softirq 0.00, kernel threads 0.45, rest 1.09
+  other programs, counted directly: 0.01 CPU-s = 0.00 CPUs
+/usr/bin/true:
+  unattributed 0.01 CPU-s = 0.01 CPUs; other programs, counted directly: 0.00 CPUs
+true, with another program (setsid sh loop of sha256sum 16 MiB) running:
+  unattributed (busy - own) 1.27 CPU-s = 1.01 CPUs
+  other programs, counted directly: 1.26 CPU-s = 1.00 CPUs
+(servil 082afa3's b3sum: unattributed 0.03 CPUs; sha256sum: 0.02 CPUs.)

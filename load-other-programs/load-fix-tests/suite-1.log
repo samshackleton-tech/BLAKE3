@@ -1,0 +1,44 @@
+   Compiling clocks v0.1.0 (/root/BLAKE3-load-other/clocks)
+    Finished `release` profile [optimized] target(s) in 1.85s
+────────────
+ Nextest run ID 9b173d1b-b1d8-4cd0-b80b-2811807ab9f3 with nextest profile: default
+    Starting 37 tests across 1 binary (4 tests skipped)
+        PASS [   0.003s] ( 1/37) clocks child::tests::exiting_threads_helper
+        PASS [   0.003s] ( 2/37) clocks child::tests::runs_sum
+        PASS [   0.003s] ( 3/37) clocks load::tests::a_window_holds_its_start_and_not_its_end
+        PASS [   0.020s] ( 4/37) clocks energy::tests::scales_parse_exactly
+        PASS [   0.020s] ( 5/37) clocks load::tests::quiet_tail_preserves_observed_other_load
+        PASS [   0.020s] ( 6/37) clocks threads::tests::since_counts_a_new_thread_from_zero
+        PASS [   0.020s] ( 7/37) clocks linux_counts::tests::pmu_selection_requires_a_complete_readable_hybrid_pair
+        PASS [   0.020s] ( 8/37) clocks load::tests::newly_busy_tail_still_marks_the_run_busy
+        PASS [   0.020s] ( 9/37) clocks load::tests::busy_starts_at_one_cpu_of_other_load_or_steal
+        PASS [   0.020s] (10/37) clocks load::tests::quiet_tail_preserves_observed_steal
+        PASS [   0.003s] (11/37) clocks tests::busy_gaps_require_work
+        PASS [   0.020s] (12/37) clocks load::tests::a_stat_line_parses_past_any_command_name
+        PASS [   0.016s] (13/37) clocks summary::tests::the_change_is_the_geometric_mean_of_the_ratios
+        PASS [   0.016s] (14/37) clocks summary::tests::exact_mean_totals_are_every_sample_summed
+        PASS [   0.016s] (15/37) clocks summary::tests::a_slow_sample_among_few_counts_in_full
+        PASS [   0.016s] (16/37) clocks tests::counts_subtract_and_rate
+        PASS [   0.034s] (17/37) clocks load::tests::descriptions_weigh_windows_by_length_and_name_busy_ones
+        PASS [   0.034s] (18/37) clocks linux_counts::tests::an_attr_is_perf_event_attr_v0_counting_one_thread_unscaled
+        PASS [   0.003s] (19/37) clocks summary::tests::t_p_values_match_the_tables
+        PASS [   0.003s] (20/37) clocks load::tests::quiet_tail_still_extends_a_quiet_window
+        PASS [   0.017s] (21/37) clocks other_code::tests::functions_are_distinct_and_large
+        PASS [   0.018s] (22/37) clocks summary::tests::a_mean_is_total_time_over_total_work
+        PASS [   0.018s] (23/37) clocks summary::tests::discoveries_judge_every_cell_at_once
+        PASS [   0.035s] (24/37) clocks load::tests::other_programs_leave_out_our_tree_and_kernel_threads
+        PASS [   0.032s] (25/37) clocks tests::tiny_budgets_still_complete_calls
+        PASS [   0.032s] (26/37) clocks tests::a_measurement_counts_its_calls_and_time
+        PASS [   0.035s] (27/37) clocks tests::prepared_calls_follow_their_writes_and_exclude_gaps
+        PASS [   0.036s] (28/37) clocks tests::idle_gaps_sleep_outside_the_intervals
+        PASS [   0.037s] (29/37) clocks threads::tests::a_busy_thread_shows_its_time
+        PASS [   1.034s] (30/37) clocks energy::tests::package_energy_counts_up_by_a_plausible_amount
+        PASS [   2.809s] (31/37) clocks child::tests::a_childs_exited_threads_count_as_its_own
+        PASS [   2.827s] (32/37) clocks child::tests::a_child_is_timed_and_counted
+        PASS [   2.862s] (33/37) clocks child::tests::a_reaped_childs_cpu_time_is_this_processs
+        PASS [   6.878s] (34/37) clocks child::tests::a_program_we_did_not_start_reads_as_load
+        PASS [  10.888s] (35/37) clocks child::tests::a_running_childs_windows_stay_a_second_long
+        PASS [  12.076s] (36/37) clocks load::tests::ticks_close_a_window_after_a_window_of_time
+        PASS [  16.101s] (37/37) clocks child::tests::a_sibling_beside_the_child_reads_as_load
+────────────
+     Summary [  16.101s] 37 tests run: 37 passed, 4 skipped
