@@ -1,0 +1,46 @@
+From 0471a7702b82c2af5e28523b65125dd8c73dc65f Mon Sep 17 00:00:00 2001
+From: Sam Shackleton <samshackleton-tech@users.noreply.github.com>
+Date: Sat, 24 Oct 2026 14:06:19 +0000
+Subject: [PATCH] DIAGNOSTIC ONLY: chunk-root output to a thread-local buffer,
+ not the stack
+
+---
+ src/ffi_chunk_root.rs | 14 ++++++++++----
+ 1 file changed, 10 insertions(+), 4 deletions(-)
+
+diff --git a/src/ffi_chunk_root.rs b/src/ffi_chunk_root.rs
+index bf23d25..c228521 100644
+--- a/src/ffi_chunk_root.rs
++++ b/src/ffi_chunk_root.rs
+@@ -30,18 +30,24 @@ pub(crate) unsafe fn chunk_root(avx512: bool, input: &[u8], key: &CVWords, flags
+         (blocks, padded.0.as_ptr(), tail)
+     };
+     let packed = flags as u64 | (last_len as u64) << 8 | (whole as u64) << 16;
+-    let mut out = MaybeUninit::<[u8; OUT_LEN]>::uninit();
++    // DIAGNOSTIC ONLY (John's question on #141): the kernel's 32-byte output
++    // goes to a thread-local buffer, not this frame, then is copied out.
++    std::thread_local! {
++        static OUT: core::cell::UnsafeCell<[u8; OUT_LEN]> = const { core::cell::UnsafeCell::new([0; OUT_LEN]) };
++    }
++    let out: *mut u8 = OUT.with(|c| c.get().cast::<u8>());
++    let _ = MaybeUninit::<u8>::uninit();
+     // Sound: `whole` blocks precede `last` in the input, `last` holds 64
+     // readable bytes, `out` 32 writable ones; the caller has the ISA.
+     unsafe {
+         if avx512 {
+             crate::ran_kernel(ffi::blake3_avx512_chunk_root as *const ());
+-            ffi::blake3_avx512_chunk_root(input.as_ptr(), key.as_ptr(), last, packed, out.as_mut_ptr().cast());
++            ffi::blake3_avx512_chunk_root(input.as_ptr(), key.as_ptr(), last, packed, out);
+         } else {
+             crate::ran_kernel(ffi::blake3_sse41_chunk_root as *const ());
+-            ffi::blake3_sse41_chunk_root(input.as_ptr(), key.as_ptr(), last, packed, out.as_mut_ptr().cast());
++            ffi::blake3_sse41_chunk_root(input.as_ptr(), key.as_ptr(), last, packed, out);
+         }
+-        out.assume_init()
++        *out.cast::<[u8; OUT_LEN]>()
+     }
+ }
+ 
+-- 
+2.53.0
+
