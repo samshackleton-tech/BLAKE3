@@ -1,0 +1,29 @@
+   Compiling blake3-servil v0.3.0+2e4fa821f9db07b945dbb2b0d02eb76cb19617b5 (/root/BLAKE3-ring)
+    Finished `release` profile [optimized] target(s) in 1.46s
+────────────
+ Nextest run ID ab9cd2a9-85a6-4f70-a86c-537b951cf2ca with nextest profile: default
+    Starting 1 test across 1 binary (87 tests skipped)
+        FAIL [   0.003s] (1/1) blake3-servil stream::test::test_stream_rooms_are_64_byte_aligned
+  stdout ───
+
+    running 1 test
+    test stream::test::test_stream_rooms_are_64_byte_aligned ... FAILED
+
+    failures:
+
+    failures:
+        stream::test::test_stream_rooms_are_64_byte_aligned
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 87 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'stream::test::test_stream_rooms_are_64_byte_aligned' (2699976) panicked at src/stream.rs:833:9:
+    (message, offset, misalignment): [(0, 0, 16), (1, 0, 16), (2, 0, 16), (3, 0, 16), (4, 0, 16), (5, 0, 16), (6, 0, 16), (7, 0, 16), (8, 0, 16), (9, 0, 16), (9, 65536, 16), (10, 0, 16), (10, 65536, 16), (10, 131072, 16), (10, 196608, 16), (11, 0, 16), (12, 0, 16), (13, 0, 16), (14, 0, 16), (15, 0, 16), (16, 0, 16), (17, 0, 16), (18, 0, 16), (19, 0, 16), (20, 0, 16), (21, 0, 16), (22, 0, 16), (22, 65536, 16), (23, 0, 16), (23, 65536, 16), (23, 131072, 16), (23, 196608, 16), (24, 0, 16), (25, 0, 16), (26, 0, 16), (27, 0, 16), (28, 0, 16), (29, 0, 16), (30, 0, 16), (31, 0, 16), (32, 0, 16), (33, 0, 16), (34, 0, 16), (35, 0, 16), (35, 65536, 16), (36, 0, 16), (36, 65536, 16), (36, 131072, 16), (36, 196608, 16), (37, 0, 16), (38, 0, 16), (39, 0, 16), (40, 0, 16), (41, 0, 16), (42, 0, 16), (43, 0, 16), (44, 0, 16), (45, 0, 16), (46, 0, 16), (47, 0, 16), (48, 0, 16), (48, 65536, 16), (49, 0, 16), (49, 65536, 16), (49, 131072, 16), (49, 196608, 16), (50, 0, 16), (51, 0, 16)]
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+  Cancelling due to test failure
+────────────
+     Summary [   0.004s] 1 test run: 0 passed, 1 failed, 87 skipped
+        FAIL [   0.003s] (1/1) blake3-servil stream::test::test_stream_rooms_are_64_byte_aligned
+error: test run failed
