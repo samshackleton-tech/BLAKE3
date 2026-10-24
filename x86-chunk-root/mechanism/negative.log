@@ -1,0 +1,29 @@
+   Compiling blake3-servil v0.3.0+2e4fa821f9db07b945dbb2b0d02eb76cb19617b5 (/root/BLAKE3-chunk-root)
+    Finished `release` profile [optimized] target(s) in 1.54s
+────────────
+ Nextest run ID ce0a350d-62a7-4c1e-a15c-79b849864e2f with nextest profile: default
+    Starting 1 test across 1 binary (86 tests skipped)
+        FAIL [   0.002s] (1/1) blake3-servil chunk_root::test::test_chunk_root_kernel_touches_no_stack
+  stdout ───
+
+    running 1 test
+    test chunk_root::test::test_chunk_root_kernel_touches_no_stack ... FAILED
+
+    failures:
+
+    failures:
+        chunk_root::test::test_chunk_root_kernel_touches_no_stack
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 86 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'chunk_root::test::test_chunk_root_kernel_touches_no_stack' (2377688) panicked at src/ffi_chunk_root.rs:110:17:
+    line 244: push:         push rbx
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+  Cancelling due to test failure
+────────────
+     Summary [   0.003s] 1 test run: 0 passed, 1 failed, 86 skipped
+        FAIL [   0.002s] (1/1) blake3-servil chunk_root::test::test_chunk_root_kernel_touches_no_stack
+error: test run failed
