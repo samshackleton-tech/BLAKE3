@@ -1,0 +1,29 @@
++0x1d68  call   ad2f0 <blake3_servil::lanes::hash_over_pool>
++0x1d6d  cmpb   $0x1,%fs:0xffffffffffffff80
++0x1d76  jne    24bd9c <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x21ac>
++0x1d7c  cmpq   $0x0,(%r14)
++0x1d80  jne    24bcb2 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x20c2>
++0x1d86  movq   $0xffffffffffffffff,(%r14)
++0x1d8d  mov    0x18(%r14),%rsi
++0x1d91  mov    0x20(%r14),%rax
++0x1d95  mov    %eax,%edi
++0x1d97  and    $0x3ff,%edi
++0x1d9d  cmp    %rsi,%rdi
++0x1da0  jae    24bfce <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x23de>
++0x1da6  mov    0x10(%r14),%rcx
++0x1daa  shl    $0x5,%edi
++0x1dad  movdqu 0x4f0(%rsp),%xmm0
++0x1db6  movdqu 0x500(%rsp),%xmm1
++0x1dbf  movdqu %xmm1,0x10(%rcx,%rdi,1)
++0x1dc5  movdqu %xmm0,(%rcx,%rdi,1)
++0x1dca  inc    %rax
++0x1dcd  mov    %rax,0x20(%r14)
++0x1dd1  incq   (%r14)
++0x1dd4  add    $0xc78,%rsp
++0x1ddb  pop    %rbx
++0x1ddc  pop    %r12
++0x1dde  pop    %r13
++0x1de0  pop    %r14
++0x1de2  pop    %r15
++0x1de4  pop    %rbp
++0x1de5  ret

@@ -1,0 +1,14 @@
+side/thread                               cycles                instructions  ex_no_retire.load_not_comp   ls_bad_status2.stli_other        ls_l1_d_tlb_miss.all
+new/duo-copy-0                       131,401,971                 181,802,727                  11,041,656                   1,876,811                           0
+new/duo-copy-1                       127,401,911                 199,402,991                  11,181,677                   2,029,039                           0
+new/main                             176,602,649                 355,005,325                  32,264,839                   1,962,940                     266,399
+old/duo-copy-0                        78,401,176                 173,602,604                   6,781,017                     791,185                           0
+old/duo-copy-1                        82,401,236                 170,202,553                   6,420,963                     612,918                           0
+old/main                             194,602,919                 387,205,808                  27,364,104                   1,548,319                     272,408
+
+new/duo-copy-0       IPC=1.384  per 1k instructions: store-load conflicts=10.323  load-not-complete cycles=60.7  smt-contention slots=0.0  dTLB misses=0.000
+new/duo-copy-1       IPC=1.565  per 1k instructions: store-load conflicts=10.176  load-not-complete cycles=56.1  smt-contention slots=0.0  dTLB misses=0.000
+new/main             IPC=2.010  per 1k instructions: store-load conflicts=5.529  load-not-complete cycles=90.9  smt-contention slots=0.0  dTLB misses=0.750
+old/duo-copy-0       IPC=2.214  per 1k instructions: store-load conflicts=4.557  load-not-complete cycles=39.1  smt-contention slots=0.0  dTLB misses=0.000
+old/duo-copy-1       IPC=2.066  per 1k instructions: store-load conflicts=3.601  load-not-complete cycles=37.7  smt-contention slots=0.0  dTLB misses=0.000
+old/main             IPC=1.990  per 1k instructions: store-load conflicts=3.999  load-not-complete cycles=70.7  smt-contention slots=0.0  dTLB misses=0.704

@@ -1,0 +1,42 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 1K of event 'ls_bad_status2.stli_other/period=1009/u'
+# Event count (approx.): 1601283
+#
+# Overhead       Samples  Symbol                                                           
+# ........  ............  .................................................................
+#
+    27.66%           439  [.] _blake3_compress_in_place_avx512
+    17.08%           271  [.] blake3_servil::hash_serial
+    13.23%           210  [.] blake3_servil::hash_serial_from
+     1.70%            27  [.] bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>
+     0.06%             1  [k] 0xffffffff81200ef0
+     0.06%             1  [k] 0xffffffff815edfbc
+
+
+# Samples: 1K of event 'cpu/cycles,period=100003/u'
+# Event count (approx.): 167205016
+#
+# Overhead       Samples  Symbol                                                                            
+# ........  ............  ..................................................................................
+#
+    37.98%           635  [.] _blake3_compress_in_place_avx512
+     8.43%           141  [.] blake3_servil::hash_serial
+     4.31%            72  [.] blake3_servil::hash_serial_from
+     2.93%            49  [.] bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>
+     0.96%            16  [.] bench_hashes::hash_batch::<bench_hashes::use_digest>
+     0.54%             9  [.] 0x00000000001b0a13
+     0.30%             5  [.] 0x00000000001b0a28
+     0.24%             4  [.] 0x00000000001b0a04
+     0.12%             2  [.] 0x00000000001b0a00
+     0.06%             1  [.] <blake3_servil::hasher::ChunkState<blake3_servil::platform::Platform>>::absorb
+     0.06%             1  [k] 0xffffffff81200b90
+     0.06%             1  [.] 0x00000000001b0a36
+
+
+#
+# (Cannot load tips.txt file, please install perf!)
+#

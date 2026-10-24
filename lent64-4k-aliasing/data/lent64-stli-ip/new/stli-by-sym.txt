@@ -1,0 +1,53 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 3K of event 'ls_bad_status2.stli_other/period=1009/u'
+# Event count (approx.): 3268151
+#
+# Overhead       Samples  Symbol                                                                            
+# ........  ............  ..................................................................................
+#
+    20.47%           663  [.] bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>
+    15.68%           508  [.] _blake3_compress_in_place_avx512
+     7.22%           234  [.] blake3_servil::hash_serial_from
+     6.61%           214  [.] blake3_servil::hash_serial
+     5.68%           184  [.] bench_hashes::hash_batch::<bench_hashes::use_digest>
+     2.32%            75  [.] 0x00000000001b0a04
+     1.36%            44  [.] 0x00000000001b0a36
+     0.40%            13  [.] <blake3_servil::hasher::ChunkState<blake3_servil::platform::Platform>>::absorb
+     0.15%             5  [.] 0x00000000001b0a00
+     0.09%             3  [.] 0x00000000001b0a13
+     0.06%             2  [.] 0x00000000001b0a28
+
+
+# Samples: 2K of event 'cpu/cycles,period=100003/u'
+# Event count (approx.): 210306309
+#
+# Overhead       Samples  Symbol                                                                                            
+# ........  ............  ..................................................................................................
+#
+    44.08%           927  [.] _blake3_compress_in_place_avx512
+     8.08%           170  [.] blake3_servil::hash_serial
+     5.71%           120  [.] blake3_servil::hash_serial_from
+     2.19%            46  [.] bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>
+     0.86%            18  [.] 0x00000000001b0a13
+     0.57%            12  [.] 0x00000000001b0a36
+     0.43%             9  [.] bench_hashes::hash_batch::<bench_hashes::use_digest>
+     0.38%             8  [.] 0x00000000001b0a00
+     0.38%             8  [.] 0x00000000001b0a04
+     0.33%             7  [.] <blake3_servil::hasher::ChunkState<blake3_servil::platform::Platform>>::absorb
+     0.14%             3  [.] 0x00000000001b0a28
+     0.10%             2  [.] std::sys::backtrace::__rust_begin_short_backtrace::<<bench_hashes::Duo>::new::{closure#0}, ()>
+     0.05%             1  [.] <std::sys::pal::unix::time::Timespec>::sub_timespec
+     0.05%             1  [.] bench_hashes::take_buffers
+     0.05%             1  [k] 0xffffffff81200b90
+     0.05%             1  [k] 0xffffffff81784dd5
+     0.05%             1  [k] 0xffffffff81b1b83b
+     0.05%             1  [.] 0x00000000000b3cf8
+
+
+#
+# (Cannot load tips.txt file, please install perf!)
+#
