@@ -132,6 +132,18 @@ pub(crate) const MIN_SPLIT_LEN: usize = if cfg!(miri) { 16 * 1024 } else { 512 *
 /// The shortest piece: eight chunks, a hybrid kernel's worth.
 const MIN_PIECE_LEN: usize = 8 * CHUNK_LEN;
 
+/// A tree piece on AVX-512 holds a full sixteen-chunk group. Keep the
+/// existing floor for other platforms, and for batches and collections.
+#[inline]
+fn tree_piece_min(platform: Platform) -> usize {
+    #[cfg(blake3_avx512_ffi)]
+    if matches!(platform, Platform::AVX512) {
+        return 16 * CHUNK_LEN;
+    }
+    let _ = platform;
+    MIN_PIECE_LEN
+}
+
 /// The longest piece.
 const MAX_PIECE_LEN: usize = 128 * CHUNK_LEN;
 
@@ -203,7 +215,7 @@ fn spare_pool() -> Option<(&'static Pool, Caller<'static>)> {
 fn tree_cvs(pool: &Pool, input: &[u8], key: &crate::CVWords, counter: u64, flags: u8) -> (Vec<Piece>, Vec<ChainingValue>) {
     let threads = pool.threads;
     let turn = crate::platform::Sme2Turn::take(Platform::detect(), true);
-    let (pieces, own) = cut_with_prefix(input.len(), threads, prefix_for(&turn, input.len(), threads));
+    let (pieces, own) = cut_with_prefix(input.len(), threads, prefix_for(&turn, input.len(), threads), tree_piece_min(turn.platform()));
     let mut cvs = vec![ChainingValue::default(); pieces.len()];
     let work = Work::Tree { input, pieces: &pieces, cvs: cvs.as_mut_ptr(), key: *key, counter, flags };
     pool.run_job(work, pieces.len(), own, turn.platform());
@@ -419,15 +431,17 @@ struct Piece {
 /// piece starts at a multiple of its own length, so each is a whole
 /// subtree at its offset. Returns the pieces and how many form the prefix
 /// (none when `prefix` rounds to nothing). `prefix` is below `len`; `len`
-/// exceeds [`MIN_PIECE_LEN`] and at least two threads share it, so two or
-/// more pieces come back.
-fn cut_with_prefix(len: usize, threads: usize, prefix: usize) -> (Vec<Piece>, usize) {
+/// exceeds `minimum` and at least two threads share it, so two or more
+/// pieces come back. `minimum` is a power of two within the piece bounds;
+/// non-final pieces are at least that long.
+fn cut_with_prefix(len: usize, threads: usize, prefix: usize, minimum: usize) -> (Vec<Piece>, usize) {
+    debug_assert!(minimum.is_power_of_two() && (MIN_PIECE_LEN..=MAX_PIECE_LEN).contains(&minimum));
     assert!(threads >= 2, "a serial call hashes the input whole");
-    assert!(len > MIN_PIECE_LEN, "one piece has no parent to merge; hash it whole instead");
+    assert!(len > minimum, "one piece has no parent to merge; hash it whole instead");
     assert!(prefix < len, "the SME2 thread's prefix leaves the pool some input");
     let mut pieces = Vec::with_capacity(64);
     let mut offset = 0;
-    let first_after = next_piece_len(len - prefix, threads);
+    let first_after = next_piece_len(len - prefix, threads).max(minimum);
     let prefix = prefix / first_after * first_after;
     while offset < prefix {
         let piece = MAX_PREFIX_PIECE_LEN.min(1 << (usize::BITS - 1 - (prefix - offset).leading_zeros()));
@@ -436,8 +450,8 @@ fn cut_with_prefix(len: usize, threads: usize, prefix: usize) -> (Vec<Piece>, us
     }
     let own = pieces.len();
     let mut cap = if own > 0 { pieces[own - 1].len } else { MAX_PIECE_LEN };
-    while len - offset > MIN_PIECE_LEN {
-        let piece = next_piece_len(len - offset, threads).min(cap);
+    while len - offset > minimum {
+        let piece = next_piece_len(len - offset, threads).max(minimum).min(cap);
         if len - offset <= piece {
             break;
         }
@@ -505,7 +519,9 @@ fn merge_to_children(pieces: &[Piece], cvs: &mut [ChainingValue], key: &crate::C
     debug_assert!(pieces.windows(2).all(|w| w[0].len.is_power_of_two() && w[0].len >= w[1].len && w[0].offset + w[0].len == w[1].offset));
     let platform = pool_platform();
     let mut count = cvs.len();
-    let mut width = MIN_PIECE_LEN;
+    // Start where the smallest whole pieces live. A larger floor can
+    // leave no pair at the old 8 KiB level; that level would merge nothing.
+    let mut width = pieces[pieces.len() - 2].len;
     let mut out = [0u8; crate::MAX_SIMD_DEGREE_OR_2 * crate::OUT_LEN];
     while count > 2 {
         let prefix = pieces.partition_point(|p| p.len > width);
@@ -536,7 +552,7 @@ fn merge_to_children(pieces: &[Piece], cvs: &mut [ChainingValue], key: &crate::C
 /// [`cut_with_prefix`] with no prefix (the tests').
 #[cfg(test)]
 fn cut_subtrees(len: usize, threads: usize) -> Vec<Piece> {
-    cut_with_prefix(len, threads, 0).0
+    cut_with_prefix(len, threads, 0, MIN_PIECE_LEN).0
 }
 
 /// The chaining value of the subtree covering `pieces` (in offset order,
@@ -1524,7 +1540,7 @@ mod test {
         for len in [MIN_PIECE_LEN + 1, 64 * CHUNK_LEN, 100 * CHUNK_LEN + 7, 1 << 20, 3 << 20, input.len()] {
             for threads in [2, 3, 4, 16] {
                 let prefix = sme2_prefix(len, threads);
-                let (pieces, own) = cut_with_prefix(len, threads, prefix);
+                let (pieces, own) = cut_with_prefix(len, threads, prefix, MIN_PIECE_LEN);
                 assert!(pieces.len() >= 2 && own < pieces.len());
                 assert!(pieces[..own].iter().map(|p| p.len).sum::<usize>() <= prefix);
                 let mut offset = 0;
@@ -1541,6 +1557,64 @@ mod test {
                     .map(|p| {
                         crate::hash_all_at_once(&input[p.offset..][..p.len], crate::IV, (p.offset / CHUNK_LEN) as u64, 0, Platform::detect()).chaining_value()
                     })
+                    .collect();
+                assert_eq!(merge_root(&pieces, &mut cvs, crate::IV, 0), crate::convenience::hash(&input[..len]), "{len} {threads}");
+            }
+        }
+    }
+
+    /// Inspect the actual cutter, rather than a separate model of it.
+    #[test]
+    fn test_tree_group_piece_counts() {
+        for threads in [2, 8, 24, 48, 96, 192] {
+            for len in [512 << 10, 1 << 20, 2 << 20, 8 << 20] {
+                for minimum in [8 << 10, 16 << 10] {
+                    let (pieces, own) = cut_with_prefix(len, threads, 0, minimum);
+                    assert_eq!(own, 0);
+                    let mut counts = std::collections::BTreeMap::<usize, usize>::new();
+                    for p in &pieces {
+                        *counts.entry(p.len / 1024).or_default() += 1;
+                    }
+                    eprintln!("tree cut: bytes={len} threads={threads} minimum={minimum} pieces={} KiB:count={counts:?}", pieces.len());
+                    if len == 512 << 10 && threads == 48 {
+                        assert_eq!(pieces.len(), len / minimum);
+                        assert!(pieces.iter().all(|p| p.len == minimum));
+                    }
+                }
+            }
+        }
+        assert_eq!(tree_piece_min(Platform::Portable), MIN_PIECE_LEN);
+        #[cfg(blake3_avx512_ffi)]
+        assert_eq!(tree_piece_min(Platform::AVX512), 16 * CHUNK_LEN);
+        #[cfg(any(blake3_avx2_ffi, blake3_avx2_rust))]
+        assert_eq!(tree_piece_min(Platform::AVX2), MIN_PIECE_LEN);
+        #[cfg(blake3_neon)]
+        assert_eq!(tree_piece_min(Platform::NEON), MIN_PIECE_LEN);
+        #[cfg(blake3_sme2)]
+        assert_eq!(tree_piece_min(Platform::SME2), MIN_PIECE_LEN);
+    }
+
+    /// Full-group cuts retain subtree alignment, handle a short final
+    /// piece, and merge correctly even when there is no 8 KiB pair.
+    #[test]
+    fn test_full_group_tree_cuts_hash_correctly() {
+        let mut input = vec![0u8; (1 << 20) + 17];
+        crate::test::paint_test_input(&mut input);
+        let platform = Platform::detect();
+        for len in [(16 << 10) + 1, (32 << 10) - 1, 32 << 10, (64 << 10) + 1, 512 << 10, (512 << 10) + 1, input.len()] {
+            for threads in [2, 3, 24, 48, 96] {
+                let (pieces, _) = cut_with_prefix(len, threads, 0, 16 * CHUNK_LEN);
+                assert!(pieces.len() >= 2);
+                assert_eq!(pieces.iter().map(|p| p.len).sum::<usize>(), len);
+                for pair in pieces.windows(2) {
+                    assert!(pair[0].len >= 16 * CHUNK_LEN && pair[0].len.is_power_of_two());
+                    assert_eq!(pair[0].offset % pair[0].len, 0);
+                    assert!(pair[0].len >= pair[1].len);
+                    assert_eq!(pair[0].offset + pair[0].len, pair[1].offset);
+                }
+                let mut cvs: Vec<ChainingValue> = pieces
+                    .iter()
+                    .map(|p| crate::hash_all_at_once(&input[p.offset..][..p.len], crate::IV, (p.offset / CHUNK_LEN) as u64, 0, platform).chaining_value())
                     .collect();
                 assert_eq!(merge_root(&pieces, &mut cvs, crate::IV, 0), crate::convenience::hash(&input[..len]), "{len} {threads}");
             }
