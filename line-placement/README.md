@@ -181,7 +181,7 @@ Results are in `retrospective/`.
   - Small ManyMessages batches have means ×0.82–0.83, with only 11 of 16
     pairs faster (bimodal by layout). That needs its own look.
 
-**Addendum (11:25 UTC):** Devon's tool on the base built with the diagnostic
+**Addendum (11:13 UTC):** Devon's tool on the base built with the diagnostic
 64-byte alignment (`devon-align64base-{1,2}.out`) judges no cell sensitive,
 one-shot or batch. It exits 3: "no control cell was judged sensitive: the
 check cannot see the effect here". Aligned buffers remove the batch windows

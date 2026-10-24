@@ -1,7 +1,7 @@
 # Solo ManyMessages: a per-process state, about 1.6×, set by where the process may run
 
 AMD EPYC 9255 (4 CCDs: L3 0 = CPUs 0–5 and 24–29, L3 2 = 6–11 and 30–35, …),
-Ubuntu 26.04. October 24, 2026, 11:45–12:30 UTC. All runs are
+Ubuntu 26.04. October 24, 2026, 11:15–11:30 UTC. All runs are
 `--contenders blake3-servil-st --points 64[,256] --for-regression-check --rounds 24`.
 The binary is servil b94e2fa with bench #67 plus `diag-align64` (buffers aligned,
 so #65's windows are absent), unless noted. These are diagnostics, not speed
