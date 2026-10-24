@@ -1,0 +1,10 @@
+scanned 256 offsets x 16 cells, rescanned 91 twice; confirming 8: thread-stack+3168 (1.01x the median at its lowest) against thread-stack+1648, thread-stack+3360 (1.01x the median at its lowest) against thread-stack+1648, thread-stack+1056 (1.01x the median at its lowest) against thread-stack+208, thread-stack+2272 (1.00x the median at its lowest) against thread-stack+3600, thread-stack+2192 (1.00x the median at its lowest) against thread-stack+96, thread-stack+1200 (1.00x the median at its lowest) against thread-stack+704, thread-stack+2912 (1.00x the median at its lowest) against thread-stack+304, thread-stack+3408 (1.00x the median at its lowest) against thread-stack+864
+confirm thread-stack+3168 against thread-stack+1648: regress exit 0; slower: none
+confirm thread-stack+3360 against thread-stack+1648: regress exit 0; slower: none
+confirm thread-stack+1056 against thread-stack+208: regress exit 0; slower: none
+confirm thread-stack+2272 against thread-stack+3600: regress exit 0; slower: none
+confirm thread-stack+2192 against thread-stack+96: regress exit 0; slower: none
+confirm thread-stack+1200 against thread-stack+704: regress exit 0; slower: none
+confirm thread-stack+2912 against thread-stack+304: regress exit 0; slower: none
+confirm thread-stack+3408 against thread-stack+864: regress exit 0; slower: none
+FAIL: no control cell was judged sensitive: the check cannot see the effect here
