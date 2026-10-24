@@ -1,0 +1,102 @@
+===== /home/samshackleton/work/BLAKE3-peer-evidence/line-placement/drain-hash-lent/map-line16-base-drain.tsv
+shared|Batches one after another, buffers lent (ns/msg)|16         best 8.940 median 8.989 worst 9.161 (1.02x); slow 0/64; default 1.00x
+shared|Batches one after another, buffers lent (ns/msg)|64         best 6.952 median 6.979 worst 7.025 (1.01x); slow 0/64; default 1.00x
+shared|Batches one after another, buffers owned (ns/msg)|16        best 7.503 median 7.549 worst 7.677 (1.02x); slow 0/64; default 1.01x
+shared|Batches one after another, buffers owned (ns/msg)|64        best 6.605 median 6.637 worst 6.738 (1.02x); slow 0/64; default 1.01x
+shared|Messages one after another, buffers lent (ns/B)|256 B       best 1.365 median 1.368 worst 1.376 (1.01x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers lent (ns/B)|64 B        best 1.713 median 1.719 worst 1.757 (1.03x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers owned (ns/B)|256 B      best 1.289 median 1.291 worst 1.292 (1.00x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers owned (ns/B)|64 B       best 1.050 median 1.052 worst 1.535 (1.46x); slow 5/64; default 1.00x: +704, +896, +1088, +1152, +1664
+solo|Batches one after another, buffers lent (ns/msg)|16           best 8.940 median 8.989 worst 9.185 (1.03x); slow 0/256; default 1.00x
+solo|Batches one after another, buffers lent (ns/msg)|64           best 6.929 median 6.978 worst 7.056 (1.02x); slow 0/256; default 1.00x
+solo|Batches one after another, buffers owned (ns/msg)|16          best 7.464 median 7.543 worst 7.733 (1.04x); slow 0/256; default 1.01x
+solo|Batches one after another, buffers owned (ns/msg)|64          best 6.577 median 6.631 worst 6.691 (1.02x); slow 0/256; default 1.00x
+solo|Messages one after another, buffers lent (ns/B)|256 B         best 1.365 median 1.369 worst 1.378 (1.01x); slow 0/256; default 1.00x
+solo|Messages one after another, buffers lent (ns/B)|64 B          best 1.712 median 1.726 worst 1.768 (1.03x); slow 0/256; default 1.02x
+solo|Messages one after another, buffers owned (ns/B)|256 B        best 1.289 median 1.290 worst 1.293 (1.00x); slow 0/256; default 1.00x
+solo|Messages one after another, buffers owned (ns/B)|64 B         best 1.046 median 1.049 worst 1.533 (1.47x); slow 20/256; default 1.00x
+===== /home/samshackleton/work/BLAKE3-peer-evidence/line-placement/drain-hash-lent/map-line16-fix-drain.tsv
+shared|Batches one after another, buffers lent (ns/msg)|16         best 8.945 median 8.985 worst 9.148 (1.02x); slow 0/64; default 1.00x
+shared|Batches one after another, buffers lent (ns/msg)|64         best 6.962 median 6.992 worst 7.040 (1.01x); slow 0/64; default 1.00x
+shared|Batches one after another, buffers owned (ns/msg)|16        best 7.504 median 7.547 worst 7.704 (1.03x); slow 0/64; default 1.01x
+shared|Batches one after another, buffers owned (ns/msg)|64        best 6.613 median 6.639 worst 6.714 (1.02x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers lent (ns/B)|256 B       best 1.322 median 1.324 worst 1.333 (1.01x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers lent (ns/B)|64 B        best 1.613 median 1.616 worst 1.647 (1.02x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers owned (ns/B)|256 B      best 1.244 median 1.245 worst 1.247 (1.00x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers owned (ns/B)|64 B       best 1.303 median 1.305 worst 1.319 (1.01x); slow 0/64; default 1.00x
+solo|Batches one after another, buffers lent (ns/msg)|16           best 8.941 median 8.988 worst 9.200 (1.03x); slow 0/256; default 1.00x
+solo|Batches one after another, buffers lent (ns/msg)|64           best 6.943 median 6.979 worst 7.038 (1.01x); slow 0/256; default 1.00x
+solo|Batches one after another, buffers owned (ns/msg)|16          best 7.469 median 7.541 worst 7.741 (1.04x); slow 0/256; default 1.01x
+solo|Batches one after another, buffers owned (ns/msg)|64          best 6.582 median 6.620 worst 6.673 (1.01x); slow 0/256; default 1.00x
+solo|Messages one after another, buffers lent (ns/B)|256 B         best 1.322 median 1.324 worst 1.334 (1.01x); slow 0/256; default 1.00x
+solo|Messages one after another, buffers lent (ns/B)|64 B          best 1.610 median 1.617 worst 1.650 (1.02x); slow 0/256; default 1.00x
+solo|Messages one after another, buffers owned (ns/B)|256 B        best 1.243 median 1.245 worst 1.248 (1.00x); slow 0/256; default 1.00x
+solo|Messages one after another, buffers owned (ns/B)|64 B         best 1.299 median 1.301 worst 1.304 (1.00x); slow 0/256; default 1.00x
+===== /home/samshackleton/work/BLAKE3-peer-evidence/line-placement/drain-hash-lent/map-line32-base-drain.tsv
+shared|Batches one after another, buffers lent (ns/msg)|16         best 8.927 median 8.964 worst 9.085 (1.02x); slow 0/64; default 1.00x
+shared|Batches one after another, buffers lent (ns/msg)|64         best 6.930 median 6.962 worst 7.003 (1.01x); slow 0/64; default 1.00x
+shared|Batches one after another, buffers owned (ns/msg)|16        best 7.416 median 7.489 worst 7.578 (1.02x); slow 0/64; default 1.01x
+shared|Batches one after another, buffers owned (ns/msg)|64        best 6.596 median 6.620 worst 6.695 (1.02x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers lent (ns/B)|256 B       best 1.366 median 1.368 worst 1.376 (1.01x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers lent (ns/B)|64 B        best 1.708 median 1.715 worst 1.751 (1.03x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers owned (ns/B)|256 B      best 1.186 median 1.188 worst 1.189 (1.00x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers owned (ns/B)|64 B       best 1.050 median 1.052 worst 1.544 (1.47x); slow 4/64; default 1.00x: +704, +896, +1088, +1152
+solo|Batches one after another, buffers lent (ns/msg)|16           best 8.893 median 8.964 worst 9.128 (1.03x); slow 0/256; default 1.01x
+solo|Batches one after another, buffers lent (ns/msg)|64           best 6.914 median 6.953 worst 7.011 (1.01x); slow 0/256; default 1.00x
+solo|Batches one after another, buffers owned (ns/msg)|16          best 7.396 median 7.478 worst 7.696 (1.04x); slow 0/256; default 1.01x
+solo|Batches one after another, buffers owned (ns/msg)|64          best 6.566 median 6.603 worst 6.672 (1.02x); slow 0/256; default 1.00x
+solo|Messages one after another, buffers lent (ns/B)|256 B         best 1.364 median 1.368 worst 1.377 (1.01x); slow 0/256; default 1.01x
+solo|Messages one after another, buffers lent (ns/B)|64 B          best 1.709 median 1.723 worst 1.761 (1.03x); slow 0/256; default 1.03x
+solo|Messages one after another, buffers owned (ns/B)|256 B        best 1.186 median 1.188 worst 1.190 (1.00x); slow 0/256; default 1.00x
+solo|Messages one after another, buffers owned (ns/B)|64 B         best 1.047 median 1.049 worst 1.534 (1.47x); slow 16/256; default 1.00x
+===== /home/samshackleton/work/BLAKE3-peer-evidence/line-placement/drain-hash-lent/map-line32-fix-drain.tsv
+shared|Batches one after another, buffers lent (ns/msg)|16         best 8.928 median 8.974 worst 9.092 (1.02x); slow 0/64; default 1.00x
+shared|Batches one after another, buffers lent (ns/msg)|64         best 6.927 median 6.952 worst 6.983 (1.01x); slow 0/64; default 1.00x
+shared|Batches one after another, buffers owned (ns/msg)|16        best 7.440 median 7.486 worst 7.548 (1.01x); slow 0/64; default 1.01x
+shared|Batches one after another, buffers owned (ns/msg)|64        best 6.584 median 6.610 worst 6.655 (1.01x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers lent (ns/B)|256 B       best 1.322 median 1.323 worst 1.333 (1.01x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers lent (ns/B)|64 B        best 1.605 median 1.608 worst 1.653 (1.03x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers owned (ns/B)|256 B      best 1.153 median 1.154 worst 1.156 (1.00x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers owned (ns/B)|64 B       best 0.940 median 0.942 worst 0.950 (1.01x); slow 0/64; default 1.01x
+solo|Batches one after another, buffers lent (ns/msg)|16           best 8.894 median 8.965 worst 9.159 (1.03x); slow 0/256; default 1.01x
+solo|Batches one after another, buffers lent (ns/msg)|64           best 6.915 median 6.945 worst 7.000 (1.01x); slow 0/256; default 1.00x
+solo|Batches one after another, buffers owned (ns/msg)|16          best 7.401 median 7.471 worst 7.677 (1.04x); slow 0/256; default 1.00x
+solo|Batches one after another, buffers owned (ns/msg)|64          best 6.562 median 6.593 worst 6.653 (1.01x); slow 0/256; default 1.00x
+solo|Messages one after another, buffers lent (ns/B)|256 B         best 1.321 median 1.325 worst 1.337 (1.01x); slow 0/256; default 1.00x
+solo|Messages one after another, buffers lent (ns/B)|64 B          best 1.602 median 1.614 worst 1.656 (1.03x); slow 0/256; default 1.01x
+solo|Messages one after another, buffers owned (ns/B)|256 B        best 1.152 median 1.154 worst 1.157 (1.00x); slow 0/256; default 1.00x
+solo|Messages one after another, buffers owned (ns/B)|64 B         best 0.935 median 0.939 worst 0.943 (1.01x); slow 0/256; default 1.01x
+===== /home/samshackleton/work/BLAKE3-peer-evidence/line-placement/drain-hash-lent/map-line48-base-drain.tsv
+shared|Batches one after another, buffers lent (ns/msg)|16         best 8.991 median 9.028 worst 9.231 (1.03x); slow 0/64; default 1.00x
+shared|Batches one after another, buffers lent (ns/msg)|64         best 6.953 median 7.010 worst 7.055 (1.01x); slow 0/64; default 1.00x
+shared|Batches one after another, buffers owned (ns/msg)|16        best 7.544 median 7.575 worst 7.799 (1.03x); slow 0/64; default 1.00x
+shared|Batches one after another, buffers owned (ns/msg)|64        best 6.626 median 6.659 worst 6.779 (1.02x); slow 0/64; default 1.01x
+shared|Messages one after another, buffers lent (ns/B)|256 B       best 1.366 median 1.368 worst 1.376 (1.01x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers lent (ns/B)|64 B        best 1.709 median 1.716 worst 1.752 (1.03x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers owned (ns/B)|256 B      best 1.310 median 1.311 worst 1.313 (1.00x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers owned (ns/B)|64 B       best 1.050 median 1.052 worst 1.539 (1.47x); slow 3/64; default 1.00x: +704, +896, +1152
+solo|Batches one after another, buffers lent (ns/msg)|16           best 8.988 median 9.039 worst 9.232 (1.03x); slow 0/256; default 1.00x
+solo|Batches one after another, buffers lent (ns/msg)|64           best 6.939 median 7.001 worst 7.064 (1.02x); slow 0/256; default 1.01x
+solo|Batches one after another, buffers owned (ns/msg)|16          best 7.494 median 7.572 worst 7.787 (1.04x); slow 0/256; default 1.01x
+solo|Batches one after another, buffers owned (ns/msg)|64          best 6.594 median 6.655 worst 6.720 (1.02x); slow 0/256; default 1.01x
+solo|Messages one after another, buffers lent (ns/B)|256 B         best 1.365 median 1.368 worst 1.377 (1.01x); slow 0/256; default 1.00x
+solo|Messages one after another, buffers lent (ns/B)|64 B          best 1.713 median 1.726 worst 1.765 (1.03x); slow 0/256; default 1.00x
+solo|Messages one after another, buffers owned (ns/B)|256 B        best 1.309 median 1.311 worst 1.314 (1.00x); slow 0/256; default 1.00x
+solo|Messages one after another, buffers owned (ns/B)|64 B         best 1.047 median 1.049 worst 1.535 (1.47x); slow 12/256; default 1.00x
+===== /home/samshackleton/work/BLAKE3-peer-evidence/line-placement/drain-hash-lent/map-line48-fix-drain.tsv
+shared|Batches one after another, buffers lent (ns/msg)|16         best 8.999 median 9.046 worst 9.213 (1.02x); slow 0/64; default 1.00x
+shared|Batches one after another, buffers lent (ns/msg)|64         best 6.945 median 6.979 worst 7.029 (1.01x); slow 0/64; default 1.00x
+shared|Batches one after another, buffers owned (ns/msg)|16        best 7.541 median 7.581 worst 7.736 (1.03x); slow 0/64; default 1.00x
+shared|Batches one after another, buffers owned (ns/msg)|64        best 6.615 median 6.641 worst 6.736 (1.02x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers lent (ns/B)|256 B       best 1.322 median 1.323 worst 1.331 (1.01x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers lent (ns/B)|64 B        best 1.604 median 1.608 worst 1.642 (1.02x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers owned (ns/B)|256 B      best 1.264 median 1.265 worst 1.266 (1.00x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers owned (ns/B)|64 B       best 1.384 median 1.386 worst 1.406 (1.02x); slow 0/64; default 1.00x
+solo|Batches one after another, buffers lent (ns/msg)|16           best 8.990 median 9.047 worst 9.288 (1.03x); slow 0/256; default 1.00x
+solo|Batches one after another, buffers lent (ns/msg)|64           best 6.931 median 6.975 worst 7.043 (1.02x); slow 0/256; default 1.01x
+solo|Batches one after another, buffers owned (ns/msg)|16          best 7.496 median 7.576 worst 7.819 (1.04x); slow 0/256; default 1.01x
+solo|Batches one after another, buffers owned (ns/msg)|64          best 6.592 median 6.625 worst 6.703 (1.02x); slow 0/256; default 1.01x
+solo|Messages one after another, buffers lent (ns/B)|256 B         best 1.321 median 1.323 worst 1.334 (1.01x); slow 0/256; default 1.00x
+solo|Messages one after another, buffers lent (ns/B)|64 B          best 1.604 median 1.609 worst 1.647 (1.03x); slow 0/256; default 1.01x
+solo|Messages one after another, buffers owned (ns/B)|256 B        best 1.263 median 1.265 worst 1.269 (1.00x); slow 0/256; default 1.00x
+solo|Messages one after another, buffers owned (ns/B)|64 B         best 1.380 median 1.381 worst 1.385 (1.00x); slow 0/256; default 1.00x

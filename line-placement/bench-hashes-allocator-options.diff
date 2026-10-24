@@ -36,7 +36,7 @@ index 3058bb6..6f31ef6 100644
 +# stores have committed before the timed call.
 +diag-drain = []
 diff --git a/src/main.rs b/src/main.rs
-index 695a062..f7e5511 100644
+index 695a062..e1857a3 100644
 --- a/src/main.rs
 +++ b/src/main.rs
 @@ -1953,6 +1953,109 @@ impl std::hash::BuildHasher for Seeded {
@@ -166,7 +166,20 @@ index 695a062..f7e5511 100644
              |produced| call(black_box(produced)),
          );
          // The write and the call, both the program's work (FROZEN.md, Zooko,
-@@ -5816,6 +5927,9 @@ fn samples_header(machine: &MachineMetadata, run: &[(String, String)]) -> String
+@@ -3847,6 +3958,12 @@ fn hash_lent(
+         let buffer = &mut buffers[0];
+         buffer.clear();
+         buffer.extend_from_slice(black_box(input));
++        // Diagnostic (`--features diag-drain`): the copy's stores drained
++        // before the call. Not for measurements.
++        #[cfg(all(feature = "diag-drain", target_arch = "x86_64"))]
++        unsafe {
++            core::arch::x86_64::_mm_mfence()
++        };
+         hash_in_memory(algorithm, buffer, in_memory, 1, &mut consume);
+     }
+     keep_buffers(1, input.len(), buffers);
+@@ -5816,6 +5933,9 @@ fn samples_header(machine: &MachineMetadata, run: &[(String, String)]) -> String
          writeln!(out, "# {key}: {value}").unwrap();
      }
      writeln!(out, "# power: {}", machine.describe_power()).unwrap();
@@ -176,7 +189,7 @@ index 695a062..f7e5511 100644
      writeln!(out, "# load: {}", clocks::load::describe(&machine.load)).unwrap();
      let windows: Vec<String> = machine
          .load
-@@ -6028,6 +6142,9 @@ fn generate_text(
+@@ -6028,6 +6148,9 @@ fn generate_text(
          "  {RUSTC_VERSION}; target {BUILD_TARGET}; features {TARGET_FEATURES}"
      )
      .unwrap();

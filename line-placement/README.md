@@ -107,13 +107,16 @@ thread's input: 64 B at 2128/2144/2160, 256 B at 2576/2592/2608, align64 at
 
 ## Follow-up (October 24, 10:20–11:10 UTC): kernel variants, Devon's tool, a retrospective
 
-### Correcting my hypothesis
+### Correcting my hypothesis (itself wrong; see the 13:20 result below)
 
-The lent cells do not go through `take_prepared_sample`. They call `hash()` in a
-loop over one buffer that nothing writes; each digest goes to a ring of 1024
-32-byte slots. So "the bench's write just before the call" cannot be the
-mechanism. An mfence after the prepared write (`diag-drain`) is off this path
-and changed nothing (`kernel-variants/maps/map-*-drain.tsv`).
+~~The lent cells do not go through `take_prepared_sample`. They call `hash()`
+in a loop over one buffer that nothing writes.~~ **Wrong.** The lent cells do
+not go through `take_prepared_sample`, but `hash_lent` copies the input into a
+kept buffer (`extend_from_slice`) right before every call, so the copy's stores
+are in flight when the hash loads the message. The first mfence, after
+`take_prepared_sample`'s write, was off this path and changed nothing
+(`kernel-variants/maps/map-*-drain.tsv`). The fence in the right place is the
+last section below.
 
 ### Variants of the AVX-512 chunk-root kernel's block load
 
@@ -199,3 +202,25 @@ solo 16–24/256, up to 1.48×). The base has them at 16/32/48, at 1.05.
 
 Devon's tool (`devon-pick-{1,2}.out`) at default glibc placement judges neither
 64 B cell sensitive. As on every build, it does judge the batch cells sensitive.
+
+## The fence in the right place (13:00–13:20 UTC): the copy's stores are the cause
+
+This run adds an mfence right after `hash_lent`'s copy (`diag-drain`, now in the
+right place; the diff is updated). Buffers sit 16, 32 or 48 bytes into a line.
+Lent 64 B medians in ns/B (`drain-hash-lent/`):
+
+| build | 16 | 32 | 48 | windows |
+|---|---|---|---|---|
+| base, no fence | 1.05 | 1.05 | 1.05 | yes |
+| base + mfence | 1.719 | 1.715 | 1.716 | none (0/64, 0/256) |
+| #141, no fence | 1.30 | 0.94 | 1.38 | none |
+| #141 + mfence | 1.616 | 1.608 | 1.608 | none |
+
+The fence costs about 43 ns a call, and placement stops mattering. Both
+placement effects come from the copy's stores still being in flight when the
+hash loads the message:
+- the base's 4 KiB-aliasing windows;
+- #141's cost at 16 and 48. A 64-byte copy is two 32-byte stores, and at those
+  offsets one crosses a line.
+
+John's reading on #141 was right in substance.
