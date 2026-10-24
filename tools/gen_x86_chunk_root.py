@@ -27,8 +27,9 @@ The chunk counter is 0. CHUNK_START goes on the first block, CHUNK_END and
 ROOT on the last. Only the arguments' memory is read or written: no push, no
 spill, no stack scratch, no constant loads (IV and shuffle masks are built
 from immediates). Clobbers rax, rcx, rdx, rdi, r9-r11, xmm0-xmm15 and flags,
-all caller-saved. The sse41 entry needs SSE4.1; the avx512 entry needs
-AVX-512F and AVX-512VL (vprord on xmm).
+all caller-saved (the avx512 entry also ymm10/ymm11, and ends with
+vzeroupper). The sse41 entry needs SSE4.1; the avx512 entry needs
+AVX-512F and AVX-512VL (vprord on xmm) and AVX2 (vextracti128).
 
 The compression body is upstream BLAKE3's blake3_compress_in_place_sse41,
 instruction for instruction, with its rotations rendered per ISA. Proof
@@ -94,7 +95,16 @@ def render(isa, ins):
 def body(isa, block_ptr):
     """Compress xmm0..xmm3 with the block at block_ptr; CV out in xmm0/xmm1."""
     out = []
-    for ins in stream(LOAD.format(p=block_ptr)):
+    load = stream(LOAD.format(p=block_ptr))
+    if isa == 'avx512':
+        # The block in two 32-byte loads, the shape of a 33-64 byte memcpy's
+        # stores: a load inside one store whose line split it is otherwise
+        # held until that store commits (bench-hashes #65 follow-up).
+        out += [f'vmovdqu ymm10, ymmword ptr [{block_ptr}]', f'vmovdqu ymm11, ymmword ptr [{block_ptr}+0x20]',
+                'vmovdqa xmm4, xmm10', 'vextracti128 xmm5, ymm10, 1',
+                'vmovdqa xmm6, xmm11', 'vextracti128 xmm7, ymm11, 1']
+        load = [ins for ins in load if not (ins[0] == 'movups' and '[' in ins[2])]
+    for ins in load:
         out += render(isa, ins)
     out.append('mov al, 7')
     out.append('9:')
@@ -143,7 +153,8 @@ def kernel(isa):
     out += qword_pair(isa, 'xmm2', IV)
     out += ['mov eax, r11d', 'or eax, ecx', f'or eax, {CHUNK_END | ROOT}', 'shl rax, 32', 'or rax, r10'] + row3(isa)
     out += body(isa, 'rdx')
-    out += [f'{x}movups xmmword ptr [r8], xmm0', f'{x}movups xmmword ptr [r8+0x10], xmm1', 'ret']
+    out += [f'{x}movups xmmword ptr [r8], xmm0', f'{x}movups xmmword ptr [r8+0x10], xmm1']
+    out += ['vzeroupper', 'ret'] if isa == 'avx512' else ['ret']
     return out
 
 
