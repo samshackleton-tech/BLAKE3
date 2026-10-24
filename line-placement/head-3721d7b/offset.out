@@ -1,0 +1,17 @@
+scanned 256 offsets x 32 cells, rescanned 152 twice; confirming 8: thread-stack+912 (1.50x the median at its lowest) against thread-stack+1088, thread-stack+3152 (1.11x the median at its lowest) against thread-stack+304, thread-stack+3328 (1.06x the median at its lowest) against thread-stack+1408, thread-stack+3024 (1.05x the median at its lowest) against thread-stack+512, thread-stack+3360 (1.04x the median at its lowest) against thread-stack+3568, thread-stack+3392 (1.04x the median at its lowest) against thread-stack+3552, thread-stack+2320 (1.03x the median at its lowest) against thread-stack+976, thread-stack+3248 (1.03x the median at its lowest) against thread-stack+2640
+confirm thread-stack+912 against thread-stack+1088: regress exit 1; slower: blake3-official|shared|ContinuousMessages|64 B
+confirm thread-stack+3152 against thread-stack+304: regress exit 1; slower: blake3-official|shared|LentMessages|256 B, blake3-official|shared|LentMessages|64 B
+confirm thread-stack+3328 against thread-stack+1408: regress exit 1; slower: blake3-official|shared|ContinuousBatches|16, blake3-official|shared|LentBatches|16, blake3-servil-st|shared|ContinuousBatches|16, blake3-servil-st|shared|LentBatches|16
+confirm thread-stack+3024 against thread-stack+512: regress exit 1; slower: blake3-official|shared|ContinuousBatches|16, blake3-official|shared|LentBatches|16
+confirm thread-stack+3360 against thread-stack+3568: regress exit 1; slower: blake3-official|shared|ContinuousBatches|16, blake3-official|shared|LentBatches|16
+confirm thread-stack+3392 against thread-stack+3552: regress exit 1; slower: blake3-official|shared|ContinuousBatches|16, blake3-official|shared|LentBatches|16
+confirm thread-stack+2320 against thread-stack+976: regress exit 0; slower: none
+confirm thread-stack+3248 against thread-stack+2640: regress exit 0; slower: none
+offset-sensitive: blake3-official|shared|ContinuousBatches|16 (slower at thread-stack+3328 vs thread-stack+1408, thread-stack+3024 vs thread-stack+512, thread-stack+3360 vs thread-stack+3568, thread-stack+3392 vs thread-stack+3552)
+offset-sensitive: blake3-official|shared|ContinuousMessages|64 B (slower at thread-stack+912 vs thread-stack+1088)
+offset-sensitive: blake3-official|shared|LentBatches|16 (slower at thread-stack+3328 vs thread-stack+1408, thread-stack+3024 vs thread-stack+512, thread-stack+3360 vs thread-stack+3568, thread-stack+3392 vs thread-stack+3552)
+offset-sensitive: blake3-official|shared|LentMessages|256 B (slower at thread-stack+3152 vs thread-stack+304)
+offset-sensitive: blake3-official|shared|LentMessages|64 B (slower at thread-stack+3152 vs thread-stack+304)
+offset-sensitive: blake3-servil-st|shared|ContinuousBatches|16 (slower at thread-stack+3328 vs thread-stack+1408)
+offset-sensitive: blake3-servil-st|shared|LentBatches|16 (slower at thread-stack+3328 vs thread-stack+1408)
+ok: immune cells stay immune; the check still sees the effect (blake3-official|shared|LentMessages|64 B, blake3-official|shared|ContinuousMessages|64 B)

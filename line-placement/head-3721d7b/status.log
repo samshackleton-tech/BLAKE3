@@ -1,0 +1,20 @@
+2026-10-24T16:13:57+00:00 generated matches: 0
+2026-10-24T16:14:04+00:00 focused exit=0
+2026-10-24T16:14:06+00:00 release exit=0
+     Summary [   0.070s] 4 tests run: 4 passed, 84 skipped
+     Summary [   0.795s] 107 tests run: 107 passed, 0 skipped
+blake3_servil::hash_serial: 308 instructions, pushes 8, realignments 1
+blake3_servil::hash_serial_on: 262 instructions, pushes 6, realignments 1
+blake3_servil::hash_serial_from: 265 instructions, pushes 6, realignments 1
+blake3_servil::hash_serial: 266 instructions, pushes 8, realignments 1
+blake3_servil::hash_serial_on: 213 instructions, pushes 5, realignments 1
+blake3_servil::hash_serial_from: 211 instructions, pushes 5, realignments 1
+2026-10-24T16:17:49+00:00 offset_check exit=0
+offset-sensitive: blake3-official|shared|ContinuousBatches|16 (slower at thread-stack+3328 vs thread-stack+1408, thread-stack+3024 vs thread-stack+512, thread-stack+3360 vs thread-stack+3568, thread-stack+3392 vs thread-stack+3552)
+offset-sensitive: blake3-official|shared|ContinuousMessages|64 B (slower at thread-stack+912 vs thread-stack+1088)
+offset-sensitive: blake3-official|shared|LentBatches|16 (slower at thread-stack+3328 vs thread-stack+1408, thread-stack+3024 vs thread-stack+512, thread-stack+3360 vs thread-stack+3568, thread-stack+3392 vs thread-stack+3552)
+offset-sensitive: blake3-official|shared|LentMessages|256 B (slower at thread-stack+3152 vs thread-stack+304)
+offset-sensitive: blake3-official|shared|LentMessages|64 B (slower at thread-stack+3152 vs thread-stack+304)
+offset-sensitive: blake3-servil-st|shared|ContinuousBatches|16 (slower at thread-stack+3328 vs thread-stack+1408)
+offset-sensitive: blake3-servil-st|shared|LentBatches|16 (slower at thread-stack+3328 vs thread-stack+1408)
+ok: immune cells stay immune; the check still sees the effect (blake3-official|shared|LentMessages|64 B, blake3-official|shared|ContinuousMessages|64 B)
