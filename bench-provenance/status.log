@@ -1,0 +1,12 @@
+2026-10-24T15:59:49+00:00 A build exit=0
+2026-10-24T15:59:49+00:00 A: # git clean status: clean|# dependency lock: blake3 508380b48c41c92fed979ba2a639c81df1eb63117b369c4004cea5c1fa11b59b of Cargo.lock|# clocks source: clocks 0.1.0; source https://github.com/johnservil/BLAKE3; commit b94e2fac72b8be346e8c012c6a749caa134e2480; clean|
+2026-10-24T15:59:51+00:00 B build exit=101 (must fail)
+  cargo:rerun-if-env-changed=BENCH_CLOCKS_CHECKOUT
+2026-10-24T16:00:08+00:00 C build exit=0
+2026-10-24T16:00:08+00:00 C: # git clean status: clean|# dependency lock: blake3 4ef2b901da404b16868304ca27e1cfdae0c6b8278ea2e675f403cc753cd41f02 of Cargo.lock|# clocks source: clocks 0.1.0 (local checkout /root/BLAKE3-load-other/clocks); source https://github.com/devonjonte/BLAKE3; branch HEAD; commit 1eefd8468fd39d5d6d56d2d01808ff75afdc627f; clean|
+2026-10-24T16:00:27+00:00 D build exit=0
+2026-10-24T16:00:27+00:00 D: # git clean status: clean|# dependency lock: blake3 9dd5b3a34e41d198db8072451fedbdb174a463a3fd5fc3ca5fe5d032dbecfa63 of Cargo.lock|# clocks source: clocks 0.1.0; source https://github.com/johnservil/BLAKE3; commit b94e2fac72b8be346e8c012c6a749caa134e2480; clean|
+2026-10-24T16:00:43+00:00 E build exit=0
+2026-10-24T16:00:44+00:00 E: # git clean status: dirty-a52ab9b878bd3974718842605beac78142ec8b557bfe98b5024039f249ef8d92|# dependency lock: blake3 508380b48c41c92fed979ba2a639c81df1eb63117b369c4004cea5c1fa11b59b of Cargo.lock|# clocks source: clocks 0.1.0; source https://github.com/johnservil/BLAKE3; commit b94e2fac72b8be346e8c012c6a749caa134e2480; clean|
+2026-10-24T16:01:04+00:00 F tests exit=0
+     Summary [   0.307s] 42 tests run: 42 passed, 0 skipped
