@@ -1,0 +1,14 @@
+scanned 256 offsets x 16 cells, rescanned 99 twice; confirming 8: thread-stack+3280 (1.08x the median at its lowest) against thread-stack+1488, thread-stack+2352 (1.03x the median at its lowest) against thread-stack+3136, thread-stack+624 (1.01x the median at its lowest) against thread-stack+832, thread-stack+64 (1.01x the median at its lowest) against thread-stack+1136, thread-stack+3056 (1.01x the median at its lowest) against thread-stack+3520, thread-stack+1648 (1.00x the median at its lowest) against thread-stack+752, thread-stack+592 (1.00x the median at its lowest) against thread-stack+496, thread-stack+2032 (1.00x the median at its lowest) against thread-stack+80
+confirm thread-stack+3280 against thread-stack+1488: regress exit 1; slower: blake3-servil-st|shared|ContinuousBatches|16, blake3-servil-st|shared|LentBatches|16
+confirm thread-stack+2352 against thread-stack+3136: regress exit 1; slower: blake3-servil-st|shared|ContinuousBatches|64, blake3-servil-st|shared|LentBatches|64
+confirm thread-stack+624 against thread-stack+832: regress exit 0; slower: none
+confirm thread-stack+64 against thread-stack+1136: regress exit 0; slower: none
+confirm thread-stack+3056 against thread-stack+3520: regress exit 0; slower: none
+confirm thread-stack+1648 against thread-stack+752: regress exit 0; slower: none
+confirm thread-stack+592 against thread-stack+496: regress exit 0; slower: none
+confirm thread-stack+2032 against thread-stack+80: regress exit 0; slower: none
+offset-sensitive: blake3-servil-st|shared|ContinuousBatches|16 (slower at thread-stack+3280 vs thread-stack+1488)
+offset-sensitive: blake3-servil-st|shared|ContinuousBatches|64 (slower at thread-stack+2352 vs thread-stack+3136)
+offset-sensitive: blake3-servil-st|shared|LentBatches|16 (slower at thread-stack+3280 vs thread-stack+1488)
+offset-sensitive: blake3-servil-st|shared|LentBatches|64 (slower at thread-stack+2352 vs thread-stack+3136)
+FAIL: cells our APIs keep immune turned offset-sensitive: blake3-servil-st|shared|LentBatches|64, blake3-servil-st|shared|ContinuousBatches|64

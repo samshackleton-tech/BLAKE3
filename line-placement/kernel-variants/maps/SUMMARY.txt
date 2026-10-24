@@ -15,6 +15,23 @@ solo|Messages one after another, buffers lent (ns/B)|256 B         best 1.151 me
 solo|Messages one after another, buffers lent (ns/B)|64 B          best 0.931 median 0.935 worst 0.938 (1.01x); slow 0/256; default 1.00x
 solo|Messages one after another, buffers owned (ns/B)|256 B        best 1.151 median 1.152 worst 1.153 (1.00x); slow 0/256; default 1.00x
 solo|Messages one after another, buffers owned (ns/B)|64 B         best 0.931 median 0.935 worst 0.939 (1.01x); slow 0/256; default 1.00x
+===== /home/samshackleton/work/BLAKE3-peer-evidence/line-placement/kernel-variants/maps/map-line0-pick.tsv
+shared|Batches one after another, buffers lent (ns/msg)|16         best 7.392 median 7.447 worst 7.568 (1.02x); slow 0/64; default 1.01x
+shared|Batches one after another, buffers lent (ns/msg)|64         best 6.569 median 6.590 worst 6.633 (1.01x); slow 0/64; default 1.00x
+shared|Batches one after another, buffers owned (ns/msg)|16        best 7.394 median 7.454 worst 7.548 (1.02x); slow 0/64; default 1.00x
+shared|Batches one after another, buffers owned (ns/msg)|64        best 6.571 median 6.596 worst 6.642 (1.01x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers lent (ns/B)|256 B       best 1.152 median 1.153 worst 1.154 (1.00x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers lent (ns/B)|64 B        best 0.933 median 0.935 worst 0.938 (1.01x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers owned (ns/B)|256 B      best 1.152 median 1.153 worst 1.154 (1.00x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers owned (ns/B)|64 B       best 0.933 median 0.936 worst 0.939 (1.01x); slow 0/64; default 1.00x
+solo|Batches one after another, buffers lent (ns/msg)|16           best 7.377 median 7.448 worst 7.591 (1.03x); slow 0/256; default 1.01x
+solo|Batches one after another, buffers lent (ns/msg)|64           best 6.553 median 6.578 worst 6.648 (1.01x); slow 0/256; default 1.01x
+solo|Batches one after another, buffers owned (ns/msg)|16          best 7.378 median 7.451 worst 7.603 (1.03x); slow 0/256; default 1.01x
+solo|Batches one after another, buffers owned (ns/msg)|64          best 6.556 median 6.579 worst 6.626 (1.01x); slow 0/256; default 1.01x
+solo|Messages one after another, buffers lent (ns/B)|256 B         best 1.151 median 1.153 worst 1.156 (1.00x); slow 0/256; default 1.00x
+solo|Messages one after another, buffers lent (ns/B)|64 B          best 0.931 median 0.935 worst 0.939 (1.01x); slow 0/256; default 1.00x
+solo|Messages one after another, buffers owned (ns/B)|256 B        best 1.151 median 1.153 worst 1.156 (1.00x); slow 0/256; default 1.00x
+solo|Messages one after another, buffers owned (ns/B)|64 B         best 0.930 median 0.934 worst 0.938 (1.01x); slow 0/256; default 1.01x
 ===== /home/samshackleton/work/BLAKE3-peer-evidence/line-placement/kernel-variants/maps/map-line0-zmm.tsv
 shared|Batches one after another, buffers lent (ns/msg)|16         best 7.399 median 7.451 worst 7.550 (1.02x); slow 0/64; default 1.00x
 shared|Batches one after another, buffers lent (ns/msg)|64         best 6.560 median 6.582 worst 6.619 (1.01x); slow 0/64; default 1.00x
@@ -83,6 +100,23 @@ solo|Messages one after another, buffers lent (ns/B)|256 B         best 1.273 me
 solo|Messages one after another, buffers lent (ns/B)|64 B          best 1.412 median 1.415 worst 1.432 (1.01x); slow 0/256; default 1.01x
 solo|Messages one after another, buffers owned (ns/B)|256 B        best 1.274 median 1.276 worst 1.279 (1.00x); slow 0/256; default 1.00x
 solo|Messages one after another, buffers owned (ns/B)|64 B         best 1.416 median 1.418 worst 1.422 (1.00x); slow 0/256; default 1.00x
+===== /home/samshackleton/work/BLAKE3-peer-evidence/line-placement/kernel-variants/maps/map-line16-pick.tsv
+shared|Batches one after another, buffers lent (ns/msg)|16         best 7.509 median 7.548 worst 7.729 (1.03x); slow 0/64; default 1.01x
+shared|Batches one after another, buffers lent (ns/msg)|64         best 6.598 median 6.618 worst 6.666 (1.01x); slow 0/64; default 1.00x
+shared|Batches one after another, buffers owned (ns/msg)|16        best 7.504 median 7.540 worst 7.724 (1.03x); slow 0/64; default 1.00x
+shared|Batches one after another, buffers owned (ns/msg)|64        best 6.597 median 6.623 worst 6.689 (1.01x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers lent (ns/B)|256 B       best 1.160 median 1.161 worst 1.271 (1.10x); slow 2/64; default 1.00x: +2496, +2560
+shared|Messages one after another, buffers lent (ns/B)|64 B        best 0.960 median 0.961 worst 1.402 (1.46x); slow 5/64; default 1.00x: +2944, +3200, +3264, +3584, +3904
+shared|Messages one after another, buffers owned (ns/B)|256 B      best 1.160 median 1.161 worst 1.271 (1.10x); slow 2/64; default 1.00x: +256, +320
+shared|Messages one after another, buffers owned (ns/B)|64 B       best 0.961 median 0.963 worst 1.408 (1.47x); slow 5/64; default 1.01x: +704, +960, +1024, +1344, +1664
+solo|Batches one after another, buffers lent (ns/msg)|16           best 7.765 median 7.839 worst 8.389 (1.08x); slow 6/256; default 1.01x: +3296, +3360, +3392, +3408, +3424, +3440
+solo|Batches one after another, buffers lent (ns/msg)|64           best 6.579 median 6.620 worst 6.831 (1.04x); slow 0/256; default 1.01x
+solo|Batches one after another, buffers owned (ns/msg)|16          best 7.766 median 7.837 worst 8.382 (1.08x); slow 5/256; default 1.01x: +3296, +3392, +3408, +3424, +3440
+solo|Batches one after another, buffers owned (ns/msg)|64          best 6.582 median 6.617 worst 6.815 (1.04x); slow 0/256; default 1.01x
+solo|Messages one after another, buffers lent (ns/B)|256 B         best 1.159 median 1.161 worst 1.276 (1.10x); slow 13/256; default 1.00x
+solo|Messages one after another, buffers lent (ns/B)|64 B          best 0.959 median 0.961 worst 1.420 (1.48x); slow 24/256; default 1.00x
+solo|Messages one after another, buffers owned (ns/B)|256 B        best 1.159 median 1.161 worst 1.273 (1.10x); slow 8/256; default 1.00x: +1472, +1488, +1504, +1520, +1536, +1552, +1568, +1584
+solo|Messages one after another, buffers owned (ns/B)|64 B         best 0.959 median 0.961 worst 1.408 (1.47x); slow 22/256; default 1.00x
 ===== /home/samshackleton/work/BLAKE3-peer-evidence/line-placement/kernel-variants/maps/map-line16-zmm.tsv
 shared|Batches one after another, buffers lent (ns/msg)|16         best 7.509 median 7.550 worst 7.706 (1.03x); slow 0/64; default 1.00x
 shared|Batches one after another, buffers lent (ns/msg)|64         best 6.609 median 6.638 worst 6.675 (1.01x); slow 0/64; default 1.00x
@@ -151,6 +185,23 @@ solo|Messages one after another, buffers lent (ns/B)|256 B         best 1.154 me
 solo|Messages one after another, buffers lent (ns/B)|64 B          best 0.938 median 0.942 worst 0.945 (1.01x); slow 0/256; default 1.00x
 solo|Messages one after another, buffers owned (ns/B)|256 B        best 1.153 median 1.155 worst 1.158 (1.00x); slow 0/256; default 1.00x
 solo|Messages one after another, buffers owned (ns/B)|64 B         best 0.938 median 0.941 worst 0.946 (1.01x); slow 0/256; default 1.00x
+===== /home/samshackleton/work/BLAKE3-peer-evidence/line-placement/kernel-variants/maps/map-line32-pick.tsv
+shared|Batches one after another, buffers lent (ns/msg)|16         best 7.414 median 7.483 worst 7.585 (1.02x); slow 0/64; default 1.01x
+shared|Batches one after another, buffers lent (ns/msg)|64         best 6.596 median 6.627 worst 6.676 (1.01x); slow 0/64; default 1.00x
+shared|Batches one after another, buffers owned (ns/msg)|16        best 7.400 median 7.488 worst 7.574 (1.02x); slow 0/64; default 1.01x
+shared|Batches one after another, buffers owned (ns/msg)|64        best 6.593 median 6.635 worst 6.676 (1.01x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers lent (ns/B)|256 B       best 1.152 median 1.153 worst 1.155 (1.00x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers lent (ns/B)|64 B        best 0.933 median 0.935 worst 0.936 (1.00x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers owned (ns/B)|256 B      best 1.152 median 1.153 worst 1.155 (1.00x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers owned (ns/B)|64 B       best 0.933 median 0.936 worst 0.941 (1.01x); slow 0/64; default 1.00x
+solo|Batches one after another, buffers lent (ns/msg)|16           best 7.687 median 7.780 worst 8.378 (1.09x); slow 5/256; default 1.01x: +3344, +3376, +3392, +3408, +3424
+solo|Batches one after another, buffers lent (ns/msg)|64           best 6.578 median 6.630 worst 6.843 (1.04x); slow 0/256; default 1.01x
+solo|Batches one after another, buffers owned (ns/msg)|16          best 7.689 median 7.777 worst 8.294 (1.08x); slow 5/256; default 1.01x: +3344, +3376, +3392, +3408, +3424
+solo|Batches one after another, buffers owned (ns/msg)|64          best 6.578 median 6.627 worst 6.849 (1.04x); slow 0/256; default 1.01x
+solo|Messages one after another, buffers lent (ns/B)|256 B         best 1.151 median 1.153 worst 1.155 (1.00x); slow 0/256; default 1.00x
+solo|Messages one after another, buffers lent (ns/B)|64 B          best 0.930 median 0.935 worst 0.939 (1.01x); slow 0/256; default 1.00x
+solo|Messages one after another, buffers owned (ns/B)|256 B        best 1.151 median 1.153 worst 1.157 (1.01x); slow 0/256; default 1.00x
+solo|Messages one after another, buffers owned (ns/B)|64 B         best 0.929 median 0.933 worst 0.936 (1.01x); slow 0/256; default 1.00x
 ===== /home/samshackleton/work/BLAKE3-peer-evidence/line-placement/kernel-variants/maps/map-line32-zmm.tsv
 shared|Batches one after another, buffers lent (ns/msg)|16         best 7.414 median 7.479 worst 7.578 (1.02x); slow 0/64; default 1.01x
 shared|Batches one after another, buffers lent (ns/msg)|64         best 6.585 median 6.617 worst 6.659 (1.01x); slow 0/64; default 1.00x
@@ -185,6 +236,23 @@ solo|Messages one after another, buffers lent (ns/B)|256 B         best 1.273 me
 solo|Messages one after another, buffers lent (ns/B)|64 B          best 1.412 median 1.414 worst 1.432 (1.01x); slow 0/256; default 1.00x
 solo|Messages one after another, buffers owned (ns/B)|256 B        best 1.274 median 1.276 worst 1.279 (1.00x); slow 0/256; default 1.00x
 solo|Messages one after another, buffers owned (ns/B)|64 B         best 1.416 median 1.418 worst 1.422 (1.00x); slow 0/256; default 1.00x
+===== /home/samshackleton/work/BLAKE3-peer-evidence/line-placement/kernel-variants/maps/map-line48-pick.tsv
+shared|Batches one after another, buffers lent (ns/msg)|16         best 7.532 median 7.571 worst 7.770 (1.03x); slow 0/64; default 1.00x
+shared|Batches one after another, buffers lent (ns/msg)|64         best 6.607 median 6.633 worst 6.676 (1.01x); slow 0/64; default 1.00x
+shared|Batches one after another, buffers owned (ns/msg)|16        best 7.534 median 7.567 worst 7.764 (1.03x); slow 0/64; default 1.00x
+shared|Batches one after another, buffers owned (ns/msg)|64        best 6.612 median 6.639 worst 6.715 (1.02x); slow 0/64; default 1.00x
+shared|Messages one after another, buffers lent (ns/B)|256 B       best 1.162 median 1.164 worst 1.271 (1.09x); slow 2/64; default 1.00x: +2496, +2560
+shared|Messages one after another, buffers lent (ns/B)|64 B        best 0.967 median 0.968 worst 1.402 (1.45x); slow 4/64; default 1.00x: +2944, +3200, +3264, +3584
+shared|Messages one after another, buffers owned (ns/B)|256 B      best 1.162 median 1.164 worst 1.272 (1.09x); slow 2/64; default 1.00x: +256, +320
+shared|Messages one after another, buffers owned (ns/B)|64 B       best 0.969 median 0.971 worst 1.434 (1.48x); slow 5/64; default 1.00x: +704, +960, +1024, +1344, +1472
+solo|Batches one after another, buffers lent (ns/msg)|16           best 7.803 median 7.870 worst 8.418 (1.08x); slow 6/256; default 1.01x: +3312, +3328, +3344, +3360, +3376, +3392
+solo|Batches one after another, buffers lent (ns/msg)|64           best 6.592 median 6.633 worst 6.853 (1.04x); slow 0/256; default 1.01x
+solo|Batches one after another, buffers owned (ns/msg)|16          best 7.799 median 7.870 worst 8.440 (1.08x); slow 6/256; default 1.01x: +3312, +3328, +3344, +3360, +3376, +3392
+solo|Batches one after another, buffers owned (ns/msg)|64          best 6.595 median 6.631 worst 6.870 (1.04x); slow 0/256; default 1.00x
+solo|Messages one after another, buffers lent (ns/B)|256 B         best 1.161 median 1.163 worst 1.276 (1.10x); slow 9/256; default 1.00x
+solo|Messages one after another, buffers lent (ns/B)|64 B          best 0.966 median 0.968 worst 1.421 (1.47x); slow 16/256; default 1.00x
+solo|Messages one after another, buffers owned (ns/B)|256 B        best 1.161 median 1.163 worst 1.273 (1.10x); slow 8/256; default 1.00x: +1456, +1472, +1488, +1504, +1520, +1536, +1552, +1568
+solo|Messages one after another, buffers owned (ns/B)|64 B         best 0.966 median 0.968 worst 1.432 (1.48x); slow 17/256; default 1.00x
 ===== /home/samshackleton/work/BLAKE3-peer-evidence/line-placement/kernel-variants/maps/map-line48-zmm.tsv
 shared|Batches one after another, buffers lent (ns/msg)|16         best 7.536 median 7.570 worst 7.726 (1.03x); slow 0/64; default 1.00x
 shared|Batches one after another, buffers lent (ns/msg)|64         best 6.618 median 6.641 worst 6.674 (1.01x); slow 0/64; default 1.00x

@@ -186,3 +186,16 @@ Results are in `retrospective/`.
 one-shot or batch. It exits 3: "no control cell was judged sensitive: the
 check cannot see the effect here". Aligned buffers remove the batch windows
 too.
+
+**Addendum (11:50 UTC), a picking kernel** (`candidate/sam-x86-chunk-root-pick`
+6f9d962, `patches/chunk-root-pick.patch`). With the block 16 or 48 bytes into
+its line, it uses one 64-byte load; at 0 or 32, the four 16-byte loads. Tests
+pass: focused 4/4, release 107/107, with a new test of every length at line
+offsets around 0/16/32/48.
+
+64 B medians are 0.935 / 0.961 / 0.935 / 0.968 at offsets 0/16/32/48; 256 B is
+1.153 / 1.161 / 1.153 / 1.163. There are windows at 16/48 only (shared 4–5/64,
+solo 16–24/256, up to 1.48×). The base has them at 16/32/48, at 1.05.
+
+Devon's tool (`devon-pick-{1,2}.out`) at default glibc placement judges neither
+64 B cell sensitive. As on every build, it does judge the batch cells sensitive.
