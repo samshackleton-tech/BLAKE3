@@ -1,0 +1,79 @@
+From 51ce58f59bcd2ed7f89a914645f2b3ff915928b5 Mon Sep 17 00:00:00 2001
+From: Sam Shackleton <samshackleton-tech@users.noreply.github.com>
+Date: Sat, 24 Oct 2026 08:31:50 +0000
+Subject: [PATCH] DIAGNOSTIC ONLY: allocations of 64 bytes or more aligned to
+ 64 (default)
+
+For re-running decisions made under bench-hashes #65's artifact with no
+buffer crossing a cache line. Never a measurement configuration.
+---
+ Cargo.toml  |  8 ++++++++
+ src/main.rs | 29 +++++++++++++++++++++++++++++
+ 2 files changed, 37 insertions(+)
+
+diff --git a/Cargo.toml b/Cargo.toml
+index 553d753..f703e49 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -77,3 +77,11 @@ lto = "fat"
+ codegen-units = 1
+ panic = "abort"
+ incremental = false
++
++# DIAGNOSTIC ONLY (never a measurement configuration): the system allocator
++# with every allocation of 64 bytes or more aligned to 64, so no buffer
++# crosses a cache line (bench-hashes #65 follow-up). On by default in this
++# diagnostic branch, so `check` gives both sides the same placement.
++[features]
++default = ["diag-align64"]
++diag-align64 = []
+diff --git a/src/main.rs b/src/main.rs
+index 4335f18..0e340ed 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -1934,6 +1934,32 @@ fn parse_selection(arguments: &[String]) -> (Selection, Vec<Algorithm>) {
+     }
+ }
+ 
++/// Diagnostic (`--features diag-align64`): the system allocator, each
++/// allocation of 64 bytes or more aligned to 64. Not for measurements.
++#[cfg(feature = "diag-align64")]
++struct Align64;
++#[cfg(feature = "diag-align64")]
++unsafe impl std::alloc::GlobalAlloc for Align64 {
++    unsafe fn alloc(&self, l: std::alloc::Layout) -> *mut u8 {
++        unsafe { std::alloc::System.alloc(Self::up(l)) }
++    }
++    unsafe fn dealloc(&self, p: *mut u8, l: std::alloc::Layout) {
++        unsafe { std::alloc::System.dealloc(p, Self::up(l)) }
++    }
++    unsafe fn alloc_zeroed(&self, l: std::alloc::Layout) -> *mut u8 {
++        unsafe { std::alloc::System.alloc_zeroed(Self::up(l)) }
++    }
++}
++#[cfg(feature = "diag-align64")]
++impl Align64 {
++    fn up(l: std::alloc::Layout) -> std::alloc::Layout {
++        if l.size() >= 64 { l.align_to(64).unwrap() } else { l }
++    }
++}
++#[cfg(feature = "diag-align64")]
++#[global_allocator]
++static DIAG_ALLOC: Align64 = Align64;
++
+ fn main() {
+     // Once per process, before any other call: blake3-servil's contract.
+     blake3_servil::initialize();
+@@ -5797,6 +5823,9 @@ fn samples_header(machine: &MachineMetadata, run: &[(String, String)]) -> String
+         writeln!(out, "# {key}: {value}").unwrap();
+     }
+     writeln!(out, "# power: {}", machine.describe_power()).unwrap();
++    if cfg!(feature = "diag-align64") {
++        writeln!(out, "# global allocator: diagnostic, allocations of 64 bytes or more aligned to 64").unwrap();
++    }
+     writeln!(out, "# load: {}", clocks::load::describe(&machine.load)).unwrap();
+     let windows: Vec<String> = machine
+         .load
+-- 
+2.53.0
+

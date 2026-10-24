@@ -104,3 +104,79 @@ thread's input: 64 B at 2128/2144/2160, 256 B at 2576/2592/2608, align64 at
   - `__rust_alloc_zeroed` 7.8% of stli samples, against 0.7% under glibc.
 
   Causes not tested.
+
+## Follow-up (October 24, 10:20–11:10 UTC): kernel variants, Devon's tool, a retrospective
+
+### Correcting my hypothesis
+
+The lent cells do not go through `take_prepared_sample`. They call `hash()` in a
+loop over one buffer that nothing writes; each digest goes to a ring of 1024
+32-byte slots. So "the bench's write just before the call" cannot be the
+mechanism. An mfence after the prepared write (`diag-drain`) is off this path
+and changed nothing (`kernel-variants/maps/map-*-drain.tsv`).
+
+### Variants of the AVX-512 chunk-root kernel's block load
+
+`blake3-servil-st` buffers lent, shared and solo map medians in ns/B; "windows"
+means slow positions on the 16-byte main-stack axis. All variants are on
+cba5f24 (`kernel-variants/patches/`) and pass the focused and release tests
+(`kernel-variants/tests/`).
+
+| block load | offset 0 | 16 | 32 | 48 | windows |
+|---|---|---|---|---|---|
+| base (ChunkState, memcpy) | 1.05 | 1.05 | 1.05 | 1.05 | at 16/32/48 |
+| #141: 4 × 16 B `movups` | 0.94 | 1.30 | 0.94 | 1.38 | none |
+| 2 × 32 B `vmovdqu` (5c8fdb5) | 0.95 | 1.31 | 0.95 | 1.39 | none |
+| 1 × 64 B `vmovdqu32` (John; 7a3b55e) | 0.955 | 0.96 | 0.96 | 0.965 | at 16/32/48: 4–5/64 shared, 17–24/256 solo, up to 1.49× (and 256 B up to 1.10×) |
+| aligned lines + `valignd` at 16/48 (bd9079d) | 0.935 | 1.415 | 0.94 | 1.415 | none |
+
+What these results show:
+
+- One 64-byte load is fast at every placement. When it crosses a line, the
+  windows come back, even though the kernel touches no stack.
+- Reading the same two lines with aligned loads, or with 16- or 32-byte loads,
+  is window-free, but slow when the block sits 16 or 48 bytes into a line.
+- IBS: at 16, every sampled round op in the kernel waits about 55 cycles longer
+  to retire than at 32 (`kernel-variants/ibs/`).
+- The cause is still open. On the i7 (no AVX-512, so its SSE4.1 entry), Devon
+  sees no placement cost at all (#141).
+
+### Devon's offset_check (4f3e033) on the EPYC
+
+`kernel-variants/devon-offset-check/` holds three runs on the base, three on
+#141 and two on the aligned-lines variant, all at default glibc placement.
+
+- **Base:** it finds shared lent 64 B and continuous 64 B every run.
+- **#141 and the variant:** neither 64-byte cell is found, in any run.
+- **Every build:** with thread stacks stepped by 16 bytes, it also judges the
+  batch cells slower at a few offsets. The batch path (`hash_many`) is
+  unchanged by #141. Every run therefore exits 1 ("cells our APIs keep immune
+  turned offset-sensitive"):
+  - 64-message batches: +3–4%, 8/8 pairs (for example +2320/+2352 against +3952);
+  - 16-message batches: +4–7%.
+- **A correction:** the 64-message batches are not immune on Zen 5, which
+  contradicts the guidance I gave on #65. My earlier scans stepped thread
+  stacks by 64 bytes, believing that the TLS tunable moves them in 64-byte
+  quanta. Devon's 16-byte steps show otherwise (+3296 and +3312 differ).
+
+### Retrospective: decisions taken under the artifact, re-run with aligned buffers
+
+The instrument is bench v7 ae63011 plus a diagnostic default allocator that
+aligns allocations of 64 bytes or more to 64 (`retrospective/bench-v7-diag-align64.patch`).
+Results are in `retrospective/`.
+
+- **A/A, a5e1e18 against itself (full4):** no cell slower.
+- **Guarded publication wake against a5e1e18 (full4):** no cell slower.
+  - MT shared lent 64 B ×0.999 (×1.438 slower originally): that hold was
+    the artifact.
+  - Its hint of a benefit has gone too: MT solo continuous 1 MiB ×1.038
+    level (×0.912 originally).
+- **Guarded wake against 8e968d5 (full8):** 4 cells slower, all genuine.
+  - MT solo One/IdleOne 2 MiB +3.3% / +4.5%, and Idle ManyMessages|1 ST/MT
+    +3.4% / +3.8%. 4 MiB is faster (×0.955).
+  - a5e1e18 alone against 8e968d5 (full8) has no cell slower: IdleMany|1
+    ×1.02 level, MT 2 MiB ×0.99. So the 2 MiB cost belongs to the guarded wake.
+- **Parent-routing ablation 9e5f484 against a5e1e18 (full16):** no cell slower.
+  - IdleManyMessages|1 ×0.985 / ×0.995 (+3.1% originally, on v6).
+  - Small ManyMessages batches have means ×0.82–0.83, with only 11 of 16
+    pairs faster (bimodal by layout). That needs its own look.

@@ -1,0 +1,14 @@
+scanned 256 offsets x 16 cells, rescanned 98 twice; confirming 8: thread-stack+3296 (1.07x the median at its lowest) against thread-stack+1488, thread-stack+3280 (1.06x the median at its lowest) against thread-stack+1488, thread-stack+2336 (1.03x the median at its lowest) against thread-stack+3840, thread-stack+2320 (1.03x the median at its lowest) against thread-stack+3840, thread-stack+3008 (1.02x the median at its lowest) against thread-stack+192, thread-stack+2464 (1.01x the median at its lowest) against default, thread-stack+976 (1.00x the median at its lowest) against thread-stack+864, thread-stack+640 (1.00x the median at its lowest) against thread-stack+3696
+confirm thread-stack+3296 against thread-stack+1488: regress exit 1; slower: blake3-servil-st|shared|ContinuousBatches|16, blake3-servil-st|shared|LentBatches|16
+confirm thread-stack+3280 against thread-stack+1488: regress exit 1; slower: blake3-servil-st|shared|ContinuousBatches|16, blake3-servil-st|shared|LentBatches|16
+confirm thread-stack+2336 against thread-stack+3840: regress exit 1; slower: blake3-servil-st|shared|ContinuousBatches|64, blake3-servil-st|shared|LentBatches|64
+confirm thread-stack+2320 against thread-stack+3840: regress exit 1; slower: blake3-servil-st|shared|LentBatches|64
+confirm thread-stack+3008 against thread-stack+192: regress exit 0; slower: none
+confirm thread-stack+2464 against default: regress exit 0; slower: none
+confirm thread-stack+976 against thread-stack+864: regress exit 0; slower: none
+confirm thread-stack+640 against thread-stack+3696: regress exit 0; slower: none
+offset-sensitive: blake3-servil-st|shared|ContinuousBatches|16 (slower at thread-stack+3296 vs thread-stack+1488, thread-stack+3280 vs thread-stack+1488)
+offset-sensitive: blake3-servil-st|shared|ContinuousBatches|64 (slower at thread-stack+2336 vs thread-stack+3840)
+offset-sensitive: blake3-servil-st|shared|LentBatches|16 (slower at thread-stack+3296 vs thread-stack+1488, thread-stack+3280 vs thread-stack+1488)
+offset-sensitive: blake3-servil-st|shared|LentBatches|64 (slower at thread-stack+2336 vs thread-stack+3840, thread-stack+2320 vs thread-stack+3840)
+FAIL: cells our APIs keep immune turned offset-sensitive: blake3-servil-st|shared|LentBatches|64, blake3-servil-st|shared|ContinuousBatches|64

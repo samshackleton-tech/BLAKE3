@@ -1,0 +1,31 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 10K of event 'cpu/cycles,period=100003/u'
+# Event count (approx.): 1008230246
+#
+# Overhead  Symbol                                                                                                                                                     
+# ........  ...........................................................................................................................................................
+#
+    42.24%  [.] _blake3_hash_many_avx512
+    21.88%  [.] <blake3_servil::lanes::Pool>::serve
+    14.72%  [.] 0x00000000001b0cd4
+     2.88%  [.] 0x00000000001b0cab
+     1.91%  [.] 0x00000000001b0cbf
+     1.62%  [.] 0x00000000001b0cb2
+     1.51%  [.] 0x00000000001b0cb9
+     1.35%  [.] blake3_servil::outboard::groups_cvs_into
+     1.24%  [.] _blake3_compress_in_place_avx512
+     1.23%  [.] blake3_servil::tree::wide::<blake3_servil::tree::PlatformKernels>
+     0.80%  [.] <blake3_servil::lanes::Pool>::run_job
+     0.76%  [.] bench_hashes::hash_continuous_messages::<bench_hashes::use_digest>
+     0.72%  [.] __rustc::__rust_alloc
+     0.66%  [.] 0x00000000001b0a13
+     0.57%  [.] __rustc::__rust_alloc_zeroed
+
+
+#
+# (Cannot load tips.txt file, please install perf!)
+#

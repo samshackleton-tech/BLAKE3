@@ -1,0 +1,41 @@
+8267 ops decoded, 320 matched
+[unknown]                                        LD n=   21 mean_ttr=  36.4 max=  211 sum=    765 addr%4096={3088: 3, 3136: 3, 3200: 2}
+filemap_get_entry+0x82                           ST n=    1 mean_ttr= 655.0 max=  655 sum=    655 addr%4096={2960: 1}
+blake3_servil::hash_serial+0x2ac                 ST n=    3 mean_ttr= 202.3 max=  203 sum=    607 addr%4096={4032: 3}
+nohz_balancer_kick+0x24f                         LD n=    1 mean_ttr= 563.0 max=  563 sum=    563 addr%4096={936: 1}
+sysvec_apic_timer_interrupt+0xa0                 ST n=    1 mean_ttr= 510.0 max=  510 sum=    510 addr%4096={58: 1}
+kernfs_get_target_path+0xfe                      ST n=    1 mean_ttr= 464.0 max=  464 sum=    464 addr%4096={2024: 1}
+perf_adjust_freq_unthr_events+0xa4               LD n=    1 mean_ttr= 463.0 max=  463 sum=    463 addr%4096={352: 1}
+blake3_servil::hash_serial+0x279                 ST n=    2 mean_ttr= 211.0 max=  214 sum=    422 addr%4096={320: 1, 3840: 1}
+blake3_servil::hash_serial+0x299                 LD n=    2 mean_ttr= 201.0 max=  202 sum=    402 addr%4096={3712: 2}
+blake3_servil::hash_serial+0x2e1                 LD n=    2 mean_ttr= 200.0 max=  200 sum=    400 addr%4096={208: 1, 3728: 1}
+_blake3_compress_in_place_avx512+0x35            LD n=    2 mean_ttr= 195.0 max=  196 sum=    390 addr%4096={3856: 2}
+_blake3_compress_in_place_avx512+0x29            LD n=    2 mean_ttr= 192.5 max=  195 sum=    385 addr%4096={3584: 2}
+__hrtimer_run_queues+0x125                       LD n=    1 mean_ttr= 347.0 max=  347 sum=    347 addr%4096={208: 1}
+h_in_memory::<&mut bench_hashes::use_digest>+0x9 ST n=    1 mean_ttr= 214.0 max=  214 sum=    214 addr%4096={3320: 1}
+blake3_servil::hash_serial+0x97                  ST n=    1 mean_ttr= 213.0 max=  213 sum=    213 addr%4096={3744: 1}
+blake3_servil::hash_serial+0x87                  ST n=    1 mean_ttr= 212.0 max=  212 sum=    212 addr%4096={3712: 1}
+blake3_servil::hash_serial+0x289                 ST n=    1 mean_ttr= 211.0 max=  211 sum=    211 addr%4096={352: 1}
+blake3_servil::hash_serial+0x3d3                 LD n=    1 mean_ttr= 206.0 max=  206 sum=    206 addr%4096={4000: 1}
+blake3_servil::hash_serial+0x3f7                 LD n=    1 mean_ttr= 206.0 max=  206 sum=    206 addr%4096={112: 1}
+blake3_servil::hash_serial+0x26a                 LD n=    1 mean_ttr= 205.0 max=  205 sum=    205 addr%4096={3664: 1}
+blake3_servil::hash_serial+0x3db                 LD n=    1 mean_ttr= 204.0 max=  204 sum=    204 addr%4096={496: 1}
+blake3_servil::hash_serial+0x2e7                 ST n=    1 mean_ttr= 202.0 max=  202 sum=    202 addr%4096={3920: 1}
+blake3_servil::hash_serial+0x3ae                 LD n=    1 mean_ttr= 201.0 max=  201 sum=    201 addr%4096={512: 1}
+blake3_servil::hash_serial+0x2b4                 LD n=    1 mean_ttr= 201.0 max=  201 sum=    201 addr%4096={3744: 1}
+blake3_servil::hash_serial+0x2fe                 ST n=    1 mean_ttr= 201.0 max=  201 sum=    201 addr%4096={3944: 1}
+_blake3_compress_in_place_avx512+0x8             LD n=    1 mean_ttr= 200.0 max=  200 sum=    200 addr%4096={4048: 1}
+blake3_servil::hash_serial+0x3c6                 ST n=    1 mean_ttr= 200.0 max=  200 sum=    200 addr%4096={4000: 1}
+blake3_servil::hash_serial+0x3be                 ST n=    1 mean_ttr= 198.0 max=  198 sum=    198 addr%4096={4016: 1}
+_blake3_compress_in_place_avx512+0x31            LD n=    1 mean_ttr= 196.0 max=  196 sum=    196 addr%4096={3840: 1}
+filemap_map_pages+0x1af                          LD n=    2 mean_ttr=  97.5 max=  135 sum=    195 addr%4096={616: 1, 544: 1}
+_blake3_compress_in_place_avx512+0x178           LD n=    1 mean_ttr= 195.0 max=  195 sum=    195 addr%4096={3576: 1}
+_blake3_compress_in_place_avx512+0x46            LD n=    1 mean_ttr= 194.0 max=  194 sum=    194 addr%4096={3872: 1}
+balance_dirty_pages_ratelimited_flags+0x188      LD n=    1 mean_ttr= 191.0 max=  191 sum=    191 addr%4096={1608: 1}
+native_read_msr+0x2                              LD n=   13 mean_ttr=  13.8 max=   18 sum=    180 addr%4096={}
+native_write_msr+0xb                             LD n=    8 mean_ttr=  17.2 max=   39 sum=    138 addr%4096={}
+step_into_slowpath+0x197                         LD n=    1 mean_ttr= 135.0 max=  135 sum=    135 addr%4096={2184: 1}
+ext4_get_group_desc+0x9a                         LD n=    1 mean_ttr= 127.0 max=  127 sum=    127 addr%4096={2016: 1}
+ima_file_check+0x8b                              LD n=    2 mean_ttr=  63.0 max=   63 sum=    126 addr%4096={3152: 1, 2384: 1}
+step_into_slowpath+0x91                          LD n=    1 mean_ttr= 119.0 max=  119 sum=    119 addr%4096={3236: 1}
+__css_rstat_updated+0x3c                         LD n=    1 mean_ttr= 119.0 max=  119 sum=    119 addr%4096={248: 1}

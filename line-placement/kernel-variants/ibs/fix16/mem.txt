@@ -1,0 +1,41 @@
+9083 ops decoded, 392 matched
+[unknown]                                        LD n=   37 mean_ttr=  37.8 max=  206 sum=   1399 addr%4096={3112: 3, 3464: 2, 2128: 2}
+apparmor_current_getlsmprop_subj+0x5             LD n=    1 mean_ttr=1073.0 max= 1073 sum=   1073 addr%4096={24: 1}
+ext4_sb_block_valid+0xbd                         LD n=    1 mean_ttr=1018.0 max= 1018 sum=   1018 addr%4096={3168: 1}
+find_get_pmu_context+0xb4                        LD n=    1 mean_ttr=1012.0 max= 1012 sum=   1012 addr%4096={3328: 1}
+nohz_balancer_kick+0x35                          LD n=    1 mean_ttr= 861.0 max=  861 sum=    861 addr%4096={72: 1}
+__ext4_get_inode_loc+0x37                        ST n=    1 mean_ttr= 645.0 max=  645 sum=    645 addr%4096={2672: 1}
+blake3_servil::hash_serial+0x571                 ST n=    3 mean_ttr= 203.3 max=  204 sum=    610 addr%4096={3640: 3}
+strlen+0x14                                      LD n=    1 mean_ttr= 608.0 max=  608 sum=    608 addr%4096={3139: 1}
+blake3_servil::hash_serial+0x49                  ST n=    3 mean_ttr= 201.0 max=  201 sum=    603 addr%4096={4025: 3}
+__d_alloc+0x33                                   ST n=    1 mean_ttr= 533.0 max=  533 sum=    533 addr%4096={2496: 1}
+next_uptodate_folio+0x27a                        LD n=    1 mean_ttr= 467.0 max=  467 sum=    467 addr%4096={3048: 1}
+__kmalloc_cache_noprof+0x2a9                     ST n=    1 mean_ttr= 462.0 max=  462 sum=    462 addr%4096={2216: 1}
+inode_permission+0xf4                            LD n=    1 mean_ttr= 446.0 max=  446 sum=    446 addr%4096={2576: 1}
+n_memory::<&mut bench_hashes::use_digest>+0x1de0 LD n=    2 mean_ttr= 206.5 max=  207 sum=    413 addr%4096={3360: 2}
+s::hash_batch::<bench_hashes::use_digest>+0x8e62 LD n=    2 mean_ttr= 205.5 max=  207 sum=    411 addr%4096={3448: 2}
+blake3_servil::hash_serial+0xc                   ST n=    2 mean_ttr= 203.0 max=  204 sum=    406 addr%4096={88: 2}
+blake3_servil::hash_serial+0x3a3                 ST n=    2 mean_ttr= 200.5 max=  201 sum=    401 addr%4096={1408: 2}
+n_memory::<&mut bench_hashes::use_digest>+0x1d86 ST n=    2 mean_ttr= 198.0 max=  199 sum=    396 addr%4096={3352: 2}
+blake3_servil::hash_serial+0x38f                 LD n=    2 mean_ttr= 197.0 max=  199 sum=    394 addr%4096={3984: 2}
+blake3_servil::hash_serial+0x397                 LD n=    2 mean_ttr= 196.0 max=  197 sum=    392 addr%4096={480: 1, 4000: 1}
+_blake3_avx512_chunk_root+0x34b                  ST n=    2 mean_ttr= 191.0 max=  193 sum=    382 addr%4096={4000: 2}
+swake_up_one+0x5                                 ST n=    1 mean_ttr= 330.0 max=  330 sum=    330 addr%4096={3800: 1}
+__rcu_read_lock+0x25                             LD n=    2 mean_ttr= 123.5 max=  157 sum=    247 addr%4096={3016: 1, 2920: 1}
+timerqueue_add+0x37                              LD n=    1 mean_ttr= 244.0 max=  244 sum=    244 addr%4096={984: 1}
+n_memory::<&mut bench_hashes::use_digest>+0x1dd1 LD n=    2 mean_ttr= 118.5 max=  203 sum=    237 addr%4096={3352: 2}
+crc32_lsb_vpclmul_avx512+0xc4                    LD n=    1 mean_ttr= 219.0 max=  219 sum=    219 addr%4096={2432: 1}
+s::hash_batch::<bench_hashes::use_digest>+0x8e30 LD n=    1 mean_ttr= 208.0 max=  208 sum=    208 addr%4096={536: 1}
+_in_memory::<&mut bench_hashes::use_digest>+0x30 LD n=    1 mean_ttr= 206.0 max=  206 sum=    206 addr%4096={1940: 1}
+blake3_servil::hash_serial+0x58                  ST n=    1 mean_ttr= 205.0 max=  205 sum=    205 addr%4096={184: 1}
+_blake3_avx512_chunk_root+0x21e                  LD n=    1 mean_ttr= 205.0 max=  205 sum=    205 addr%4096={3120: 1}
+s::hash_batch::<bench_hashes::use_digest>+0x8e76 ST n=    1 mean_ttr= 205.0 max=  205 sum=    205 addr%4096={0: 1}
+n_memory::<&mut bench_hashes::use_digest>+0x1ddc LD n=    1 mean_ttr= 204.0 max=  204 sum=    204 addr%4096={3344: 1}
+n_memory::<&mut bench_hashes::use_digest>+0x1dbf ST n=    1 mean_ttr= 204.0 max=  204 sum=    204 addr%4096={1152: 1}
+in_memory::<&mut bench_hashes::use_digest>+0xb8c LD n=    1 mean_ttr= 204.0 max=  204 sum=    204 addr%4096={216: 1}
+s::hash_batch::<bench_hashes::use_digest>+0x8e3f ST n=    1 mean_ttr= 203.0 max=  203 sum=    203 addr%4096={544: 1}
+s::hash_batch::<bench_hashes::use_digest>+0x8e47 LD n=    1 mean_ttr= 203.0 max=  203 sum=    203 addr%4096={3552: 1}
+_blake3_avx512_chunk_root+0x223                  LD n=    1 mean_ttr= 201.0 max=  201 sum=    201 addr%4096={3136: 1}
+s::hash_batch::<bench_hashes::use_digest>+0x8e5d ST n=    1 mean_ttr= 200.0 max=  200 sum=    200 addr%4096={3384: 1}
+blake3_servil::hash_serial+0x4                   ST n=    1 mean_ttr= 199.0 max=  199 sum=    199 addr%4096={120: 1}
+_blake3_avx512_chunk_root+0x203                  LD n=    1 mean_ttr= 198.0 max=  198 sum=    198 addr%4096={3088: 1}

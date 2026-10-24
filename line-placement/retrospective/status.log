@@ -1,0 +1,17 @@
+2026-10-24T09:07:22+00:00 aa: check --against a5e1e18ad9874f419abfd61fe7c5c6c0f2bf7e00 --pairs 4 begins
+2026-10-24T09:15:06+00:00 aa exit=0
+2026-10-24T09:15:06+00:00 aa: samples files carrying the diagnostic allocator header: 8 of 8
+2026-10-24T09:15:06+00:00 relaunched after the source guard compared diff headers; A/A kept
+2026-10-24T09:15:06+00:00 guarded-parent: check --against a5e1e18ad9874f419abfd61fe7c5c6c0f2bf7e00 --pairs 4 begins
+2026-10-24T09:23:11+00:00 guarded-parent exit=0
+2026-10-24T09:23:11+00:00 guarded-parent: samples files carrying the diagnostic allocator header: 8 of 8
+2026-10-24T09:23:11+00:00 guarded-baseline: check --against 8e968d5599b3ae577f5234f1e8e5e10cfb72b9e4 --pairs 8 begins
+2026-10-24T09:37:44+00:00 guarded-baseline exit=1
+2026-10-24T09:37:44+00:00 guarded-baseline: samples files carrying the diagnostic allocator header: 16 of 16
+2026-10-24T09:37:44+00:00 routing: check --against a5e1e18ad9874f419abfd61fe7c5c6c0f2bf7e00 --pairs 16 begins
+2026-10-24T10:06:16+00:00 routing exit=0
+2026-10-24T10:06:16+00:00 routing: samples files carrying the diagnostic allocator header: 32 of 32
+2026-10-24T10:06:16+00:00 complete
+2026-10-24T10:06:38+00:00 line: a5e1e18 check --against 8e968d5 --pairs 8 begins
+2026-10-24T10:21:55+00:00 line exit=0
+2026-10-24T10:21:55+00:00 line: samples files carrying the diagnostic allocator header: 16 of 16

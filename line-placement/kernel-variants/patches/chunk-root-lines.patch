@@ -1,0 +1,214 @@
+From bd9079da3e0bdcff87c1ae696a4631911f432071 Mon Sep 17 00:00:00 2001
+From: Sam Shackleton <samshackleton-tech@users.noreply.github.com>
+Date: Sat, 24 Oct 2026 10:47:32 +0000
+Subject: [PATCH] x86 chunk root (experiment): whole aligned lines for blocks
+ 16/48 into a line
+
+With the block 16 or 48 bytes into a cache line, the AVX-512 entry reads
+the two aligned lines that hold it (vmovdqa64 at block-16/+48 or -48/+16)
+and splices the block out with valignd, so that no load crosses a line. At
+0 and 32 it keeps upstream's four 16-byte loads (flat and fastest on the
+EPYC 9255). Reads stay within the block's own cache lines, never another
+page. New test: every length at line offsets around 0/16/32/48 from a
+64-aligned buffer; the structural test accepts negative displacements.
+---
+ c/blake3_chunk_root_x86-64_unix.S | 55 ++++++++++++++++++++++++++++---
+ src/ffi_chunk_root.rs             | 26 ++++++++++++++-
+ tools/gen_x86_chunk_root.py       | 33 ++++++++++++++++---
+ 3 files changed, 105 insertions(+), 9 deletions(-)
+
+diff --git a/c/blake3_chunk_root_x86-64_unix.S b/c/blake3_chunk_root_x86-64_unix.S
+index ffff0b8..c68b21b 100644
+--- a/c/blake3_chunk_root_x86-64_unix.S
++++ b/c/blake3_chunk_root_x86-64_unix.S
+@@ -270,14 +270,37 @@ _CET_ENDBR
+         vmovq xmm9, rax
+         vpxor xmm3, xmm3, xmm3
+         vpunpcklqdq xmm3, xmm3, xmm9
++        mov rax, rdi
++        test al, 15
++        jnz 5f
++        test al, 16
++        jz 5f
++        test al, 32
++        jnz 6f
++        vmovdqa64 zmm10, zmmword ptr [rdi-16]
++        vmovdqa64 zmm11, zmmword ptr [rdi+48]
++        valignd zmm10, zmm11, zmm10, 4
++        jmp 7f
++6:
++        vmovdqa64 zmm10, zmmword ptr [rdi-48]
++        vmovdqa64 zmm11, zmmword ptr [rdi+16]
++        valignd zmm10, zmm11, zmm10, 12
++7:
++        vmovdqa xmm4, xmm10
++        vextracti32x4 xmm5, zmm10, 1
++        vextracti32x4 xmm6, zmm10, 2
++        vextracti32x4 xmm7, zmm10, 3
++        jmp 4f
++5:
+         vmovups xmm4, xmmword ptr [rdi]
+         vmovups xmm5, xmmword ptr [rdi+0x10]
++        vmovups xmm6, xmmword ptr [rdi+0x20]
++        vmovups xmm7, xmmword ptr [rdi+0x30]
++4:
+         vmovaps xmm8, xmm4
+         vshufps xmm4, xmm4, xmm5, 136
+         vshufps xmm8, xmm8, xmm5, 221
+         vmovaps xmm5, xmm8
+-        vmovups xmm6, xmmword ptr [rdi+0x20]
+-        vmovups xmm7, xmmword ptr [rdi+0x30]
+         vmovaps xmm8, xmm6
+         vshufps xmm6, xmm6, xmm7, 136
+         vpshufd xmm6, xmm6, 0x93
+@@ -358,14 +381,37 @@ _CET_ENDBR
+         vmovq xmm9, rax
+         vpxor xmm3, xmm3, xmm3
+         vpunpcklqdq xmm3, xmm3, xmm9
++        mov rax, rdx
++        test al, 15
++        jnz 5f
++        test al, 16
++        jz 5f
++        test al, 32
++        jnz 6f
++        vmovdqa64 zmm10, zmmword ptr [rdx-16]
++        vmovdqa64 zmm11, zmmword ptr [rdx+48]
++        valignd zmm10, zmm11, zmm10, 4
++        jmp 7f
++6:
++        vmovdqa64 zmm10, zmmword ptr [rdx-48]
++        vmovdqa64 zmm11, zmmword ptr [rdx+16]
++        valignd zmm10, zmm11, zmm10, 12
++7:
++        vmovdqa xmm4, xmm10
++        vextracti32x4 xmm5, zmm10, 1
++        vextracti32x4 xmm6, zmm10, 2
++        vextracti32x4 xmm7, zmm10, 3
++        jmp 4f
++5:
+         vmovups xmm4, xmmword ptr [rdx]
+         vmovups xmm5, xmmword ptr [rdx+0x10]
++        vmovups xmm6, xmmword ptr [rdx+0x20]
++        vmovups xmm7, xmmword ptr [rdx+0x30]
++4:
+         vmovaps xmm8, xmm4
+         vshufps xmm4, xmm4, xmm5, 136
+         vshufps xmm8, xmm8, xmm5, 221
+         vmovaps xmm5, xmm8
+-        vmovups xmm6, xmmword ptr [rdx+0x20]
+-        vmovups xmm7, xmmword ptr [rdx+0x30]
+         vmovaps xmm8, xmm6
+         vshufps xmm6, xmm6, xmm7, 136
+         vpshufd xmm6, xmm6, 0x93
+@@ -431,4 +477,5 @@ _CET_ENDBR
+         vpxor xmm1, xmm1, xmm3
+         vmovups xmmword ptr [r8], xmm0
+         vmovups xmmword ptr [r8+0x10], xmm1
++        vzeroupper
+         ret
+diff --git a/src/ffi_chunk_root.rs b/src/ffi_chunk_root.rs
+index 10ca227..9597b72 100644
+--- a/src/ffi_chunk_root.rs
++++ b/src/ffi_chunk_root.rs
+@@ -97,6 +97,30 @@ mod test {
+         }
+     }
+ 
++    /// Every placement of the input within a cache line that selects a
++    /// different load path in the avx512 kernel (16 and 48 bytes in: the
++    /// whole lines, spliced), and the bytes around them, for every length.
++    #[test]
++    fn test_chunk_root_line_placements() {
++        #[repr(C, align(64))]
++        struct Lines([u8; 2 * CHUNK_LEN]);
++        let variants = variants();
++        let mut lines = Lines([0; 2 * CHUNK_LEN]);
++        crate::test::paint_test_input(&mut lines.0);
++        let keyed = crate::platform::words_from_le_bytes_32(&[0x42; 32]);
++        for &avx512 in &variants {
++            for offset in [0, 1, 15, 16, 17, 31, 32, 33, 47, 48, 49, 63, 64 + 16, 64 + 48] {
++                for len in 0..=CHUNK_LEN {
++                    for (key, flags) in [(crate::IV, 0), (&keyed, crate::KEYED_HASH)] {
++                        let input = &lines.0[offset..][..len];
++                        let got = unsafe { chunk_root(avx512, input, key, flags) };
++                        assert_eq!(got, reference(input, key, flags), "avx512={avx512} offset={offset} len={len} flags={flags}");
++                    }
++                }
++            }
++        }
++    }
++
+     /// The kernel source keeps off the stack and out of constant memory:
+     /// no push or pop, no rsp- or rbp-based operand, no rip-relative load.
+     /// A kernel that spilled would put the aliasing it exists to avoid
+@@ -113,7 +137,7 @@ mod test {
+         // And the one memory each instruction may touch is an argument's.
+         for line in source.lines() {
+             if let Some(open) = line.find('[') {
+-                let base = line[open + 1..].split(|c| c == '+' || c == ']').next().unwrap().trim();
++                let base = line[open + 1..].split(|c| c == '+' || c == '-' || c == ']').next().unwrap().trim();
+                 assert!(["rdi", "rsi", "rdx", "r8"].contains(&base), "memory outside the arguments: {line}");
+             }
+         }
+diff --git a/tools/gen_x86_chunk_root.py b/tools/gen_x86_chunk_root.py
+index 8c524ec..3521ce1 100644
+--- a/tools/gen_x86_chunk_root.py
++++ b/tools/gen_x86_chunk_root.py
+@@ -27,8 +27,11 @@ The chunk counter is 0. CHUNK_START goes on the first block, CHUNK_END and
+ ROOT on the last. Only the arguments' memory is read or written: no push, no
+ spill, no stack scratch, no constant loads (IV and shuffle masks are built
+ from immediates). Clobbers rax, rcx, rdx, rdi, r9-r11, xmm0-xmm15 and flags,
+-all caller-saved. The sse41 entry needs SSE4.1; the avx512 entry needs
+-AVX-512F and AVX-512VL (vprord on xmm).
++all caller-saved (the avx512 entry also zmm10/zmm11, and ends with
++vzeroupper). The sse41 entry needs SSE4.1; the avx512 entry needs AVX-512F
++and AVX-512VL (vprord on xmm). The avx512 entry may read the whole cache
++lines holding a block 16 or 48 bytes into its line (aligned; never another
++page).
+ 
+ The compression body is upstream BLAKE3's blake3_compress_in_place_sse41,
+ instruction for instruction, with its rotations rendered per ISA. Proof
+@@ -94,7 +97,28 @@ def render(isa, ins):
+ def body(isa, block_ptr):
+     """Compress xmm0..xmm3 with the block at block_ptr; CV out in xmm0/xmm1."""
+     out = []
+-    for ins in stream(LOAD.format(p=block_ptr)):
++    load = stream(LOAD.format(p=block_ptr))
++    if isa == 'avx512':
++        # Experiment (#141): with the block 16 or 48 bytes into a line, read
++        # the two whole lines that hold it with aligned 64-byte loads and
++        # splice the block out in registers (valignd), so that no load
++        # crosses a line. The lines never cross a page. Elsewhere four
++        # 16-byte loads, as upstream.
++        out += [f'mov rax, {block_ptr}', 'test al, 15', 'jnz 5f', 'test al, 16', 'jz 5f',
++                'test al, 32', 'jnz 6f',
++                f'vmovdqa64 zmm10, zmmword ptr [{block_ptr}-16]', f'vmovdqa64 zmm11, zmmword ptr [{block_ptr}+48]',
++                'valignd zmm10, zmm11, zmm10, 4', 'jmp 7f',
++                '6:', f'vmovdqa64 zmm10, zmmword ptr [{block_ptr}-48]', f'vmovdqa64 zmm11, zmmword ptr [{block_ptr}+16]',
++                'valignd zmm10, zmm11, zmm10, 12',
++                '7:', 'vmovdqa xmm4, xmm10', 'vextracti32x4 xmm5, zmm10, 1',
++                'vextracti32x4 xmm6, zmm10, 2', 'vextracti32x4 xmm7, zmm10, 3', 'jmp 4f',
++                '5:']
++        for ins in load:
++            if ins[0] == 'movups' and '[' in ins[2]:
++                out += render(isa, ins)
++        out.append('4:')
++        load = [ins for ins in load if not (ins[0] == 'movups' and '[' in ins[2])]
++    for ins in load:
+         out += render(isa, ins)
+     out.append('mov al, 7')
+     out.append('9:')
+@@ -143,7 +167,8 @@ def kernel(isa):
+     out += qword_pair(isa, 'xmm2', IV)
+     out += ['mov eax, r11d', 'or eax, ecx', f'or eax, {CHUNK_END | ROOT}', 'shl rax, 32', 'or rax, r10'] + row3(isa)
+     out += body(isa, 'rdx')
+-    out += [f'{x}movups xmmword ptr [r8], xmm0', f'{x}movups xmmword ptr [r8+0x10], xmm1', 'ret']
++    out += [f'{x}movups xmmword ptr [r8], xmm0', f'{x}movups xmmword ptr [r8+0x10], xmm1']
++    out += ['vzeroupper', 'ret'] if isa == 'avx512' else ['ret']
+     return out
+ 
+ 
+-- 
+2.53.0
+
