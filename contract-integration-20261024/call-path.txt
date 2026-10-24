@@ -1,0 +1,1996 @@
+
+/root/results/gpr-chunk-root/devon-output-integration/simd:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+000000000006ab30 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>>:
+   6ab30:	push   %rbp
+   6ab31:	push   %r15
+   6ab33:	push   %r14
+   6ab35:	push   %r13
+   6ab37:	push   %r12
+   6ab39:	push   %rbx
+   6ab3a:	sub    $0xc78,%rsp
+   6ab41:	test   %r8b,%r8b
+   6ab44:	mov    $0x40,%ebx
+   6ab49:	cmove  %rdx,%rbx
+   6ab4d:	mov    %rcx,0x238(%rsp)
+   6ab55:	movzbl %dil,%eax
+   6ab59:	lea    -0x562d8(%rip),%rdi        # 14888 <__abi_tag+0x1458c>
+   6ab60:	movslq (%rdi,%rax,4),%rax
+   6ab64:	add    %rdi,%rax
+   6ab67:	jmp    *%rax
+   6ab69:	test   %r8b,%r8b
+   6ab6c:	je     6b84b <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xd1b>
+   6ab72:	cmp    $0x40,%rbx
+   6ab76:	je     6b930 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xe00>
+   6ab7c:	cmp    $0x100,%rbx
+   6ab83:	jne    6d07d <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x254d>
+   6ab89:	movups -0x55600(%rip),%xmm0        # 15590 <__abi_tag+0x15294>
+   6ab90:	movaps %xmm0,0x50(%rsp)
+   6ab95:	movdqu -0x5561d(%rip),%xmm0        # 15580 <__abi_tag+0x15284>
+   6ab9d:	movdqa %xmm0,0x40(%rsp)
+   6aba3:	test   %dl,%dl
+   6aba5:	jne    6d0c2 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2592>
+   6abab:	mov    %rdx,%rax
+   6abae:	shr    $0x8,%rax
+   6abb2:	mov    %rax,0x10(%rsp)
+   6abb7:	movzbl 0x262f84(%rip),%eax        # 2cdb42 <blake3::platform::avx512_detected::has_avx512::STORAGE>
+   6abbe:	mov    $0x4,%r12b
+   6abc1:	mov    %rsi,%r14
+   6abc4:	mov    %rdx,%r15
+   6abc7:	cmp    $0x1,%al
+   6abc9:	je     6ac0d <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xdd>
+   6abcb:	movzbl %al,%eax
+   6abce:	cmp    $0xff,%eax
+   6abd3:	je     6d10d <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x25dd>
+   6abd9:	movzbl 0x262f60(%rip),%eax        # 2cdb40 <blake3::platform::avx2_detected::has_avx2::STORAGE>
+   6abe0:	mov    $0x3,%r12b
+   6abe3:	cmp    $0x1,%al
+   6abe5:	je     6ac0d <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xdd>
+   6abe7:	movzbl %al,%eax
+   6abea:	cmp    $0xff,%eax
+   6abef:	je     6d1bc <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x268c>
+   6abf5:	movzbl 0x262f45(%rip),%eax        # 2cdb41 <blake3::platform::sse41_detected::has_sse41::STORAGE>
+   6abfc:	cmp    $0xff,%al
+   6abfe:	je     6d223 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x26f3>
+   6ac04:	cmp    $0x1,%al
+   6ac06:	sete   %r12b
+   6ac0a:	inc    %r12b
+   6ac0d:	lea    0x190(%rsp),%rdi
+   6ac15:	mov    0x10(%rsp),%rbx
+   6ac1a:	mov    %rbx,%rsi
+   6ac1d:	call   b41b0 <bench_hashes::take_batch_digests>
+   6ac22:	mov    0x198(%rsp),%rax
+   6ac2a:	mov    %rax,0x20(%rsp)
+   6ac2f:	mov    0x1a0(%rsp),%rdx
+   6ac37:	mov    %r15,%rax
+   6ac3a:	shr    $0xc,%rax
+   6ac3e:	and    $0xf00,%r15d
+   6ac45:	cmp    $0x1,%r15
+   6ac49:	sbb    $0xffffffffffffffff,%rax
+   6ac4d:	mov    %r14,0x240(%rsp)
+   6ac55:	mov    %rbx,0x248(%rsp)
+   6ac5d:	lea    0x240(%rsp),%rcx
+   6ac65:	cmp    %rdx,%rbx
+   6ac68:	ja     6cf61 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2431>
+   6ac6e:	mov    0x248(%rsp),%r15
+   6ac76:	test   %r15,%r15
+   6ac79:	je     6bc99 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1169>
+   6ac7f:	mov    %r15,%rbp
+   6ac82:	shr    $0x4,%rbp
+   6ac86:	mov    %r15d,%ecx
+   6ac89:	and    $0xf,%ecx
+   6ac8c:	cmp    $0x1,%rcx
+   6ac90:	sbb    $0xffffffffffffffff,%rbp
+   6ac94:	cmp    %rbp,%rax
+   6ac97:	cmovb  %rax,%rbp
+   6ac9b:	cmpq   $0x0,0x10(%rsp)
+   6aca1:	je     6bc99 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1169>
+   6aca7:	test   %rax,%rax
+   6acaa:	je     6bc99 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1169>
+   6acb0:	mov    0x240(%rsp),%rax
+   6acb8:	xor    %r9d,%r9d
+   6acbb:	mov    $0x10,%r14d
+   6acc1:	movzbl %r12b,%ecx
+   6acc5:	mov    %ecx,0x30(%rsp)
+   6acc9:	mov    %rax,0x38(%rsp)
+   6acce:	mov    %rax,%r12
+   6acd1:	mov    %r15,%r13
+   6acd4:	jmp    6ad25 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1f5>
+   6acd6:	cs nopw 0x0(%rax,%rax,1)
+   6ace0:	lea    0x1(%r9),%rbx
+   6ace4:	shl    $0x9,%r9
+   6ace8:	add    0x20(%rsp),%r9
+   6aced:	shl    $0x5,%rcx
+   6acf1:	mov    %rcx,(%rsp)
+   6acf5:	mov    0x30(%rsp),%edi
+   6acf9:	lea    0x4f0(%rsp),%rsi
+   6ad01:	lea    0x40(%rsp),%rcx
+   6ad06:	xor    %r8d,%r8d
+   6ad09:	call   7a680 <<blake3::platform::Platform>::hash_many::<256>>
+   6ad0e:	add    $0xfffffffffffffff0,%r13
+   6ad12:	add    $0x1000,%r12
+   6ad19:	mov    %rbx,%r9
+   6ad1c:	cmp    %rbp,%rbx
+   6ad1f:	je     6bc99 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1169>
+   6ad25:	cmp    $0x1,%r13
+   6ad29:	mov    %r13,%rax
+   6ad2c:	adc    $0x0,%rax
+   6ad30:	cmp    $0x10,%rax
+   6ad34:	cmovae %r14,%rax
+   6ad38:	mov    %r9,%rsi
+   6ad3b:	shl    $0x4,%rsi
+   6ad3f:	mov    %r15,%rdx
+   6ad42:	sub    %rsi,%rdx
+   6ad45:	cmp    $0x10,%rdx
+   6ad49:	cmovae %r14,%rdx
+   6ad4d:	mov    0x10(%rsp),%rcx
+   6ad52:	sub    %rsi,%rcx
+   6ad55:	cmp    $0x10,%rcx
+   6ad59:	cmovae %r14,%rcx
+   6ad5d:	cmp    %rsi,%r15
+   6ad60:	je     6d2b1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2781>
+   6ad66:	mov    %r9,%rdi
+   6ad69:	shl    $0xc,%rdi
+   6ad6d:	add    0x38(%rsp),%rdi
+   6ad72:	mov    %rdi,0x4f0(%rsp)
+   6ad7a:	mov    %rdi,0x4f8(%rsp)
+   6ad82:	mov    %rdi,0x500(%rsp)
+   6ad8a:	mov    %rdi,0x508(%rsp)
+   6ad92:	mov    %rdi,0x510(%rsp)
+   6ad9a:	mov    %rdi,0x518(%rsp)
+   6ada2:	mov    %rdi,0x520(%rsp)
+   6adaa:	mov    %rdi,0x528(%rsp)
+   6adb2:	mov    %rdi,0x530(%rsp)
+   6adba:	mov    %rdi,0x538(%rsp)
+   6adc2:	mov    %rdi,0x540(%rsp)
+   6adca:	mov    %rdi,0x548(%rsp)
+   6add2:	mov    %rdi,0x550(%rsp)
+   6adda:	mov    %rdi,0x558(%rsp)
+   6ade2:	mov    %rdi,0x560(%rsp)
+   6adea:	mov    %rdi,0x568(%rsp)
+   6adf2:	cmp    $0x4,%r13
+   6adf6:	jae    6adff <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2cf>
+   6adf8:	xor    %esi,%esi
+   6adfa:	jmp    6aecf <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x39f>
+   6adff:	mov    %eax,%esi
+   6ae01:	and    $0x1c,%esi
+   6ae04:	movq   %rdi,%xmm0
+   6ae09:	pshufd $0x44,%xmm0,%xmm0
+   6ae0e:	movdqa %xmm0,%xmm1
+   6ae12:	paddq  -0x56f5a(%rip),%xmm1        # 13ec0 <__abi_tag+0x13bc4>
+   6ae1a:	movdqa %xmm0,%xmm2
+   6ae1e:	paddq  -0x567f6(%rip),%xmm2        # 14630 <__abi_tag+0x14334>
+   6ae26:	movdqa %xmm1,0x4f0(%rsp)
+   6ae2f:	movdqa %xmm2,0x500(%rsp)
+   6ae38:	cmp    $0x4,%rsi
+   6ae3c:	je     6aec6 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x396>
+   6ae42:	movdqa %xmm0,%xmm1
+   6ae46:	paddq  -0x56f7e(%rip),%xmm1        # 13ed0 <__abi_tag+0x13bd4>
+   6ae4e:	movdqa %xmm0,%xmm2
+   6ae52:	paddq  -0x56aba(%rip),%xmm2        # 143a0 <__abi_tag+0x140a4>
+   6ae5a:	movdqa %xmm1,0x510(%rsp)
+   6ae63:	movdqa %xmm2,0x520(%rsp)
+   6ae6c:	cmp    $0x8,%esi
+   6ae6f:	je     6aec6 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x396>
+   6ae71:	movdqa %xmm0,%xmm1
+   6ae75:	paddq  -0x5683d(%rip),%xmm1        # 14640 <__abi_tag+0x14344>
+   6ae7d:	movdqa %xmm0,%xmm2
+   6ae81:	paddq  -0x56ea9(%rip),%xmm2        # 13fe0 <__abi_tag+0x13ce4>
+   6ae89:	movdqa %xmm1,0x530(%rsp)
+   6ae92:	movdqa %xmm2,0x540(%rsp)
+   6ae9b:	cmp    $0xc,%esi
+   6ae9e:	je     6aec6 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x396>
+   6aea0:	movdqa %xmm0,%xmm1
+   6aea4:	paddq  -0x56e6c(%rip),%xmm1        # 14040 <__abi_tag+0x13d44>
+   6aeac:	paddq  -0x572b4(%rip),%xmm0        # 13c00 <__abi_tag+0x13904>
+   6aeb4:	movdqa %xmm1,0x550(%rsp)
+   6aebd:	movdqa %xmm0,0x560(%rsp)
+   6aec6:	cmp    %rsi,%rax
+   6aec9:	je     6ace0 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1b0>
+   6aecf:	mov    %esi,%edi
+   6aed1:	shl    $0x8,%edi
+   6aed4:	add    %r12,%rdi
+   6aed7:	nopw   0x0(%rax,%rax,1)
+   6aee0:	mov    %rdi,0x4f0(%rsp,%rsi,8)
+   6aee8:	inc    %rsi
+   6aeeb:	add    $0x100,%rdi
+   6aef2:	cmp    %rsi,%rax
+   6aef5:	jne    6aee0 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x3b0>
+   6aef7:	jmp    6ace0 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1b0>
+   6aefc:	cmp    %rdx,%rbx
+   6aeff:	je     6d2c1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2791>
+   6af05:	mov    %rsi,0x4f0(%rsp)
+   6af0d:	mov    %rdx,0x4f8(%rsp)
+   6af15:	lea    0x4f0(%rsp),%rax
+   6af1d:	test   %rbx,%rbx
+   6af20:	je     6ceec <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x23bc>
+   6af26:	mov    0x4f8(%rsp),%rcx
+   6af2e:	mov    %rcx,%rax
+   6af31:	or     %rbx,%rax
+   6af34:	shr    $0x20,%rax
+   6af38:	je     6b919 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xde9>
+   6af3e:	mov    %rcx,%rax
+   6af41:	xor    %edx,%edx
+   6af43:	div    %rbx
+   6af46:	sub    %rdx,%rcx
+   6af49:	cmp    %rcx,%rbx
+   6af4c:	ja     6cdb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2281>
+   6af52:	jmp    6d2d9 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x27a9>
+   6af57:	mov    %fs:0x0,%rax
+   6af60:	lea    -0xa8(%rax),%r14
+   6af67:	cmp    %rdx,%rbx
+   6af6a:	jne    6b55f <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xa2f>
+   6af70:	mov    %rsi,0x4f0(%rsp)
+   6af78:	mov    %rdx,0x4f8(%rsp)
+   6af80:	lea    0x4f0(%rsp),%rax
+   6af88:	mov    0x4f0(%rsp),%rsi
+   6af90:	mov    0x4f8(%rsp),%rdx
+   6af98:	lea    0x4db(%rsp),%rdi
+   6afa0:	call   7ad60 <<sha1_checked::Sha1>::try_digest::<&[u8]>>
+   6afa5:	cmpb   $0x1,%fs:0xffffffffffffff80
+   6afae:	jne    6cfc1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2491>
+   6afb4:	cmpq   $0x0,(%r14)
+   6afb8:	jne    6ceb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2381>
+   6afbe:	movq   $0xffffffffffffffff,(%r14)
+   6afc5:	mov    0x18(%r14),%rsi
+   6afc9:	mov    0x20(%r14),%rax
+   6afcd:	mov    %eax,%edi
+   6afcf:	and    $0x3ff,%edi
+   6afd5:	cmp    %rsi,%rdi
+   6afd8:	jae    6d217 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x26e7>
+   6afde:	lea    0x4dc(%rsp),%rcx
+   6afe6:	mov    0x10(%r14),%rdx
+   6afea:	shl    $0x5,%edi
+   6afed:	mov    0x10(%rcx),%esi
+   6aff0:	mov    %esi,0x10(%rdx,%rdi,1)
+   6aff4:	movdqu (%rcx),%xmm0
+   6aff8:	movdqu %xmm0,(%rdx,%rdi,1)
+   6affd:	jmp    6b90a <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xdda>
+   6b002:	test   %r8b,%r8b
+   6b005:	je     6b6e1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xbb1>
+   6b00b:	mov    %rdx,0x40(%rsp)
+   6b010:	mov    %rbx,%rax
+   6b013:	imul   %rcx,%rax
+   6b017:	mov    %rax,0x4f0(%rsp)
+   6b01f:	cmp    %rax,%rdx
+   6b022:	jne    6cf09 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x23d9>
+   6b028:	mov    %rsi,%r15
+   6b02b:	mov    %rdx,%r12
+   6b02e:	lea    0x4f0(%rsp),%rdi
+   6b036:	mov    %rcx,%rsi
+   6b039:	mov    %rcx,%r14
+   6b03c:	call   b41b0 <bench_hashes::take_batch_digests>
+   6b041:	mov    %r14,%rax
+   6b044:	mov    0x500(%rsp),%rdx
+   6b04c:	cmp    %rdx,%r14
+   6b04f:	ja     6cf24 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x23f4>
+   6b055:	mov    0x4f8(%rsp),%r14
+   6b05d:	mov    %r15,0x40(%rsp)
+   6b062:	mov    %r12,0x48(%rsp)
+   6b067:	lea    0x40(%rsp),%rcx
+   6b06c:	mov    0x40(%rsp),%rdi
+   6b071:	mov    0x48(%rsp),%rsi
+   6b076:	movzbl 0x263705(%rip),%ecx        # 2ce782 <blake3_servil::platform::DETECTED>
+   6b07d:	test   %cl,%cl
+   6b07f:	je     6cee7 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x23b7>
+   6b085:	movzbl %cl,%ecx
+   6b088:	mov    %ecx,0x8(%rsp)
+   6b08c:	mov    %rax,(%rsp)
+   6b090:	shl    $0x5,%rax
+   6b094:	lea    -0x55b1b(%rip),%rcx        # 15580 <__abi_tag+0x15284>
+   6b09b:	mov    %rbx,%rdx
+   6b09e:	mov    %rax,%rbx
+   6b0a1:	xor    %r8d,%r8d
+   6b0a4:	mov    %r14,%r9
+   6b0a7:	call   121aa0 <blake3_servil::many::hash_many_on>
+   6b0ac:	mov    %r14,%rdi
+   6b0af:	mov    %rbx,%rsi
+   6b0b2:	jmp    6bcdc <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x11ac>
+   6b0b7:	test   %r8b,%r8b
+   6b0ba:	je     6b7d0 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xca0>
+   6b0c0:	mov    %rdx,0x40(%rsp)
+   6b0c5:	mov    %rbx,%rax
+   6b0c8:	imul   %rcx,%rax
+   6b0cc:	mov    %rax,0x4f0(%rsp)
+   6b0d4:	cmp    %rax,%rdx
+   6b0d7:	jne    6cf09 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x23d9>
+   6b0dd:	mov    %rsi,%r12
+   6b0e0:	mov    %rdx,%r13
+   6b0e3:	lea    0x4f0(%rsp),%rdi
+   6b0eb:	mov    %rcx,%rsi
+   6b0ee:	mov    %rcx,%r15
+   6b0f1:	call   b41b0 <bench_hashes::take_batch_digests>
+   6b0f6:	mov    %r15,%rsi
+   6b0f9:	mov    0x500(%rsp),%rdx
+   6b101:	cmp    %rdx,%r15
+   6b104:	ja     6cf44 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2414>
+   6b10a:	mov    0x4f8(%rsp),%r14
+   6b112:	mov    %r12,0x40(%rsp)
+   6b117:	mov    %r13,0x48(%rsp)
+   6b11c:	lea    0x40(%rsp),%rax
+   6b121:	mov    0x40(%rsp),%rdi
+   6b126:	mov    0x48(%rsp),%rax
+   6b12b:	mov    0x262a4f(%rip),%ecx        # 2cdb80 <blake3_servil::lanes::POOL+0x38>
+   6b131:	test   %ecx,%ecx
+   6b133:	jne    6cf04 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x23d4>
+   6b139:	cmp    $0x2,%rsi
+   6b13d:	setb   %cl
+   6b140:	cmp    $0x80000,%rax
+   6b146:	setb   %dl
+   6b149:	or     %cl,%dl
+   6b14b:	je     6bcb6 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1186>
+   6b151:	movzbl 0x26362a(%rip),%ecx        # 2ce782 <blake3_servil::platform::DETECTED>
+   6b158:	test   %cl,%cl
+   6b15a:	je     6cee7 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x23b7>
+   6b160:	movzbl %cl,%ecx
+   6b163:	mov    %ecx,0x8(%rsp)
+   6b167:	mov    %rsi,(%rsp)
+   6b16b:	lea    -0x55bf2(%rip),%rcx        # 15580 <__abi_tag+0x15284>
+   6b172:	mov    %rax,%rsi
+   6b175:	mov    %rbx,%rdx
+   6b178:	xor    %r8d,%r8d
+   6b17b:	mov    %r14,%r9
+   6b17e:	call   121aa0 <blake3_servil::many::hash_many_on>
+   6b183:	jmp    6bcd2 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x11a2>
+   6b188:	mov    %fs:0x0,%rax
+   6b191:	lea    -0xa8(%rax),%r14
+   6b198:	cmp    %rdx,%rbx
+   6b19b:	jne    6b5b1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xa81>
+   6b1a1:	mov    %rsi,0x40(%rsp)
+   6b1a6:	mov    %rdx,0x48(%rsp)
+   6b1ab:	lea    0x40(%rsp),%rax
+   6b1b0:	mov    0x40(%rsp),%rsi
+   6b1b5:	mov    0x48(%rsp),%rdx
+   6b1ba:	lea    0x4f0(%rsp),%rdi
+   6b1c2:	call   91e40 <<sha2::Sha256 as digest::digest::Digest>::digest::<&[u8]>>
+   6b1c7:	cmpb   $0x1,%fs:0xffffffffffffff80
+   6b1d0:	jne    6cf9b <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x246b>
+   6b1d6:	cmpq   $0x0,(%r14)
+   6b1da:	jne    6ceb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2381>
+   6b1e0:	movq   $0xffffffffffffffff,(%r14)
+   6b1e7:	mov    0x18(%r14),%rsi
+   6b1eb:	mov    0x20(%r14),%rax
+   6b1ef:	mov    %eax,%edi
+   6b1f1:	and    $0x3ff,%edi
+   6b1f7:	cmp    %rsi,%rdi
+   6b1fa:	jae    6d217 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x26e7>
+   6b200:	mov    0x10(%r14),%rcx
+   6b204:	shl    $0x5,%edi
+   6b207:	movdqu 0x4f0(%rsp),%xmm0
+   6b210:	movdqu 0x500(%rsp),%xmm1
+   6b219:	jmp    6b8ff <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xdcf>
+   6b21e:	cmp    %rdx,%rbx
+   6b221:	jne    6b5f7 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xac7>
+   6b227:	lea    0x4f8(%rsp),%rbx
+   6b22f:	mov    %rsi,0x40(%rsp)
+   6b234:	mov    %rdx,0x48(%rsp)
+   6b239:	lea    0x40(%rsp),%rax
+   6b23e:	mov    0x40(%rsp),%rsi
+   6b243:	mov    0x48(%rsp),%rdx
+   6b248:	lea    0x4f0(%rsp),%rdi
+   6b250:	call   2546e0 <ring::digest::digest>
+   6b255:	mov    0x4f0(%rsp),%rax
+   6b25d:	movzbl 0x59(%rax),%esi
+   6b261:	mov    %rbx,%rdi
+   6b264:	call   a0490 <bench_hashes::use_digest>
+   6b269:	jmp    6cdb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2281>
+   6b26e:	cmp    $0x1,%rcx
+   6b272:	jne    6cf74 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2444>
+   6b278:	mov    %fs:0x0,%rax
+   6b281:	lea    -0xa8(%rax),%r14
+   6b288:	cmp    %rdx,%rbx
+   6b28b:	mov    %r14,0x10(%rsp)
+   6b290:	jne    6b68f <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xb5f>
+   6b296:	mov    %rsi,0x240(%rsp)
+   6b29e:	mov    %rdx,0x248(%rsp)
+   6b2a6:	lea    0x240(%rsp),%rax
+   6b2ae:	mov    0x240(%rsp),%rsi
+   6b2b6:	mov    0x248(%rsp),%rdx
+   6b2be:	movzbl 0x26287d(%rip),%eax        # 2cdb42 <blake3::platform::avx512_detected::has_avx512::STORAGE>
+   6b2c5:	mov    $0x4,%bl
+   6b2c7:	cmp    $0x1,%al
+   6b2c9:	je     6b30a <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x7da>
+   6b2cb:	movzbl %al,%eax
+   6b2ce:	cmp    $0xff,%eax
+   6b2d3:	je     6d025 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x24f5>
+   6b2d9:	movzbl 0x262860(%rip),%eax        # 2cdb40 <blake3::platform::avx2_detected::has_avx2::STORAGE>
+   6b2e0:	mov    $0x3,%bl
+   6b2e2:	cmp    $0x1,%al
+   6b2e4:	je     6b30a <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x7da>
+   6b2e6:	movzbl %al,%eax
+   6b2e9:	cmp    $0xff,%eax
+   6b2ee:	je     6d11f <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x25ef>
+   6b2f4:	movzbl 0x262846(%rip),%eax        # 2cdb41 <blake3::platform::sse41_detected::has_sse41::STORAGE>
+   6b2fb:	cmp    $0xff,%al
+   6b2fd:	je     6d1ce <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x269e>
+   6b303:	cmp    $0x1,%al
+   6b305:	sete   %bl
+   6b308:	inc    %bl
+   6b30a:	pxor   %xmm0,%xmm0
+   6b30e:	movdqa %xmm0,0x70(%rsp)
+   6b314:	movdqa %xmm0,0x60(%rsp)
+   6b31a:	movdqa %xmm0,0x50(%rsp)
+   6b320:	movdqa %xmm0,0x40(%rsp)
+   6b326:	movdqu -0x55dae(%rip),%xmm1        # 15580 <__abi_tag+0x15284>
+   6b32e:	movdqa %xmm1,0x80(%rsp)
+   6b337:	movdqu -0x55daf(%rip),%xmm2        # 15590 <__abi_tag+0x15294>
+   6b33f:	movdqa %xmm2,0x90(%rsp)
+   6b348:	movdqa %xmm1,0x560(%rsp)
+   6b351:	movdqa %xmm2,0x570(%rsp)
+   6b35a:	movdqa %xmm0,0x4f0(%rsp)
+   6b363:	movdqa %xmm0,0x500(%rsp)
+   6b36c:	movdqa %xmm0,0x510(%rsp)
+   6b375:	movdqa %xmm0,0x520(%rsp)
+   6b37e:	movdqa %xmm1,0x530(%rsp)
+   6b387:	movdqa %xmm2,0x540(%rsp)
+   6b390:	movl   $0x0,0x557(%rsp)
+   6b39b:	movq   $0x0,0x550(%rsp)
+   6b3a7:	mov    %bl,0x55b(%rsp)
+   6b3ae:	movq   $0x0,0x580(%rsp)
+   6b3ba:	movl   $0x0,0x588(%rsp)
+   6b3c5:	lea    0x4f0(%rsp),%rdi
+   6b3cd:	call   114530 <<blake3::Hasher>::update_rayon>
+   6b3d2:	cmpq   $0x0,0x580(%rsp)
+   6b3db:	jne    6cebd <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x238d>
+   6b3e1:	lea    0x40(%rsp),%rbx
+   6b3e6:	lea    0x4f0(%rsp),%rsi
+   6b3ee:	mov    %rbx,%rdi
+   6b3f1:	call   114120 <<blake3::Hasher>::final_output>
+   6b3f6:	lea    0x190(%rsp),%rdi
+   6b3fe:	mov    %rbx,%rsi
+   6b401:	call   112b10 <<blake3::Output>::root_hash>
+   6b406:	cmpb   $0x1,%fs:0xffffffffffffff80
+   6b40f:	jne    6d048 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2518>
+   6b415:	cmpq   $0x0,(%r14)
+   6b419:	jne    6ceb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2381>
+   6b41f:	movq   $0xffffffffffffffff,(%r14)
+   6b426:	mov    0x18(%r14),%rsi
+   6b42a:	mov    0x20(%r14),%rax
+   6b42e:	mov    %eax,%edi
+   6b430:	and    $0x3ff,%edi
+   6b436:	cmp    %rsi,%rdi
+   6b439:	jae    6d217 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x26e7>
+   6b43f:	mov    0x10(%r14),%rcx
+   6b443:	shl    $0x5,%edi
+   6b446:	movdqu 0x190(%rsp),%xmm0
+   6b44f:	movdqu 0x1a0(%rsp),%xmm1
+   6b458:	jmp    6b8ff <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xdcf>
+   6b45d:	movabs $0xf0f0f0f0f0f0f0f1,%rdi
+   6b467:	mov    %rbx,%rax
+   6b46a:	mov    %rdx,%r8
+   6b46d:	mul    %rdi
+   6b470:	mov    %rdx,%rcx
+   6b473:	mov    %r8,%rax
+   6b476:	mov    %fs:0x0,%rdx
+   6b47f:	lea    -0xa8(%rdx),%r13
+   6b486:	cmp    %r8,%rbx
+   6b489:	jne    6b63d <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xb0d>
+   6b48f:	lea    0x398(%rsp),%rbx
+   6b497:	mov    %rsi,0x4f0(%rsp)
+   6b49f:	mov    %rax,0x4f8(%rsp)
+   6b4a7:	lea    0x4f0(%rsp),%rax
+   6b4af:	mov    0x4f0(%rsp),%r15
+   6b4b7:	mov    0x4f8(%rsp),%r14
+   6b4bf:	xorps  %xmm0,%xmm0
+   6b4c2:	movaps %xmm0,0x2d0(%rsp)
+   6b4ca:	movaps %xmm0,0x2e0(%rsp)
+   6b4d2:	movaps %xmm0,0x2f0(%rsp)
+   6b4da:	movaps %xmm0,0x300(%rsp)
+   6b4e2:	movaps %xmm0,0x310(%rsp)
+   6b4ea:	movaps %xmm0,0x320(%rsp)
+   6b4f2:	movaps %xmm0,0x330(%rsp)
+   6b4fa:	movaps %xmm0,0x340(%rsp)
+   6b502:	movaps %xmm0,0x350(%rsp)
+   6b50a:	movaps %xmm0,0x360(%rsp)
+   6b512:	movaps %xmm0,0x370(%rsp)
+   6b51a:	movaps %xmm0,0x380(%rsp)
+   6b522:	movq   $0x0,0x390(%rsp)
+   6b52e:	movb   $0x0,0x41f(%rsp)
+   6b536:	cmp    $0x88,%r14
+   6b53d:	jae    6bcf3 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x11c3>
+   6b543:	mov    %rbx,%rdi
+   6b546:	mov    %r15,%rsi
+   6b549:	mov    %r14,%rdx
+   6b54c:	call   *0x260ffe(%rip)        # 2cc550 <memcpy@GLIBC_2.14>
+   6b552:	mov    %r14b,0x41f(%rsp)
+   6b55a:	jmp    6be08 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x12d8>
+   6b55f:	mov    %rsi,0x190(%rsp)
+   6b567:	mov    %rdx,0x198(%rsp)
+   6b56f:	lea    0x190(%rsp),%rax
+   6b577:	test   %rbx,%rbx
+   6b57a:	je     6ceec <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x23bc>
+   6b580:	mov    0x198(%rsp),%r15
+   6b588:	mov    %r15,%rax
+   6b58b:	or     %rbx,%rax
+   6b58e:	shr    $0x20,%rax
+   6b592:	je     6c054 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1524>
+   6b598:	mov    %r15,%rax
+   6b59b:	xor    %edx,%edx
+   6b59d:	div    %rbx
+   6b5a0:	sub    %rdx,%r15
+   6b5a3:	cmp    %r15,%rbx
+   6b5a6:	jbe    6c067 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1537>
+   6b5ac:	jmp    6cdb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2281>
+   6b5b1:	mov    %rsi,0x40(%rsp)
+   6b5b6:	mov    %rdx,0x48(%rsp)
+   6b5bb:	lea    0x40(%rsp),%rax
+   6b5c0:	test   %rbx,%rbx
+   6b5c3:	je     6ceec <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x23bc>
+   6b5c9:	mov    0x48(%rsp),%r15
+   6b5ce:	mov    %r15,%rax
+   6b5d1:	or     %rbx,%rax
+   6b5d4:	shr    $0x20,%rax
+   6b5d8:	je     6c173 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1643>
+   6b5de:	mov    %r15,%rax
+   6b5e1:	xor    %edx,%edx
+   6b5e3:	div    %rbx
+   6b5e6:	sub    %rdx,%r15
+   6b5e9:	cmp    %r15,%rbx
+   6b5ec:	jbe    6c186 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1656>
+   6b5f2:	jmp    6cdb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2281>
+   6b5f7:	mov    %rsi,0x40(%rsp)
+   6b5fc:	mov    %rdx,0x48(%rsp)
+   6b601:	lea    0x40(%rsp),%rax
+   6b606:	test   %rbx,%rbx
+   6b609:	je     6ceec <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x23bc>
+   6b60f:	mov    0x48(%rsp),%r14
+   6b614:	mov    %r14,%rax
+   6b617:	or     %rbx,%rax
+   6b61a:	shr    $0x20,%rax
+   6b61e:	je     6c247 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1717>
+   6b624:	mov    %r14,%rax
+   6b627:	xor    %edx,%edx
+   6b629:	div    %rbx
+   6b62c:	sub    %rdx,%r14
+   6b62f:	cmp    %r14,%rbx
+   6b632:	jbe    6c25a <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x172a>
+   6b638:	jmp    6cdb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2281>
+   6b63d:	mov    %rsi,0x220(%rsp)
+   6b645:	mov    %rax,0x228(%rsp)
+   6b64d:	lea    0x220(%rsp),%rax
+   6b655:	test   %rbx,%rbx
+   6b658:	je     6ceec <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x23bc>
+   6b65e:	mov    0x228(%rsp),%rsi
+   6b666:	mov    %rsi,%rax
+   6b669:	or     %rbx,%rax
+   6b66c:	shr    $0x20,%rax
+   6b670:	je     6c2a3 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1773>
+   6b676:	mov    %rsi,%rax
+   6b679:	xor    %edx,%edx
+   6b67b:	div    %rbx
+   6b67e:	sub    %rdx,%rsi
+   6b681:	cmp    %rsi,%rbx
+   6b684:	jbe    6c2b5 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1785>
+   6b68a:	jmp    6cdb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2281>
+   6b68f:	mov    %rsi,0x240(%rsp)
+   6b697:	mov    %rdx,0x248(%rsp)
+   6b69f:	lea    0x240(%rsp),%rax
+   6b6a7:	test   %rbx,%rbx
+   6b6aa:	je     6ceec <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x23bc>
+   6b6b0:	mov    0x248(%rsp),%r15
+   6b6b8:	mov    %r15,%rax
+   6b6bb:	or     %rbx,%rax
+   6b6be:	shr    $0x20,%rax
+   6b6c2:	je     6c705 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1bd5>
+   6b6c8:	mov    %r15,%rax
+   6b6cb:	xor    %edx,%edx
+   6b6cd:	div    %rbx
+   6b6d0:	sub    %rdx,%r15
+   6b6d3:	cmp    %r15,%rbx
+   6b6d6:	jbe    6c718 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1be8>
+   6b6dc:	jmp    6cdb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2281>
+   6b6e1:	mov    %rsi,%r12
+   6b6e4:	mov    %rdx,%rbp
+   6b6e7:	mov    $0x20,%edi
+   6b6ec:	mov    $0x1,%esi
+   6b6f1:	call   *0x260e69(%rip)        # 2cc560 <calloc@GLIBC_2.2.5>
+   6b6f7:	test   %rax,%rax
+   6b6fa:	je     6d06e <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x253e>
+   6b700:	mov    %rax,%r14
+   6b703:	mov    %rbx,%r13
+   6b706:	shr    $0x6,%r13
+   6b70a:	add    $0xffffffffffffffff,%r13
+   6b70e:	setb   0x10(%rsp)
+   6b713:	test   $0x3f,%bl
+   6b716:	sete   %cl
+   6b719:	mov    %fs:0x0,%rax
+   6b722:	lea    -0xa8(%rax),%r15
+   6b729:	cmp    %rbp,%rbx
+   6b72c:	jne    6c12d <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x15fd>
+   6b732:	mov    %r12,0x4f0(%rsp)
+   6b73a:	mov    %rbp,0x4f8(%rsp)
+   6b742:	lea    0x4f0(%rsp),%rax
+   6b74a:	mov    0x4f0(%rsp),%rdi
+   6b752:	mov    0x4f8(%rsp),%rsi
+   6b75a:	lea    -0x561e1(%rip),%rdx        # 15580 <__abi_tag+0x15284>
+   6b761:	xor    %ecx,%ecx
+   6b763:	mov    %r14,%r8
+   6b766:	call   a0350 <blake3_servil::hash_serial>
+   6b76b:	cmpb   $0x1,%fs:0xffffffffffffff80
+   6b774:	jne    6d165 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2635>
+   6b77a:	cmpq   $0x0,(%r15)
+   6b77e:	jne    6ceb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2381>
+   6b784:	movq   $0xffffffffffffffff,(%r15)
+   6b78b:	mov    0x18(%r15),%rsi
+   6b78f:	mov    0x20(%r15),%rax
+   6b793:	mov    %eax,%edi
+   6b795:	and    $0x3ff,%edi
+   6b79b:	cmp    %rsi,%rdi
+   6b79e:	jae    6d217 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x26e7>
+   6b7a4:	mov    0x10(%r15),%rcx
+   6b7a8:	shl    $0x5,%edi
+   6b7ab:	movdqu (%r14),%xmm0
+   6b7b0:	movdqu 0x10(%r14),%xmm1
+   6b7b6:	movdqu %xmm1,0x10(%rcx,%rdi,1)
+   6b7bc:	movdqu %xmm0,(%rcx,%rdi,1)
+   6b7c1:	inc    %rax
+   6b7c4:	mov    %rax,0x20(%r15)
+   6b7c8:	incq   (%r15)
+   6b7cb:	jmp    6cda8 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2278>
+   6b7d0:	mov    %fs:0x0,%rax
+   6b7d9:	lea    -0xa8(%rax),%r14
+   6b7e0:	cmp    %rdx,%rbx
+   6b7e3:	jne    6bfd4 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x14a4>
+   6b7e9:	mov    %rsi,0x40(%rsp)
+   6b7ee:	mov    %rdx,0x48(%rsp)
+   6b7f3:	lea    0x40(%rsp),%rax
+   6b7f8:	mov    0x40(%rsp),%rsi
+   6b7fd:	mov    0x48(%rsp),%rdx
+   6b802:	mov    0x262378(%rip),%eax        # 2cdb80 <blake3_servil::lanes::POOL+0x38>
+   6b808:	test   %eax,%eax
+   6b80a:	jne    6cf04 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x23d4>
+   6b810:	cmp    $0x80000,%rdx
+   6b817:	jae    6c990 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1e60>
+   6b81d:	movzbl 0x262f5e(%rip),%eax        # 2ce782 <blake3_servil::platform::DETECTED>
+   6b824:	test   %al,%al
+   6b826:	je     6cee7 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x23b7>
+   6b82c:	movzbl %al,%edi
+   6b82f:	lea    -0x562b6(%rip),%rcx        # 15580 <__abi_tag+0x15284>
+   6b836:	lea    0x4f0(%rsp),%r9
+   6b83e:	xor    %r8d,%r8d
+   6b841:	call   131a50 <blake3_servil::hash_serial_from>
+   6b846:	jmp    6b1c7 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x697>
+   6b84b:	mov    %fs:0x0,%rax
+   6b854:	lea    -0xa8(%rax),%r14
+   6b85b:	cmp    %rdx,%rbx
+   6b85e:	jne    6c00e <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x14de>
+   6b864:	mov    %rsi,0x190(%rsp)
+   6b86c:	mov    %rdx,0x198(%rsp)
+   6b874:	lea    0x190(%rsp),%rax
+   6b87c:	mov    0x190(%rsp),%rsi
+   6b884:	mov    0x198(%rsp),%rdx
+   6b88c:	lea    -0x56313(%rip),%rcx        # 15580 <__abi_tag+0x15284>
+   6b893:	lea    0x4f0(%rsp),%rbx
+   6b89b:	mov    %rbx,%rdi
+   6b89e:	xor    %r8d,%r8d
+   6b8a1:	call   112900 <blake3::hash_all_at_once::<blake3::join::SerialJoin>>
+   6b8a6:	lea    0x40(%rsp),%rdi
+   6b8ab:	mov    %rbx,%rsi
+   6b8ae:	call   112b10 <<blake3::Output>::root_hash>
+   6b8b3:	cmpb   $0x1,%fs:0xffffffffffffff80
+   6b8bc:	jne    6d142 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2612>
+   6b8c2:	cmpq   $0x0,(%r14)
+   6b8c6:	jne    6ceb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2381>
+   6b8cc:	movq   $0xffffffffffffffff,(%r14)
+   6b8d3:	mov    0x18(%r14),%rsi
+   6b8d7:	mov    0x20(%r14),%rax
+   6b8db:	mov    %eax,%edi
+   6b8dd:	and    $0x3ff,%edi
+   6b8e3:	cmp    %rsi,%rdi
+   6b8e6:	jae    6d217 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x26e7>
+   6b8ec:	mov    0x10(%r14),%rcx
+   6b8f0:	shl    $0x5,%edi
+   6b8f3:	movdqu 0x40(%rsp),%xmm0
+   6b8f9:	movdqu 0x50(%rsp),%xmm1
+   6b8ff:	movdqu %xmm1,0x10(%rcx,%rdi,1)
+   6b905:	movdqu %xmm0,(%rcx,%rdi,1)
+   6b90a:	inc    %rax
+   6b90d:	mov    %rax,0x20(%r14)
+   6b911:	incq   (%r14)
+   6b914:	jmp    6cdb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2281>
+   6b919:	mov    %ecx,%eax
+   6b91b:	xor    %edx,%edx
+   6b91d:	div    %ebx
+   6b91f:	sub    %rdx,%rcx
+   6b922:	cmp    %rcx,%rbx
+   6b925:	ja     6cdb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2281>
+   6b92b:	jmp    6d2d9 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x27a9>
+   6b930:	movups -0x563a7(%rip),%xmm0        # 15590 <__abi_tag+0x15294>
+   6b937:	movaps %xmm0,0x50(%rsp)
+   6b93c:	movdqu -0x563c4(%rip),%xmm0        # 15580 <__abi_tag+0x15284>
+   6b944:	movdqa %xmm0,0x40(%rsp)
+   6b94a:	test   $0x3f,%dl
+   6b94d:	jne    6d0b9 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2589>
+   6b953:	mov    %rdx,%rax
+   6b956:	shr    $0x6,%rax
+   6b95a:	mov    %rax,0x10(%rsp)
+   6b95f:	movzbl 0x2621dc(%rip),%eax        # 2cdb42 <blake3::platform::avx512_detected::has_avx512::STORAGE>
+   6b966:	mov    $0x4,%r12b
+   6b969:	mov    %rsi,%r14
+   6b96c:	mov    %rdx,%r15
+   6b96f:	cmp    $0x1,%al
+   6b971:	je     6b9b5 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xe85>
+   6b973:	movzbl %al,%eax
+   6b976:	cmp    $0xff,%eax
+   6b97b:	je     6d0fb <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x25cb>
+   6b981:	movzbl 0x2621b8(%rip),%eax        # 2cdb40 <blake3::platform::avx2_detected::has_avx2::STORAGE>
+   6b988:	mov    $0x3,%r12b
+   6b98b:	cmp    $0x1,%al
+   6b98d:	je     6b9b5 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xe85>
+   6b98f:	movzbl %al,%eax
+   6b992:	cmp    $0xff,%eax
+   6b997:	je     6d1aa <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x267a>
+   6b99d:	movzbl 0x26219d(%rip),%eax        # 2cdb41 <blake3::platform::sse41_detected::has_sse41::STORAGE>
+   6b9a4:	cmp    $0xff,%al
+   6b9a6:	je     6d26a <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x273a>
+   6b9ac:	cmp    $0x1,%al
+   6b9ae:	sete   %r12b
+   6b9b2:	inc    %r12b
+   6b9b5:	lea    0x190(%rsp),%rdi
+   6b9bd:	mov    0x10(%rsp),%rbx
+   6b9c2:	mov    %rbx,%rsi
+   6b9c5:	call   b41b0 <bench_hashes::take_batch_digests>
+   6b9ca:	mov    0x198(%rsp),%rax
+   6b9d2:	mov    %rax,0x20(%rsp)
+   6b9d7:	mov    0x1a0(%rsp),%rdx
+   6b9df:	mov    %r15,%rax
+   6b9e2:	shr    $0xa,%rax
+   6b9e6:	and    $0x3c0,%r15d
+   6b9ed:	cmp    $0x1,%r15
+   6b9f1:	sbb    $0xffffffffffffffff,%rax
+   6b9f5:	mov    %r14,0x240(%rsp)
+   6b9fd:	mov    %rbx,0x248(%rsp)
+   6ba05:	lea    0x240(%rsp),%rcx
+   6ba0d:	cmp    %rdx,%rbx
+   6ba10:	ja     6cf61 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2431>
+   6ba16:	mov    0x248(%rsp),%r15
+   6ba1e:	test   %r15,%r15
+   6ba21:	je     6bc99 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1169>
+   6ba27:	mov    %r15,%rbp
+   6ba2a:	shr    $0x4,%rbp
+   6ba2e:	mov    %r15d,%ecx
+   6ba31:	and    $0xf,%ecx
+   6ba34:	cmp    $0x1,%rcx
+   6ba38:	sbb    $0xffffffffffffffff,%rbp
+   6ba3c:	cmp    %rbp,%rax
+   6ba3f:	cmovb  %rax,%rbp
+   6ba43:	cmpq   $0x0,0x10(%rsp)
+   6ba49:	je     6bc99 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1169>
+   6ba4f:	test   %rax,%rax
+   6ba52:	je     6bc99 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1169>
+   6ba58:	mov    0x240(%rsp),%rax
+   6ba60:	xor    %r9d,%r9d
+   6ba63:	mov    $0x10,%r14d
+   6ba69:	movzbl %r12b,%ecx
+   6ba6d:	mov    %ecx,0x30(%rsp)
+   6ba71:	mov    %rax,0x38(%rsp)
+   6ba76:	mov    %rax,%r12
+   6ba79:	mov    %r15,%r13
+   6ba7c:	jmp    6bac5 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xf95>
+   6ba7e:	xchg   %ax,%ax
+   6ba80:	lea    0x1(%r9),%rbx
+   6ba84:	shl    $0x9,%r9
+   6ba88:	add    0x20(%rsp),%r9
+   6ba8d:	shl    $0x5,%rcx
+   6ba91:	mov    %rcx,(%rsp)
+   6ba95:	mov    0x30(%rsp),%edi
+   6ba99:	lea    0x4f0(%rsp),%rsi
+   6baa1:	lea    0x40(%rsp),%rcx
+   6baa6:	xor    %r8d,%r8d
+   6baa9:	call   7a7d0 <<blake3::platform::Platform>::hash_many::<64>>
+   6baae:	add    $0xfffffffffffffff0,%r13
+   6bab2:	add    $0x400,%r12
+   6bab9:	mov    %rbx,%r9
+   6babc:	cmp    %rbp,%rbx
+   6babf:	je     6bc99 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1169>
+   6bac5:	cmp    $0x1,%r13
+   6bac9:	mov    %r13,%rax
+   6bacc:	adc    $0x0,%rax
+   6bad0:	cmp    $0x10,%rax
+   6bad4:	cmovae %r14,%rax
+   6bad8:	mov    %r9,%rsi
+   6badb:	shl    $0x4,%rsi
+   6badf:	mov    %r15,%rdx
+   6bae2:	sub    %rsi,%rdx
+   6bae5:	cmp    $0x10,%rdx
+   6bae9:	cmovae %r14,%rdx
+   6baed:	mov    0x10(%rsp),%rcx
+   6baf2:	sub    %rsi,%rcx
+   6baf5:	cmp    $0x10,%rcx
+   6baf9:	cmovae %r14,%rcx
+   6bafd:	cmp    %rsi,%r15
+   6bb00:	je     6d2b1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2781>
+   6bb06:	mov    %r9,%rdi
+   6bb09:	shl    $0xa,%rdi
+   6bb0d:	add    0x38(%rsp),%rdi
+   6bb12:	mov    %rdi,0x4f0(%rsp)
+   6bb1a:	mov    %rdi,0x4f8(%rsp)
+   6bb22:	mov    %rdi,0x500(%rsp)
+   6bb2a:	mov    %rdi,0x508(%rsp)
+   6bb32:	mov    %rdi,0x510(%rsp)
+   6bb3a:	mov    %rdi,0x518(%rsp)
+   6bb42:	mov    %rdi,0x520(%rsp)
+   6bb4a:	mov    %rdi,0x528(%rsp)
+   6bb52:	mov    %rdi,0x530(%rsp)
+   6bb5a:	mov    %rdi,0x538(%rsp)
+   6bb62:	mov    %rdi,0x540(%rsp)
+   6bb6a:	mov    %rdi,0x548(%rsp)
+   6bb72:	mov    %rdi,0x550(%rsp)
+   6bb7a:	mov    %rdi,0x558(%rsp)
+   6bb82:	mov    %rdi,0x560(%rsp)
+   6bb8a:	mov    %rdi,0x568(%rsp)
+   6bb92:	cmp    $0x4,%r13
+   6bb96:	jae    6bb9f <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x106f>
+   6bb98:	xor    %esi,%esi
+   6bb9a:	jmp    6bc6f <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x113f>
+   6bb9f:	mov    %eax,%esi
+   6bba1:	and    $0x1c,%esi
+   6bba4:	movq   %rdi,%xmm0
+   6bba9:	pshufd $0x44,%xmm0,%xmm0
+   6bbae:	movdqa %xmm0,%xmm1
+   6bbb2:	paddq  -0x57d6a(%rip),%xmm1        # 13e50 <__abi_tag+0x13b54>
+   6bbba:	movdqa %xmm0,%xmm2
+   6bbbe:	paddq  -0x57466(%rip),%xmm2        # 14760 <__abi_tag+0x14464>
+   6bbc6:	movdqa %xmm1,0x4f0(%rsp)
+   6bbcf:	movdqa %xmm2,0x500(%rsp)
+   6bbd8:	cmp    $0x4,%rsi
+   6bbdc:	je     6bc66 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1136>
+   6bbe2:	movdqa %xmm0,%xmm1
+   6bbe6:	paddq  -0x5767e(%rip),%xmm1        # 14570 <__abi_tag+0x14274>
+   6bbee:	movdqa %xmm0,%xmm2
+   6bbf2:	paddq  -0x57eca(%rip),%xmm2        # 13d30 <__abi_tag+0x13a34>
+   6bbfa:	movdqa %xmm1,0x510(%rsp)
+   6bc03:	movdqa %xmm2,0x520(%rsp)
+   6bc0c:	cmp    $0x8,%esi
+   6bc0f:	je     6bc66 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1136>
+   6bc11:	movdqa %xmm0,%xmm1
+   6bc15:	paddq  -0x575cd(%rip),%xmm1        # 14650 <__abi_tag+0x14354>
+   6bc1d:	movdqa %xmm0,%xmm2
+   6bc21:	paddq  -0x57769(%rip),%xmm2        # 144c0 <__abi_tag+0x141c4>
+   6bc29:	movdqa %xmm1,0x530(%rsp)
+   6bc32:	movdqa %xmm2,0x540(%rsp)
+   6bc3b:	cmp    $0xc,%esi
+   6bc3e:	je     6bc66 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1136>
+   6bc40:	movdqa %xmm0,%xmm1
+   6bc44:	paddq  -0x575ac(%rip),%xmm1        # 146a0 <__abi_tag+0x143a4>
+   6bc4c:	paddq  -0x58154(%rip),%xmm0        # 13b00 <__abi_tag+0x13804>
+   6bc54:	movdqa %xmm1,0x550(%rsp)
+   6bc5d:	movdqa %xmm0,0x560(%rsp)
+   6bc66:	cmp    %rsi,%rax
+   6bc69:	je     6ba80 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xf50>
+   6bc6f:	mov    %esi,%edi
+   6bc71:	shl    $0x6,%edi
+   6bc74:	add    %r12,%rdi
+   6bc77:	nopw   0x0(%rax,%rax,1)
+   6bc80:	mov    %rdi,0x4f0(%rsp,%rsi,8)
+   6bc88:	inc    %rsi
+   6bc8b:	add    $0x40,%rdi
+   6bc8f:	cmp    %rsi,%rax
+   6bc92:	jne    6bc80 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1150>
+   6bc94:	jmp    6ba80 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xf50>
+   6bc99:	mov    0x10(%rsp),%rsi
+   6bc9e:	shl    $0x5,%rsi
+   6bca2:	mov    0x20(%rsp),%rdi
+   6bca7:	call   a0490 <bench_hashes::use_digest>
+   6bcac:	lea    0x190(%rsp),%rdi
+   6bcb4:	jmp    6bce9 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x11b9>
+   6bcb6:	mov    %rsi,(%rsp)
+   6bcba:	lea    -0x56741(%rip),%rcx        # 15580 <__abi_tag+0x15284>
+   6bcc1:	mov    %rax,%rsi
+   6bcc4:	mov    %rbx,%rdx
+   6bcc7:	xor    %r8d,%r8d
+   6bcca:	mov    %r14,%r9
+   6bccd:	call   133b70 <blake3_servil::lanes::hash_many_over_pool>
+   6bcd2:	mov    %r15,%rsi
+   6bcd5:	shl    $0x5,%rsi
+   6bcd9:	mov    %r14,%rdi
+   6bcdc:	call   a0490 <bench_hashes::use_digest>
+   6bce1:	lea    0x4f0(%rsp),%rdi
+   6bce9:	call   b40c0 <bench_hashes::keep_batch_digests>
+   6bcee:	jmp    6cdb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2281>
+   6bcf3:	mov    %r13,%rbp
+   6bcf6:	mov    %r14,%rax
+   6bcf9:	mul    %rdi
+   6bcfc:	mov    %rdx,%rax
+   6bcff:	shr    $0x7,%rax
+   6bd03:	and    $0xffffffffffffff80,%rdx
+   6bd07:	lea    (%rdx,%rax,8),%r12
+   6bd0b:	sub    %r12,%r14
+   6bd0e:	add    %r15,%r12
+   6bd11:	lea    0x2d0(%rsp),%r13
+   6bd19:	nopl   0x0(%rax)
+   6bd20:	movups (%r15),%xmm0
+   6bd24:	xorps  0x2d0(%rsp),%xmm0
+   6bd2c:	movaps %xmm0,0x2d0(%rsp)
+   6bd34:	movups 0x10(%r15),%xmm0
+   6bd39:	xorps  0x2e0(%rsp),%xmm0
+   6bd41:	movaps %xmm0,0x2e0(%rsp)
+   6bd49:	movups 0x20(%r15),%xmm0
+   6bd4e:	xorps  0x2f0(%rsp),%xmm0
+   6bd56:	movaps %xmm0,0x2f0(%rsp)
+   6bd5e:	movups 0x30(%r15),%xmm0
+   6bd63:	xorps  0x300(%rsp),%xmm0
+   6bd6b:	movaps %xmm0,0x300(%rsp)
+   6bd73:	movups 0x40(%r15),%xmm0
+   6bd78:	xorps  0x310(%rsp),%xmm0
+   6bd80:	movaps %xmm0,0x310(%rsp)
+   6bd88:	movups 0x50(%r15),%xmm0
+   6bd8d:	xorps  0x320(%rsp),%xmm0
+   6bd95:	movaps %xmm0,0x320(%rsp)
+   6bd9d:	movups 0x60(%r15),%xmm0
+   6bda2:	xorps  0x330(%rsp),%xmm0
+   6bdaa:	movaps %xmm0,0x330(%rsp)
+   6bdb2:	movups 0x70(%r15),%xmm0
+   6bdb7:	xorps  0x340(%rsp),%xmm0
+   6bdbf:	movaps %xmm0,0x340(%rsp)
+   6bdc7:	mov    0x80(%r15),%rax
+   6bdce:	xor    %rax,0x350(%rsp)
+   6bdd6:	add    $0x88,%r15
+   6bddd:	mov    %r13,%rdi
+   6bde0:	call   83a50 <keccak::backends::soft::keccak_p::<u64, 24>>
+   6bde5:	cmp    %r12,%r15
+   6bde8:	jne    6bd20 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x11f0>
+   6bdee:	mov    %r14b,0x41f(%rsp)
+   6bdf6:	mov    %rbx,%rdi
+   6bdf9:	mov    %r12,%rsi
+   6bdfc:	mov    %r14,%rdx
+   6bdff:	call   *0x26074b(%rip)        # 2cc550 <memcpy@GLIBC_2.14>
+   6be05:	mov    %rbp,%r13
+   6be08:	movzbl 0x41f(%rsp),%r14d
+   6be11:	xorps  %xmm0,%xmm0
+   6be14:	movaps %xmm0,0x420(%rsp)
+   6be1c:	movaps %xmm0,0x430(%rsp)
+   6be24:	movaps %xmm0,0x440(%rsp)
+   6be2c:	movaps %xmm0,0x450(%rsp)
+   6be34:	movaps %xmm0,0x460(%rsp)
+   6be3c:	movaps %xmm0,0x470(%rsp)
+   6be44:	movaps %xmm0,0x480(%rsp)
+   6be4c:	movaps %xmm0,0x490(%rsp)
+   6be54:	movq   $0x0,0x4a0(%rsp)
+   6be60:	lea    0x420(%rsp),%rdi
+   6be68:	mov    %rbx,%rsi
+   6be6b:	mov    %r14,%rdx
+   6be6e:	call   *0x2606dc(%rip)        # 2cc550 <memcpy@GLIBC_2.14>
+   6be74:	movb   $0x6,0x420(%rsp,%r14,1)
+   6be7d:	orb    $0x80,0x4a7(%rsp)
+   6be85:	movaps 0x2d0(%rsp),%xmm0
+   6be8d:	movaps 0x2e0(%rsp),%xmm1
+   6be95:	movdqa 0x2f0(%rsp),%xmm2
+   6be9e:	movaps 0x300(%rsp),%xmm3
+   6bea6:	xorps  0x420(%rsp),%xmm0
+   6beae:	xorps  0x430(%rsp),%xmm1
+   6beb6:	movaps %xmm0,0x2d0(%rsp)
+   6bebe:	movaps %xmm1,0x2e0(%rsp)
+   6bec6:	pxor   0x440(%rsp),%xmm2
+   6becf:	movdqa %xmm2,0x2f0(%rsp)
+   6bed8:	xorps  0x450(%rsp),%xmm3
+   6bee0:	movaps %xmm3,0x300(%rsp)
+   6bee8:	movaps 0x310(%rsp),%xmm0
+   6bef0:	xorps  0x460(%rsp),%xmm0
+   6bef8:	movaps %xmm0,0x310(%rsp)
+   6bf00:	movaps 0x320(%rsp),%xmm0
+   6bf08:	xorps  0x470(%rsp),%xmm0
+   6bf10:	movaps %xmm0,0x320(%rsp)
+   6bf18:	movaps 0x330(%rsp),%xmm0
+   6bf20:	xorps  0x480(%rsp),%xmm0
+   6bf28:	movaps %xmm0,0x330(%rsp)
+   6bf30:	movaps 0x340(%rsp),%xmm0
+   6bf38:	xorps  0x490(%rsp),%xmm0
+   6bf40:	movaps %xmm0,0x340(%rsp)
+   6bf48:	mov    0x4a0(%rsp),%rax
+   6bf50:	xor    %rax,0x350(%rsp)
+   6bf58:	lea    0x2d0(%rsp),%rdi
+   6bf60:	call   83a50 <keccak::backends::soft::keccak_p::<u64, 24>>
+   6bf65:	movdqa 0x2d0(%rsp),%xmm0
+   6bf6e:	movdqa 0x2e0(%rsp),%xmm1
+   6bf77:	cmpb   $0x1,%fs:0xffffffffffffff80
+   6bf80:	jne    6cfe7 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x24b7>
+   6bf86:	cmpq   $0x0,0x0(%r13)
+   6bf8b:	jne    6ceb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2381>
+   6bf91:	movq   $0xffffffffffffffff,0x0(%r13)
+   6bf99:	mov    0x18(%r13),%rsi
+   6bf9d:	mov    0x20(%r13),%rax
+   6bfa1:	mov    %eax,%edi
+   6bfa3:	and    $0x3ff,%edi
+   6bfa9:	cmp    %rsi,%rdi
+   6bfac:	jae    6d217 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x26e7>
+   6bfb2:	mov    0x10(%r13),%rcx
+   6bfb6:	shl    $0x5,%edi
+   6bfb9:	movdqu %xmm0,(%rcx,%rdi,1)
+   6bfbe:	movdqu %xmm1,0x10(%rcx,%rdi,1)
+   6bfc4:	inc    %rax
+   6bfc7:	mov    %rax,0x20(%r13)
+   6bfcb:	incq   0x0(%r13)
+   6bfcf:	jmp    6cdb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2281>
+   6bfd4:	mov    %rsi,0x40(%rsp)
+   6bfd9:	mov    %rdx,0x48(%rsp)
+   6bfde:	lea    0x40(%rsp),%rax
+   6bfe3:	test   %rbx,%rbx
+   6bfe6:	je     6ceec <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x23bc>
+   6bfec:	mov    0x48(%rsp),%r15
+   6bff1:	mov    %r15,%rax
+   6bff4:	or     %rbx,%rax
+   6bff7:	shr    $0x20,%rax
+   6bffb:	je     6c9ac <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1e7c>
+   6c001:	mov    %r15,%rax
+   6c004:	xor    %edx,%edx
+   6c006:	div    %rbx
+   6c009:	jmp    6c9b3 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1e83>
+   6c00e:	mov    %rsi,0x190(%rsp)
+   6c016:	mov    %rdx,0x198(%rsp)
+   6c01e:	lea    0x190(%rsp),%rax
+   6c026:	test   %rbx,%rbx
+   6c029:	je     6ceec <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x23bc>
+   6c02f:	mov    0x198(%rsp),%r15
+   6c037:	mov    %r15,%rax
+   6c03a:	or     %rbx,%rax
+   6c03d:	shr    $0x20,%rax
+   6c041:	je     6cad0 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1fa0>
+   6c047:	mov    %r15,%rax
+   6c04a:	xor    %edx,%edx
+   6c04c:	div    %rbx
+   6c04f:	jmp    6cad7 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1fa7>
+   6c054:	mov    %r15d,%eax
+   6c057:	xor    %edx,%edx
+   6c059:	div    %ebx
+   6c05b:	sub    %rdx,%r15
+   6c05e:	cmp    %r15,%rbx
+   6c061:	ja     6cdb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2281>
+   6c067:	lea    0x4f1(%rsp),%rbp
+   6c06f:	mov    0x190(%rsp),%r12
+   6c077:	lea    0x4f0(%rsp),%r13
+   6c07f:	nop
+   6c080:	mov    %r13,%rdi
+   6c083:	mov    %r12,%rsi
+   6c086:	mov    %rbx,%rdx
+   6c089:	call   7ad60 <<sha1_checked::Sha1>::try_digest::<&[u8]>>
+   6c08e:	mov    0x10(%rbp),%eax
+   6c091:	mov    %eax,0x50(%rsp)
+   6c095:	movups 0x0(%rbp),%xmm0
+   6c099:	movaps %xmm0,0x40(%rsp)
+   6c09e:	cmpb   $0x1,%fs:0xffffffffffffff80
+   6c0a7:	mov    %r14,%rax
+   6c0aa:	jne    6c10e <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x15de>
+   6c0ac:	cmpq   $0x0,(%rax)
+   6c0b0:	jne    6ceb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2381>
+   6c0b6:	movq   $0xffffffffffffffff,(%rax)
+   6c0bd:	mov    0x18(%rax),%rsi
+   6c0c1:	mov    0x20(%rax),%rcx
+   6c0c5:	mov    %ecx,%edi
+   6c0c7:	and    $0x3ff,%edi
+   6c0cd:	cmp    %rsi,%rdi
+   6c0d0:	jae    6d217 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x26e7>
+   6c0d6:	add    %rbx,%r12
+   6c0d9:	sub    %rbx,%r15
+   6c0dc:	mov    0x10(%rax),%rdx
+   6c0e0:	shl    $0x5,%edi
+   6c0e3:	mov    0x50(%rsp),%esi
+   6c0e7:	mov    %esi,0x10(%rdx,%rdi,1)
+   6c0eb:	movdqa 0x40(%rsp),%xmm0
+   6c0f1:	movdqu %xmm0,(%rdx,%rdi,1)
+   6c0f6:	inc    %rcx
+   6c0f9:	mov    %rcx,0x20(%rax)
+   6c0fd:	incq   (%rax)
+   6c100:	cmp    %r15,%rbx
+   6c103:	jbe    6c080 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1550>
+   6c109:	jmp    6cdb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2281>
+   6c10e:	mov    %fs:0x0,%rax
+   6c117:	lea    -0xa8(%rax),%rdi
+   6c11e:	call   7af50 <<std::sys::thread_local::native::lazy::Storage<core::cell::RefCell<(alloc::vec::Vec<[u8; 32]>, usize)>, ()>>::get_or_init_slow::<bench_hashes::DIGESTS::__rust_std_internal_init_fn>>
+   6c123:	test   %rax,%rax
+   6c126:	jne    6c0ac <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x157c>
+   6c128:	jmp    6d186 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2656>
+   6c12d:	mov    %r12,0x190(%rsp)
+   6c135:	mov    %rbp,0x198(%rsp)
+   6c13d:	lea    0x190(%rsp),%rax
+   6c145:	test   %rbx,%rbx
+   6c148:	je     6d192 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2662>
+   6c14e:	mov    0x198(%rsp),%r12
+   6c156:	mov    %r12,%rax
+   6c159:	or     %rbx,%rax
+   6c15c:	shr    $0x20,%rax
+   6c160:	je     6cbb6 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2086>
+   6c166:	mov    %r12,%rax
+   6c169:	xor    %edx,%edx
+   6c16b:	div    %rbx
+   6c16e:	jmp    6cbbd <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x208d>
+   6c173:	mov    %r15d,%eax
+   6c176:	xor    %edx,%edx
+   6c178:	div    %ebx
+   6c17a:	sub    %rdx,%r15
+   6c17d:	cmp    %r15,%rbx
+   6c180:	ja     6cdb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2281>
+   6c186:	mov    0x40(%rsp),%r12
+   6c18b:	lea    0x4f0(%rsp),%r13
+   6c193:	data16 data16 data16 cs nopw 0x0(%rax,%rax,1)
+   6c1a0:	mov    %r13,%rdi
+   6c1a3:	mov    %r12,%rsi
+   6c1a6:	mov    %rbx,%rdx
+   6c1a9:	call   91e40 <<sha2::Sha256 as digest::digest::Digest>::digest::<&[u8]>>
+   6c1ae:	cmpb   $0x1,%fs:0xffffffffffffff80
+   6c1b7:	mov    %r14,%rax
+   6c1ba:	jne    6c224 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x16f4>
+   6c1bc:	cmpq   $0x0,(%rax)
+   6c1c0:	jne    6ceb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2381>
+   6c1c6:	movq   $0xffffffffffffffff,(%rax)
+   6c1cd:	mov    0x18(%rax),%rsi
+   6c1d1:	mov    0x20(%rax),%rcx
+   6c1d5:	mov    %ecx,%edi
+   6c1d7:	and    $0x3ff,%edi
+   6c1dd:	cmp    %rsi,%rdi
+   6c1e0:	jae    6d217 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x26e7>
+   6c1e6:	add    %rbx,%r12
+   6c1e9:	sub    %rbx,%r15
+   6c1ec:	mov    0x10(%rax),%rdx
+   6c1f0:	shl    $0x5,%edi
+   6c1f3:	movdqu 0x4f0(%rsp),%xmm0
+   6c1fc:	movdqu 0x500(%rsp),%xmm1
+   6c205:	movdqu %xmm1,0x10(%rdx,%rdi,1)
+   6c20b:	movdqu %xmm0,(%rdx,%rdi,1)
+   6c210:	inc    %rcx
+   6c213:	mov    %rcx,0x20(%rax)
+   6c217:	incq   (%rax)
+   6c21a:	cmp    %r15,%rbx
+   6c21d:	jbe    6c1a0 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1670>
+   6c21f:	jmp    6cdb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2281>
+   6c224:	mov    %fs:0x0,%rax
+   6c22d:	lea    -0xa8(%rax),%rdi
+   6c234:	call   7af50 <<std::sys::thread_local::native::lazy::Storage<core::cell::RefCell<(alloc::vec::Vec<[u8; 32]>, usize)>, ()>>::get_or_init_slow::<bench_hashes::DIGESTS::__rust_std_internal_init_fn>>
+   6c239:	test   %rax,%rax
+   6c23c:	jne    6c1bc <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x168c>
+   6c242:	jmp    6d186 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2656>
+   6c247:	mov    %r14d,%eax
+   6c24a:	xor    %edx,%edx
+   6c24c:	div    %ebx
+   6c24e:	sub    %rdx,%r14
+   6c251:	cmp    %r14,%rbx
+   6c254:	ja     6cdb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2281>
+   6c25a:	lea    0x4f8(%rsp),%r15
+   6c262:	mov    0x40(%rsp),%rsi
+   6c267:	lea    0x4f0(%rsp),%r12
+   6c26f:	nop
+   6c270:	lea    (%rsi,%rbx,1),%r13
+   6c274:	sub    %rbx,%r14
+   6c277:	mov    %r12,%rdi
+   6c27a:	mov    %rbx,%rdx
+   6c27d:	call   2546e0 <ring::digest::digest>
+   6c282:	mov    0x4f0(%rsp),%rax
+   6c28a:	movzbl 0x59(%rax),%esi
+   6c28e:	mov    %r15,%rdi
+   6c291:	call   a0490 <bench_hashes::use_digest>
+   6c296:	mov    %r13,%rsi
+   6c299:	cmp    %r14,%rbx
+   6c29c:	jbe    6c270 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1740>
+   6c29e:	jmp    6cdb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2281>
+   6c2a3:	mov    %esi,%eax
+   6c2a5:	xor    %edx,%edx
+   6c2a7:	div    %ebx
+   6c2a9:	sub    %rdx,%rsi
+   6c2ac:	cmp    %rsi,%rbx
+   6c2af:	ja     6cdb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2281>
+   6c2b5:	mov    %rcx,%rax
+   6c2b8:	shr    $0x7,%rax
+   6c2bc:	and    $0xffffffffffffff80,%rcx
+   6c2c0:	lea    (%rcx,%rax,8),%rcx
+   6c2c4:	mov    %rbx,%rdx
+   6c2c7:	mov    %rcx,0x30(%rsp)
+   6c2cc:	sub    %rcx,%rdx
+   6c2cf:	mov    %rdx,0x230(%rsp)
+   6c2d7:	mov    0x220(%rsp),%r12
+   6c2df:	mov    0x26026a(%rip),%rbp        # 2cc550 <memcpy@GLIBC_2.14>
+   6c2e6:	lea    0x40(%rsp),%r14
+   6c2eb:	mov    %rbx,0x20(%rsp)
+   6c2f0:	mov    %r13,0x38(%rsp)
+   6c2f5:	data16 cs nopw 0x0(%rax,%rax,1)
+   6c300:	mov    %rsi,0x10(%rsp)
+   6c305:	pxor   %xmm0,%xmm0
+   6c309:	movdqa %xmm0,0xf0(%rsp)
+   6c312:	movdqa %xmm0,0xe0(%rsp)
+   6c31b:	movdqa %xmm0,0xd0(%rsp)
+   6c324:	movdqa %xmm0,0xc0(%rsp)
+   6c32d:	movdqa %xmm0,0xb0(%rsp)
+   6c336:	movdqa %xmm0,0xa0(%rsp)
+   6c33f:	movdqa %xmm0,0x90(%rsp)
+   6c348:	movdqa %xmm0,0x80(%rsp)
+   6c351:	movdqa %xmm0,0x70(%rsp)
+   6c357:	movdqa %xmm0,0x60(%rsp)
+   6c35d:	movdqa %xmm0,0x50(%rsp)
+   6c363:	movdqa %xmm0,0x40(%rsp)
+   6c369:	movq   $0x0,0x100(%rsp)
+   6c375:	movb   $0x0,0x18f(%rsp)
+   6c37d:	cmp    $0x87,%rbx
+   6c384:	ja     6c3b0 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1880>
+   6c386:	lea    0x108(%rsp),%rdi
+   6c38e:	mov    %r12,%rsi
+   6c391:	mov    %rbx,%rdx
+   6c394:	call   *%rbp
+   6c396:	mov    %bl,0x18f(%rsp)
+   6c39d:	mov    %r13,%rbx
+   6c3a0:	jmp    6c4a2 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1972>
+   6c3a5:	data16 cs nopw 0x0(%rax,%rax,1)
+   6c3b0:	mov    0x30(%rsp),%rax
+   6c3b5:	lea    (%r12,%rax,1),%rbp
+   6c3b9:	mov    %r12,%r13
+   6c3bc:	nopl   0x0(%rax)
+   6c3c0:	movups 0x0(%r13),%xmm0
+   6c3c5:	xorps  0x40(%rsp),%xmm0
+   6c3ca:	movaps %xmm0,0x40(%rsp)
+   6c3cf:	movups 0x10(%r13),%xmm0
+   6c3d4:	xorps  0x50(%rsp),%xmm0
+   6c3d9:	movaps %xmm0,0x50(%rsp)
+   6c3de:	movups 0x20(%r13),%xmm0
+   6c3e3:	xorps  0x60(%rsp),%xmm0
+   6c3e8:	movaps %xmm0,0x60(%rsp)
+   6c3ed:	movups 0x30(%r13),%xmm0
+   6c3f2:	xorps  0x70(%rsp),%xmm0
+   6c3f7:	movaps %xmm0,0x70(%rsp)
+   6c3fc:	movups 0x40(%r13),%xmm0
+   6c401:	xorps  0x80(%rsp),%xmm0
+   6c409:	movaps %xmm0,0x80(%rsp)
+   6c411:	movups 0x50(%r13),%xmm0
+   6c416:	xorps  0x90(%rsp),%xmm0
+   6c41e:	movaps %xmm0,0x90(%rsp)
+   6c426:	movups 0x60(%r13),%xmm0
+   6c42b:	xorps  0xa0(%rsp),%xmm0
+   6c433:	movaps %xmm0,0xa0(%rsp)
+   6c43b:	movdqu 0x70(%r13),%xmm0
+   6c441:	pxor   0xb0(%rsp),%xmm0
+   6c44a:	movdqa %xmm0,0xb0(%rsp)
+   6c453:	mov    0x80(%r13),%rax
+   6c45a:	xor    %rax,0xc0(%rsp)
+   6c462:	add    $0x88,%r13
+   6c469:	mov    %r14,%rdi
+   6c46c:	call   83a50 <keccak::backends::soft::keccak_p::<u64, 24>>
+   6c471:	cmp    %rbp,%r13
+   6c474:	jne    6c3c0 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1890>
+   6c47a:	mov    0x230(%rsp),%rdx
+   6c482:	mov    %dl,0x18f(%rsp)
+   6c489:	lea    0x108(%rsp),%rdi
+   6c491:	mov    %rbp,%rsi
+   6c494:	mov    0x2600b5(%rip),%rbp        # 2cc550 <memcpy@GLIBC_2.14>
+   6c49b:	call   *%rbp
+   6c49d:	mov    0x38(%rsp),%rbx
+   6c4a2:	mov    $0x150,%edx
+   6c4a7:	lea    0x4f0(%rsp),%rdi
+   6c4af:	mov    %r14,%rsi
+   6c4b2:	call   *%rbp
+   6c4b4:	movzbl 0x63f(%rsp),%r13d
+   6c4bd:	pxor   %xmm0,%xmm0
+   6c4c1:	movdqa %xmm0,0x200(%rsp)
+   6c4ca:	movdqa %xmm0,0x1f0(%rsp)
+   6c4d3:	movdqa %xmm0,0x1e0(%rsp)
+   6c4dc:	movdqa %xmm0,0x1d0(%rsp)
+   6c4e5:	movdqa %xmm0,0x1c0(%rsp)
+   6c4ee:	movdqa %xmm0,0x1b0(%rsp)
+   6c4f7:	movdqa %xmm0,0x1a0(%rsp)
+   6c500:	movdqa %xmm0,0x190(%rsp)
+   6c509:	movq   $0x0,0x210(%rsp)
+   6c515:	lea    0x190(%rsp),%r15
+   6c51d:	mov    %r15,%rdi
+   6c520:	lea    0x5b8(%rsp),%rsi
+   6c528:	mov    %r13,%rdx
+   6c52b:	call   *%rbp
+   6c52d:	mov    $0x88,%edx
+   6c532:	lea    0x240(%rsp),%rdi
+   6c53a:	mov    %r15,%rsi
+   6c53d:	call   *%rbp
+   6c53f:	movb   $0x6,0x240(%rsp,%r13,1)
+   6c548:	orb    $0x80,0x2c7(%rsp)
+   6c550:	movaps 0x4f0(%rsp),%xmm0
+   6c558:	movaps 0x500(%rsp),%xmm1
+   6c560:	movdqa 0x510(%rsp),%xmm2
+   6c569:	movaps 0x520(%rsp),%xmm3
+   6c571:	xorps  0x240(%rsp),%xmm0
+   6c579:	xorps  0x250(%rsp),%xmm1
+   6c581:	movaps %xmm0,0x4f0(%rsp)
+   6c589:	movaps %xmm1,0x500(%rsp)
+   6c591:	pxor   0x260(%rsp),%xmm2
+   6c59a:	movdqa %xmm2,0x510(%rsp)
+   6c5a3:	xorps  0x270(%rsp),%xmm3
+   6c5ab:	movaps %xmm3,0x520(%rsp)
+   6c5b3:	movaps 0x530(%rsp),%xmm0
+   6c5bb:	xorps  0x280(%rsp),%xmm0
+   6c5c3:	movaps %xmm0,0x530(%rsp)
+   6c5cb:	movaps 0x540(%rsp),%xmm0
+   6c5d3:	xorps  0x290(%rsp),%xmm0
+   6c5db:	movaps %xmm0,0x540(%rsp)
+   6c5e3:	movaps 0x550(%rsp),%xmm0
+   6c5eb:	xorps  0x2a0(%rsp),%xmm0
+   6c5f3:	movaps %xmm0,0x550(%rsp)
+   6c5fb:	movaps 0x560(%rsp),%xmm0
+   6c603:	xorps  0x2b0(%rsp),%xmm0
+   6c60b:	movaps %xmm0,0x560(%rsp)
+   6c613:	mov    0x2c0(%rsp),%rax
+   6c61b:	xor    %rax,0x570(%rsp)
+   6c623:	lea    0x4f0(%rsp),%rdi
+   6c62b:	call   83a50 <keccak::backends::soft::keccak_p::<u64, 24>>
+   6c630:	movdqa 0x4f0(%rsp),%xmm0
+   6c639:	movdqa 0x500(%rsp),%xmm1
+   6c642:	cmpb   $0x1,%fs:0xffffffffffffff80
+   6c64b:	mov    %rbx,%rax
+   6c64e:	mov    %rbx,%r13
+   6c651:	jne    6c6be <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1b8e>
+   6c653:	cmpq   $0x0,(%rax)
+   6c657:	mov    0x20(%rsp),%rbx
+   6c65c:	jne    6ceb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2381>
+   6c662:	movq   $0xffffffffffffffff,(%rax)
+   6c669:	mov    0x18(%rax),%rsi
+   6c66d:	mov    0x20(%rax),%rcx
+   6c671:	mov    %ecx,%edi
+   6c673:	and    $0x3ff,%edi
+   6c679:	cmp    %rsi,%rdi
+   6c67c:	jae    6d217 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x26e7>
+   6c682:	add    %rbx,%r12
+   6c685:	mov    0x10(%rsp),%rsi
+   6c68a:	sub    %rbx,%rsi
+   6c68d:	mov    0x10(%rax),%rdx
+   6c691:	shl    $0x5,%edi
+   6c694:	movdqu %xmm0,(%rdx,%rdi,1)
+   6c699:	movdqu %xmm1,0x10(%rdx,%rdi,1)
+   6c69f:	inc    %rcx
+   6c6a2:	mov    %rcx,0x20(%rax)
+   6c6a6:	incq   (%rax)
+   6c6a9:	cmp    %rsi,%rbx
+   6c6ac:	mov    0x25fe9d(%rip),%rbp        # 2cc550 <memcpy@GLIBC_2.14>
+   6c6b3:	jbe    6c300 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x17d0>
+   6c6b9:	jmp    6cdb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2281>
+   6c6be:	mov    %fs:0x0,%rax
+   6c6c7:	lea    -0xa8(%rax),%rdi
+   6c6ce:	movdqa %xmm0,0x4c0(%rsp)
+   6c6d7:	movdqa %xmm1,0x4b0(%rsp)
+   6c6e0:	call   7af50 <<std::sys::thread_local::native::lazy::Storage<core::cell::RefCell<(alloc::vec::Vec<[u8; 32]>, usize)>, ()>>::get_or_init_slow::<bench_hashes::DIGESTS::__rust_std_internal_init_fn>>
+   6c6e5:	movdqa 0x4b0(%rsp),%xmm1
+   6c6ee:	movdqa 0x4c0(%rsp),%xmm0
+   6c6f7:	test   %rax,%rax
+   6c6fa:	jne    6c653 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1b23>
+   6c700:	jmp    6d186 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2656>
+   6c705:	mov    %r15d,%eax
+   6c708:	xor    %edx,%edx
+   6c70a:	div    %ebx
+   6c70c:	sub    %rdx,%r15
+   6c70f:	cmp    %r15,%rbx
+   6c712:	ja     6cdb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2281>
+   6c718:	mov    0x240(%rsp),%r12
+   6c720:	lea    0x560(%rsp),%r13
+   6c728:	lea    0x4f0(%rsp),%r14
+   6c730:	mov    %r14,%rbp
+   6c733:	movzbl 0x261408(%rip),%eax        # 2cdb42 <blake3::platform::avx512_detected::has_avx512::STORAGE>
+   6c73a:	mov    $0x4,%r14b
+   6c73d:	cmp    $0x1,%al
+   6c73f:	je     6c783 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1c53>
+   6c741:	movzbl %al,%eax
+   6c744:	cmp    $0xff,%eax
+   6c749:	je     6c902 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1dd2>
+   6c74f:	movzbl 0x2613ea(%rip),%eax        # 2cdb40 <blake3::platform::avx2_detected::has_avx2::STORAGE>
+   6c756:	mov    $0x3,%r14b
+   6c759:	cmp    $0x1,%al
+   6c75b:	je     6c783 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1c53>
+   6c75d:	movzbl %al,%eax
+   6c760:	cmp    $0xff,%eax
+   6c765:	je     6c937 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1e07>
+   6c76b:	movzbl 0x2613cf(%rip),%eax        # 2cdb41 <blake3::platform::sse41_detected::has_sse41::STORAGE>
+   6c772:	cmp    $0xff,%al
+   6c774:	je     6c949 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1e19>
+   6c77a:	cmp    $0x1,%al
+   6c77c:	sete   %r14b
+   6c780:	inc    %r14b
+   6c783:	xorps  %xmm0,%xmm0
+   6c786:	movaps %xmm0,0x70(%rsp)
+   6c78b:	movaps %xmm0,0x60(%rsp)
+   6c790:	movaps %xmm0,0x50(%rsp)
+   6c795:	movaps %xmm0,0x40(%rsp)
+   6c79a:	lea    0x80(%rsp),%rax
+   6c7a2:	movups -0x57219(%rip),%xmm0        # 15590 <__abi_tag+0x15294>
+   6c7a9:	movups %xmm0,0x10(%rax)
+   6c7ad:	movups -0x57234(%rip),%xmm1        # 15580 <__abi_tag+0x15284>
+   6c7b4:	movups %xmm1,(%rax)
+   6c7b7:	movups %xmm1,0x0(%r13)
+   6c7bc:	movups %xmm0,0x10(%r13)
+   6c7c1:	movaps 0x40(%rsp),%xmm0
+   6c7c6:	movaps 0x50(%rsp),%xmm1
+   6c7cb:	movdqa 0x60(%rsp),%xmm2
+   6c7d1:	movaps 0x70(%rsp),%xmm3
+   6c7d6:	movaps %xmm0,0x4f0(%rsp)
+   6c7de:	movaps %xmm1,0x500(%rsp)
+   6c7e6:	movdqa %xmm2,0x510(%rsp)
+   6c7ef:	movaps %xmm3,0x520(%rsp)
+   6c7f7:	movaps 0x80(%rsp),%xmm0
+   6c7ff:	movaps %xmm0,0x530(%rsp)
+   6c807:	movaps 0x90(%rsp),%xmm0
+   6c80f:	movaps %xmm0,0x540(%rsp)
+   6c817:	movl   $0x0,-0x9(%r13)
+   6c81f:	movq   $0x0,-0x10(%r13)
+   6c827:	mov    %r14b,0x55b(%rsp)
+   6c82f:	movq   $0x0,0x580(%rsp)
+   6c83b:	movl   $0x0,0x588(%rsp)
+   6c846:	mov    %rbp,%r14
+   6c849:	mov    %rbp,%rdi
+   6c84c:	mov    %r12,%rsi
+   6c84f:	mov    %rbx,%rdx
+   6c852:	call   114530 <<blake3::Hasher>::update_rayon>
+   6c857:	cmpq   $0x0,0x580(%rsp)
+   6c860:	jne    6cebd <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x238d>
+   6c866:	lea    0x40(%rsp),%rbp
+   6c86b:	mov    %rbp,%rdi
+   6c86e:	mov    %r14,%rsi
+   6c871:	call   114120 <<blake3::Hasher>::final_output>
+   6c876:	lea    0x190(%rsp),%rdi
+   6c87e:	mov    %rbp,%rsi
+   6c881:	call   112b10 <<blake3::Output>::root_hash>
+   6c886:	cmpb   $0x1,%fs:0xffffffffffffff80
+   6c88f:	mov    0x10(%rsp),%rax
+   6c894:	jne    6c914 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1de4>
+   6c896:	cmpq   $0x0,(%rax)
+   6c89a:	jne    6ceb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2381>
+   6c8a0:	movq   $0xffffffffffffffff,(%rax)
+   6c8a7:	mov    0x18(%rax),%rsi
+   6c8ab:	mov    0x20(%rax),%rcx
+   6c8af:	mov    %ecx,%edi
+   6c8b1:	and    $0x3ff,%edi
+   6c8b7:	cmp    %rsi,%rdi
+   6c8ba:	jae    6d217 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x26e7>
+   6c8c0:	add    %rbx,%r12
+   6c8c3:	sub    %rbx,%r15
+   6c8c6:	mov    0x10(%rax),%rdx
+   6c8ca:	shl    $0x5,%edi
+   6c8cd:	movdqu 0x190(%rsp),%xmm0
+   6c8d6:	movdqu 0x1a0(%rsp),%xmm1
+   6c8df:	movdqu %xmm1,0x10(%rdx,%rdi,1)
+   6c8e5:	movdqu %xmm0,(%rdx,%rdi,1)
+   6c8ea:	inc    %rcx
+   6c8ed:	mov    %rcx,0x20(%rax)
+   6c8f1:	incq   (%rax)
+   6c8f4:	cmp    %r15,%rbx
+   6c8f7:	jbe    6c730 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1c00>
+   6c8fd:	jmp    6cdb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2281>
+   6c902:	call   112bb0 <blake3::platform::avx512_detected::has_avx512::init_get::init_inner>
+   6c907:	test   %al,%al
+   6c909:	je     6c74f <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1c1f>
+   6c90f:	jmp    6c783 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1c53>
+   6c914:	mov    %fs:0x0,%rax
+   6c91d:	lea    -0xa8(%rax),%rdi
+   6c924:	call   7af50 <<std::sys::thread_local::native::lazy::Storage<core::cell::RefCell<(alloc::vec::Vec<[u8; 32]>, usize)>, ()>>::get_or_init_slow::<bench_hashes::DIGESTS::__rust_std_internal_init_fn>>
+   6c929:	test   %rax,%rax
+   6c92c:	jne    6c896 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1d66>
+   6c932:	jmp    6d186 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2656>
+   6c937:	call   112c30 <blake3::platform::avx2_detected::has_avx2::init_get::init_inner>
+   6c93c:	test   %al,%al
+   6c93e:	je     6c76b <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1c3b>
+   6c944:	jmp    6c783 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1c53>
+   6c949:	mov    $0x1,%eax
+   6c94e:	xor    %ecx,%ecx
+   6c950:	mov    %rbx,%rsi
+   6c953:	cpuid
+   6c955:	xchg   %rsi,%rbx
+   6c958:	mov    %ecx,%r14d
+   6c95b:	mov    $0x7,%eax
+   6c960:	xor    %ecx,%ecx
+   6c962:	mov    %rbx,%rsi
+   6c965:	cpuid
+   6c967:	xchg   %rsi,%rbx
+   6c96a:	mov    $0x1,%ecx
+   6c96f:	mov    $0x7,%eax
+   6c974:	mov    %rbx,%rsi
+   6c977:	cpuid
+   6c979:	xchg   %rsi,%rbx
+   6c97c:	shr    $0x13,%r14d
+   6c980:	and    $0x1,%r14d
+   6c984:	mov    %r14b,0x2611b6(%rip)        # 2cdb41 <blake3::platform::sse41_detected::has_sse41::STORAGE>
+   6c98b:	jmp    6c780 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1c50>
+   6c990:	lea    -0x57417(%rip),%rcx        # 15580 <__abi_tag+0x15284>
+   6c997:	lea    0x4f0(%rsp),%rdi
+   6c99f:	xor    %r8d,%r8d
+   6c9a2:	call   133880 <blake3_servil::lanes::hash_over_pool>
+   6c9a7:	jmp    6b1c7 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x697>
+   6c9ac:	mov    %r15d,%eax
+   6c9af:	xor    %edx,%edx
+   6c9b1:	div    %ebx
+   6c9b3:	sub    %rdx,%r15
+   6c9b6:	cmp    %r15,%rbx
+   6c9b9:	ja     6cdb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2281>
+   6c9bf:	mov    0x40(%rsp),%r12
+   6c9c4:	lea    -0x5744b(%rip),%r13        # 15580 <__abi_tag+0x15284>
+   6c9cb:	lea    0x4f0(%rsp),%rbp
+   6c9d3:	data16 data16 data16 cs nopw 0x0(%rax,%rax,1)
+   6c9e0:	mov    0x26119a(%rip),%eax        # 2cdb80 <blake3_servil::lanes::POOL+0x38>
+   6c9e6:	test   %eax,%eax
+   6c9e8:	jne    6cf04 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x23d4>
+   6c9ee:	cmp    $0x80000,%rbx
+   6c9f5:	jae    6ca1f <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1eef>
+   6c9f7:	movzbl 0x261d84(%rip),%eax        # 2ce782 <blake3_servil::platform::DETECTED>
+   6c9fe:	test   %al,%al
+   6ca00:	je     6cee7 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x23b7>
+   6ca06:	movzbl %al,%edi
+   6ca09:	mov    %r12,%rsi
+   6ca0c:	mov    %rbx,%rdx
+   6ca0f:	mov    %r13,%rcx
+   6ca12:	xor    %r8d,%r8d
+   6ca15:	mov    %rbp,%r9
+   6ca18:	call   131a50 <blake3_servil::hash_serial_from>
+   6ca1d:	jmp    6ca33 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1f03>
+   6ca1f:	mov    %rbp,%rdi
+   6ca22:	mov    %r12,%rsi
+   6ca25:	mov    %rbx,%rdx
+   6ca28:	mov    %r13,%rcx
+   6ca2b:	xor    %r8d,%r8d
+   6ca2e:	call   133880 <blake3_servil::lanes::hash_over_pool>
+   6ca33:	cmpb   $0x1,%fs:0xffffffffffffff80
+   6ca3c:	mov    %r14,%rax
+   6ca3f:	jne    6caad <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1f7d>
+   6ca41:	cmpq   $0x0,(%rax)
+   6ca45:	jne    6ceb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2381>
+   6ca4b:	movq   $0xffffffffffffffff,(%rax)
+   6ca52:	mov    0x18(%rax),%rsi
+   6ca56:	mov    0x20(%rax),%rcx
+   6ca5a:	mov    %ecx,%edi
+   6ca5c:	and    $0x3ff,%edi
+   6ca62:	cmp    %rsi,%rdi
+   6ca65:	jae    6d217 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x26e7>
+   6ca6b:	add    %rbx,%r12
+   6ca6e:	sub    %rbx,%r15
+   6ca71:	mov    0x10(%rax),%rdx
+   6ca75:	shl    $0x5,%edi
+   6ca78:	movdqu 0x4f0(%rsp),%xmm0
+   6ca81:	movdqu 0x500(%rsp),%xmm1
+   6ca8a:	movdqu %xmm1,0x10(%rdx,%rdi,1)
+   6ca90:	movdqu %xmm0,(%rdx,%rdi,1)
+   6ca95:	inc    %rcx
+   6ca98:	mov    %rcx,0x20(%rax)
+   6ca9c:	incq   (%rax)
+   6ca9f:	cmp    %r15,%rbx
+   6caa2:	jbe    6c9e0 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1eb0>
+   6caa8:	jmp    6cdb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2281>
+   6caad:	mov    %fs:0x0,%rax
+   6cab6:	lea    -0xa8(%rax),%rdi
+   6cabd:	call   7af50 <<std::sys::thread_local::native::lazy::Storage<core::cell::RefCell<(alloc::vec::Vec<[u8; 32]>, usize)>, ()>>::get_or_init_slow::<bench_hashes::DIGESTS::__rust_std_internal_init_fn>>
+   6cac2:	test   %rax,%rax
+   6cac5:	jne    6ca41 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1f11>
+   6cacb:	jmp    6d186 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2656>
+   6cad0:	mov    %r15d,%eax
+   6cad3:	xor    %edx,%edx
+   6cad5:	div    %ebx
+   6cad7:	sub    %rdx,%r15
+   6cada:	cmp    %r15,%rbx
+   6cadd:	ja     6cdb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2281>
+   6cae3:	mov    0x190(%rsp),%r12
+   6caeb:	lea    0x4f0(%rsp),%rbp
+   6caf3:	lea    0x40(%rsp),%r13
+   6caf8:	nopl   0x0(%rax,%rax,1)
+   6cb00:	mov    %rbp,%rdi
+   6cb03:	mov    %r12,%rsi
+   6cb06:	mov    %rbx,%rdx
+   6cb09:	lea    -0x57590(%rip),%rcx        # 15580 <__abi_tag+0x15284>
+   6cb10:	xor    %r8d,%r8d
+   6cb13:	call   112900 <blake3::hash_all_at_once::<blake3::join::SerialJoin>>
+   6cb18:	mov    %r13,%rdi
+   6cb1b:	mov    %rbp,%rsi
+   6cb1e:	call   112b10 <<blake3::Output>::root_hash>
+   6cb23:	cmpb   $0x1,%fs:0xffffffffffffff80
+   6cb2c:	mov    %r14,%rax
+   6cb2f:	jne    6cb97 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2067>
+   6cb31:	cmpq   $0x0,(%rax)
+   6cb35:	jne    6ceb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2381>
+   6cb3b:	movq   $0xffffffffffffffff,(%rax)
+   6cb42:	mov    0x18(%rax),%rsi
+   6cb46:	mov    0x20(%rax),%rcx
+   6cb4a:	mov    %ecx,%edi
+   6cb4c:	and    $0x3ff,%edi
+   6cb52:	cmp    %rsi,%rdi
+   6cb55:	jae    6d217 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x26e7>
+   6cb5b:	add    %rbx,%r12
+   6cb5e:	sub    %rbx,%r15
+   6cb61:	mov    0x10(%rax),%rdx
+   6cb65:	shl    $0x5,%edi
+   6cb68:	movdqu 0x40(%rsp),%xmm0
+   6cb6e:	movdqu 0x50(%rsp),%xmm1
+   6cb74:	movdqu %xmm1,0x10(%rdx,%rdi,1)
+   6cb7a:	movdqu %xmm0,(%rdx,%rdi,1)
+   6cb7f:	inc    %rcx
+   6cb82:	mov    %rcx,0x20(%rax)
+   6cb86:	incq   (%rax)
+   6cb89:	cmp    %r15,%rbx
+   6cb8c:	jbe    6cb00 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1fd0>
+   6cb92:	jmp    6cdb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2281>
+   6cb97:	mov    %fs:0x0,%rax
+   6cba0:	lea    -0xa8(%rax),%rdi
+   6cba7:	call   7af50 <<std::sys::thread_local::native::lazy::Storage<core::cell::RefCell<(alloc::vec::Vec<[u8; 32]>, usize)>, ()>>::get_or_init_slow::<bench_hashes::DIGESTS::__rust_std_internal_init_fn>>
+   6cbac:	test   %rax,%rax
+   6cbaf:	jne    6cb31 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2001>
+   6cbb1:	jmp    6d186 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2656>
+   6cbb6:	mov    %r12d,%eax
+   6cbb9:	xor    %edx,%edx
+   6cbbb:	div    %ebx
+   6cbbd:	sub    %rdx,%r12
+   6cbc0:	cmp    $0x400,%rbx
+   6cbc7:	ja     6cda3 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2273>
+   6cbcd:	cmp    %r12,%rbx
+   6cbd0:	ja     6cda8 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2278>
+   6cbd6:	mov    %r13,%rax
+   6cbd9:	shl    $0x10,%rax
+   6cbdd:	and    %cl,0x10(%rsp)
+   6cbe1:	shl    $0x6,%r13
+   6cbe5:	or     $0x4000,%rax
+   6cbeb:	mov    %rax,0x20(%rsp)
+   6cbf0:	mov    0x190(%rsp),%rbp
+   6cbf8:	movzbl 0x261b83(%rip),%ecx        # 2ce782 <blake3_servil::platform::DETECTED>
+   6cbff:	test   %cl,%cl
+   6cc01:	je     6cee7 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x23b7>
+   6cc07:	movzbl %cl,%eax
+   6cc0a:	lea    -0x57691(%rip),%rdx        # 15580 <__abi_tag+0x15284>
+   6cc11:	mov    %rdx,0x40(%rsp)
+   6cc16:	movb   $0x0,0x48(%rsp)
+   6cc1b:	mov    %cl,0x49(%rsp)
+   6cc1f:	lea    -0x3(%rax),%ecx
+   6cc22:	cmp    $0x2,%ecx
+   6cc25:	jae    6cc67 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2137>
+   6cc27:	cmpb   $0x0,0x10(%rsp)
+   6cc2c:	je     6cd4d <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x221d>
+   6cc32:	mov    %rbp,%rdx
+   6cc35:	add    %r13,%rdx
+   6cc38:	mov    %rbp,%rdi
+   6cc3b:	lea    -0x576c2(%rip),%rsi        # 15580 <__abi_tag+0x15284>
+   6cc42:	mov    0x20(%rsp),%rcx
+   6cc47:	mov    %r14,%r8
+   6cc4a:	call   *0x25f918(%rip)        # 2cc568 <_DYNAMIC+0x220>
+   6cc50:	cmpb   $0x1,%fs:0xffffffffffffff80
+   6cc59:	mov    %r15,%rax
+   6cc5c:	je     6cceb <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x21bb>
+   6cc62:	jmp    6cd80 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2250>
+   6cc67:	cmp    $0x5,%eax
+   6cc6a:	jne    6cca8 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2178>
+   6cc6c:	cmpb   $0x0,0x10(%rsp)
+   6cc71:	je     6cd51 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2221>
+   6cc77:	mov    %rbp,%rdx
+   6cc7a:	add    %r13,%rdx
+   6cc7d:	mov    %rbp,%rdi
+   6cc80:	lea    -0x57707(%rip),%rsi        # 15580 <__abi_tag+0x15284>
+   6cc87:	mov    0x20(%rsp),%rcx
+   6cc8c:	mov    %r14,%r8
+   6cc8f:	call   *0x25f8db(%rip)        # 2cc570 <_DYNAMIC+0x228>
+   6cc95:	cmpb   $0x1,%fs:0xffffffffffffff80
+   6cc9e:	mov    %r15,%rax
+   6cca1:	je     6cceb <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x21bb>
+   6cca3:	jmp    6cd80 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2250>
+   6cca8:	lea    0x4f0(%rsp),%rdi
+   6ccb0:	lea    0x40(%rsp),%rsi
+   6ccb5:	mov    %rbp,%rdx
+   6ccb8:	mov    %rbx,%rcx
+   6ccbb:	call   1223a0 <blake3_servil::tree::chunk_root_by_state>
+   6ccc0:	movups 0x4f0(%rsp),%xmm0
+   6ccc8:	movups 0x500(%rsp),%xmm1
+   6ccd0:	movups %xmm1,0x10(%r14)
+   6ccd5:	movups %xmm0,(%r14)
+   6ccd9:	cmpb   $0x1,%fs:0xffffffffffffff80
+   6cce2:	mov    %r15,%rax
+   6cce5:	jne    6cd80 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2250>
+   6cceb:	cmpq   $0x0,(%rax)
+   6ccef:	jne    6ceb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2381>
+   6ccf5:	movq   $0xffffffffffffffff,(%rax)
+   6ccfc:	mov    0x18(%rax),%rsi
+   6cd00:	mov    0x20(%rax),%rcx
+   6cd04:	mov    %ecx,%edi
+   6cd06:	and    $0x3ff,%edi
+   6cd0c:	cmp    %rsi,%rdi
+   6cd0f:	jae    6d217 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x26e7>
+   6cd15:	add    %rbx,%rbp
+   6cd18:	sub    %rbx,%r12
+   6cd1b:	mov    0x10(%rax),%rdx
+   6cd1f:	shl    $0x5,%edi
+   6cd22:	movdqu (%r14),%xmm0
+   6cd27:	movdqu 0x10(%r14),%xmm1
+   6cd2d:	movdqu %xmm1,0x10(%rdx,%rdi,1)
+   6cd33:	movdqu %xmm0,(%rdx,%rdi,1)
+   6cd38:	inc    %rcx
+   6cd3b:	mov    %rcx,0x20(%rax)
+   6cd3f:	incq   (%rax)
+   6cd42:	cmp    %r12,%rbx
+   6cd45:	jbe    6cbf8 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x20c8>
+   6cd4b:	jmp    6cda8 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2278>
+   6cd4d:	xor    %edi,%edi
+   6cd4f:	jmp    6cd56 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2226>
+   6cd51:	mov    $0x1,%edi
+   6cd56:	mov    %rbp,%rsi
+   6cd59:	mov    %rbx,%rdx
+   6cd5c:	lea    -0x577e3(%rip),%rcx        # 15580 <__abi_tag+0x15284>
+   6cd63:	xor    %r8d,%r8d
+   6cd66:	mov    %r14,%r9
+   6cd69:	call   1222d0 <blake3_servil::chunk_root::chunk_root_partial>
+   6cd6e:	cmpb   $0x1,%fs:0xffffffffffffff80
+   6cd77:	mov    %r15,%rax
+   6cd7a:	je     6cceb <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x21bb>
+   6cd80:	mov    %fs:0x0,%rax
+   6cd89:	lea    -0xa8(%rax),%rdi
+   6cd90:	call   7af50 <<std::sys::thread_local::native::lazy::Storage<core::cell::RefCell<(alloc::vec::Vec<[u8; 32]>, usize)>, ()>>::get_or_init_slow::<bench_hashes::DIGESTS::__rust_std_internal_init_fn>>
+   6cd95:	test   %rax,%rax
+   6cd98:	jne    6cceb <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x21bb>
+   6cd9e:	jmp    6d186 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2656>
+   6cda3:	cmp    %r12,%rbx
+   6cda6:	jbe    6cdc3 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2293>
+   6cda8:	mov    %r14,%rdi
+   6cdab:	call   *0x25f797(%rip)        # 2cc548 <free@GLIBC_2.2.5>
+   6cdb1:	add    $0xc78,%rsp
+   6cdb8:	pop    %rbx
+   6cdb9:	pop    %r12
+   6cdbb:	pop    %r13
+   6cdbd:	pop    %r14
+   6cdbf:	pop    %r15
+   6cdc1:	pop    %rbp
+   6cdc2:	ret
+   6cdc3:	mov    0x190(%rsp),%r13
+   6cdcb:	lea    0x40(%rsp),%rbp
+   6cdd0:	movzbl 0x2619ab(%rip),%eax        # 2ce782 <blake3_servil::platform::DETECTED>
+   6cdd7:	test   %al,%al
+   6cdd9:	je     6cee7 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x23b7>
+   6cddf:	lea    -0x57866(%rip),%rcx        # 15580 <__abi_tag+0x15284>
+   6cde6:	mov    %rcx,0x40(%rsp)
+   6cdeb:	movb   $0x0,0x48(%rsp)
+   6cdf0:	mov    %al,0x49(%rsp)
+   6cdf4:	lea    0x4f0(%rsp),%rdi
+   6cdfc:	mov    %rbp,%rsi
+   6cdff:	mov    %r13,%rdx
+   6ce02:	mov    %rbx,%rcx
+   6ce05:	call   11eb50 <blake3_servil::tree::hash_tree::<blake3_servil::tree::PlatformKernels>>
+   6ce0a:	movups 0x4f0(%rsp),%xmm0
+   6ce12:	movups 0x500(%rsp),%xmm1
+   6ce1a:	movups %xmm1,0x10(%r14)
+   6ce1f:	movups %xmm0,(%r14)
+   6ce23:	cmpb   $0x1,%fs:0xffffffffffffff80
+   6ce2c:	mov    %r15,%rax
+   6ce2f:	jne    6ce92 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2362>
+   6ce31:	cmpq   $0x0,(%rax)
+   6ce35:	jne    6ceb1 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2381>
+   6ce37:	movq   $0xffffffffffffffff,(%rax)
+   6ce3e:	mov    0x18(%rax),%rsi
+   6ce42:	mov    0x20(%rax),%rcx
+   6ce46:	mov    %ecx,%edi
+   6ce48:	and    $0x3ff,%edi
+   6ce4e:	cmp    %rsi,%rdi
+   6ce51:	jae    6d217 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x26e7>
+   6ce57:	add    %rbx,%r13
+   6ce5a:	sub    %rbx,%r12
+   6ce5d:	mov    0x10(%rax),%rdx
+   6ce61:	shl    $0x5,%edi
+   6ce64:	movdqu (%r14),%xmm0
+   6ce69:	movdqu 0x10(%r14),%xmm1
+   6ce6f:	movdqu %xmm1,0x10(%rdx,%rdi,1)
+   6ce75:	movdqu %xmm0,(%rdx,%rdi,1)
+   6ce7a:	inc    %rcx
+   6ce7d:	mov    %rcx,0x20(%rax)
+   6ce81:	incq   (%rax)
+   6ce84:	cmp    %r12,%rbx
+   6ce87:	jbe    6cdd0 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x22a0>
+   6ce8d:	jmp    6cda8 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2278>
+   6ce92:	mov    %fs:0x0,%rax
+   6ce9b:	lea    -0xa8(%rax),%rdi
+   6cea2:	call   7af50 <<std::sys::thread_local::native::lazy::Storage<core::cell::RefCell<(alloc::vec::Vec<[u8; 32]>, usize)>, ()>>::get_or_init_slow::<bench_hashes::DIGESTS::__rust_std_internal_init_fn>>
+   6cea7:	test   %rax,%rax
+   6ceaa:	jne    6ce31 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2301>
+   6ceac:	jmp    6d186 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2656>
+   6ceb1:	lea    0x253340(%rip),%rdi        # 2c01f8 <__frame_dummy_init_array_entry+0xa60>
+   6ceb8:	call   242640 <core::cell::panic_already_borrowed>
+   6cebd:	lea    0x580(%rsp),%rsi
+   6cec5:	lea    -0x583d4(%rip),%rdx        # 14af8 <__abi_tag+0x147fc>
+   6cecc:	lea    -0x3acf2(%rip),%rcx        # 321e1 <__abi_tag+0x31ee5>
+   6ced3:	lea    0x258d9e(%rip),%r9        # 2c5c78 <__frame_dummy_init_array_entry+0x64e0>
+   6ceda:	mov    $0x69,%r8d
+   6cee0:	xor    %edi,%edi
+   6cee2:	call   23fccb <core::panicking::assert_failed::<u64, u64>>
+   6cee7:	call   11f720 <blake3_servil::platform::not_initialized>
+   6ceec:	lea    -0x3ae53(%rip),%rdi        # 320a0 <__abi_tag+0x31da4>
+   6cef3:	lea    0x2529c6(%rip),%rdx        # 2bf8c0 <__frame_dummy_init_array_entry+0x128>
+   6cefa:	mov    $0x37,%esi
+   6ceff:	call   23e890 <core::panicking::panic_fmt>
+   6cf04:	call   11f700 <blake3_servil::lanes::no_pool>
+   6cf09:	lea    0x2529c8(%rip),%r8        # 2bf8d8 <__frame_dummy_init_array_entry+0x140>
+   6cf10:	lea    0x40(%rsp),%rdi
+   6cf15:	lea    0x4f0(%rsp),%rsi
+   6cf1d:	xor    %edx,%edx
+   6cf1f:	call   23fc88 <core::panicking::assert_failed::<usize, usize>>
+   6cf24:	mov    %r15,0x40(%rsp)
+   6cf29:	mov    %r12,0x48(%rsp)
+   6cf2e:	lea    0x40(%rsp),%rcx
+   6cf33:	lea    0x2529b6(%rip),%rcx        # 2bf8f0 <__frame_dummy_init_array_entry+0x158>
+   6cf3a:	xor    %edi,%edi
+   6cf3c:	mov    %rax,%rsi
+   6cf3f:	call   2407c0 <core::slice::index::slice_index_fail>
+   6cf44:	mov    %r12,0x40(%rsp)
+   6cf49:	mov    %r13,0x48(%rsp)
+   6cf4e:	lea    0x40(%rsp),%rax
+   6cf53:	lea    0x252996(%rip),%rcx        # 2bf8f0 <__frame_dummy_init_array_entry+0x158>
+   6cf5a:	xor    %edi,%edi
+   6cf5c:	call   2407c0 <core::slice::index::slice_index_fail>
+   6cf61:	lea    0x252a30(%rip),%rcx        # 2bf998 <__frame_dummy_init_array_entry+0x200>
+   6cf68:	xor    %edi,%edi
+   6cf6a:	mov    0x10(%rsp),%rsi
+   6cf6f:	call   2407c0 <core::slice::index::slice_index_fail>
+   6cf74:	lea    -0x584a3(%rip),%rsi        # 14ad8 <__abi_tag+0x147dc>
+   6cf7b:	lea    -0x4f2e7(%rip),%rdx        # 1dc9b <__abi_tag+0x1d99f>
+   6cf82:	lea    0x25297f(%rip),%r8        # 2bf908 <__frame_dummy_init_array_entry+0x170>
+   6cf89:	lea    0x238(%rsp),%rdi
+   6cf91:	mov    $0x6b,%ecx
+   6cf96:	call   23fc88 <core::panicking::assert_failed::<usize, usize>>
+   6cf9b:	mov    %fs:0x0,%rax
+   6cfa4:	lea    -0xa8(%rax),%rdi
+   6cfab:	call   7af50 <<std::sys::thread_local::native::lazy::Storage<core::cell::RefCell<(alloc::vec::Vec<[u8; 32]>, usize)>, ()>>::get_or_init_slow::<bench_hashes::DIGESTS::__rust_std_internal_init_fn>>
+   6cfb0:	mov    %rax,%r14
+   6cfb3:	test   %rax,%rax
+   6cfb6:	jne    6b1d6 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x6a6>
+   6cfbc:	jmp    6d186 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2656>
+   6cfc1:	mov    %fs:0x0,%rax
+   6cfca:	lea    -0xa8(%rax),%rdi
+   6cfd1:	call   7af50 <<std::sys::thread_local::native::lazy::Storage<core::cell::RefCell<(alloc::vec::Vec<[u8; 32]>, usize)>, ()>>::get_or_init_slow::<bench_hashes::DIGESTS::__rust_std_internal_init_fn>>
+   6cfd6:	mov    %rax,%r14
+   6cfd9:	test   %rax,%rax
+   6cfdc:	jne    6afb4 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x484>
+   6cfe2:	jmp    6d186 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2656>
+   6cfe7:	mov    %fs:0x0,%rax
+   6cff0:	lea    -0xa8(%rax),%rdi
+   6cff7:	movdqa %xmm0,0x10(%rsp)
+   6cffd:	movdqa %xmm1,0x20(%rsp)
+   6d003:	call   7af50 <<std::sys::thread_local::native::lazy::Storage<core::cell::RefCell<(alloc::vec::Vec<[u8; 32]>, usize)>, ()>>::get_or_init_slow::<bench_hashes::DIGESTS::__rust_std_internal_init_fn>>
+   6d008:	movdqa 0x20(%rsp),%xmm1
+   6d00e:	movdqa 0x10(%rsp),%xmm0
+   6d014:	mov    %rax,%r13
+   6d017:	test   %rax,%rax
+   6d01a:	jne    6bf86 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x1456>
+   6d020:	jmp    6d186 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2656>
+   6d025:	mov    %rsi,%r14
+   6d028:	mov    %rdx,%r15
+   6d02b:	call   112bb0 <blake3::platform::avx512_detected::has_avx512::init_get::init_inner>
+   6d030:	mov    %r15,%rdx
+   6d033:	mov    %r14,%rsi
+   6d036:	mov    0x10(%rsp),%r14
+   6d03b:	test   %al,%al
+   6d03d:	je     6b2d9 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x7a9>
+   6d043:	jmp    6b30a <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x7da>
+   6d048:	mov    %fs:0x0,%rax
+   6d051:	lea    -0xa8(%rax),%rdi
+   6d058:	call   7af50 <<std::sys::thread_local::native::lazy::Storage<core::cell::RefCell<(alloc::vec::Vec<[u8; 32]>, usize)>, ()>>::get_or_init_slow::<bench_hashes::DIGESTS::__rust_std_internal_init_fn>>
+   6d05d:	mov    %rax,%r14
+   6d060:	test   %rax,%rax
+   6d063:	jne    6b415 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x8e5>
+   6d069:	jmp    6d186 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2656>
+   6d06e:	mov    $0x1,%edi
+   6d073:	mov    $0x20,%esi
+   6d078:	call   10fde2 <alloc::alloc::handle_alloc_error>
+   6d07d:	mov    %rbx,0x40(%rsp)
+   6d082:	lea    0x40(%rsp),%rax
+   6d087:	mov    %rax,0x4f0(%rsp)
+   6d08f:	lea    0x1dd5fa(%rip),%rax        # 24a690 <<u64 as core::fmt::Display>::fmt>
+   6d096:	mov    %rax,0x4f8(%rsp)
+   6d09e:	lea    -0x53744(%rip),%rdi        # 19961 <__abi_tag+0x19665>
+   6d0a5:	lea    0x2527fc(%rip),%rdx        # 2bf8a8 <__frame_dummy_init_array_entry+0x110>
+   6d0ac:	lea    0x4f0(%rsp),%rsi
+   6d0b4:	call   23e890 <core::panicking::panic_fmt>
+   6d0b9:	lea    -0x58420(%rip),%rax        # 14ca0 <__abi_tag+0x149a4>
+   6d0c0:	jmp    6d0c9 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2599>
+   6d0c2:	lea    -0x58661(%rip),%rax        # 14a68 <__abi_tag+0x1476c>
+   6d0c9:	mov    %rax,0x4f0(%rsp)
+   6d0d1:	lea    0x1dd5b8(%rip),%rax        # 24a690 <<u64 as core::fmt::Display>::fmt>
+   6d0d8:	mov    %rax,0x4f8(%rsp)
+   6d0e0:	lea    -0x53caa(%rip),%rdi        # 1943d <__abi_tag+0x19141>
+   6d0e7:	lea    0x25287a(%rip),%rdx        # 2bf968 <__frame_dummy_init_array_entry+0x1d0>
+   6d0ee:	lea    0x4f0(%rsp),%rsi
+   6d0f6:	call   23e890 <core::panicking::panic_fmt>
+   6d0fb:	call   112bb0 <blake3::platform::avx512_detected::has_avx512::init_get::init_inner>
+   6d100:	test   %al,%al
+   6d102:	je     6b981 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xe51>
+   6d108:	jmp    6b9b5 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xe85>
+   6d10d:	call   112bb0 <blake3::platform::avx512_detected::has_avx512::init_get::init_inner>
+   6d112:	test   %al,%al
+   6d114:	je     6abd9 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xa9>
+   6d11a:	jmp    6ac0d <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xdd>
+   6d11f:	mov    %rsi,%r14
+   6d122:	mov    %rdx,%r15
+   6d125:	call   112c30 <blake3::platform::avx2_detected::has_avx2::init_get::init_inner>
+   6d12a:	mov    %r15,%rdx
+   6d12d:	mov    %r14,%rsi
+   6d130:	mov    0x10(%rsp),%r14
+   6d135:	test   %al,%al
+   6d137:	je     6b2f4 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x7c4>
+   6d13d:	jmp    6b30a <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x7da>
+   6d142:	mov    %fs:0x0,%rax
+   6d14b:	lea    -0xa8(%rax),%rdi
+   6d152:	call   7af50 <<std::sys::thread_local::native::lazy::Storage<core::cell::RefCell<(alloc::vec::Vec<[u8; 32]>, usize)>, ()>>::get_or_init_slow::<bench_hashes::DIGESTS::__rust_std_internal_init_fn>>
+   6d157:	mov    %rax,%r14
+   6d15a:	test   %rax,%rax
+   6d15d:	jne    6b8c2 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xd92>
+   6d163:	jmp    6d186 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x2656>
+   6d165:	mov    %fs:0x0,%rax
+   6d16e:	lea    -0xa8(%rax),%rdi
+   6d175:	call   7af50 <<std::sys::thread_local::native::lazy::Storage<core::cell::RefCell<(alloc::vec::Vec<[u8; 32]>, usize)>, ()>>::get_or_init_slow::<bench_hashes::DIGESTS::__rust_std_internal_init_fn>>
+   6d17a:	mov    %rax,%r15
+   6d17d:	test   %rax,%rax
+   6d180:	jne    6b77a <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xc4a>
+   6d186:	lea    0x25a1bb(%rip),%rdi        # 2c7348 <bytes::bytes_mut::SHARED_VTABLE+0xb8>
+   6d18d:	call   290ca0 <std::thread::local::panic_access_error>
+   6d192:	lea    -0x3b0f9(%rip),%rdi        # 320a0 <__abi_tag+0x31da4>
+   6d199:	lea    0x2528b8(%rip),%rdx        # 2bfa58 <__frame_dummy_init_array_entry+0x2c0>
+   6d1a0:	mov    $0x37,%esi
+   6d1a5:	call   23e890 <core::panicking::panic_fmt>
+   6d1aa:	call   112c30 <blake3::platform::avx2_detected::has_avx2::init_get::init_inner>
+   6d1af:	test   %al,%al
+   6d1b1:	je     6b99d <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xe6d>
+   6d1b7:	jmp    6b9b5 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xe85>
+   6d1bc:	call   112c30 <blake3::platform::avx2_detected::has_avx2::init_get::init_inner>
+   6d1c1:	test   %al,%al
+   6d1c3:	je     6abf5 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xc5>
+   6d1c9:	jmp    6ac0d <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xdd>
+   6d1ce:	mov    $0x1,%eax
+   6d1d3:	xor    %ecx,%ecx
+   6d1d5:	mov    %rdx,%rdi
+   6d1d8:	mov    %rbx,%r8
+   6d1db:	cpuid
+   6d1dd:	xchg   %r8,%rbx
+   6d1e0:	mov    %ecx,%ebx
+   6d1e2:	xor    %ecx,%ecx
+   6d1e4:	mov    $0x7,%eax
+   6d1e9:	mov    %rbx,%r8
+   6d1ec:	cpuid
+   6d1ee:	xchg   %r8,%rbx
+   6d1f1:	mov    $0x1,%ecx
+   6d1f6:	mov    $0x7,%eax
+   6d1fb:	mov    %rbx,%r8
+   6d1fe:	cpuid
+   6d200:	xchg   %r8,%rbx
+   6d203:	mov    %rdi,%rdx
+   6d206:	shr    $0x13,%ebx
+   6d209:	and    $0x1,%ebx
+   6d20c:	mov    %bl,0x26092f(%rip)        # 2cdb41 <blake3::platform::sse41_detected::has_sse41::STORAGE>
+   6d212:	jmp    6b308 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0x7d8>
+   6d217:	lea    0x254a42(%rip),%rdx        # 2c1c60 <__frame_dummy_init_array_entry+0x24c8>
+   6d21e:	call   2408a1 <core::panicking::panic_bounds_check>
+   6d223:	mov    $0x1,%eax
+   6d228:	xor    %ecx,%ecx
+   6d22a:	mov    %rbx,%rsi
+   6d22d:	cpuid
+   6d22f:	xchg   %rsi,%rbx
+   6d232:	mov    %ecx,%r12d
+   6d235:	mov    $0x7,%eax
+   6d23a:	xor    %ecx,%ecx
+   6d23c:	mov    %rbx,%rsi
+   6d23f:	cpuid
+   6d241:	xchg   %rsi,%rbx
+   6d244:	mov    $0x7,%eax
+   6d249:	mov    $0x1,%ecx
+   6d24e:	mov    %rbx,%rsi
+   6d251:	cpuid
+   6d253:	xchg   %rsi,%rbx
+   6d256:	shr    $0x13,%r12d
+   6d25a:	and    $0x1,%r12d
+   6d25e:	mov    %r12b,0x2608dc(%rip)        # 2cdb41 <blake3::platform::sse41_detected::has_sse41::STORAGE>
+   6d265:	jmp    6ac0a <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xda>
+   6d26a:	mov    $0x1,%eax
+   6d26f:	xor    %ecx,%ecx
+   6d271:	mov    %rbx,%rsi
+   6d274:	cpuid
+   6d276:	xchg   %rsi,%rbx
+   6d279:	mov    %ecx,%r12d
+   6d27c:	mov    $0x7,%eax
+   6d281:	xor    %ecx,%ecx
+   6d283:	mov    %rbx,%rsi
+   6d286:	cpuid
+   6d288:	xchg   %rsi,%rbx
+   6d28b:	mov    $0x7,%eax
+   6d290:	mov    $0x1,%ecx
+   6d295:	mov    %rbx,%rsi
+   6d298:	cpuid
+   6d29a:	xchg   %rsi,%rbx
+   6d29d:	shr    $0x13,%r12d
+   6d2a1:	and    $0x1,%r12d
+   6d2a5:	mov    %r12b,0x260895(%rip)        # 2cdb41 <blake3::platform::sse41_detected::has_sse41::STORAGE>
+   6d2ac:	jmp    6b9b2 <bench_hashes::hash_in_memory::<&mut bench_hashes::use_digest>+0xe82>
+   6d2b1:	lea    0x2526c8(%rip),%rdx        # 2bf980 <__frame_dummy_init_array_entry+0x1e8>
+   6d2b8:	xor    %edi,%edi
+   6d2ba:	xor    %esi,%esi
+   6d2bc:	call   2408a1 <core::panicking::panic_bounds_check>
+   6d2c1:	mov    %rsi,0x4f0(%rsp)
+   6d2c9:	mov    %rdx,0x4f8(%rsp)
+   6d2d1:	lea    0x4f0(%rsp),%rax
+   6d2d9:	lea    -0x4cae5(%rip),%rdi        # 207fb <__abi_tag+0x204ff>
+   6d2e0:	lea    0x256bb1(%rip),%rdx        # 2c3e98 <__frame_dummy_init_array_entry+0x4700>
+   6d2e7:	mov    $0xb3,%esi
+   6d2ec:	call   23e890 <core::panicking::panic_fmt>
