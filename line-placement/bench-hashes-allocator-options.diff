@@ -1,5 +1,5 @@
 diff --git a/Cargo.toml b/Cargo.toml
-index 3058bb6..f3edf68 100644
+index 3058bb6..6f31ef6 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
 @@ -19,6 +19,14 @@ features = ["std", "rayon"]
@@ -17,7 +17,7 @@ index 3058bb6..f3edf68 100644
  # Seeded hashing for every map (crate::Map): runs lay out alike.
  [dependencies.wyhash]
  version = "0.6"
-@@ -81,3 +89,14 @@ lto = "fat"
+@@ -81,3 +89,17 @@ lto = "fat"
  codegen-units = 1
  panic = "abort"
  incremental = false
@@ -32,8 +32,11 @@ index 3058bb6..f3edf68 100644
 +# more (alignment 16 or less) placed BENCH_DIAG_LINE_OFFSET bytes (build
 +# time) into a cache line. The converse of diag-align64.
 +diag-line-offset = []
++# Diagnostic only: an mfence after each prepared sample's write, so its
++# stores have committed before the timed call.
++diag-drain = []
 diff --git a/src/main.rs b/src/main.rs
-index 695a062..d4aaa0c 100644
+index 695a062..f7e5511 100644
 --- a/src/main.rs
 +++ b/src/main.rs
 @@ -1953,6 +1953,109 @@ impl std::hash::BuildHasher for Seeded {
@@ -146,23 +149,40 @@ index 695a062..d4aaa0c 100644
  fn main() {
      // Once per process, before any other call: blake3-servil's contract.
      blake3_servil::initialize();
-@@ -5813,6 +5916,9 @@ fn samples_header(machine: &MachineMetadata, run: &[(String, String)]) -> String
-         run.iter()
-             .map(|(key, value)| (key.as_str(), value.as_str())),
-     ) {
-+    if cfg!(feature = "smalloc") {
-+        writeln!(out, "# global allocator: smalloc").unwrap();
-+    }
+@@ -2716,7 +2819,15 @@ fn take_prepared_sample(
+             gap,
+             GAP_NS,
+             produced.as_mut_slice(),
+-            |produced| produced.copy_from_slice(black_box(input)),
++            |produced| {
++                produced.copy_from_slice(black_box(input));
++                // Diagnostic (`--features diag-drain`): the write's stores
++                // drained before the call. Not for measurements.
++                #[cfg(all(feature = "diag-drain", target_arch = "x86_64"))]
++                unsafe {
++                    core::arch::x86_64::_mm_mfence()
++                };
++            },
+             |produced| call(black_box(produced)),
+         );
+         // The write and the call, both the program's work (FROZEN.md, Zooko,
+@@ -5816,6 +5927,9 @@ fn samples_header(machine: &MachineMetadata, run: &[(String, String)]) -> String
          writeln!(out, "# {key}: {value}").unwrap();
      }
      writeln!(out, "# power: {}", machine.describe_power()).unwrap();
-@@ -6025,6 +6131,9 @@ fn generate_text(
-     writeln!(output, "  CPU: {}", machine.cpu_identity).unwrap();
-     writeln!(
-         output,
 +    if cfg!(feature = "smalloc") {
-+        writeln!(output, "  global allocator: smalloc").unwrap();
++        writeln!(out, "# global allocator: smalloc").unwrap();
 +    }
+     writeln!(out, "# load: {}", clocks::load::describe(&machine.load)).unwrap();
+     let windows: Vec<String> = machine
+         .load
+@@ -6028,6 +6142,9 @@ fn generate_text(
          "  {RUSTC_VERSION}; target {BUILD_TARGET}; features {TARGET_FEATURES}"
      )
      .unwrap();
++    if cfg!(feature = "smalloc") {
++        writeln!(output, "  global allocator: smalloc").unwrap();
++    }
+     writeln!(output, "  clock: {}", clocks::WALL_CLOCK).unwrap();
+     writeln!(
+         output,

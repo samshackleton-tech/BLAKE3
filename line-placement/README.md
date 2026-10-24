@@ -18,6 +18,14 @@ global-allocator options to the bench:
   of 64 bytes or more (alignment 16 or less) placed `BENCH_DIAG_LINE_OFFSET` = 16,
   32 or 48 bytes into a line.
 
+**Correction (09:05 UTC):** the diff first published here (13328ae) came from a
+working tree in which two re-applied hunks had landed inside other statements.
+One did not compile; the other printed the smalloc header line once per key.
+The diff is now correct. The runs used `bench-source-used-by-runs.tgz`
+(`Cargo.toml`, `src/main.rs`), which is this diff and rustfmt's formatting of
+`main.rs`. Formatted alike, the two differ only by `diag-drain`, a later
+diagnostic: an mfence after the bench's prepared write.
+
 The bench's tests pass with smalloc (`tests/bench-tests-with-smalloc.log`). The
 uprobe address probes in `addresses/` confirm each placement for the main
 thread's input: 64 B at 2128/2144/2160, 256 B at 2576/2592/2608, align64 at
