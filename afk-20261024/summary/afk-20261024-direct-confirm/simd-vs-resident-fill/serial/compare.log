@@ -1,0 +1,12 @@
+blake3-servil-st|solo|LentMessages|64 B: 1.363 -> 0.849 ns/unit  x0.623 faster, 16 of 16 pairs faster; CPU time x0.624
+blake3-servil-st|solo|LentMessages|256 B: 1.258 -> 0.790 ns/unit  x0.628 faster, 16 of 16 pairs faster; CPU time x0.629; energy x0.584
+blake3-servil-st|solo|LentMessages|1 KiB: 1.233 -> 0.779 ns/unit  x0.632 faster, 16 of 16 pairs faster; CPU time x0.632; energy x0.603
+blake3-servil-st|solo|LentBatches|16: 7.282 -> 7.339 ns/unit  x1.008 level, 8 of 16 pairs faster; CPU time x1.008; energy x1.098
+blake3-servil-st|solo|LentBatches|64: 6.645 -> 6.649 ns/unit  x1.001 level, 9 of 16 pairs faster; CPU time x1.001; energy x1.039
+blake3-servil-st|solo|LentBatches|256: 6.624 -> 6.619 ns/unit  x0.999 level, 5 of 16 pairs faster; CPU time x0.999; energy x1.041
+blake3-servil-st|shared|LentMessages|64 B: 1.364 -> 0.849 ns/unit  x0.622 faster, 16 of 16 pairs faster
+blake3-servil-st|shared|LentMessages|256 B: 1.259 -> 0.790 ns/unit  x0.628 faster, 16 of 16 pairs faster
+blake3-servil-st|shared|LentMessages|1 KiB: 1.234 -> 0.779 ns/unit  x0.631 faster, 16 of 16 pairs faster
+blake3-servil-st|shared|LentBatches|16: 7.066 -> 7.078 ns/unit  x1.002 level, 4 of 16 pairs faster
+blake3-servil-st|shared|LentBatches|64: 6.641 -> 6.645 ns/unit  x1.001 level, 5 of 16 pairs faster
+blake3-servil-st|shared|LentBatches|256: 6.626 -> 6.623 ns/unit  x1.000 level, 8 of 16 pairs faster
