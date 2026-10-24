@@ -1,0 +1,6 @@
+scanned 127 offsets x 16 cells; confirming 3: thread-stack+1152 against thread-stack+128, thread-stack+2944 against main-stack+64, main-stack+768 against main-stack+384
+confirm thread-stack+1152 against thread-stack+128: regress exit 1; slower: blake3-servil-st|shared|ContinuousMessages|64 B
+confirm thread-stack+2944 against main-stack+64: regress exit 0; slower: none
+confirm main-stack+768 against main-stack+384: regress exit 0; slower: none
+offset-sensitive: blake3-servil-st|shared|ContinuousMessages|64 B (slower at thread-stack+1152 vs thread-stack+128)
+ok: immune cells stay immune; the check still sees the effect (blake3-servil-st|shared|ContinuousMessages|64 B)

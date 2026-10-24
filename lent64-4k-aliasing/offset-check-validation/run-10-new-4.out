@@ -1,0 +1,10 @@
+scanned 127 offsets x 16 cells; confirming 4: thread-stack+1344 against thread-stack+2432, main-stack+3328 against default, main-stack+3072 against thread-stack+768, thread-stack+3328 against thread-stack+2368
+confirm thread-stack+1344 against thread-stack+2432: regress exit 1; slower: blake3-servil-st|shared|ContinuousMessages|64 B
+confirm main-stack+3328 against default: regress exit 0; slower: none
+confirm main-stack+3072 against thread-stack+768: regress exit 1; slower: blake3-servil-st|shared|LentMessages|64 B
+confirm thread-stack+3328 against thread-stack+2368: regress exit 1; slower: blake3-servil-st|shared|ContinuousBatches|16, blake3-servil-st|shared|LentBatches|16
+offset-sensitive: blake3-servil-st|shared|ContinuousBatches|16 (slower at thread-stack+3328 vs thread-stack+2368)
+offset-sensitive: blake3-servil-st|shared|ContinuousMessages|64 B (slower at thread-stack+1344 vs thread-stack+2432)
+offset-sensitive: blake3-servil-st|shared|LentBatches|16 (slower at thread-stack+3328 vs thread-stack+2368)
+offset-sensitive: blake3-servil-st|shared|LentMessages|64 B (slower at main-stack+3072 vs thread-stack+768)
+ok: immune cells stay immune; the check still sees the effect (blake3-servil-st|shared|LentMessages|64 B, blake3-servil-st|shared|ContinuousMessages|64 B)
