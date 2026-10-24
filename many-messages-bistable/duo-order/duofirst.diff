@@ -1,0 +1,20 @@
+diff --git a/src/main.rs b/src/main.rs
+index a23f314..37c5568 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -2154,6 +2154,7 @@ fn measure_all(roster: &Roster, sizes: &Sizes) -> (Results, RunSamples, Vec<cloc
+             .max()
+             .unwrap_or(0)
+     };
++    let duo = Duo::new();
+     let own = make_input_seeded(largest(&|_| true), 0);
+     let other = make_input_seeded(
+         largest(&|index| Scenario::Shared.measures(POINTS[index].use_case)),
+@@ -2179,7 +2180,6 @@ fn measure_all(roster: &Roster, sizes: &Sizes) -> (Results, RunSamples, Vec<cloc
+         .map(|range| &other[range])
+         .collect();
+     let mut progress = Progress::new(roster);
+-    let duo = Duo::new();
+ 
+     /*
+      * Each algorithm/point combination gets its own calibrated iteration
