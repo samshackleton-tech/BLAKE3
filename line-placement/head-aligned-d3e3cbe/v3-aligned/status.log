@@ -1,0 +1,11 @@
+2026-10-24T16:34:44+00:00 generated matches: 0
+2026-10-24T16:34:51+00:00 focused exit=0
+2026-10-24T16:34:53+00:00 release exit=0
+     Summary [   0.070s] 4 tests run: 4 passed, 84 skipped
+     Summary [   0.788s] 107 tests run: 107 passed, 0 skipped
+2026-10-24T16:37:31+00:00 map exit=0
+2026-10-24T16:40:31+00:00 offset_check exit=0
+offset-sensitive: blake3-official|shared|ContinuousMessages|64 B (slower at thread-stack+960 vs thread-stack+336, thread-stack+928 vs thread-stack+336)
+offset-sensitive: blake3-official|shared|LentMessages|256 B (slower at thread-stack+3152 vs thread-stack+384, thread-stack+3184 vs default)
+offset-sensitive: blake3-official|shared|LentMessages|64 B (slower at thread-stack+3152 vs thread-stack+384, thread-stack+3184 vs default)
+ok: immune cells stay immune; the check still sees the effect (blake3-official|shared|LentMessages|64 B, blake3-official|shared|ContinuousMessages|64 B)

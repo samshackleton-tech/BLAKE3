@@ -1,0 +1,13 @@
+scanned 256 offsets x 32 cells, rescanned 151 twice; confirming 8: thread-stack+960 (1.50x the median at its lowest) against thread-stack+336, thread-stack+3152 (1.11x the median at its lowest) against thread-stack+384, thread-stack+2544 (1.06x the median at its lowest) against thread-stack+2528, thread-stack+3184 (1.03x the median at its lowest) against default, thread-stack+928 (1.02x the median at its lowest) against thread-stack+336, thread-stack+896 (1.02x the median at its lowest) against thread-stack+32, thread-stack+3376 (1.01x the median at its lowest) against thread-stack+1712, thread-stack+3584 (1.01x the median at its lowest) against thread-stack+1760
+confirm thread-stack+960 against thread-stack+336: regress exit 1; slower: blake3-official|shared|ContinuousMessages|64 B
+confirm thread-stack+3152 against thread-stack+384: regress exit 1; slower: blake3-official|shared|LentMessages|256 B, blake3-official|shared|LentMessages|64 B
+confirm thread-stack+2544 against thread-stack+2528: regress exit 0; slower: none
+confirm thread-stack+3184 against default: regress exit 1; slower: blake3-official|shared|LentMessages|256 B, blake3-official|shared|LentMessages|64 B
+confirm thread-stack+928 against thread-stack+336: regress exit 1; slower: blake3-official|shared|ContinuousMessages|64 B
+confirm thread-stack+896 against thread-stack+32: regress exit 0; slower: none
+confirm thread-stack+3376 against thread-stack+1712: regress exit 0; slower: none
+confirm thread-stack+3584 against thread-stack+1760: regress exit 0; slower: none
+offset-sensitive: blake3-official|shared|ContinuousMessages|64 B (slower at thread-stack+960 vs thread-stack+336, thread-stack+928 vs thread-stack+336)
+offset-sensitive: blake3-official|shared|LentMessages|256 B (slower at thread-stack+3152 vs thread-stack+384, thread-stack+3184 vs default)
+offset-sensitive: blake3-official|shared|LentMessages|64 B (slower at thread-stack+3152 vs thread-stack+384, thread-stack+3184 vs default)
+ok: immune cells stay immune; the check still sees the effect (blake3-official|shared|LentMessages|64 B, blake3-official|shared|ContinuousMessages|64 B)
