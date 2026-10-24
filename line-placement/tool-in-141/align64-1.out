@@ -1,0 +1,13 @@
+scanned 256 offsets x 32 cells, rescanned 142 twice; confirming 8: thread-stack+928 (1.52x the median at its lowest) against thread-stack+3584, thread-stack+3152 (1.11x the median at its lowest) against thread-stack+112, thread-stack+1408 (1.06x the median at its lowest) against thread-stack+16, thread-stack+3168 (1.03x the median at its lowest) against thread-stack+112, thread-stack+944 (1.02x the median at its lowest) against thread-stack+1104, thread-stack+3312 (1.01x the median at its lowest) against thread-stack+1392, thread-stack+1184 (1.01x the median at its lowest) against thread-stack+3584, thread-stack+1088 (1.01x the median at its lowest) against thread-stack+3584
+confirm thread-stack+928 against thread-stack+3584: regress exit 1; slower: blake3-official|shared|ContinuousMessages|64 B
+confirm thread-stack+3152 against thread-stack+112: regress exit 1; slower: blake3-official|shared|LentMessages|256 B, blake3-official|shared|LentMessages|64 B
+confirm thread-stack+1408 against thread-stack+16: regress exit 0; slower: none
+confirm thread-stack+3168 against thread-stack+112: regress exit 1; slower: blake3-official|shared|LentMessages|256 B, blake3-official|shared|LentMessages|64 B
+confirm thread-stack+944 against thread-stack+1104: regress exit 1; slower: blake3-official|shared|ContinuousMessages|64 B
+confirm thread-stack+3312 against thread-stack+1392: regress exit 0; slower: none
+confirm thread-stack+1184 against thread-stack+3584: regress exit 0; slower: none
+confirm thread-stack+1088 against thread-stack+3584: regress exit 0; slower: none
+offset-sensitive: blake3-official|shared|ContinuousMessages|64 B (slower at thread-stack+928 vs thread-stack+3584, thread-stack+944 vs thread-stack+1104)
+offset-sensitive: blake3-official|shared|LentMessages|256 B (slower at thread-stack+3152 vs thread-stack+112, thread-stack+3168 vs thread-stack+112)
+offset-sensitive: blake3-official|shared|LentMessages|64 B (slower at thread-stack+3152 vs thread-stack+112, thread-stack+3168 vs thread-stack+112)
+ok: immune cells stay immune; the check still sees the effect (blake3-official|shared|LentMessages|64 B, blake3-official|shared|ContinuousMessages|64 B)

@@ -1,0 +1,679 @@
+From a683e77b8662ef056bfd58e72096f402aa6c45c7 Mon Sep 17 00:00:00 2001
+From: Sam Shackleton <samshackleton-tech@users.noreply.github.com>
+Date: Sat, 24 Oct 2026 04:04:03 +0000
+Subject: [PATCH 1/5] tools/offset_check.py: flag short-message cells whose
+ speed follows stack/buffer offsets
+
+A caller that writes a short message and hashes it at once pays 4 KiB
+aliasing when our call chain's stack accesses share the message's low 12
+address bits: on an EPYC 9255, shared lent 64 B through hash() runs at
+1.05 or 1.45 ns/B by that alone (bench-hashes #65). Frame sizes, thread
+count, environment and allocation history set the offset, and relinking
+leaves it, so one offset can decide a check's verdict for a cell.
+
+The tool moves the duo threads' stacks (glibc.rtld.optional_static_tls)
+and the main thread's (environment size) through a page, scans a
+short-message cell set with one quick run per offset, and confirms each
+screened cell's worst offset against its best with bench-hashes regress.
+It reads only the bench's printed report, for selection; verdicts are
+regress's. Exit 1 when a batch-of-64 cell turns offset-sensitive; exit 3
+when hash() of 64 bytes (the control) is no longer seen sensitive, so the
+tool cannot have gone blind; a fix that makes those immune moves them.
+
+Validated on the EPYC 9255: 10 of 10 runs pass over two builds and eight
+layouts (control confirmed every run; batch-of-64 cells never); a fresh
+checkout building its own bench passes with --coarse in 62 s. Batches of
+16 show +6-8% at one offset (4 of 10 runs): on neither list. Solo cells
+are not yet covered: their windows are narrower than the environment
+steps. Linux with glibc only.
+---
+ tools/offset_check.py | 196 ++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 196 insertions(+)
+ create mode 100644 tools/offset_check.py
+
+diff --git a/tools/offset_check.py b/tools/offset_check.py
+new file mode 100644
+index 0000000..b74aebe
+--- /dev/null
++++ b/tools/offset_check.py
+@@ -0,0 +1,196 @@
++#!/usr/bin/env python3
++"""Whether short-message speed depends on where buffers and stacks happen to
++sit, modulo the 4 KiB page (4 KiB aliasing), and whether that changed.
++
++    python3 tools/offset_check.py [--exe BENCH] [--coarse] [--keep DIR]
++
++Run from the fork's root with a bench-hashes checkout in `bench-hashes/` (or
++pass --exe, a `bench-hashes build-against` executable). Linux with glibc:
++it moves the duo-copy threads' stacks (glibc.rtld.optional_static_tls) and
++the main thread's (environment size) through one whole page in 64-byte
++steps (128 with --coarse), and measures a short-message cell set at each.
++
++Why: a caller writes a short message and hashes it at once. When our call
++chain's stack accesses share the message's low 12 address bits, the CPU
++holds them behind the caller's stores (EPYC 9255: 1.05 to 1.5 ns/B for a
++64-byte hash()). Which state a build lands in follows frame sizes, thread
++count, environment and allocation history, none of which a relink changes,
++so one offset can decide a comparison (bench-hashes #65).
++
++How: a scan (one quick run per offset, reading the bench's printed report)
++picks the worst offset for each cell; then `bench-hashes regress` compares
++each cell's best scanned offset against its worst on fresh runs, judged as every
++comparison is (clocks::summary). Selection and verdict use separate runs.
++
++Verdicts:
++- IMMUNE_CELLS are the cells our APIs keep free of the effect (the batch
++  calls). Any one of them judged slower at some offset: exit 1.
++- CONTROL_CELLS are known to be sensitive today (hash() of 64 bytes, a
++  buffer lent or owned). If
++  none is judged slower, the check lost its sight of the effect: exit 3.
++  A change that makes them immune moves them to IMMUNE_CELLS with it.
++- Exit 0 otherwise; 2 when regress gave no verdict (a busy machine).
++"""
++import argparse
++import os
++import pathlib
++import re
++import shutil
++import statistics
++import subprocess
++import sys
++import tempfile
++
++CONTENDER = 'blake3-servil-st'
++POINTS = ['lent 64 B', 'lent 256 B', 'continuous 64 B', 'continuous 256 B',
++          'lent batch 16', 'lent batch 64', 'continuous batch 16', 'continuous batch 64']
++# Batches of 64 messages: written long enough before the call. Batches of 16
++# showed +6-8% at one offset on the EPYC, so they are on neither list.
++IMMUNE_CELLS = [f'{CONTENDER}|{s}|{u}|64' for s in ('solo', 'shared')
++                for u in ('LentBatches', 'ContinuousBatches')]
++CONTROL_CELLS = [f'{CONTENDER}|{s}|{u}|64 B' for s in ('solo', 'shared')
++                 for u in ('LentMessages', 'ContinuousMessages')]
++PAGE = 4096
++DEFAULT_TLS = 512
++# Screening: a cell whose worst scanned run is this far above its median
++# gets a confirmation. Confirmation alone decides.
++SCREEN = 1.10
++MAX_CONFIRMATIONS = 8
++
++
++def offsets(step):
++    """(name, environment additions) for each offset, the default first."""
++    yield 'default', {}
++    for k in range(1, PAGE // step):
++        yield f'thread-stack+{k * step}', {'GLIBC_TUNABLES': f'glibc.rtld.optional_static_tls={DEFAULT_TLS + k * step}'}
++    for k in range(1, PAGE // step):
++        yield f'main-stack+{k * step}', {'OFFSET_CHECK_PAD': 'x' * (k * step)}
++
++
++def run_env(extra):
++    env = {'PATH': os.environ['PATH'], 'HOME': os.environ.get('HOME', '/')}
++    env.update(extra)
++    return env
++
++
++def parse_report(text):
++    """{(scenario, table title, size label): mean} from the printed report."""
++    cells, scenario, table, header = {}, None, None, False
++    for line in text.splitlines():
++        if line.startswith('SOLO'):
++            scenario = 'solo'
++        elif line.startswith('SHARED'):
++            scenario = 'shared'
++        elif re.match(r'^  \S.*\((ns|us)/', line):
++            table, header = line.strip(), False
++        elif re.match(r'^  (size|messages)\s', line):
++            header = True
++        elif header and scenario and table:
++            m = re.match(r'^\s+(\d+(?: [KMG]?i?B)?)\s+([\d.]+)\s*$', line)
++            if m:
++                cells[(scenario, table, m.group(1))] = float(m.group(2))
++    return cells
++
++
++def scan(exe, step, work):
++    results = {}
++    for name, extra in offsets(step):
++        out = work / 'scan' / name
++        out.mkdir(parents=True)
++        subprocess.run([exe, '--contenders', CONTENDER, '--points', ','.join(POINTS),
++                        '--for-regression-check', '--rounds', '24'],
++                       cwd=out, env=run_env(extra), check=True,
++                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
++        report = next(out.glob('benchmark-results/*/bench-hashes.result.txt'))
++        results[name] = parse_report(report.read_text())
++        print(f'scan {name}: {len(results[name])} cells', file=sys.stderr, flush=True)
++    return results
++
++
++def pick(results):
++    """(slow, fast) offset pairs to confirm: for each screened cell, its
++    worst and best scanned offsets, most-affected first. The default offset
++    has no special role: a build may sit in the slow state by default."""
++    cells = set().union(*(r.keys() for r in results.values()))
++    picks = {}
++    for cell in cells:
++        runs = {name: r[cell] for name, r in results.items() if cell in r}
++        median = statistics.median(runs.values())
++        worst, best = max(runs, key=runs.get), min(runs, key=runs.get)
++        ratio = runs[worst] / median
++        if ratio >= SCREEN and picks.get(worst, (0,))[0] < ratio:
++            picks[worst] = (ratio, best)
++    order = sorted(picks, key=lambda w: picks[w][0], reverse=True)[:MAX_CONFIRMATIONS]
++    return [(w, picks[w][1]) for w in order], len(cells)
++
++
++def wrapper(path, exe, extra):
++    lines = ['#!/bin/sh', 'exec env -i ' + ' '.join(f"'{k}={v}'" for k, v in run_env(extra).items()) + f" '{exe}' \"$@\""]
++    path.write_text('\n'.join(lines) + '\n')
++    path.chmod(0o755)
++    return str(path)
++
++
++def confirm(exe, slow, fast, extras, work):
++    """regress: the fast offset (old side) against the slow one (new)."""
++    out = work / 'confirm' / slow
++    out.mkdir(parents=True)
++    old = [wrapper(out / f'fast-{i}', exe, extras[fast]) for i in range(4)]
++    new = [wrapper(out / f'slow-{i}', exe, extras[slow]) for i in range(4)]
++    done = subprocess.run([exe, 'regress', '--contenders', CONTENDER, '--points', ','.join(POINTS),
++                           '--pairs', '4', '--keep', str(out / 'samples'), *old, '--', *new],
++                          cwd=out, capture_output=True, text=True)
++    (out / 'regress.out').write_text(done.stdout)
++    (out / 'regress.err').write_text(done.stderr)
++    slower = set(re.findall(r'^\s+SLOWER (\S+\|\S+\|\S+\|.+?):', done.stdout, re.M))
++    return done.returncode, slower
++
++
++def main():
++    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
++    parser.add_argument('--exe', help='a bench-hashes build-against executable (default: build one)')
++    parser.add_argument('--coarse', action='store_true', help='128-byte steps: half the runs')
++    parser.add_argument('--keep', help='keep the scan and confirmation runs here')
++    args = parser.parse_args()
++    if not (sys.platform.startswith('linux') and os.confstr('CS_GNU_LIBC_VERSION')):
++        sys.exit('offset_check: Linux with glibc only (it moves thread stacks with a glibc tunable)')
++    exe = args.exe
++    if exe is None:
++        exe = subprocess.run(['cargo', 'run', '--quiet', '--release', '--', 'build-against', '..'],
++                             cwd='bench-hashes', check=True, capture_output=True, text=True).stdout.strip()
++    exe = str(pathlib.Path(exe).resolve())
++    work = pathlib.Path(args.keep) if args.keep else pathlib.Path(tempfile.mkdtemp(prefix='offset-check-'))
++    work.mkdir(parents=True, exist_ok=True)
++    results = scan(exe, 128 if args.coarse else 64, work)
++    picks, ncells = pick(results)
++    print(f'scanned {len(results)} offsets x {ncells} cells; confirming {len(picks)}: '
++          + (', '.join(f'{s} against {f}' for s, f in picks) or 'none'))
++    extras = dict(offsets(128 if args.coarse else 64))
++    sensitive, no_verdict = {}, False
++    for slow, fast in picks:
++        code, slower = confirm(exe, slow, fast, extras, work)
++        no_verdict |= code == 2
++        for cell in slower:
++            sensitive.setdefault(cell, []).append(f'{slow} vs {fast}')
++        print(f'confirm {slow} against {fast}: regress exit {code}; slower: {", ".join(sorted(slower)) or "none"}')
++    broken = [c for c in IMMUNE_CELLS if c in sensitive]
++    seen = [c for c in CONTROL_CELLS if c in sensitive]
++    for cell, names in sorted(sensitive.items()):
++        print(f'offset-sensitive: {cell} (slower at {", ".join(names)})')
++    if not args.keep:
++        shutil.rmtree(work)
++    if broken:
++        print(f'FAIL: cells our APIs keep immune turned offset-sensitive: {", ".join(broken)}')
++        return 1
++    if no_verdict and not seen:
++        print('no verdict: a confirmation found the machine busy')
++        return 2
++    if not seen:
++        print('FAIL: no control cell was judged sensitive: the check cannot see the effect here')
++        return 3
++    print(f'ok: immune cells stay immune; the check still sees the effect ({", ".join(seen)})')
++    return 0
++
++
++if __name__ == '__main__':
++    sys.exit(main())
+-- 
+2.53.0
+
+
+From 6016c66f4f0d57b0138700e697536a62b6eadc47 Mon Sep 17 00:00:00 2001
+From: Devon Jonte <devonjonte@users.noreply.github.com>
+Date: Sat, 24 Oct 2026 04:39:09 +0000
+Subject: [PATCH 2/5] offset_check.py: 16-byte steps, rescans instead of a
+ threshold, eight pairs a confirmation; thread stacks only
+
+On the i7-12700K the effect is +9-11% in a window 48 bytes wide, and the
+check could not see it (exit 3 at steps of 128 and 64). Three causes,
+each fixed here:
+
+- Steps of 64 jump over a 48-byte window: the scan now steps 16 bytes,
+  the stack's alignment (--step replaces --coarse).
+- A 10% screen sits above a 9% effect: each cell's three worst offsets
+  are rescanned twice and ranked by the lowest of their three readings,
+  which one stray reading cannot raise; regress alone decides.
+- Four pairs cannot clear Benjamini-Hochberg over 16 cells: the slow
+  offset ran +8% to +20% in every one of four pairs and was judged
+  level. A confirmation now runs eight.
+
+The main thread's stack is left out: its top holds the command line,
+which regress's runs do not share with the scan, so a main-stack offset
+found in the scan lands elsewhere when confirmed (one read 1.38 times
+the median in three scans and level under regress).
+
+On the i7, 5 of 8 runs now exit 0 (servil 2e892e1: 3 of 5; 082afa3: 2 of
+3); in the other three the scan's candidates missed the window.
+---
+ tools/offset_check.py | 105 ++++++++++++++++++++++++++++--------------
+ 1 file changed, 70 insertions(+), 35 deletions(-)
+
+diff --git a/tools/offset_check.py b/tools/offset_check.py
+index b74aebe..312d72f 100644
+--- a/tools/offset_check.py
++++ b/tools/offset_check.py
+@@ -2,13 +2,14 @@
+ """Whether short-message speed depends on where buffers and stacks happen to
+ sit, modulo the 4 KiB page (4 KiB aliasing), and whether that changed.
+ 
+-    python3 tools/offset_check.py [--exe BENCH] [--coarse] [--keep DIR]
++    python3 tools/offset_check.py [--exe BENCH] [--step BYTES] [--keep DIR]
+ 
+ Run from the fork's root with a bench-hashes checkout in `bench-hashes/` (or
+ pass --exe, a `bench-hashes build-against` executable). Linux with glibc:
+-it moves the duo-copy threads' stacks (glibc.rtld.optional_static_tls) and
+-the main thread's (environment size) through one whole page in 64-byte
+-steps (128 with --coarse), and measures a short-message cell set at each.
++it moves the duo-copy threads' stacks (glibc.rtld.optional_static_tls)
++through one whole page in 16-byte steps, the stack's own alignment
++(--step for others), and measures a short-message cell set at each (the
++main thread's stack: see offsets()).
+ 
+ Why: a caller writes a short message and hashes it at once. When our call
+ chain's stack accesses share the message's low 12 address bits, the CPU
+@@ -17,10 +18,15 @@ holds them behind the caller's stores (EPYC 9255: 1.05 to 1.5 ns/B for a
+ count, environment and allocation history, none of which a relink changes,
+ so one offset can decide a comparison (bench-hashes #65).
+ 
+-How: a scan (one quick run per offset, reading the bench's printed report)
+-picks the worst offset for each cell; then `bench-hashes regress` compares
+-each cell's best scanned offset against its worst on fresh runs, judged as every
+-comparison is (clocks::summary). Selection and verdict use separate runs.
++How: a scan (one quick run per offset, reading the bench's printed report),
++then a rescan of each cell's few worst offsets, twice more: a slow state
++stays slow when measured again, a stray reading does not, so a candidate's
++score is the lowest of its three readings. Each cell's best-scoring
++candidate is then compared against its best scanned offset by `bench-hashes
++regress` on fresh runs, judged as every comparison is (clocks::summary).
++Selection and verdict use separate runs; no threshold stands between a
++small effect and its confirmation (the i7-12700K's is +9-11% in a window
++48 bytes wide, which steps of 64 and a 10% screen both missed).
+ 
+ Verdicts:
+ - IMMUNE_CELLS are the cells our APIs keep free of the effect (the batch
+@@ -52,19 +58,30 @@ CONTROL_CELLS = [f'{CONTENDER}|{s}|{u}|64 B' for s in ('solo', 'shared')
+                  for u in ('LentMessages', 'ContinuousMessages')]
+ PAGE = 4096
+ DEFAULT_TLS = 512
+-# Screening: a cell whose worst scanned run is this far above its median
+-# gets a confirmation. Confirmation alone decides.
+-SCREEN = 1.10
++# Each cell's worst scanned offsets rescanned, and how many times.
++CANDIDATES = 3
++RESCANS = 2
+ MAX_CONFIRMATIONS = 8
++# Pairs per confirmation. regress judges every cell of the set at once
++# (Benjamini-Hochberg over 16 cells), and four pairs cannot get a cell
++# below its bar: on the i7-12700K the slow offset ran +8% to +20% in every
++# one of four pairs and was judged level. Eight can.
++PAIRS = 8
+ 
+ 
+ def offsets(step):
+-    """(name, environment additions) for each offset, the default first."""
++    """(name, environment additions) for each offset, the default first.
++
++    The duo threads' stacks only. The main thread's stack also moves with
++    the environment's size, but its top holds the command line as well,
++    and `regress` runs the bench with other arguments than the scan, so a
++    main-stack offset found in the scan lands elsewhere in its
++    confirmation: on the i7-12700K one read 1.38 times the median in all
++    three scans and level under regress. Until a confirmation can hold the
++    main stack where the scan had it, solo cells are not covered."""
+     yield 'default', {}
+     for k in range(1, PAGE // step):
+         yield f'thread-stack+{k * step}', {'GLIBC_TUNABLES': f'glibc.rtld.optional_static_tls={DEFAULT_TLS + k * step}'}
+-    for k in range(1, PAGE // step):
+-        yield f'main-stack+{k * step}', {'OFFSET_CHECK_PAD': 'x' * (k * step)}
+ 
+ 
+ def run_env(extra):
+@@ -92,10 +109,11 @@ def parse_report(text):
+     return cells
+ 
+ 
+-def scan(exe, step, work):
++def scan(exe, named, work, label='scan'):
++    """{offset name: {cell: mean}}, one quick run per (name, environment)."""
+     results = {}
+-    for name, extra in offsets(step):
+-        out = work / 'scan' / name
++    for name, extra in named:
++        out = work / label / name
+         out.mkdir(parents=True)
+         subprocess.run([exe, '--contenders', CONTENDER, '--points', ','.join(POINTS),
+                         '--for-regression-check', '--rounds', '24'],
+@@ -103,25 +121,40 @@ def scan(exe, step, work):
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+         report = next(out.glob('benchmark-results/*/bench-hashes.result.txt'))
+         results[name] = parse_report(report.read_text())
+-        print(f'scan {name}: {len(results[name])} cells', file=sys.stderr, flush=True)
++        print(f'{label} {name}: {len(results[name])} cells', file=sys.stderr, flush=True)
+     return results
+ 
+ 
+-def pick(results):
+-    """(slow, fast) offset pairs to confirm: for each screened cell, its
+-    worst and best scanned offsets, most-affected first. The default offset
++def candidates(results):
++    """The offsets to rescan: each cell's CANDIDATES worst."""
++    cells = set().union(*(r.keys() for r in results.values()))
++    chosen = set()
++    for cell in cells:
++        runs = {name: r[cell] for name, r in results.items() if cell in r}
++        chosen.update(sorted(runs, key=runs.get, reverse=True)[:CANDIDATES])
++    return chosen
++
++
++def pick(results, rescans):
++    """(slow, fast) offset pairs to confirm, most-affected first: for each
++    cell, the rescanned offset whose lowest reading (scan and rescans) is
++    highest, against the cell's fastest scanned offset. The default offset
+     has no special role: a build may sit in the slow state by default."""
+     cells = set().union(*(r.keys() for r in results.values()))
+     picks = {}
+     for cell in cells:
+         runs = {name: r[cell] for name, r in results.items() if cell in r}
+         median = statistics.median(runs.values())
+-        worst, best = max(runs, key=runs.get), min(runs, key=runs.get)
+-        ratio = runs[worst] / median
+-        if ratio >= SCREEN and picks.get(worst, (0,))[0] < ratio:
++        lowest = {name: min([runs[name]] + [r[name][cell] for r in rescans if cell in r.get(name, {})])
++                  for name in rescans[0] if name in runs}
++        if not lowest:
++            continue
++        worst, best = max(lowest, key=lowest.get), min(runs, key=runs.get)
++        ratio = lowest[worst] / median
++        if picks.get(worst, (0,))[0] < ratio:
+             picks[worst] = (ratio, best)
+     order = sorted(picks, key=lambda w: picks[w][0], reverse=True)[:MAX_CONFIRMATIONS]
+-    return [(w, picks[w][1]) for w in order], len(cells)
++    return [(w, picks[w][1], picks[w][0]) for w in order], len(cells)
+ 
+ 
+ def wrapper(path, exe, extra):
+@@ -135,10 +168,10 @@ def confirm(exe, slow, fast, extras, work):
+     """regress: the fast offset (old side) against the slow one (new)."""
+     out = work / 'confirm' / slow
+     out.mkdir(parents=True)
+-    old = [wrapper(out / f'fast-{i}', exe, extras[fast]) for i in range(4)]
+-    new = [wrapper(out / f'slow-{i}', exe, extras[slow]) for i in range(4)]
++    old = [wrapper(out / f'fast-{i}', exe, extras[fast]) for i in range(PAIRS)]
++    new = [wrapper(out / f'slow-{i}', exe, extras[slow]) for i in range(PAIRS)]
+     done = subprocess.run([exe, 'regress', '--contenders', CONTENDER, '--points', ','.join(POINTS),
+-                           '--pairs', '4', '--keep', str(out / 'samples'), *old, '--', *new],
++                           '--pairs', str(PAIRS), '--keep', str(out / 'samples'), *old, '--', *new],
+                           cwd=out, capture_output=True, text=True)
+     (out / 'regress.out').write_text(done.stdout)
+     (out / 'regress.err').write_text(done.stderr)
+@@ -149,7 +182,7 @@ def confirm(exe, slow, fast, extras, work):
+ def main():
+     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+     parser.add_argument('--exe', help='a bench-hashes build-against executable (default: build one)')
+-    parser.add_argument('--coarse', action='store_true', help='128-byte steps: half the runs')
++    parser.add_argument('--step', type=int, default=16, help='bytes between offsets (default 16, the stack alignment)')
+     parser.add_argument('--keep', help='keep the scan and confirmation runs here')
+     args = parser.parse_args()
+     if not (sys.platform.startswith('linux') and os.confstr('CS_GNU_LIBC_VERSION')):
+@@ -161,13 +194,15 @@ def main():
+     exe = str(pathlib.Path(exe).resolve())
+     work = pathlib.Path(args.keep) if args.keep else pathlib.Path(tempfile.mkdtemp(prefix='offset-check-'))
+     work.mkdir(parents=True, exist_ok=True)
+-    results = scan(exe, 128 if args.coarse else 64, work)
+-    picks, ncells = pick(results)
+-    print(f'scanned {len(results)} offsets x {ncells} cells; confirming {len(picks)}: '
+-          + (', '.join(f'{s} against {f}' for s, f in picks) or 'none'))
+-    extras = dict(offsets(128 if args.coarse else 64))
++    extras = dict(offsets(args.step))
++    results = scan(exe, extras.items(), work)
++    again = sorted(candidates(results))
++    rescans = [scan(exe, [(name, extras[name]) for name in again], work, f'rescan{i + 1}') for i in range(RESCANS)]
++    picks, ncells = pick(results, rescans)
++    print(f'scanned {len(results)} offsets x {ncells} cells, rescanned {len(again)} twice; confirming {len(picks)}: '
++          + (', '.join(f'{s} ({r:.2f}x the median at its lowest) against {f}' for s, f, r in picks) or 'none'))
+     sensitive, no_verdict = {}, False
+-    for slow, fast in picks:
++    for slow, fast, _ in picks:
+         code, slower = confirm(exe, slow, fast, extras, work)
+         no_verdict |= code == 2
+         for cell in slower:
+-- 
+2.53.0
+
+
+From a10ef3ec90cc59332cd09c87e37588327ef05d92 Mon Sep 17 00:00:00 2001
+From: Devon Jonte <devonjonte@users.noreply.github.com>
+Date: Sat, 24 Oct 2026 09:04:09 +0000
+Subject: [PATCH 3/5] offset_check.py: ten candidates a cell rescanned; 8 of 8
+ runs detect on the i7
+
+The three misses of 9145354 were selection: one quick reading strays as
+high as a slow state reads, and the window's offsets ranked anywhere
+from 1st to 10th of 256 under readings that read 0.73 again when
+rescanned. Rescanning each cell's ten worst (a rescan run takes a
+fraction of a second): 8 of 8 runs exit 0 on the i7-12700K (servil
+2e892e1: 5 of 5; 082afa3: 3 of 3), about 97 s each, no batch cell ever
+judged sensitive. Found: shared lent 64 B at thread stack +3472..+3520
+in 7 runs, shared continuous 64 B at +912..+960 in 6.
+---
+ tools/offset_check.py | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/tools/offset_check.py b/tools/offset_check.py
+index 312d72f..d23c956 100644
+--- a/tools/offset_check.py
++++ b/tools/offset_check.py
+@@ -58,8 +58,12 @@ CONTROL_CELLS = [f'{CONTENDER}|{s}|{u}|64 B' for s in ('solo', 'shared')
+                  for u in ('LentMessages', 'ContinuousMessages')]
+ PAGE = 4096
+ DEFAULT_TLS = 512
+-# Each cell's worst scanned offsets rescanned, and how many times.
+-CANDIDATES = 3
++# Each cell's worst scanned offsets rescanned, and how many times. A single
++# quick reading strays as high as a slow state reads (on the i7-12700K the
++# window's 0.80 ns/B ranked anywhere from 1st to 10th among 256 offsets,
++# under readings of 0.83-0.86 that read 0.73 again when rescanned), so ten
++# a cell; a rescan run takes a fraction of a second.
++CANDIDATES = 10
+ RESCANS = 2
+ MAX_CONFIRMATIONS = 8
+ # Pairs per confirmation. regress judges every cell of the set at once
+-- 
+2.53.0
+
+
+From 903d3fd348aadd2bbbfc64047efd93d49260bece Mon Sep 17 00:00:00 2001
+From: Devon Jonte <devonjonte@users.noreply.github.com>
+Date: Sat, 24 Oct 2026 11:21:11 +0000
+Subject: [PATCH 4/5] offset_check.py: no cell immune today; batches measured
+ with the rest
+
+Sam Shackleton (#65, October 24): at 16-byte steps, 64-message batches
+run 3-4% slower at a few offsets on the EPYC 9255 and 16-message ones
+4-7%, every run; the immunity came from 64-byte steps. The i7 shows
+none. IMMUNE_CELLS is empty: the batches are measured and reported as
+every cell is, and the list stays for a change that does make a cell
+immune.
+---
+ tools/offset_check.py | 16 ++++++++++------
+ 1 file changed, 10 insertions(+), 6 deletions(-)
+
+diff --git a/tools/offset_check.py b/tools/offset_check.py
+index d23c956..1cff66e 100644
+--- a/tools/offset_check.py
++++ b/tools/offset_check.py
+@@ -29,8 +29,8 @@ small effect and its confirmation (the i7-12700K's is +9-11% in a window
+ 48 bytes wide, which steps of 64 and a 10% screen both missed).
+ 
+ Verdicts:
+-- IMMUNE_CELLS are the cells our APIs keep free of the effect (the batch
+-  calls). Any one of them judged slower at some offset: exit 1.
++- IMMUNE_CELLS are the cells our APIs keep free of the effect (none
++  today). Any one of them judged slower at some offset: exit 1.
+ - CONTROL_CELLS are known to be sensitive today (hash() of 64 bytes, a
+   buffer lent or owned). If
+   none is judged slower, the check lost its sight of the effect: exit 3.
+@@ -50,10 +50,14 @@ import tempfile
+ CONTENDER = 'blake3-servil-st'
+ POINTS = ['lent 64 B', 'lent 256 B', 'continuous 64 B', 'continuous 256 B',
+           'lent batch 16', 'lent batch 64', 'continuous batch 16', 'continuous batch 64']
+-# Batches of 64 messages: written long enough before the call. Batches of 16
+-# showed +6-8% at one offset on the EPYC, so they are on neither list.
+-IMMUNE_CELLS = [f'{CONTENDER}|{s}|{u}|64' for s in ('solo', 'shared')
+-                for u in ('LentBatches', 'ContinuousBatches')]
++# No cell is immune today. Batches were thought so, from scans in 64-byte
++# steps; at 16-byte steps the EPYC 9255 shows 64-message batches +3-4% and
++# 16-message +4-7% at a few offsets, every run (Sam Shackleton, #65,
++# October 24), while the i7-12700K shows none. They are measured and
++# reported with the rest. A change that makes a cell immune (an API that
++# aligns its messages to 64 bytes, say) lists it here, and the check then
++# fails if it turns sensitive again.
++IMMUNE_CELLS = []
+ CONTROL_CELLS = [f'{CONTENDER}|{s}|{u}|64 B' for s in ('solo', 'shared')
+                  for u in ('LentMessages', 'ContinuousMessages')]
+ PAGE = 4096
+-- 
+2.53.0
+
+
+From ad29ede16d07f437202d9bd6b1bb56c1f53448b1 Mon Sep 17 00:00:00 2001
+From: Sam Shackleton <samshackleton-tech@users.noreply.github.com>
+Date: Sat, 24 Oct 2026 12:07:08 +0000
+Subject: [PATCH 5/5] offset_check.py: our 64-byte hash() immune; the upstream
+ crate's is the control
+
+With the chunk-root kernel our hash() of 64 bytes keeps off the stack and
+shows no window at any offset (#141); it moves to IMMUNE_CELLS. The check
+still needs cells it knows to be sensitive, on every machine: the upstream
+blake3 crate's 64-byte hash() keeps its chunk state on the stack as ours
+did, so it is measured beside ours and its cells are the controls.
+---
+ tools/offset_check.py | 55 ++++++++++++++++++++++++-------------------
+ 1 file changed, 31 insertions(+), 24 deletions(-)
+
+diff --git a/tools/offset_check.py b/tools/offset_check.py
+index 1cff66e..c532ebc 100644
+--- a/tools/offset_check.py
++++ b/tools/offset_check.py
+@@ -29,12 +29,13 @@ small effect and its confirmation (the i7-12700K's is +9-11% in a window
+ 48 bytes wide, which steps of 64 and a 10% screen both missed).
+ 
+ Verdicts:
+-- IMMUNE_CELLS are the cells our APIs keep free of the effect (none
+-  today). Any one of them judged slower at some offset: exit 1.
+-- CONTROL_CELLS are known to be sensitive today (hash() of 64 bytes, a
+-  buffer lent or owned). If
+-  none is judged slower, the check lost its sight of the effect: exit 3.
+-  A change that makes them immune moves them to IMMUNE_CELLS with it.
++- IMMUNE_CELLS are the cells our APIs keep free of the effect: our hash()
++  of 64 bytes, a buffer lent or owned, since the x86-64 chunk-root kernel
++  (#141). Any one of them judged slower at some offset: exit 1.
++- CONTROL_CELLS are known to be sensitive: the upstream blake3 crate's
++  hash() of 64 bytes, whose chunk path keeps its state on the stack as ours
++  did. If none is judged slower, the check lost its sight of the effect:
++  exit 3.
+ - Exit 0 otherwise; 2 when regress gave no verdict (a busy machine).
+ """
+ import argparse
+@@ -48,17 +49,21 @@ import sys
+ import tempfile
+ 
+ CONTENDER = 'blake3-servil-st'
++# The control contender: the upstream crate, whose 64-byte hash() still
++# reads stack memory the caller's stores can hold back.
++CONTROL = 'blake3-official'
+ POINTS = ['lent 64 B', 'lent 256 B', 'continuous 64 B', 'continuous 256 B',
+           'lent batch 16', 'lent batch 64', 'continuous batch 16', 'continuous batch 64']
+-# No cell is immune today. Batches were thought so, from scans in 64-byte
+-# steps; at 16-byte steps the EPYC 9255 shows 64-message batches +3-4% and
+-# 16-message +4-7% at a few offsets, every run (Sam Shackleton, #65,
+-# October 24), while the i7-12700K shows none. They are measured and
+-# reported with the rest. A change that makes a cell immune (an API that
+-# aligns its messages to 64 bytes, say) lists it here, and the check then
+-# fails if it turns sensitive again.
+-IMMUNE_CELLS = []
+-CONTROL_CELLS = [f'{CONTENDER}|{s}|{u}|64 B' for s in ('solo', 'shared')
++# Our 64-byte hash() is immune since the chunk-root kernel (#141). Batches
++# are not: they were thought so, from scans in 64-byte steps; at 16-byte
++# steps the EPYC 9255 shows 64-message batches +3-4% and 16-message +4-7%
++# at a few offsets, every run (Sam Shackleton, #65, October 24), while the
++# i7-12700K shows none. They are measured and reported with the rest. A
++# change that makes a cell immune lists it here, and the check then fails
++# if it turns sensitive again.
++IMMUNE_CELLS = [f'{CONTENDER}|{s}|{u}|64 B' for s in ('solo', 'shared')
++                for u in ('LentMessages', 'ContinuousMessages')]
++CONTROL_CELLS = [f'{CONTROL}|{s}|{u}|64 B' for s in ('solo', 'shared')
+                  for u in ('LentMessages', 'ContinuousMessages')]
+ PAGE = 4096
+ DEFAULT_TLS = 512
+@@ -99,21 +104,23 @@ def run_env(extra):
+ 
+ 
+ def parse_report(text):
+-    """{(scenario, table title, size label): mean} from the printed report."""
+-    cells, scenario, table, header = {}, None, None, False
++    """{(column, scenario, table title, size label): mean} from the printed
++    report; one column per contender, headed by its display name."""
++    cells, scenario, table, columns = {}, None, None, None
+     for line in text.splitlines():
+         if line.startswith('SOLO'):
+             scenario = 'solo'
+         elif line.startswith('SHARED'):
+             scenario = 'shared'
+         elif re.match(r'^  \S.*\((ns|us)/', line):
+-            table, header = line.strip(), False
++            table, columns = line.strip(), None
+         elif re.match(r'^  (size|messages)\s', line):
+-            header = True
+-        elif header and scenario and table:
+-            m = re.match(r'^\s+(\d+(?: [KMG]?i?B)?)\s+([\d.]+)\s*$', line)
++            columns = re.split(r'\s{2,}', line.strip())[1:]
++        elif columns and scenario and table:
++            m = re.match(r'^\s+(\d+(?: [KMG]?i?B)?)((?:\s+[\d.]+)+)\s*$', line)
+             if m:
+-                cells[(scenario, table, m.group(1))] = float(m.group(2))
++                for column, value in zip(columns, m.group(2).split()):
++                    cells[(column, scenario, table, m.group(1))] = float(value)
+     return cells
+ 
+ 
+@@ -123,7 +130,7 @@ def scan(exe, named, work, label='scan'):
+     for name, extra in named:
+         out = work / label / name
+         out.mkdir(parents=True)
+-        subprocess.run([exe, '--contenders', CONTENDER, '--points', ','.join(POINTS),
++        subprocess.run([exe, '--contenders', f'{CONTENDER},{CONTROL}', '--points', ','.join(POINTS),
+                         '--for-regression-check', '--rounds', '24'],
+                        cwd=out, env=run_env(extra), check=True,
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+@@ -178,7 +185,7 @@ def confirm(exe, slow, fast, extras, work):
+     out.mkdir(parents=True)
+     old = [wrapper(out / f'fast-{i}', exe, extras[fast]) for i in range(PAIRS)]
+     new = [wrapper(out / f'slow-{i}', exe, extras[slow]) for i in range(PAIRS)]
+-    done = subprocess.run([exe, 'regress', '--contenders', CONTENDER, '--points', ','.join(POINTS),
++    done = subprocess.run([exe, 'regress', '--contenders', f'{CONTENDER},{CONTROL}', '--points', ','.join(POINTS),
+                            '--pairs', str(PAIRS), '--keep', str(out / 'samples'), *old, '--', *new],
+                           cwd=out, capture_output=True, text=True)
+     (out / 'regress.out').write_text(done.stdout)
+-- 
+2.53.0
+
