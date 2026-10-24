@@ -451,7 +451,7 @@ fn cut_with_prefix(len: usize, threads: usize, prefix: usize, minimum: usize) ->
     let own = pieces.len();
     let mut cap = if own > 0 { pieces[own - 1].len } else { MAX_PIECE_LEN };
     while len - offset > minimum {
-        let piece = next_piece_len(len - offset, threads).max(minimum).min(cap);
+        let piece = next_piece_len(len - offset, threads).min(cap);
         if len - offset <= piece {
             break;
         }
