@@ -1,0 +1,11 @@
+   Compiling blake3-servil v0.3.0+2e4fa821f9db07b945dbb2b0d02eb76cb19617b5 (/root/BLAKE3-finish-publication)
+    Finished `release` profile [optimized] target(s) in 1.07s
+────────────
+ Nextest run ID 2660c672-bf95-4815-b530-a74ffdf843f5 with nextest profile: default
+    Starting 4 tests across 1 binary
+        PASS [   0.195s] (1/4) blake3-servil::loom_finish a_caller_continuing_to_poll_observes_outputs
+        PASS [   0.115s] (2/4) blake3-servil::loom_finish a_caller_polling_once_then_sleeping_is_woken
+        PASS [   0.113s] (3/4) blake3-servil::loom_finish a_caller_sleeping_at_once_is_woken_by_the_last_piece
+        PASS [   0.003s] (4/4) blake3-servil::loom_finish one_piece_one_worker
+────────────
+     Summary [   0.427s] 4 tests run: 4 passed, 0 skipped

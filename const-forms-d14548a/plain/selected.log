@@ -1,0 +1,37 @@
+every test runs: src/lib.rs:3 is in a const fn, which the compiler may evaluate for a test that runs none of its lines (3)
+run  reach-const-fn-fixture direct_low_byte: src/lib.rs:3 is in a const fn, which the compiler may evaluate for a test that runs none of its lines (3)
+run  reach-const-fn-fixture indirect_full_width: src/lib.rs:3 is in a const fn, which the compiler may evaluate for a test that runs none of its lines (3)
+2 of 2 tests, against tree ece4ed6023d2 (1 files changed)
+PASS reach-const-fn-fixture direct_low_byte
+FAIL reach-const-fn-fixture indirect_full_width
+    Finished `release` profile [optimized] target(s) in 0.00s
+────────────
+ Nextest run ID fea97e59-b459-4f69-8898-947f4f1857af with nextest profile: default
+    Starting 1 test across 1 binary (1 test skipped)
+        FAIL [   0.002s] (1/1) reach-const-fn-fixture indirect_full_width
+  stdout ───
+
+    running 1 test
+    test indirect_full_width ... FAILED
+
+    failures:
+
+    failures:
+        indirect_full_width
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'indirect_full_width' (2895816) panicked at src/lib.rs:18:5:
+    assertion `left == right` failed
+      left: 259
+     right: 3
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+  Cancelling due to test failure
+────────────
+     Summary [   0.003s] 1 test run: 0 passed, 1 failed, 1 skipped
+        FAIL [   0.002s] (1/1) reach-const-fn-fixture indirect_full_width
+error: test run failed
+

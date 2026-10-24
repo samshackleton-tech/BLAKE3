@@ -1,6 +1,14 @@
-# Independent public-source review — EPYC 9255, 2026-10-23
+# Independent public-source review — EPYC 9255, October 23–24, 2026
 
 Independent reviews, run serially on a native AMD EPYC 9255 (Linux x86-64, AVX-512). No optimization candidate or private performance results are included. Tool versions are in `tool-versions.txt`.
+
+## Latest followups, October 24
+
+- [Const-function header forms](const-forms-d14548a/): the ordinary `const fn` fix passes the native control. External-ABI and split-line forms still select only the passing runtime test; full suites catch the compile-time consumer. Exact PR head and logs included.
+- [Finish publication fix](finish-publication-fix/): a small applicable patch with payload-before-join assertions. Four enhanced Loom models fail with the original Relaxed load and pass with Acquire; native release104/debug105 tests pass on the fix. Performance and cross-platform promotion remain open.
+- [Promoted x86 model check](promoted-model-2e892e1/): the unchanged checker at John's promoted tip agrees on all312 forms,81 memory forms and24 alignment-fault controls, with no AVX-512 skips. This is native instruction-model evidence, separately scoped from his symbolic proofs.
+
+Earlier findings and their source-pinned outcomes remain below.
 
 ## Test selection: two false-green controls
 
@@ -42,7 +50,7 @@ fn indirect_full_width() {
 
 Change A from 3 to 259. The selector finds the executed line naming A and runs only the direct test, which still passes after truncation. The test using B is affected transitively, but is not selected and fails in the full suite. The selected check also writes a new successful map.
 
-Conservative interim behavior: do not equate missing coverage with uncompiled source; do not narrow changes to constants/types/imports solely by direct textual uses. Run all tests where dependencies or compilation status are not established. Runtime-only function bodies can still use line selection. The additional control below identifies a compile-time exception.
+Conservative interim behavior: do not equate missing coverage with uncompiled source; do not narrow changes to constants/types/imports solely by direct textual uses. Run all tests where dependencies or compilation status are not established. Runtime coverage can inform selection for ordinary function bodies; these controls do not establish the completeness of a selector. The additional control below identifies a compile-time exception.
 
 ### Reproduce
 

@@ -1,0 +1,11 @@
+replace: /root/results/peer-const-forms-d14548a-v2/extern-c/fixture/src/lib.rs: 1 replacement(s)
+--- /root/results/peer-const-forms-d14548a-v2/extern-c/fixture/src/lib.rs
++++ /root/results/peer-const-forms-d14548a-v2/extern-c/fixture/src/lib.rs (new)
+@@ -1,6 +1,6 @@
+ #[inline(never)]
+ const extern "C" fn base() -> u16 {
+-    3
++    259
+ }
+ const B: u16 = base();
+ pub fn direct() -> u8 {

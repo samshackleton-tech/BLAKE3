@@ -1,0 +1,4 @@
+every test runs: src/lib.rs:3 is in a const fn, which the compiler may evaluate for a test that runs none of its lines (3)
+run  reach-const-fn-fixture direct_low_byte: src/lib.rs:3 is in a const fn, which the compiler may evaluate for a test that runs none of its lines (3)
+run  reach-const-fn-fixture indirect_full_width: src/lib.rs:3 is in a const fn, which the compiler may evaluate for a test that runs none of its lines (3)
+2 of 2 tests, against tree ece4ed6023d2 (1 files changed)

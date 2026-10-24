@@ -1,0 +1,12 @@
+replace: /root/results/peer-const-forms-d14548a-v2/split/fixture/src/lib.rs: 1 replacement(s)
+--- /root/results/peer-const-forms-d14548a-v2/split/fixture/src/lib.rs
++++ /root/results/peer-const-forms-d14548a-v2/split/fixture/src/lib.rs (new)
+@@ -1,7 +1,7 @@
+ #[inline(never)]
+ const
+ fn base() -> u16 {
+-    3
++    259
+ }
+ const B: u16 = base();
+ pub fn direct() -> u8 {
