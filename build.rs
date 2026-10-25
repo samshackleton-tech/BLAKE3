@@ -182,6 +182,9 @@ fn build_avx512_assembly() {
         is_msvc = true;
     } else {
         build.file("c/blake3_avx512_x86-64_unix.S");
+        if env::var("CARGO_CFG_TARGET_OS").unwrap() == "linux" {
+            build.file("c/blake3_avx512_32.S");
+        }
     }
 
     // Older versions of Clang require these flags, even for assembly. See
