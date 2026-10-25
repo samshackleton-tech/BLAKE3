@@ -90,3 +90,26 @@ bench `d21cdf36`. Old: `candidate/devon-kernel-names-john` `bfbda19` with
 FANOUT 8 against ee4c0d7 (wakes-8), then (B) FANOUT 64 (every wake
 direct; a measurement-only commit that changes only the constant)
 against FANOUT 8. Both `--cells all --pairs 12 --keep`, bench d21cdf36.
+
+## 4. Release check repeated: st LentBatches 256 holds at about +4%
+
+`release-08-epyc-repeat/` (`release-repeat.sh`): the identical release
+check (ee4c0d7 + d21cdf36 against bfbda19 `--old-bench 5be5f236`, `--cells
+all --pairs 12`). All runs `quiet`. Again "REGRESSION: 4 cells slower"
+with no second stage, and 37 cells faster:
+
+| cell | run 1 | repeat |
+|---|---|---|
+| st solo LentBatches 256 | +4.0% (12/12) | **+3.8% (12/12)** |
+| st shared LentBatches 256 | +4.6% (12/12) | **+3.9% (12/12)** |
+| mt solo LentBatches 256 | +3.3% | not slower |
+| mt solo Collection Nix files | +3.0% | not slower |
+| mt shared ContinuousBatches 256 / 1024 | not slower | +4.0% / +3.6% (pairs of both signs) |
+
+The reproducible finding is **st LentBatches 256, about +4%**. The st
+contender never enters the pool, so the waker is not its cause. The two
+benches' calls for this cell differ: the old bench (5be5f236) calls
+`hash_many(batch, 64, out)`, the new one (d21cdf36) calls
+`performance::hash_many(Mode::Hash, blocks, 64, out)`, the two-kinds API
+(#146/#157). So the figure is the new API's lent-batch call, or its
+harness, against the old one, at 256 messages of 64 B. Unresolved.
