@@ -1,0 +1,32 @@
+[
+  {
+    "fixture": "positive control",
+    "expected_release_pass": true,
+    "actual_exit": 0,
+    "requests": [
+      "/repos/johnservil/BLAKE3/actions/runs?head_sha=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&per_page=20",
+      "/repos/johnservil/BLAKE3/commits/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/statuses"
+    ],
+    "output": "PASS  CI, every job\nPASS  long proofs\nPASS  Mac check against the previous release\nPASS  VM check against the previous release\nPASS  full mutation run\nPASS  check-builds\nPASS  cargo publish --dry-run\nPASS  README.md rewritten since v0.3.0+fixture\nPASS  QUALITY.md rewritten since v0.3.0+fixture\nPASS  CHANGELOG.md rewritten since v0.3.0+fixture\nrelease-check: every step passes\n"
+  },
+  {
+    "fixture": "CI jobs skipped",
+    "expected_release_pass": false,
+    "actual_exit": 0,
+    "requests": [
+      "/repos/johnservil/BLAKE3/actions/runs?head_sha=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&per_page=20",
+      "/repos/johnservil/BLAKE3/commits/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/statuses"
+    ],
+    "output": "PASS  CI, every job\nPASS  long proofs\nPASS  Mac check against the previous release\nPASS  VM check against the previous release\nPASS  full mutation run\nPASS  check-builds\nPASS  cargo publish --dry-run\nPASS  README.md rewritten since v0.3.0+fixture\nPASS  QUALITY.md rewritten since v0.3.0+fixture\nPASS  CHANGELOG.md rewritten since v0.3.0+fixture\nrelease-check: every step passes\n"
+  },
+  {
+    "fixture": "Mac changed-cells only",
+    "expected_release_pass": false,
+    "actual_exit": 0,
+    "requests": [
+      "/repos/johnservil/BLAKE3/actions/runs?head_sha=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&per_page=20",
+      "/repos/johnservil/BLAKE3/commits/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/statuses"
+    ],
+    "output": "PASS  CI, every job\nPASS  long proofs\nPASS  Mac check against the previous release\nPASS  VM check against the previous release\nPASS  full mutation run\nPASS  check-builds\nPASS  cargo publish --dry-run\nPASS  README.md rewritten since v0.3.0+fixture\nPASS  QUALITY.md rewritten since v0.3.0+fixture\nPASS  CHANGELOG.md rewritten since v0.3.0+fixture\nrelease-check: every step passes\n"
+  }
+]
