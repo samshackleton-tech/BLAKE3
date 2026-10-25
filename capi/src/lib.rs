@@ -306,14 +306,14 @@ pub unsafe extern "C" fn b3_stream_begin(mode: *const B3Mode, done: Option<B3Don
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn b3_stream_submit(stream: *mut B3Stream, input: *const c_void, len: usize, out: *mut Digest) {
     check_range(input, len, "the input");
+    let blocks = len.div_ceil(64).max(1);
+    let block_bytes = blocks.checked_mul(64).expect("b3: the submitted block range overflows size_t");
+    assert!(block_bytes <= isize::MAX as usize, "b3: the submitted block range exceeds isize::MAX");
     check_range(out.cast(), OUT_LEN, "the digest's place");
     check_disjoint(input, len, out.cast(), OUT_LEN);
     let s = unsafe { stream_mut(stream) };
     // Sound by the contract: both live until finish, which is 'static to
     // the stream; a Digest is a Hash.
-    let blocks = len.div_ceil(64).max(1);
-    let block_bytes = blocks.checked_mul(64).expect("b3: the submitted block range overflows size_t");
-    assert!(block_bytes <= isize::MAX as usize, "b3: the submitted block range exceeds isize::MAX");
     // The message's blocks: a misaligned pointer cannot soundly become a
     // &[Block], the stop Rust's soundness needs (as for a batch).
     let input = if input.is_null() {
