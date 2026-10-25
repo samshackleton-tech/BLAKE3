@@ -182,6 +182,22 @@ mod test {
         }
     }
 
+    /// Two blocks per message: this product wraps to zero in an unchecked
+    /// release build, constructing an empty buffer for a nonempty batch.
+    #[test]
+    #[should_panic(expected = "batch block count overflows usize")]
+    fn test_batch_rejects_block_count_overflow() {
+        Batch::new(128, usize::MAX / 2 + 1);
+    }
+
+    #[test]
+    fn test_empty_batch_needs_no_blocks_even_for_a_large_message_length() {
+        let batch = Batch::new(usize::MAX, 0);
+        assert!(batch.is_empty());
+        assert!(batch.blocks().is_empty());
+        assert_eq!(batch.message_len(), usize::MAX);
+    }
+
     #[test]
     fn test_from_bytes_takes_aligned_whole_blocks_only() {
         let blocks = [Block::ZERO; 3];
