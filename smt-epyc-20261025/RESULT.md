@@ -13,7 +13,7 @@ code under test was changed.
    fewer ns/B than 0.8's at 1 MiB warm. It gets almost nothing from a
    second thread on the same core: two threads together do x0.96-1.11 of
    one thread's work, against x1.44-1.57 for 0.8's kernel. With its
-   sibling busy, each of its threads is 15-32% slower than 0.8's kernel in
+   sibling busy, each of its threads is 14-32% slower than 0.8's kernel in
    the same place. Whenever siblings share a core (every all-core run on
    an SMT machine), its lead becomes a loss. Its all-core clock is also
    lower (3.62 against 3.79 GHz).
