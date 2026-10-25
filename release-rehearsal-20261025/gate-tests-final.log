@@ -1,0 +1,27 @@
+test_all_pages_are_checked (__main__.CI.test_all_pages_are_checked) ... ok
+test_failed_or_cancelled_does_not_pass (__main__.CI.test_failed_or_cancelled_does_not_pass) ... ok
+test_job_timeout_stays_distinct (__main__.CI.test_job_timeout_stays_distinct) ... ok
+test_missing_page_stops (__main__.CI.test_missing_page_stops) ... ok
+test_pr_merge_run_is_not_release_evidence (__main__.CI.test_pr_merge_run_is_not_release_evidence) ... ok
+test_skipped_or_pending_is_open (__main__.CI.test_skipped_or_pending_is_open) ... ok
+test_success_needs_successful_jobs (__main__.CI.test_success_needs_successful_jobs) ... ok
+test_unfinished_or_failed_workflow_does_not_pass (__main__.CI.test_unfinished_or_failed_workflow_does_not_pass) ... ok
+test_no_reachable_release_is_open (__main__.PreviousRelease.test_no_reachable_release_is_open) ... ok
+test_release_on_second_parent_is_reachable (__main__.PreviousRelease.test_release_on_second_parent_is_reachable) ... ok
+test_tagged_candidate_uses_previous_release (__main__.PreviousRelease.test_tagged_candidate_uses_previous_release) ... ok
+test_unrelated_recent_tag_cannot_set_the_baseline (__main__.PreviousRelease.test_unrelated_recent_tag_cannot_set_the_baseline) ... ok
+test_complete_fixture_passes (__main__.ReleaseEvidence.test_complete_fixture_passes) ... ok
+test_incomplete_mutation_log_is_open (__main__.ReleaseEvidence.test_incomplete_mutation_log_is_open) ... ok
+test_mac_undecided_outcomes_remain_distinct (__main__.ReleaseEvidence.test_mac_undecided_outcomes_remain_distinct) ... ok
+test_mutation_survivor_failure_is_failed (__main__.ReleaseEvidence.test_mutation_survivor_failure_is_failed) ... ok
+test_mutation_timeout_mismatch_is_no_verdict (__main__.ReleaseEvidence.test_mutation_timeout_mismatch_is_no_verdict) ... ok
+test_non_check_mac_not_pass (__main__.ReleaseEvidence.test_non_check_mac_not_pass) ... ok
+test_partial_mac_not_pass (__main__.ReleaseEvidence.test_partial_mac_not_pass) ... ok
+test_pr_merge_ci_not_pass (__main__.ReleaseEvidence.test_pr_merge_ci_not_pass) ... ok
+test_skipped_ci_not_pass (__main__.ReleaseEvidence.test_skipped_ci_not_pass) ... ok
+test_wrong_commits_not_pass (__main__.ReleaseEvidence.test_wrong_commits_not_pass) ... ok
+
+----------------------------------------------------------------------
+Ran 22 tests in 0.125s
+
+OK

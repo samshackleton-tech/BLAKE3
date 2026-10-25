@@ -1,0 +1,37 @@
+/home/samshackleton/blake3-reports/release/update-20261025-0118/negative-mutation/release-check.py:88: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp6oxpj9ew/tmp/night/check-release-vm-aaaaaaaaaaaa.log' mode='r' encoding='UTF-8'>
+  return text in open(full, errors="replace").read()[-4000:]
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/home/samshackleton/blake3-reports/release/update-20261025-0118/negative-mutation/release-check.py:88: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp6oxpj9ew/tmp/night/mutants-aaaaaaaaaaaa.log' mode='r' encoding='UTF-8'>
+  return text in open(full, errors="replace").read()[-4000:]
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/home/samshackleton/blake3-reports/release/update-20261025-0118/negative-mutation/release-check.py:88: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp6oxpj9ew/tmp/night/check-builds-aaaaaaaaaaaa.log' mode='r' encoding='UTF-8'>
+  return text in open(full, errors="replace").read()[-4000:]
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/home/samshackleton/blake3-reports/release/update-20261025-0118/negative-mutation/release-check.py:88: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp6oxpj9ew/tmp/night/publish-dry-run-aaaaaaaaaaaa.log' mode='r' encoding='UTF-8'>
+  return text in open(full, errors="replace").read()[-4000:]
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+F
+======================================================================
+FAIL: test_mutation_timeout_mismatch_is_no_verdict (__main__.ReleaseEvidence.test_mutation_timeout_mismatch_is_no_verdict)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/samshackleton/blake3-reports/release/update-20261025-0118/negative-mutation/test_release_check.py", line 147, in test_mutation_timeout_mismatch_is_no_verdict
+    self.assertEqual(code, 2, output)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+AssertionError: 0 != 2 : PASS  CI, every job
+PASS  long proofs
+PASS  Mac check against the previous release
+PASS  VM check against the previous release
+PASS  full mutation run
+PASS  check-builds
+PASS  cargo publish --dry-run
+PASS  README.md rewritten since v0.3.0+fixture
+PASS  QUALITY.md rewritten since v0.3.0+fixture
+PASS  CHANGELOG.md rewritten since v0.3.0+fixture
+release-check: every step passes
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.005s
+
+FAILED (failures=1)

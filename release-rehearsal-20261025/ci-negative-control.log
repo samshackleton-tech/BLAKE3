@@ -1,0 +1,14 @@
+F
+======================================================================
+FAIL: test_pr_merge_ci_not_pass (__main__.ReleaseEvidence.test_pr_merge_ci_not_pass)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/samshackleton/blake3-reports/release/update-20261025-0118/negative-ci/test_release_check.py", line 116, in test_pr_merge_ci_not_pass
+    self.assertEqual(code, 1)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^
+AssertionError: 0 != 1
+
+----------------------------------------------------------------------
+Ran 1 test in 0.002s
+
+FAILED (failures=1)
