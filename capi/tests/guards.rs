@@ -32,7 +32,7 @@ const CASES: &[(&str, &str)] = &[
     ("context not UTF-8", "the context is UTF-8"),
     ("batch misplaced", "a batch starts at a 64-byte boundary"),
     ("batch NULL", "the batch is NULL with a length of 128"),
-    ("batch too long", "the batch length exceeds isize::MAX"),
+    ("batch too long", "the batch's length fits a size_t"),
     ("digests NULL", "the digests' storage is NULL"),
     ("hasher NULL", "the hasher is NULL"),
     ("output NULL", "the output is NULL with a length of 5"),
