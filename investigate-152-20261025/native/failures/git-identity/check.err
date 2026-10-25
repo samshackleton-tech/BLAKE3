@@ -1,0 +1,76 @@
+    Updating git repository `https://github.com/johnservil/BLAKE3`
+     Locking 1 package to highest compatible version
+      Adding blake3-servil v0.3.0+2e4fa821f9db07b945dbb2b0d02eb76cb19617b5 (https://github.com/johnservil/BLAKE3?rev=b94e2fac72b8be346e8c012c6a749caa134e2480#b94e2fac)
+   Compiling shlex v2.0.1
+   Compiling find-msvc-tools v0.1.11
+   Compiling typenum v1.20.1
+   Compiling cfg-if v1.0.4
+   Compiling version_check v0.9.5
+   Compiling proc-macro2 v1.0.107
+   Compiling crossbeam-utils v0.8.23
+   Compiling quote v1.0.47
+   Compiling libc v0.2.189
+   Compiling unicode-ident v1.0.26
+   Compiling crossbeam-epoch v0.9.21
+   Compiling crossbeam-deque v0.8.8
+   Compiling rayon-core v1.13.0
+   Compiling ref-cast v1.0.27
+   Compiling const-oid v0.9.6
+   Compiling arrayvec v0.7.8
+   Compiling cpufeatures v0.3.0
+   Compiling constant_time_eq v0.4.2
+   Compiling smallvec v1.16.2
+   Compiling cpufeatures v0.2.17
+   Compiling binary-merge v0.1.2
+   Compiling self_cell v1.3.0
+   Compiling rand_core v0.9.5
+   Compiling once_cell v1.21.4
+   Compiling untrusted v0.9.0
+   Compiling bytes v1.12.1
+   Compiling clocks v0.1.0 (https://github.com/johnservil/BLAKE3?rev=b94e2fac72b8be346e8c012c6a749caa134e2480#b94e2fac)
+   Compiling keccak v0.2.2
+   Compiling cc v1.4.4
+   Compiling wyhash v0.6.0
+   Compiling generic-array v0.14.7
+   Compiling inplace-vec-builder v0.1.1
+   Compiling syn v3.0.6
+   Compiling hybrid-array v0.4.15
+   Compiling blake3 v1.8.7
+   Compiling ring v0.17.14
+   Compiling blake3-servil v0.3.0+2e4fa821f9db07b945dbb2b0d02eb76cb19617b5 (https://github.com/johnservil/BLAKE3?rev=b94e2fac72b8be346e8c012c6a749caa134e2480#b94e2fac)
+   Compiling getrandom v0.2.17
+   Compiling positioned-io v0.3.5
+   Compiling sysinfo v0.30.13
+   Compiling crypto-common v0.2.2
+   Compiling block-buffer v0.12.1
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling digest v0.10.7
+   Compiling sha1 v0.10.7
+   Compiling sha1-checked v0.10.0
+   Compiling bench-hashes v0.17.0+1b480eed20d11d7cd1417384e4a9d540b0e321be (/root/BLAKE3-152/bench-hashes)
+   Compiling digest v0.11.3
+   Compiling sha2 v0.11.0
+   Compiling sha3 v0.11.0
+   Compiling ref-cast-impl v1.0.27
+   Compiling range-collections v0.4.6
+   Compiling bao-tree v0.16.1
+    Finished `release` profile [optimized] target(s) in 21.22s
+     Running `target/release/bench-hashes check --against 61b469ce88cec441859e7e6d698473acc9ddc929 --cells all --keep /root/results/investigate-152-20261025/check/samples`
+
+thread 'main' (3039018) panicked at src/check.rs:297:9:
+git commit-tree d1996a604f7a153fa1a9aa645d64dbb2ff19899c -p HEAD -m check: the working tree: Author identity unknown
+
+*** Please tell me who you are.
+
+Run
+
+  git config --global user.email "you@example.com"
+  git config --global user.name "Your Name"
+
+to set your account's default identity.
+Omit --global to set the identity only in this repository.
+
+fatal: unable to auto-detect email address (got 'root@electric-rhino.(none)')
+
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

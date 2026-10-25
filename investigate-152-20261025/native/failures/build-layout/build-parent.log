@@ -1,0 +1,21 @@
+error: failed to run custom build command for `bench-hashes v0.17.0+1b480eed20d11d7cd1417384e4a9d540b0e321be (/root/bench-hashes-round-152)`
+
+Caused by:
+  process didn't exit successfully: `/root/target-round-152/release/build/bench-hashes-d90bc13c3aba6a2c/build-script-build` (exit status: 101)
+  --- stdout
+  cargo:rerun-if-changed=Cargo.toml
+  cargo:rustc-env=BENCH_SERVIL_GIT=https://github.com/johnservil/BLAKE3
+  cargo:rerun-if-changed=Cargo.lock
+  cargo:rerun-if-changed=README.md
+  cargo:rerun-if-changed=src
+  cargo:rustc-env=BLAKE3_SOURCE_INFO=blake3 1.8.7; crate archive SHA-256 6d9e454fc11f76977dc803893aff6304ed33d6a26efae8696573bea74baa27ae; source registry+https://github.com/rust-lang/crates.io-index
+  cargo:rustc-env=SHA2_SOURCE_INFO=sha2 0.11.0; crate archive SHA-256 446ba717509524cb3f22f17ecc096f10f4822d76ab5c0b9822c5f9c284e825f4; source registry+https://github.com/rust-lang/crates.io-index
+  cargo:rustc-env=SHA1_CHECKED_SOURCE_INFO=sha1-checked 0.10.0; crate archive SHA-256 89f599ac0c323ebb1c6082821a54962b839832b03984598375bff3975b804423; source registry+https://github.com/rust-lang/crates.io-index
+  cargo:rustc-env=SHA3_SOURCE_INFO=sha3 0.11.0; crate archive SHA-256 be176f1a57ce4e3d31c1a166222d9768de5954f811601fb7ca06fc8203905ce1; source registry+https://github.com/rust-lang/crates.io-index
+  cargo:rustc-env=RING_SOURCE_INFO=ring 0.17.14; crate archive SHA-256 a4689e6c2294d81e88dc6261c768b63bc4fcdb852be6d1352498b114f61383b7; source registry+https://github.com/rust-lang/crates.io-index
+
+  --- stderr
+
+  thread 'main' (3023222) panicked at build.rs:452:13:
+  blake3-servil is patched to a local checkout, which must be the enclosing one at /root/bench-hashes-round-152/.. (this repository inside it)
+  note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

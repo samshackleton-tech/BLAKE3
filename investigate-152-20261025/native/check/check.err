@@ -1,0 +1,10 @@
+   Compiling bench-hashes v0.17.0+1b480eed20d11d7cd1417384e4a9d540b0e321be (/root/BLAKE3-152/bench-hashes)
+    Finished `release` profile [optimized] target(s) in 16.71s
+     Running `target/release/bench-hashes check --against 61b469ce88cec441859e7e6d698473acc9ddc929 --cells all --keep /root/results/investigate-152-20261025/check/samples`
+check: the fork's working tree (d00475e9750a) against 61b469ce88cec441859e7e6d698473acc9ddc929 (61b469ce88ce)
+regress: 4 new builds against 4 old, 4 pairs over --contenders blake3-servil-st,blake3-servil-mt
+regress: pair 1 of 4 in 74.1 s
+regress: pair 2 of 4 in 73.8 s
+regress: pair 3 of 4 in 73.5 s
+regress: pair 4 of 4 in 73.5 s
+check: a second stage for 8 suspects on 16 fresh pairs: blake3-servil-mt|solo|ContinuousMessages|64 B, blake3-servil-mt|solo|ManyMessages|3, blake3-servil-mt|solo|ManyMessages|32, blake3-servil-st|solo|ManyMessages|3, blake3-servil-st|solo|ManyMessages|24, blake3-servil-mt|solo|ContinuousMessages|1 KiB, blake3-servil-mt|solo|ManyMessages|64, blake3-servil-st|solo|ManyMessages|8

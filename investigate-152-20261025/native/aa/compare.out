@@ -1,0 +1,82 @@
+blake3-servil-st|solo|OneMessage|64 B: 10.067 -> 10.659 ns/unit  x1.059 level, 1 of 4 pairs faster
+blake3-servil-st|solo|OneMessage|256 B: 3.651 -> 3.978 ns/unit  x1.090 level, 1 of 4 pairs faster
+blake3-servil-st|solo|OneMessage|1 KiB: 1.904 -> 1.961 ns/unit  x1.030 level, 1 of 4 pairs faster
+blake3-servil-st|solo|OneMessage|1536 B: 1.795 -> 1.835 ns/unit  x1.022 level, 2 of 4 pairs faster
+blake3-servil-st|solo|OneMessage|4 KiB: 0.679 -> 0.706 ns/unit  x1.039 level, 1 of 4 pairs faster
+blake3-servil-st|solo|OneMessage|8 KiB: 0.493 -> 0.518 ns/unit  x1.050 level, 2 of 4 pairs faster
+blake3-servil-st|solo|OneMessage|512 KiB: 0.136 -> 0.136 ns/unit  x1.001 level, 2 of 4 pairs faster
+blake3-servil-st|solo|OneMessage|1 MiB: 0.129 -> 0.129 ns/unit  x0.999 level, 2 of 4 pairs faster
+blake3-servil-st|solo|ManyMessages|16: 64.171 -> 72.025 ns/unit  x1.122 level, 1 of 4 pairs faster
+blake3-servil-st|solo|ManyMessages|48: 29.331 -> 30.275 ns/unit  x1.032 level, 3 of 4 pairs faster
+blake3-servil-st|solo|ManyMessages|1024: 9.531 -> 9.561 ns/unit  x1.003 level, 2 of 4 pairs faster
+blake3-servil-st|solo|IdleOneMessage|64 B: 3.683 -> 3.697 ns/unit  x1.004 level, 1 of 4 pairs faster
+blake3-servil-st|solo|IdleOneMessage|256 B: 1.935 -> 1.946 ns/unit  x1.006 level, 1 of 4 pairs faster
+blake3-servil-st|solo|IdleOneMessage|1 KiB: 1.478 -> 1.478 ns/unit  x1.000 level, 1 of 4 pairs faster
+blake3-servil-st|solo|IdleOneMessage|1536 B: 1.075 -> 1.077 ns/unit  x1.002 level, 2 of 4 pairs faster
+blake3-servil-st|solo|IdleOneMessage|4 KiB: 0.413 -> 0.414 ns/unit  x1.001 level, 2 of 4 pairs faster
+blake3-servil-st|solo|IdleManyMessages|16: 15.066 -> 15.100 ns/unit  x1.002 level, 0 of 4 pairs faster
+blake3-servil-st|solo|IdleManyMessages|48: 9.640 -> 9.579 ns/unit  x0.994 level, 2 of 4 pairs faster
+blake3-servil-st|solo|IdleManyMessages|1024: 7.032 -> 7.024 ns/unit  x0.999 level, 3 of 4 pairs faster
+blake3-servil-st|solo|ContinuousMessages|64 B: 1.152 -> 1.059 ns/unit  x0.920 level, 2 of 4 pairs faster; CPU time x0.920; energy x0.928
+blake3-servil-st|solo|ContinuousMessages|256 B: 1.285 -> 1.284 ns/unit  x0.999 level, 3 of 4 pairs faster; CPU time x0.999; energy x1.008
+blake3-servil-st|solo|ContinuousMessages|1 KiB: 1.275 -> 1.273 ns/unit  x0.999 level, 3 of 4 pairs faster; CPU time x0.999; energy x1.035
+blake3-servil-st|solo|ContinuousBatches|16: 7.546 -> 7.514 ns/unit  x0.996 level, 2 of 4 pairs faster; CPU time x0.996; energy x1.051
+blake3-servil-st|solo|ContinuousBatches|1024: 6.975 -> 7.000 ns/unit  x1.004 level, 2 of 4 pairs faster; CPU time x1.004; energy x1.015
+blake3-servil-st|solo|LentMessages|64 B: 1.050 -> 1.131 ns/unit  x1.077 level, 3 of 4 pairs faster; CPU time x1.078; energy x1.068
+blake3-servil-st|solo|LentMessages|256 B: 1.288 -> 1.290 ns/unit  x1.001 level, 1 of 4 pairs faster; CPU time x1.001; energy x0.986
+blake3-servil-st|solo|LentMessages|1 KiB: 1.274 -> 1.272 ns/unit  x0.999 level, 3 of 4 pairs faster; CPU time x0.999; energy x0.997
+blake3-servil-st|solo|LentMessages|4 KiB: 0.358 -> 0.358 ns/unit  x0.999 level, 3 of 4 pairs faster; CPU time x0.999; energy x0.951
+blake3-servil-st|solo|LentBatches|16: 7.546 -> 7.516 ns/unit  x0.996 level, 2 of 4 pairs faster; CPU time x0.996; energy x0.996
+blake3-servil-st|solo|LentBatches|1024: 6.989 -> 7.013 ns/unit  x1.003 level, 2 of 4 pairs faster; CPU time x1.003; energy x1.045
+blake3-servil-st|shared|ContinuousMessages|64 B: 1.052 -> 1.052 ns/unit  x1.000 level, 2 of 4 pairs faster
+blake3-servil-st|shared|ContinuousMessages|256 B: 1.250 -> 1.250 ns/unit  x1.001 level, 2 of 4 pairs faster
+blake3-servil-st|shared|ContinuousMessages|1 KiB: 1.258 -> 1.258 ns/unit  x1.000 level, 2 of 4 pairs faster
+blake3-servil-st|shared|ContinuousBatches|16: 7.525 -> 7.530 ns/unit  x1.001 level, 1 of 4 pairs faster
+blake3-servil-st|shared|ContinuousBatches|1024: 7.013 -> 7.013 ns/unit  x1.000 level, 3 of 4 pairs faster
+blake3-servil-st|shared|LentMessages|64 B: 1.049 -> 1.048 ns/unit  x0.999 level, 1 of 4 pairs faster
+blake3-servil-st|shared|LentMessages|256 B: 1.249 -> 1.250 ns/unit  x1.000 level, 1 of 4 pairs faster
+blake3-servil-st|shared|LentMessages|1 KiB: 1.258 -> 1.259 ns/unit  x1.000 level, 2 of 4 pairs faster
+blake3-servil-st|shared|LentMessages|4 KiB: 0.358 -> 0.358 ns/unit  x1.000 level, 2 of 4 pairs faster
+blake3-servil-st|shared|LentBatches|16: 7.525 -> 7.530 ns/unit  x1.001 level, 1 of 4 pairs faster
+blake3-servil-st|shared|LentBatches|1024: 7.047 -> 7.053 ns/unit  x1.001 level, 2 of 4 pairs faster
+blake3-servil-mt|solo|OneMessage|64 B: 9.505 -> 10.493 ns/unit  x1.104 level, 1 of 4 pairs faster
+blake3-servil-mt|solo|OneMessage|256 B: 3.755 -> 4.143 ns/unit  x1.103 level, 1 of 4 pairs faster
+blake3-servil-mt|solo|OneMessage|1 KiB: 1.892 -> 1.981 ns/unit  x1.047 level, 1 of 4 pairs faster
+blake3-servil-mt|solo|OneMessage|1536 B: 1.785 -> 1.868 ns/unit  x1.046 level, 1 of 4 pairs faster
+blake3-servil-mt|solo|OneMessage|4 KiB: 0.680 -> 0.713 ns/unit  x1.048 level, 1 of 4 pairs faster
+blake3-servil-mt|solo|OneMessage|8 KiB: 0.489 -> 0.521 ns/unit  x1.064 level, 2 of 4 pairs faster
+blake3-servil-mt|solo|OneMessage|512 KiB: 0.151 -> 0.152 ns/unit  x1.005 level, 1 of 4 pairs faster
+blake3-servil-mt|solo|OneMessage|1 MiB: 0.117 -> 0.119 ns/unit  x1.022 level, 1 of 4 pairs faster
+blake3-servil-mt|solo|ManyMessages|16: 64.362 -> 71.844 ns/unit  x1.116 level, 0 of 4 pairs faster
+blake3-servil-mt|solo|ManyMessages|48: 29.728 -> 32.038 ns/unit  x1.078 level, 2 of 4 pairs faster
+blake3-servil-mt|solo|ManyMessages|1024: 9.574 -> 9.675 ns/unit  x1.011 level, 2 of 4 pairs faster
+blake3-servil-mt|solo|IdleOneMessage|64 B: 3.495 -> 3.514 ns/unit  x1.005 level, 0 of 4 pairs faster
+blake3-servil-mt|solo|IdleOneMessage|256 B: 1.913 -> 1.947 ns/unit  x1.018 level, 0 of 4 pairs faster
+blake3-servil-mt|solo|IdleOneMessage|1 KiB: 1.474 -> 1.473 ns/unit  x0.999 level, 2 of 4 pairs faster
+blake3-servil-mt|solo|IdleOneMessage|1536 B: 1.075 -> 1.074 ns/unit  x0.999 level, 2 of 4 pairs faster
+blake3-servil-mt|solo|IdleOneMessage|4 KiB: 0.413 -> 0.413 ns/unit  x0.999 level, 3 of 4 pairs faster
+blake3-servil-mt|solo|IdleManyMessages|16: 15.121 -> 15.022 ns/unit  x0.993 level, 3 of 4 pairs faster
+blake3-servil-mt|solo|IdleManyMessages|48: 9.691 -> 9.640 ns/unit  x0.995 level, 2 of 4 pairs faster
+blake3-servil-mt|solo|IdleManyMessages|1024: 7.053 -> 7.078 ns/unit  x1.004 level, 1 of 4 pairs faster
+blake3-servil-mt|solo|ContinuousMessages|64 B: 0.889 -> 0.899 ns/unit  x1.012 level, 1 of 4 pairs faster; CPU time x1.024; energy x1.162
+blake3-servil-mt|solo|ContinuousMessages|256 B: 0.295 -> 0.295 ns/unit  x0.997 level, 2 of 4 pairs faster; CPU time x1.006; energy x1.049
+blake3-servil-mt|solo|ContinuousMessages|1 KiB: 0.254 -> 0.250 ns/unit  x0.981 level, 2 of 4 pairs faster; CPU time x1.005; energy x0.953
+blake3-servil-mt|solo|ContinuousBatches|16: 12.713 -> 12.568 ns/unit  x0.989 level, 3 of 4 pairs faster; CPU time x0.999; energy x0.961
+blake3-servil-mt|solo|ContinuousBatches|1024: 8.321 -> 8.269 ns/unit  x0.994 level, 3 of 4 pairs faster; CPU time x0.990; energy x1.004
+blake3-servil-mt|solo|LentMessages|64 B: 1.062 -> 1.153 ns/unit  x1.086 level, 3 of 4 pairs faster; CPU time x1.086; energy x1.103
+blake3-servil-mt|solo|LentMessages|256 B: 1.286 -> 1.286 ns/unit  x1.000 level, 2 of 4 pairs faster; CPU time x1.000; energy x0.988
+blake3-servil-mt|solo|LentMessages|1 KiB: 1.274 -> 1.272 ns/unit  x0.999 level, 3 of 4 pairs faster; CPU time x0.999; energy x1.003
+blake3-servil-mt|solo|LentMessages|4 KiB: 0.358 -> 0.358 ns/unit  x0.999 level, 3 of 4 pairs faster; CPU time x0.999; energy x1.053
+blake3-servil-mt|solo|LentBatches|16: 7.550 -> 7.524 ns/unit  x0.997 level, 2 of 4 pairs faster; CPU time x0.997; energy x1.044
+blake3-servil-mt|solo|LentBatches|1024: 6.989 -> 7.013 ns/unit  x1.003 level, 2 of 4 pairs faster; CPU time x1.003; energy x0.997
+blake3-servil-mt|shared|ContinuousMessages|64 B: 0.736 -> 0.757 ns/unit  x1.029 level, 2 of 4 pairs faster
+blake3-servil-mt|shared|ContinuousMessages|256 B: 0.245 -> 0.241 ns/unit  x0.984 level, 3 of 4 pairs faster
+blake3-servil-mt|shared|ContinuousMessages|1 KiB: 0.170 -> 0.158 ns/unit  x0.932 level, 3 of 4 pairs faster
+blake3-servil-mt|shared|ContinuousBatches|16: 10.469 -> 10.435 ns/unit  x0.997 level, 2 of 4 pairs faster
+blake3-servil-mt|shared|ContinuousBatches|1024: 8.454 -> 7.969 ns/unit  x0.943 level, 3 of 4 pairs faster
+blake3-servil-mt|shared|LentMessages|64 B: 1.052 -> 1.053 ns/unit  x1.001 level, 1 of 4 pairs faster
+blake3-servil-mt|shared|LentMessages|256 B: 1.250 -> 1.250 ns/unit  x1.000 level, 2 of 4 pairs faster
+blake3-servil-mt|shared|LentMessages|1 KiB: 1.258 -> 1.259 ns/unit  x1.000 level, 2 of 4 pairs faster
+blake3-servil-mt|shared|LentMessages|4 KiB: 0.358 -> 0.358 ns/unit  x1.001 level, 2 of 4 pairs faster
+blake3-servil-mt|shared|LentBatches|16: 7.524 -> 7.525 ns/unit  x1.000 level, 1 of 4 pairs faster
+blake3-servil-mt|shared|LentBatches|1024: 7.029 -> 7.028 ns/unit  x1.000 level, 3 of 4 pairs faster

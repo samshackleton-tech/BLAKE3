@@ -1,0 +1,3 @@
+regress: no cell slower
+regress: suspects: blake3-servil-mt|solo|IdleManyMessages|16;blake3-servil-st|solo|IdleManyMessages|16;blake3-servil-mt|solo|ContinuousBatches|16;blake3-servil-st|solo|ManyMessages|16;blake3-servil-mt|solo|ContinuousMessages|1 KiB;blake3-servil-mt|solo|ContinuousMessages|256 B;blake3-servil-st|solo|IdleManyMessages|48;blake3-servil-mt|solo|ContinuousBatches|1024
+regress: power during the check: mains power, no battery, CPU frequency governor performance, energy-performance preference performance

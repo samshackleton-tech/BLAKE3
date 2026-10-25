@@ -1,0 +1,1 @@
+/root/results/investigate-152-20261025/suspects.sh: line 15: 3046719 Aborted                    (core dumped) "$PWD/bin/parent-0" regress --pairs 8 --contenders blake3-servil-st,blake3-servil-mt --points '64 B,1 KiB,3,8,24,32,64' --judge "$judge" --keep "$r/samples" "$PWD"/bin/parent-{0..3} -- "$PWD"/bin/candidate-{0..3} > "$r/regress.out" 2> "$r/regress.err"
