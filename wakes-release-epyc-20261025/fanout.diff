@@ -1,0 +1,247 @@
+--- src/lanes.rs
+@@ -580,7 +580,7 @@ struct Pool {
+ pub(crate) fn initialize(threads: usize) {
+     // With one thread, none beside the caller: no SME2 thread either.
+     let sme2 = threads > 1 && cfg!(blake3_sme2) && !matches!(pool_platform(), p if core::mem::discriminant(&p) == core::mem::discriminant(&Platform::detect()));
+-    let pool = Pool { callers: AtomicUsize::new(0), threads, sme2, park: crate::park::Park::new(threads - 1) };
++    let pool = Pool { callers: AtomicUsize::new(0), threads, sme2, park: crate::park::Park::new(threads - 1, crate::park::FANOUT) };
+     assert!(POOL.set(pool).is_ok(), "initialize_multithreaded creates the pool once");
+     if sme2 {
+         std::thread::Builder::new().name("blake3-sme2".into()).spawn(sme2_main).expect("spawning the SME2 thread");
+--- src/park.rs
+@@ -36,25 +36,39 @@ pub(crate) struct Park {
+     parked: Box<[Line<AtomicU64>]>,
+     /// Each worker's thread, set as it starts.
+     handles: Box<[OnceLock<thread::Thread>]>,
+-    /// Wakes still owed: each woken worker pays them before it works.
++    /// Wakes still owed: each woken worker pays up to `fanout` of them
++    /// before it works.
+     owed: AtomicUsize,
++    /// The most wakes any one waker makes (FANOUT; a test may choose).
++    fanout: usize,
+ }
+ 
+-/// The most wakes a publisher makes itself before its own pieces; the rest
+-/// are owed, and the workers it woke pay them, side by side (BLAKE3 #119).
+-/// Every wake direct costs the publisher a system call per worker before
+-/// it starts: 47 on the EPYC 9255 made 14 pool cells 4-12% slower. One
+-/// direct wake and a cascade makes each worker wait for the one before:
+-/// the i7-12700K's one-shots of 1-2 MiB 16-25% slower. At 8, the i7 reads
+-/// level (data 2026-10-24/wakes-i7, 2026-10-25/wakes8-i7).
+-const DIRECT_WAKES: usize = 8;
++/// The most wakes any one waker makes, publisher or woken worker: the rest
++/// stay owed for the workers it woke, so a job's wakes spread as a tree,
++/// FANOUT more a hop, and no thread makes more than FANOUT system calls
++/// before its own work (BLAKE3 #119). Every wake direct put up to 47 calls
++/// before the publisher's first piece on the EPYC 9255 (14 pool cells
++/// 4-12% slower); one wake a hop made each worker wait for the one before
++/// (the i7-12700K's 1-2 MiB one-shots 16-25% slower); a publisher of 8 with
++/// workers paying the rest unbounded let one worker make every owed wake
++/// in a quarter of the i7's 2 MiB jobs (data 2026-10-25/wake-counts).
++pub(crate) const FANOUT: usize = 8;
++
++/// A waker's share of `need` wakes: the ones it makes now, at most
++/// `fanout`, and the ones it leaves owed.
++pub(crate) fn split(need: usize, fanout: usize) -> (usize, usize) {
++    let now = need.min(fanout);
++    (now, need - now)
++}
+ 
+ impl Park {
+-    pub(crate) fn new(workers: usize) -> Park {
++    pub(crate) fn new(workers: usize, fanout: usize) -> Park {
++        assert!(fanout >= 1, "a waker makes at least one wake");
+         Park {
+             parked: (0..workers.div_ceil(64).max(1)).map(|_| Line(AtomicU64::new(0))).collect(),
+             handles: (0..workers).map(|_| OnceLock::new()).collect(),
+             owed: AtomicUsize::new(0),
++            fanout,
+         }
+     }
+ 
+@@ -96,34 +110,22 @@ impl Park {
+     }
+ 
+     /// Wake workers for `wanted` pieces of new work, given `workers`
+-    /// workers in all: one now, and the rest owed, which each woken worker
+-    /// pays before it works, so the publisher makes one wake and starts on
+-    /// its own pieces while the wakes cascade. The publisher making every
+-    /// wake itself put up to 47 system calls before its first piece on a
+-    /// 48-thread EPYC 9255: 14 pool cells 4-12% slower (BLAKE3 #119, Sam
+-    /// Shackleton, October 24). A publisher's read of `parked` follows its
+-    /// publication (a SeqCst store or a fence), as a parking worker's
+-    /// re-check follows its bit: one of the two sees the other.
+-    pub(crate) fn wake_for(&self, wanted: usize, workers: usize) {
++    /// workers in all: up to `fanout` now, the rest owed, which the woken
++    /// workers pay, `fanout` each, before they work. How many it woke. A
++    /// publisher's read of `parked` follows its publication (a SeqCst store
++    /// or a fence), as a parking worker's re-check follows its bit: one of
++    /// the two sees the other.
++    pub(crate) fn wake_for(&self, wanted: usize, workers: usize) -> usize {
+         let parked = self.parked_count();
+-        if parked == 0 {
+-            return;
+-        }
+         let awake = workers - parked;
+-        if awake < wanted {
+-            // The publisher makes up to DIRECT_WAKES wakes itself and owes
+-            // the rest, which the woken workers pay.
+-            let need = (wanted - awake).min(parked);
+-            let direct = need.min(DIRECT_WAKES);
+-            if need > direct {
+-                self.owed.fetch_add(need - direct, Ordering::SeqCst);
+-            }
+-            for _ in 0..direct {
+-                if !self.wake_one() {
+-                    break;
+-                }
+-            }
++        if parked == 0 || awake >= wanted {
++            return 0;
++        }
++        let (now, later) = split((wanted - awake).min(parked), self.fanout);
++        if later > 0 {
++            self.owed.fetch_add(later, Ordering::SeqCst);
+         }
++        (0..now).take_while(|_| self.wake_one()).count()
+     }
+ 
+     /// Worker `me` parks unless `visible()` finds work: the bit first,
+@@ -155,20 +157,42 @@ impl Park {
+         true
+     }
+ 
+-    /// A woken worker pays the wakes owed before working: one more worker
+-    /// each, until none is owed or none is parked.
+-    pub(crate) fn pay_owed(&self) {
+-        loop {
++    /// A woken worker pays up to `fanout` of the wakes owed before it
++    /// works, each a worker that pays in turn: how many it woke.
++    pub(crate) fn pay_owed(&self) -> usize {
++        let mut made = 0;
++        while made < self.fanout {
+             let owed = self.owed.load(Ordering::SeqCst);
+             if owed == 0 {
+-                return;
++                break;
+             }
+             if self.owed.compare_exchange(owed, owed - 1, Ordering::SeqCst, Ordering::SeqCst).is_err() {
+                 continue;
+             }
+             if !self.wake_one() {
+                 self.owed.store(0, Ordering::SeqCst);
+-                return;
++                break;
++            }
++            made += 1;
++        }
++        made
++    }
++}
++
++#[cfg(test)]
++mod test {
++    use super::split;
++
++    /// A waker's share: at most its fan-out now, the rest owed, nothing
++    /// lost or added.
++    #[test]
++    fn a_waker_wakes_at_most_its_fanout_and_owes_the_rest() {
++        for need in 0..100 {
++            for fanout in 1..20 {
++                let (now, later) = split(need, fanout);
++                assert!(now <= fanout, "need {need}, fan-out {fanout}");
++                assert_eq!(now + later, need, "need {need}, fan-out {fanout}");
++                assert_eq!(later > 0, need > fanout, "need {need}, fan-out {fanout}");
+             }
+         }
+     }
+--- tests/shuttle_park.rs
+@@ -47,7 +47,7 @@ mod park_sync {
+ #[allow(dead_code)]
+ mod park;
+ 
+-use park::Park;
++use park::{FANOUT, Park};
+ use shuttle::sync::Arc;
+ use shuttle::sync::atomic::{AtomicUsize, Ordering};
+ use shuttle::thread;
+@@ -58,7 +58,7 @@ fn run(workers: usize, publishers: usize, each: usize) {
+     let total = publishers * each;
+     shuttle::check_pct(
+         move || {
+-            let park = Arc::new(Park::new(workers));
++            let park = Arc::new(Park::new(workers, FANOUT));
+             let published = Arc::new(AtomicUsize::new(0));
+             let taken = Arc::new(AtomicUsize::new(0));
+             let mut threads = Vec::new();
+@@ -127,14 +127,14 @@ fn two_workers_two_publishers() {
+     run(2, 2, 2);
+ }
+ 
+-/// wake_for owes wakes that cascade: with three workers parked and three
+-/// pieces published at once, the publisher wakes one and every worker is
+-/// woken.
++/// wake_for owes wakes that cascade: with three workers parked, three
++/// pieces published at once, and a fan-out of one, the publisher wakes one,
++/// each woken worker the next, and every worker is woken.
+ #[test]
+ fn owed_wakes_cascade() {
+     shuttle::check_pct(
+         || {
+-            let park = Arc::new(Park::new(3));
++            let park = Arc::new(Park::new(3, 1));
+             let published = Arc::new(AtomicUsize::new(0));
+             let woken = Arc::new(AtomicUsize::new(0));
+             let mut threads = Vec::new();
+@@ -170,7 +170,7 @@ fn owed_wakes_cascade() {
+ fn two_wakers_wake_two_workers() {
+     shuttle::check_pct(
+         || {
+-            let park = Arc::new(Park::new(2));
++            let park = Arc::new(Park::new(2, FANOUT));
+             let go = Arc::new(AtomicUsize::new(0));
+             let mut threads = Vec::new();
+             for me in 0..2 {
+@@ -202,3 +202,41 @@ fn two_wakers_wake_two_workers() {
+         3,
+     );
+ }
++
++/// The wakes spread as a tree: five workers parked, five pieces published,
++/// a fan-out of two. Every worker is woken, and no waker (the publisher or
++/// a woken worker) makes more than two wakes.
++#[test]
++fn wakes_fan_out_no_waker_makes_more_than_its_share() {
++    shuttle::check_pct(
++        || {
++            let park = Arc::new(Park::new(5, 2));
++            let published = Arc::new(AtomicUsize::new(0));
++            let woken = Arc::new(AtomicUsize::new(0));
++            let most = Arc::new(AtomicUsize::new(0));
++            let mut threads = Vec::new();
++            for me in 0..5 {
++                let (park, published, woken, most) = (park.clone(), published.clone(), woken.clone(), most.clone());
++                threads.push(thread::spawn(move || {
++                    park.register(me);
++                    if park.park_unless(me, || published.load(Ordering::SeqCst) > 0) {
++                        most.fetch_max(park.pay_owed(), Ordering::SeqCst);
++                    }
++                    woken.fetch_add(1, Ordering::SeqCst);
++                }));
++            }
++            let (p, pub2, most2) = (park.clone(), published.clone(), most.clone());
++            threads.push(thread::spawn(move || {
++                pub2.store(5, Ordering::SeqCst);
++                most2.fetch_max(p.wake_for(5, 5), Ordering::SeqCst);
++            }));
++            for t in threads {
++                t.join().unwrap();
++            }
++            assert_eq!(woken.load(Ordering::SeqCst), 5, "every worker woken");
++            assert!(most.load(Ordering::SeqCst) <= 2, "no waker makes more than its fan-out");
++        },
++        3000,
++        3,
++    );
++}

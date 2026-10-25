@@ -1,0 +1,114 @@
+    Blocking waiting for file lock on package cache
+    Updating crates.io index
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling proc-macro2 v1.0.107
+   Compiling cfg-if v1.0.5
+   Compiling unicode-ident v1.0.27
+   Compiling quote v1.0.47
+   Compiling libc v0.2.191
+   Compiling shlex v2.0.1
+   Compiling find-msvc-tools v0.1.15
+   Compiling zerocopy v0.8.63
+   Compiling rustversion v1.0.23
+   Compiling serde_core v1.0.229
+   Compiling typenum v1.20.1
+   Compiling radium v0.7.0
+   Compiling rand_core v0.10.1
+   Compiling once_cell v1.21.4
+   Compiling getrandom v0.4.3
+   Compiling zmij v1.0.23
+   Compiling cmov v0.5.4
+   Compiling serde v1.0.229
+   Compiling cpufeatures v0.3.1
+   Compiling tap v1.0.1
+   Compiling rustix v1.1.5
+   Compiling arrayvec v0.7.8
+   Compiling funty v2.0.0
+   Compiling linux-raw-sys v0.12.1
+   Compiling bitflags v2.13.2
+   Compiling pin-project-lite v0.2.17
+   Compiling log v0.4.34
+   Compiling constant_time_eq v0.4.2
+   Compiling serde_json v1.0.154
+   Compiling ciborium-io v0.2.2
+   Compiling memchr v2.8.3
+   Compiling fastrand v2.5.0
+   Compiling owo-colors v3.5.0
+   Compiling itoa v1.0.18
+   Compiling assoc v0.1.3
+   Compiling scoped-tls v1.0.1
+   Compiling hex v0.4.3
+   Compiling smallvec v1.16.4
+   Compiling clocks v0.1.0 (/root/BLAKE3-release-08/clocks)
+   Compiling reference_impl v0.0.0 (/root/BLAKE3-release-08/reference_impl)
+   Compiling wyz v0.5.1
+   Compiling chacha20 v0.10.2
+   Compiling cc v1.10.0
+   Compiling ctutils v0.4.5
+   Compiling tracing-core v0.1.36
+   Compiling bitvec v1.1.1
+   Compiling syn v2.0.119
+   Compiling syn v3.0.9
+   Compiling tracing v0.1.44
+   Compiling hybrid-array v0.4.15
+   Compiling getrandom v0.2.17
+   Compiling crypto-common v0.2.2
+   Compiling block-buffer v0.12.1
+   Compiling generator v0.8.11
+   Compiling blake3 v1.8.7
+   Compiling blake3-servil v0.3.0+2e4fa821f9db07b945dbb2b0d02eb76cb19617b5 (/root/BLAKE3-release-08)
+   Compiling rand_core v0.6.4
+   Compiling rand v0.10.3
+   Compiling rand_pcg v0.3.1
+   Compiling digest v0.11.3
+   Compiling hmac v0.13.0
+   Compiling tempfile v3.27.0
+   Compiling serde_derive v1.0.229
+   Compiling zerocopy-derive v0.8.63
+   Compiling ppv-lite86 v0.2.21
+   Compiling half v2.7.1
+   Compiling ciborium-ll v0.2.2
+   Compiling rand_chacha v0.3.1
+   Compiling ciborium v0.2.2
+   Compiling rand v0.8.8
+   Compiling shuttle v0.8.1
+    Finished `release` profile [optimized] target(s) in 8.08s
+────────────
+ Nextest run ID f67cd826-7a3c-44dc-84e6-3780e9e40284 with nextest profile: default
+    Starting 29 tests across 5 binaries
+        PASS [   0.003s] ( 1/29) blake3-servil many::test::test_hash_many_needs_the_input_it_names
+        PASS [   0.003s] ( 2/29) blake3-servil::initialize_contract a_call_before_initialize_panics
+        PASS [   0.003s] ( 3/29) blake3-servil platform::x86_features_test::test_x86_detection_matches_std
+        PASS [   0.003s] ( 4/29) blake3-servil test::test_set_input_offset_cant_finalize_xof
+        PASS [   0.003s] ( 5/29) blake3-servil test::test_hash_conversions
+        PASS [   0.003s] ( 6/29) blake3-servil test::test_xof_seek
+        PASS [   0.004s] ( 7/29) blake3-servil ffi_partial::test::test_params_layout_is_the_generators
+        PASS [   0.004s] ( 8/29) blake3-servil test::test_reset
+        PASS [   0.004s] ( 9/29) blake3-servil many::test::test_hash_blocks_without_plans
+        PASS [   0.004s] (10/29) blake3-servil test::test_hash_const_conversions
+        PASS [   0.004s] (11/29) blake3-servil avx512::test::test_xof_many
+        PASS [   0.004s] (12/29) blake3-servil test::test_unaligned_offset_should_panic
+        PASS [   0.004s] (13/29) blake3-servil test::aaa_require_nextest
+        PASS [   0.004s] (14/29) blake3-servil test::test_hash_comparisons_and_formats
+        PASS [   0.004s] (15/29) blake3-servil test::test_block_buffer_alignment
+        PASS [   0.004s] (16/29) blake3-servil test::test_empty_subtree_should_panic
+        PASS [   0.005s] (17/29) blake3-servil test::test_miri_smoketest
+        PASS [   0.005s] (18/29) blake3-servil test::test_too_much_input_should_panic
+        PASS [   0.005s] (19/29) blake3-servil platform::x86_degree_test::test_detected_degree_is_the_widest_kernel
+        PASS [   0.005s] (20/29) blake3-servil platform::x86_features_test::test_x86_features_match_std
+        PASS [   0.005s] (21/29) blake3-servil test::test_hex_encoding_decoding
+        PASS [   0.005s] (22/29) blake3-servil test::test_set_input_offset_cant_finalize
+        PASS [   0.005s] (23/29) blake3-servil test::test_hasher_already_accepted_input_should_panic
+        PASS [   0.005s] (24/29) blake3-servil test::test_grouped_hash
+        PASS [   0.007s] (25/29) blake3-servil ffi_partial::test::test_partial_kernels_against_portable
+        PASS [   0.017s] (26/29) blake3-servil many::test::test_hash_many_whole_blocks
+        PASS [   0.040s] (27/29) blake3-servil many::test::test_hash_many_modes_every_platform
+        PASS [   0.069s] (28/29) blake3-servil self_test::stops::test_a_failing_self_test_stops_the_process
+        PASS [   0.793s] (29/29) blake3-servil many::test::test_whole_blocks_x86_full_width
+────────────
+     Summary [   0.793s] 29 tests run: 29 passed, 0 skipped

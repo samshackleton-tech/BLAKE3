@@ -1,0 +1,88 @@
+   Compiling shlex v2.0.1
+   Compiling find-msvc-tools v0.1.11
+   Compiling typenum v1.20.1
+   Compiling cfg-if v1.0.4
+   Compiling version_check v0.9.5
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.26
+   Compiling crossbeam-utils v0.8.23
+   Compiling quote v1.0.47
+   Compiling libc v0.2.189
+   Compiling crossbeam-epoch v0.9.21
+   Compiling rayon-core v1.13.0
+   Compiling crossbeam-deque v0.8.8
+   Compiling ref-cast v1.0.27
+   Compiling cpufeatures v0.3.0
+   Compiling arrayvec v0.7.8
+   Compiling constant_time_eq v0.4.2
+   Compiling smallvec v1.16.2
+   Compiling const-oid v0.9.6
+   Compiling binary-merge v0.1.2
+   Compiling cpufeatures v0.2.17
+   Compiling untrusted v0.9.0
+   Compiling bytes v1.12.1
+   Compiling self_cell v1.3.0
+   Compiling rand_core v0.9.5
+   Compiling once_cell v1.21.4
+   Compiling clocks v0.1.0 (https://github.com/devonjonte/BLAKE3?rev=7f9f1f7f79f4b239bf9b3089afdde83d2333febb#7f9f1f7f)
+   Compiling keccak v0.2.2
+   Compiling cc v1.4.4
+   Compiling wyhash v0.6.0
+   Compiling generic-array v0.14.7
+   Compiling inplace-vec-builder v0.1.1
+   Compiling syn v3.0.6
+   Compiling hybrid-array v0.4.15
+   Compiling blake3 v1.8.7
+   Compiling ring v0.17.14
+   Compiling blake3-servil v0.3.0+2e4fa821f9db07b945dbb2b0d02eb76cb19617b5 (https://github.com/devonjonte/BLAKE3?rev=082afa368f37c050238c0c9a708348f1940aff51#082afa36)
+   Compiling getrandom v0.2.17
+   Compiling positioned-io v0.3.5
+   Compiling sysinfo v0.30.13
+   Compiling crypto-common v0.2.2
+   Compiling block-buffer v0.12.1
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling digest v0.10.7
+   Compiling sha1 v0.10.7
+   Compiling bench-hashes v0.17.0+1b480eed20d11d7cd1417384e4a9d540b0e321be (/root/BLAKE3-wakes8/bench-hashes)
+   Compiling sha1-checked v0.10.0
+   Compiling digest v0.11.3
+   Compiling sha3 v0.11.0
+   Compiling sha2 v0.11.0
+   Compiling ref-cast-impl v1.0.27
+   Compiling range-collections v0.4.6
+   Compiling bao-tree v0.16.1
+    Finished `release` profile [optimized] target(s) in 21.03s
+     Running `target/release/bench-hashes check --against 338e249ef726c240aa28205db44ce033f7db27df --cells all --pairs 12 --keep /root/results/wakes8-epyc-20261025/check-samples`
+check: the fork's working tree (6dd5899546a0) against 338e249ef726c240aa28205db44ce033f7db27df (338e249ef726)
+regress: 12 new builds against 12 old, 12 pairs over --contenders blake3-servil-st,blake3-servil-mt
+regress: pair 1 of 12 in 75.7 s
+regress: pair 2 of 12 in 75.2 s
+regress: pair 3 of 12 in 75.7 s
+regress: pair 4 of 12 in 76.0 s
+regress: pair 5 of 12 in 75.1 s
+regress: pair 6 of 12 in 74.6 s
+regress: pair 7 of 12 in 76.0 s
+regress: pair 8 of 12 in 75.1 s
+regress: pair 9 of 12 in 74.8 s
+regress: pair 10 of 12 in 75.5 s
+regress: pair 11 of 12 in 74.8 s
+regress: pair 12 of 12 in 75.6 s
+check: a second stage for 8 suspects on 16 fresh pairs: blake3-servil-mt|solo|OneMessage|64 B, blake3-servil-st|solo|ManyMessages|4, blake3-servil-mt|solo|ManyMessages|4, blake3-servil-mt|solo|OneMessage|128 B, blake3-servil-st|solo|OneMessage|64 B, blake3-servil-st|solo|ManyMessages|6, blake3-servil-mt|solo|ManyMessages|3, blake3-servil-st|solo|OneMessage|256 B
+regress: 16 new builds against 16 old, 16 pairs over --contenders blake3-servil-mt,blake3-servil-st --points "128 B,256 B,3,4,6,64 B"
+regress: pair 1 of 16 in 7.8 s
+regress: pair 2 of 16 in 7.6 s
+regress: pair 3 of 16 in 7.7 s
+regress: pair 4 of 16 in 7.6 s
+regress: pair 5 of 16 in 7.8 s
+regress: pair 6 of 16 in 7.6 s
+regress: pair 7 of 16 in 7.9 s
+regress: pair 8 of 16 in 7.9 s
+regress: pair 9 of 16 in 7.8 s
+regress: pair 10 of 16 in 7.8 s
+regress: pair 11 of 16 in 7.7 s
+regress: pair 12 of 16 in 7.7 s
+regress: pair 13 of 16 in 7.8 s
+regress: pair 14 of 16 in 7.6 s
+regress: pair 15 of 16 in 7.5 s
+regress: pair 16 of 16 in 7.8 s
