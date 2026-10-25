@@ -37,10 +37,12 @@ every-core rows wait for the release's run.
 Beyond official's tests (published test vectors and a reference
 implementation), this crate adds:
 
-- **Formal proofs of every assembly kernel**, official's own x86-64
-  assembly among them, at every shape this crate calls it: symbolic
-  execution against a specification of BLAKE3, with memory accesses,
-  the calling convention and secret-dependent branches checked too.
+- **Formal proofs of the assembly kernels covered by the proof suite**,
+  within their stated contracts: symbolic execution of the assembled
+  instructions against a specification of BLAKE3, with memory accesses,
+  the calling convention and secret-dependent branches checked too. The
+  proof documents identify the covered kernels and contracts; Rust
+  kernels and the code around the assembly are tested.
 - **Mutation testing**: one small mistake planted at a time, and a test
   must fail for each; the few that survive are listed with their reason.
 - **A model checker (Shuttle)** for the thread pool's waits, under
