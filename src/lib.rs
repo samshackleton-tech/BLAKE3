@@ -936,6 +936,20 @@ pub fn initialize() {
 /// than leaving the call that waits for that worker's piece waiting
 /// forever.
 ///
+/// `None` counts logical CPUs, so on a CPU with SMT (Hyper-Threading) both
+/// threads of each core. For hashing that is the faster default: one thread
+/// alone leaves most of a core's dispatch slots waiting on its loads, and
+/// the second fills them (on an EPYC 9255, two threads on a core hash
+/// 1.4-1.7 times what one does, as with official BLAKE3). A thread slowed
+/// by the other thread on its core, by an efficiency core or by another
+/// program takes fewer of a call's pieces, and the pieces shrink toward
+/// the end of the input, so the slowest thread finishes holding a small
+/// one. A program that hashes mostly 512 KiB to 1 MiB at a time, and
+/// little in bulk, may do better with one thread a physical core: on that
+/// EPYC, 24 threads in place of 48 ran calls of 512 KiB-1 MiB 6-7% faster,
+/// single inputs of 3 MiB and more 3-8% slower, and collections through
+/// [`performance::hash_each_multithreaded`] 10-39% slower.
+///
 /// ```
 /// blake3_servil::initialize_multithreaded(None);
 /// let message = vec![blake3_servil::performance::Block::ZERO; (1 << 20) / 64];
