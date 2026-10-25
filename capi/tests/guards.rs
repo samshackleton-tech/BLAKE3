@@ -16,6 +16,9 @@ const CASES: &[(&str, &str)] = &[
     ("batch-count", "the batch's length fits a size_t"),
     ("batch-overlap", "input and output ranges overlap"),
     ("batch-overlap-reverse", "input and output ranges overlap"),
+    ("batch-alignment", "a batch starts at a 64-byte boundary"),
+    ("stream-rounded-length", "the submitted block range overflows size_t"),
+    ("stream-input-alignment", "a submitted message starts at a 64-byte boundary"),
     ("hasher-update-overlap", "input and output ranges overlap"),
     ("hasher-output-overlap", "input and output ranges overlap"),
     ("output-length", "the output length exceeds isize::MAX"),
@@ -61,6 +64,15 @@ unsafe fn bad_call(case: &str) {
             "batch-count" => b3_hash_many(&mode, pointer.cast(), 64, usize::MAX, output.as_mut_ptr()),
             "batch-overlap" => b3_hash_many(&mode, pointer.cast(), 64, 2, pointer.add(32).cast()),
             "batch-overlap-reverse" => b3_hash_many(&mode, pointer.add(64).cast(), 64, 2, pointer.add(32).cast()),
+            "batch-alignment" => b3_hash_many(&mode, pointer.add(1).cast(), 64, 1, output.as_mut_ptr()),
+            "stream-rounded-length" => {
+                let stream = b3_stream_begin(&mode, Some(done), core::ptr::null_mut());
+                b3_stream_submit(stream, pointer.cast(), isize::MAX as usize, output.as_mut_ptr());
+            }
+            "stream-input-alignment" => {
+                let stream = b3_stream_begin(&mode, Some(done), core::ptr::null_mut());
+                b3_stream_submit(stream, pointer.add(1).cast(), 64, output.as_mut_ptr());
+            }
             "hasher-update-overlap" => {
                 b3_hasher_init(hasher.as_mut_ptr(), &mode);
                 b3_hasher_update(hasher.as_mut_ptr(), hasher.as_ptr().cast(), 1);

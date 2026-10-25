@@ -312,13 +312,14 @@ pub unsafe extern "C" fn b3_stream_submit(stream: *mut B3Stream, input: *const c
     // Sound by the contract: both live until finish, which is 'static to
     // the stream; a Digest is a Hash.
     let blocks = len.div_ceil(64).max(1);
+    let block_bytes = blocks.checked_mul(64).expect("b3: the submitted block range overflows size_t");
     // The message's blocks: a misaligned pointer cannot soundly become a
     // &[Block], the stop Rust's soundness needs (as for a batch).
     let input = if input.is_null() {
         assert_eq!(len, 0, "b3: the input is NULL with a length of {len}");
         &[Block::ZERO][..]
     } else {
-        Block::from_bytes(unsafe { bytes(input, blocks * 64, "the input") })
+        Block::from_bytes(unsafe { bytes(input, block_bytes, "the input") })
             .expect("b3: a submitted message starts at a 64-byte boundary (aligned_alloc(64, n))")
     };
     let input: &'static [Block] = unsafe { core::slice::from_raw_parts(input.as_ptr(), input.len()) };
