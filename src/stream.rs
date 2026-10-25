@@ -460,13 +460,7 @@ impl<'env, D: FnMut(&'env mut [Hash])> Stream<'env, D> {
             // Sound: as in submit_with.
             let room = unsafe { core::slice::from_raw_parts_mut(self.s.ring_at(at), count * slot) };
             fill(first * slot, room);
-            // The bytes past each message, zero (none when the length is a
-            // multiple of 64): a reused room holds an earlier batch's bytes.
-            if message_len % 64 != 0 || message_len == 0 {
-                for message in room.chunks_exact_mut(slot) {
-                    message[message_len..].fill(0);
-                }
-            }
+            crate::many::assert_slots(room, message_len, count);
             let end = self.head;
             let kind = Kind::Batch { message_len, whole: (p + 1 == parts).then_some(whole) };
             // Sound: `first` is within the batch's space.
