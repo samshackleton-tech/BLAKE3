@@ -1,0 +1,19 @@
+Sun Oct 25 17:53:31 UTC 2026
+ 17:53:31 up 3 days,  3:18,  1 user,  load average: 0.00, 0.00, 0.01
+48
+library: bfbda1920283335ff3802723db11c209159f47fc
+?? bench-hashes/
+bench:   5be5f23699ee7146ada56a08777173a4ee1c7bde
+ M Cargo.lock
+diff --git a/Cargo.lock b/Cargo.lock
+index 76c7d05d..747efe0b 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -61,7 +61,6 @@ dependencies = [
+ [[package]]
+ name = "blake3-servil"
+ version = "0.3.0+2e4fa821f9db07b945dbb2b0d02eb76cb19617b5"
+-source = "git+https://github.com/devonjonte/BLAKE3?rev=082afa368f37c050238c0c9a708348f1940aff51#082afa368f37c050238c0c9a708348f1940aff51"
+ dependencies = [
+  "arrayvec",
+  "cc",

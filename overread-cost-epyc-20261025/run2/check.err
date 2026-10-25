@@ -1,0 +1,34 @@
+    Finished `release` profile [optimized] target(s) in 0.01s
+     Running `target/release/bench-hashes check --against a137c68 --cells all --pairs 12 --keep /root/results/overread-check-20261025/samples`
+check: the fork's working tree (512dd09f304c) against a137c68 (a137c68fc5cf)
+regress: 12 new builds against 12 old, 12 pairs over --contenders blake3-servil-st,blake3-servil-mt
+regress: pair 1 of 12 in 72.8 s
+regress: pair 2 of 12 in 72.5 s
+regress: pair 3 of 12 in 72.7 s
+regress: pair 4 of 12 in 72.1 s
+regress: pair 5 of 12 in 72.4 s
+regress: pair 6 of 12 in 71.8 s
+regress: pair 7 of 12 in 73.3 s
+regress: pair 8 of 12 in 72.7 s
+regress: pair 9 of 12 in 72.6 s
+regress: pair 10 of 12 in 72.5 s
+regress: pair 11 of 12 in 72.0 s
+regress: pair 12 of 12 in 72.8 s
+check: a second stage for 8 suspects on 16 fresh pairs: blake3-servil-mt|shared|ContinuousMessages|1 KiB, blake3-servil-mt|shared|ContinuousMessages|16 KiB, blake3-servil-mt|shared|ContinuousMessages|256 KiB, blake3-servil-mt|shared|ContinuousMessages|64 KiB, blake3-servil-mt|shared|ContinuousBatches|4096, blake3-servil-mt|shared|ContinuousCollection|git objects, blake3-servil-mt|shared|ContinuousBatches|64, blake3-servil-mt|shared|ContinuousBatches|256
+regress: 16 new builds against 16 old, 16 pairs over --contenders blake3-servil-mt --points "continuous 1 KiB,continuous 16 KiB,continuous 256 KiB,continuous 64 KiB,continuous batch 256,continuous batch 4096,continuous batch 64,continuous collection git objects"
+regress: pair 1 of 16 in 0.7 s
+regress: pair 2 of 16 in 0.7 s
+regress: pair 3 of 16 in 0.7 s
+regress: pair 4 of 16 in 0.7 s
+regress: pair 5 of 16 in 0.7 s
+regress: pair 6 of 16 in 0.7 s
+regress: pair 7 of 16 in 0.7 s
+regress: pair 8 of 16 in 0.7 s
+regress: pair 9 of 16 in 0.7 s
+regress: pair 10 of 16 in 0.7 s
+regress: pair 11 of 16 in 0.7 s
+regress: pair 12 of 16 in 0.7 s
+regress: pair 13 of 16 in 0.7 s
+regress: pair 14 of 16 in 0.7 s
+regress: pair 15 of 16 in 0.7 s
+regress: pair 16 of 16 in 0.7 s

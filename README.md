@@ -103,3 +103,4 @@ Result, exit 0:
 ```
 
 No AVX-512 skips. `model/model.log` is the full output, and the empty tracked-source diff is retained. The expected alignment child faults are controls, not timeouts or failed proof jobs. This is randomized hardware/model evidence on another native machine; **not** a full-kernel or symbolic proof, nor validation of general-register instructions, branches, or prefetch effects. Those remain outside this cross-check's stated scope.
+- [`overread-cost-epyc-20261025/`](overread-cost-epyc-20261025/): #168, the over-read fix's AVX-512 cost on EPYC 9255. `check --cells all --pairs 12` found no cell slower in two runs. Raw samples are kept, with the failed and incomplete attempts.

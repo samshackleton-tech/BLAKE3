@@ -1,0 +1,16 @@
+blake3-servil-mt|solo|ContinuousMessages|1 KiB: 0.255 -> 0.254 ns/unit  x0.996 level, 8 of 16 pairs faster; CPU time x0.999; energy x1.048
+blake3-servil-mt|solo|ContinuousMessages|16 KiB: 0.177 -> 0.182 ns/unit  x1.031 level, 6 of 16 pairs faster; CPU time x1.002; energy x1.076
+blake3-servil-mt|solo|ContinuousMessages|64 KiB: 0.118 -> 0.118 ns/unit  x1.000 level, 9 of 16 pairs faster; CPU time x1.002; energy x0.974
+blake3-servil-mt|solo|ContinuousMessages|256 KiB: 0.117 -> 0.116 ns/unit  x0.988 level, 11 of 16 pairs faster; CPU time x1.000; energy x0.999
+blake3-servil-mt|solo|ContinuousBatches|64: 9.386 -> 9.383 ns/unit  x1.000 level, 7 of 16 pairs faster; CPU time x1.001; energy x0.974
+blake3-servil-mt|solo|ContinuousBatches|256: 8.525 -> 8.503 ns/unit  x0.997 level, 7 of 16 pairs faster; CPU time x1.008; energy x0.972
+blake3-servil-mt|solo|ContinuousBatches|4096: 8.270 -> 8.230 ns/unit  x0.995 level, 13 of 16 pairs faster; CPU time x1.008; energy x0.984
+blake3-servil-mt|solo|ContinuousCollection|git objects: 0.111 -> 0.111 ns/unit  x1.006 level, 7 of 16 pairs faster; CPU time x1.003; energy x1.009
+blake3-servil-mt|shared|ContinuousMessages|1 KiB: 0.150 -> 0.144 ns/unit  x0.958 level, 9 of 16 pairs faster
+blake3-servil-mt|shared|ContinuousMessages|16 KiB: 0.113 -> 0.111 ns/unit  x0.980 level, 9 of 16 pairs faster
+blake3-servil-mt|shared|ContinuousMessages|64 KiB: 0.0907 -> 0.0871 ns/unit  x0.961 level, 11 of 16 pairs faster
+blake3-servil-mt|shared|ContinuousMessages|256 KiB: 0.0878 -> 0.0864 ns/unit  x0.983 level, 9 of 16 pairs faster
+blake3-servil-mt|shared|ContinuousBatches|64: 7.734 -> 7.750 ns/unit  x1.002 level, 7 of 16 pairs faster
+blake3-servil-mt|shared|ContinuousBatches|256: 6.689 -> 6.664 ns/unit  x0.996 level, 6 of 16 pairs faster
+blake3-servil-mt|shared|ContinuousBatches|4096: 7.667 -> 7.606 ns/unit  x0.992 level, 10 of 16 pairs faster
+blake3-servil-mt|shared|ContinuousCollection|git objects: 0.0831 -> 0.0828 ns/unit  x0.996 level, 9 of 16 pairs faster
