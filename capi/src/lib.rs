@@ -161,7 +161,7 @@ unsafe fn batch<'a>(input: *const c_void, message_len: usize, count: usize, out:
     // stride >= OUT_LEN, so the checked total also bounds this product.
     let out_bytes = count * OUT_LEN;
     check_range(input, total, "the batch");
-    check_range(out.cast(), out_bytes, "the digests");
+    check_range(out.cast(), out_bytes, "the digests' storage");
     check_disjoint(input, total, out.cast(), out_bytes);
     if count == 0 {
         return (&[], &mut []);
@@ -273,18 +273,11 @@ pub struct B3Stream {
 }
 
 unsafe fn stream_mut<'a>(stream: *mut B3Stream) -> &'a mut B3Stream {
-<<<<<<< HEAD
-    assert!(!stream.is_null(), "b3: the stream is NULL");
+    check_range(stream.cast(), size_of::<B3Stream>(), "the stream");
+    assert!(stream.is_aligned(), "b3: the stream handle is misaligned");
     // A finished stream is freed; its pointer is the caller's to forget
     // (b3.h: a stream ends at b3_stream_finish).
     unsafe { &mut *stream }
-=======
-    check_range(stream.cast(), size_of::<B3Stream>(), "the stream");
-    assert!(stream.is_aligned(), "b3: the stream handle is misaligned");
-    let s = unsafe { &mut *stream };
-    assert!(!s.finished, "b3: the stream is finished; begin another");
-    s
->>>>>>> 50d28e2 (Check simple C argument errors before forming Rust references)
 }
 
 /// # Safety
@@ -312,19 +305,21 @@ pub unsafe extern "C" fn b3_stream_begin(mode: *const B3Mode, done: Option<B3Don
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn b3_stream_submit(stream: *mut B3Stream, input: *const c_void, len: usize, out: *mut Digest) {
     check_range(input, len, "the input");
+    let blocks = len.div_ceil(64).max(1);
+    let block_bytes = blocks.checked_mul(64).expect("b3: the submitted block range overflows size_t");
+    assert!(block_bytes <= isize::MAX as usize, "b3: the submitted block range exceeds isize::MAX");
     check_range(out.cast(), OUT_LEN, "the digest's place");
     check_disjoint(input, len, out.cast(), OUT_LEN);
     let s = unsafe { stream_mut(stream) };
     // Sound by the contract: both live until finish, which is 'static to
     // the stream; a Digest is a Hash.
-    let blocks = len.div_ceil(64).max(1);
     // The message's blocks: a misaligned pointer cannot soundly become a
     // &[Block], the stop Rust's soundness needs (as for a batch).
     let input = if input.is_null() {
         assert_eq!(len, 0, "b3: the input is NULL with a length of {len}");
         &[Block::ZERO][..]
     } else {
-        Block::from_bytes(unsafe { bytes(input, blocks * 64, "the input") })
+        Block::from_bytes(unsafe { bytes(input, block_bytes, "the input") })
             .expect("b3: a submitted message starts at a 64-byte boundary (aligned_alloc(64, n))")
     };
     let input: &'static [Block] = unsafe { core::slice::from_raw_parts(input.as_ptr(), input.len()) };
