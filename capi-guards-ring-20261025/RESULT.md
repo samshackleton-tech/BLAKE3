@@ -72,4 +72,4 @@ boundary. Options have different costs: explicitly document unspecified
 contents and require overwriting/zeroization by callers with secrecy needs;
 clear used rooms at a defined lifecycle point; or another owner-approved
 design. No fix is asserted here and no performance experiment was run.
-Filed for owner review; see the linked issue in the repository record.
+Filed as BLAKE3 issue #161 for owner review.
