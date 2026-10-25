@@ -99,9 +99,12 @@ impl Batch {
     /// `count` messages of `message_len` bytes, every byte zero. The zeros
     /// are written now, so all of a `Batch`'s memory is resident from its
     /// making, not as its pages are first touched: make one and refill it.
+    ///
+    /// # Panics
+    /// Panics if the number of blocks cannot be represented by a `usize`.
     pub fn new(message_len: usize, count: usize) -> Self {
-        let per = Self::blocks_per(message_len);
-        Batch { blocks: std::vec![Block::ZERO; per * count], message_len, count }
+        let blocks = Self::blocks_per(message_len).checked_mul(count).expect("batch block count overflows usize");
+        Batch { blocks: std::vec![Block::ZERO; blocks], message_len, count }
     }
 
     /// The blocks each message of `message_len` bytes takes: its bytes in
