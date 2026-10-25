@@ -1,0 +1,92 @@
+    Blocking waiting for file lock on package cache
+   Compiling blake3-servil-c v0.8.0 (/root/BLAKE3-capi-contract-list/capi)
+    Finished `release` profile [optimized] target(s) in 0.22s
+────────────
+ Nextest run ID bd91b14a-5aaa-439d-9ff1-a13a2ecc954b with nextest profile: default
+    Starting 8 tests across 6 binaries
+        PASS [   0.003s] (1/8) blake3-servil-c test::aaa_require_nextest
+        PASS [   0.003s] (2/8) blake3-servil-c::vectors null_with_nothing
+        PASS [   0.004s] (3/8) blake3-servil-c::provenance miri_callback_context_retains_pointer_provenance
+        PASS [   0.004s] (4/8) blake3-servil-c::guards miri_adjacent_ranges_and_empty_null_ranges_are_allowed
+        PASS [   0.008s] (5/8) blake3-servil-c::vectors every_call_against_the_test_vectors
+        PASS [   0.041s] (6/8) blake3-servil-c::guard_pages every_call_inside_guard_pages
+        FAIL [   1.700s] (7/8) blake3-servil-c::guards bad_calls_stop_at_the_guard
+  stdout ───
+
+    running 1 test
+    test bad_calls_stop_at_the_guard ... FAILED
+
+    failures:
+
+    failures:
+        bad_calls_stop_at_the_guard
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 1.70s
+
+  stderr ───
+    callback-null: guard diagnostic and abort verified
+    hasher-init-alignment: guard diagnostic and abort verified
+    hasher-read-alignment: guard diagnostic and abort verified
+    hasher-mode-overlap: guard diagnostic and abort verified
+    input-null: guard diagnostic and abort verified
+    input-length: guard diagnostic and abort verified
+    input-wrap: guard diagnostic and abort verified
+    batch-stride: guard diagnostic and abort verified
+    batch-count: guard diagnostic and abort verified
+    batch-overlap: guard diagnostic and abort verified
+    batch-overlap-reverse: guard diagnostic and abort verified
+    hasher-update-overlap: guard diagnostic and abort verified
+    hasher-output-overlap: guard diagnostic and abort verified
+    output-length: guard diagnostic and abort verified
+    stream-overlap: guard diagnostic and abort verified
+    stream-alignment: guard diagnostic and abort verified
+    input NULL: guard diagnostic and abort verified
+    mode NULL: guard diagnostic and abort verified
+    mode unmade: guard diagnostic and abort verified
+    key NULL: guard diagnostic and abort verified
+    context NULL: guard diagnostic and abort verified
+    context not UTF-8: guard diagnostic and abort verified
+    batch misplaced: guard diagnostic and abort verified
+    batch NULL: guard diagnostic and abort verified
+
+    thread 'bad_calls_stop_at_the_guard' (2998274) panicked at tests/guards.rs:181:9:
+    batch too long: missing guard diagnostic the batch length exceeds isize::MAX: 
+    thread 'bad_calls_stop_at_the_guard' (2998991) panicked at src/lib.rs:160:43:
+    b3: the batch's length fits a size_t
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+    thread 'bad_calls_stop_at_the_guard' (2998991) panicked at /rustc/58cf8f9c35b355199727627d07ae34a4e2846d67/library/core/src/panicking.rs:225:5:
+    panic in a function that cannot unwind
+    stack backtrace:
+       0:     0x5f8285c3e311 - <<std[68c81ae915296b05]::sys::backtrace::BacktraceLock>::print::DisplayBacktrace as core[efd5e57aef94d71e]::fmt::Display>::fmt
+       1:     0x5f8285c5288a - core[efd5e57aef94d71e]::fmt::write
+       2:     0x5f8285c4370c - <std[68c81ae915296b05]::sys::stdio::unix::Stderr as core[efd5e57aef94d71e]::io::write::Write>::write_fmt
+       3:     0x5f8285c1a676 - std[68c81ae915296b05]::panicking::default_hook::{closure#0}
+       4:     0x5f8285c36871 - std[68c81ae915296b05]::panicking::default_hook
+       5:     0x5f8285c36a2b - std[68c81ae915296b05]::panicking::panic_with_hook
+       6:     0x5f8285c1a754 - std[68c81ae915296b05]::panicking::panic_handler::{closure#0}
+       7:     0x5f8285c130c9 - std[68c81ae915296b05]::sys::backtrace::__rust_end_short_backtrace::<std[68c81ae915296b05]::panicking::panic_handler::{closure#0}, !>
+       8:     0x5f8285c1b31d - __rustc[3d2f79520d6fa809]::rust_begin_unwind
+       9:     0x5f8285c52e3d - core[efd5e57aef94d71e]::panicking::panic_nounwind_fmt
+      10:     0x5f8285c52dbb - core[efd5e57aef94d71e]::panicking::panic_nounwind
+      11:     0x5f8285c52f47 - core[efd5e57aef94d71e]::panicking::panic_cannot_unwind
+      12:     0x5f8285bda3f3 - b3_hash_many
+      13:     0x5f8285b95369 - <guards[60459d441c42a4d3]::bad_calls_stop_at_the_guard::{closure#0} as core[efd5e57aef94d71e]::ops::function::FnOnce<()>>::call_once
+      14:     0x5f8285b9743b - test[ff178199d140d5fa]::__rust_begin_short_backtrace::<core[efd5e57aef94d71e]::result::Result<(), alloc[c23e483dde3f7cfb]::string::String>, fn() -> core[efd5e57aef94d71e]::result::Result<(), alloc[c23e483dde3f7cfb]::string::String>>
+      15:     0x5f8285ba4aa5 - test[ff178199d140d5fa]::run_test::{closure#0}
+      16:     0x5f8285b9de64 - std[68c81ae915296b05]::sys::backtrace::__rust_begin_short_backtrace::<test[ff178199d140d5fa]::run_test::{closure#1}, ()>
+      17:     0x5f8285ba7c02 - <std[68c81ae915296b05]::thread::lifecycle::spawn_unchecked<test[ff178199d140d5fa]::run_test::{closure#1}, ()>::{closure#1} as core[efd5e57aef94d71e]::ops::function::FnOnce<()>>::call_once::{shim:vtable#0}
+      18:     0x5f8285c3dbb9 - <std[68c81ae915296b05]::sys::thread::unix::Thread>::new::thread_start
+      19:     0x77ce4dca3dfa - <unknown>
+      20:     0x77ce4dd375cc - <unknown>
+      21:                0x0 - <unknown>
+    thread caused non-unwinding panic. aborting.
+
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+  Cancelling due to test failure: 1 test still running
+        PASS [   2.038s] (8/8) blake3-servil-c::c from_c
+────────────
+     Summary [   2.039s] 8 tests run: 7 passed, 1 failed, 0 skipped
+        FAIL [   1.700s] (7/8) blake3-servil-c::guards bad_calls_stop_at_the_guard
+error: test run failed

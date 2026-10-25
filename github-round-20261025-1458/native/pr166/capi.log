@@ -1,0 +1,32 @@
+    Blocking waiting for file lock on package cache
+    Updating crates.io index
+    Blocking waiting for file lock on package cache
+     Locking 19 packages to highest Rust 1.99.1 compatible versions
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling find-msvc-tools v0.1.15
+   Compiling shlex v2.0.1
+   Compiling zmij v1.0.23
+   Compiling serde_core v1.0.229
+   Compiling arrayvec v0.7.8
+   Compiling constant_time_eq v0.4.2
+   Compiling cfg-if v1.0.5
+   Compiling serde_json v1.0.154
+   Compiling memchr v2.8.3
+   Compiling itoa v1.0.18
+   Compiling cc v1.10.0
+   Compiling blake3-servil v0.3.0+2e4fa821f9db07b945dbb2b0d02eb76cb19617b5 (/root/BLAKE3-round-pr166)
+   Compiling blake3-servil-c v0.8.0 (/root/BLAKE3-round-pr166/capi)
+    Finished `release` profile [optimized] target(s) in 3.91s
+────────────
+ Nextest run ID b4efe6ca-16ef-4c8d-b110-289d293780ad with nextest profile: default
+    Starting 4 tests across 3 binaries
+        PASS [   0.004s] (1/4) blake3-servil-c::vectors null_with_nothing
+        PASS [   0.004s] (2/4) blake3-servil-c test::aaa_require_nextest
+        PASS [   0.010s] (3/4) blake3-servil-c::vectors every_call_against_the_test_vectors
+        PASS [   2.033s] (4/4) blake3-servil-c::c from_c
+────────────
+     Summary [   2.033s] 4 tests run: 4 passed, 0 skipped

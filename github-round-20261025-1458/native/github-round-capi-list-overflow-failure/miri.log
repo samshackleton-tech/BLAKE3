@@ -1,0 +1,187 @@
+callback-null: guard diagnosed the call without Miri UB
+hasher-init-alignment: guard diagnosed the call without Miri UB
+hasher-read-alignment: guard diagnosed the call without Miri UB
+hasher-mode-overlap: guard diagnosed the call without Miri UB
+input-null: guard diagnosed the call without Miri UB
+input-length: guard diagnosed the call without Miri UB
+input-wrap: guard diagnosed the call without Miri UB
+batch-stride: guard diagnosed the call without Miri UB
+batch-count: guard diagnosed the call without Miri UB
+batch-overlap: guard diagnosed the call without Miri UB
+batch-overlap-reverse: guard diagnosed the call without Miri UB
+hasher-update-overlap: guard diagnosed the call without Miri UB
+hasher-output-overlap: guard diagnosed the call without Miri UB
+output-length: guard diagnosed the call without Miri UB
+stream-overlap: guard diagnosed the call without Miri UB
+stream-alignment: guard diagnosed the call without Miri UB
+input NULL: guard diagnosed the call without Miri UB
+mode NULL: guard diagnosed the call without Miri UB
+mode unmade: guard diagnosed the call without Miri UB
+key NULL: guard diagnosed the call without Miri UB
+context NULL: guard diagnosed the call without Miri UB
+context not UTF-8: guard diagnosed the call without Miri UB
+batch misplaced: guard diagnosed the call without Miri UB
+batch NULL: guard diagnosed the call without Miri UB
+Traceback (most recent call last):
+  File "/root/BLAKE3-capi-contract-list/tools/test_capi_guards.py", line 45, in <module>
+    main()
+    ~~~~^^
+  File "/root/BLAKE3-capi-contract-list/tools/test_capi_guards.py", line 39, in main
+    assert code in (1, 100) and message in output and "panicked at" in output and "Undefined Behavior" not in output, output
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError:     Finished `test` profile [unoptimized + debuginfo] target(s) in 0.00s
+info: for the target platform, using target runner `/root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/bin/cargo-miri runner` defined by `target.cfg(all()).runner` specified by `--config`
+info: for the host platform, using target runner `/root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/bin/cargo-miri runner` defined by `target.cfg(all()).runner` specified by `--config`
+────────────
+ Nextest run ID 5c78ecb4-036b-421b-a462-0846d127b130 with nextest profile: miri
+    Starting 1 test across 6 binaries (7 tests skipped)
+        FAIL [   1.645s] (1/1) blake3-servil-c::guards bad_calls_stop_at_the_guard
+  stdout ───
+
+    running 1 test
+    test bad_calls_stop_at_the_guard ... 
+  stderr ───
+
+    thread 'bad_calls_stop_at_the_guard' (1001) panicked at src/lib.rs:160:43:
+    b3: the batch's length fits a size_t
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+    note: in Miri, you may have to set `MIRIFLAGS=-Zmiri-env-forward=RUST_BACKTRACE` for the environment variable to have an effect
+
+    thread 'bad_calls_stop_at_the_guard' (1001) panicked at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panicking.rs:225:5:
+    panic in a function that cannot unwind
+    stack backtrace:
+       0:          0x1529948 - std::backtrace_rs::backtrace::miri::trace_unsynchronized::<&mut {closure@std::sys::backtrace::_print_fmt::{closure#1}}>
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/../../backtrace/src/backtrace/miri.rs:108:9
+       1:          0x152948e - std::backtrace_rs::backtrace::miri::trace::<&mut {closure@std::sys::backtrace::_print_fmt::{closure#1}}>
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/../../backtrace/src/backtrace/miri.rs:65:14
+       2:          0x143d29b - std::backtrace_rs::backtrace::trace_unsynchronized::<{closure@std::sys::backtrace::_print_fmt::{closure#1}}>
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/../../backtrace/src/backtrace/mod.rs:66:14
+       3:           0x560f7a - std::sys::backtrace::_print_fmt
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:74:9
+       4:           0x560ada - <std::sys::backtrace::BacktraceLock<'_>::print::DisplayBacktrace as std::fmt::Display>::fmt
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:44:26
+       5:           0x906bc2 - core::fmt::rt::Argument::<'_>::fmt
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/fmt/rt.rs:152:76
+       6:           0x8f86ce - std::fmt::write
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/fmt/mod.rs:1685:17
+       7:           0x792d1a - core::io::write::default_write_fmt::<std::sys::stdio::unix::Stderr>
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/io/write.rs:402:11
+       8:           0x792529 - <std::sys::stdio::unix::Stderr as std::io::Write>::write_fmt
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/io/write.rs:335:13
+       9:           0x560b57 - std::sys::backtrace::BacktraceLock::<'_>::print
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:47:9
+      10:           0x3765ff - std::panicking::default_hook::{closure#0}
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:289:22
+      11:           0x376a7d - std::panicking::default_hook
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:316:9
+      12:           0x37b251 - std::panicking::panic_with_hook
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:811:13
+      13:           0x379e79 - std::panicking::panic_handler::{closure#0}
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:678:13
+      14:           0x562064 - std::sys::backtrace::__rust_end_short_backtrace::<{closure@std::panicking::panic_handler::{closure#0}}, !>
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:182:18
+      15:           0x379e21 - std::panicking::panic_handler
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:676:5
+      16:           0x2e327e - core::panicking::panic_nounwind_fmt::runtime
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panicking.rs:122:22
+      17:           0x45c4c9 - core::panicking::panic_nounwind_fmt
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/intrinsics/mod.rs:2543:9
+      18:           0x2e4934 - core::panicking::panic_nounwind
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panicking.rs:225:5
+      19:           0x2e5cf7 - core::panicking::panic_cannot_unwind
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panicking.rs:350:5
+      20:           0x1959bb - b3_servil::b3_hash_many
+                                   at src/lib.rs:183:1
+      21:           0x14d23f - bad_call
+                                   at tests/guards.rs:126:33
+      22:           0x14d9c8 - bad_calls_stop_at_the_guard
+                                   at tests/guards.rs:164:18
+      23:           0x14d8f7 - bad_calls_stop_at_the_guard::{closure#0}
+                                   at tests/guards.rs:158:33
+      24:           0x25ab0d - <{closure@tests/guards.rs:158:1: 184:2} as std::ops::FnOnce<()>>::call_once - shim
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250:5
+      25:           0x25ab15 - <fn() -> std::result::Result<(), std::string::String> as std::ops::FnOnce<()>>::call_once - shim(fn() -> std::result::Result<(), std::string::String>)
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250:5
+      26:           0x216f91 - test::__rust_begin_short_backtrace::<std::result::Result<(), std::string::String>, fn() -> std::result::Result<(), std::string::String>>
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:703:18
+      27:           0x2e7e6f - test::types::RunnableTest::run
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/types.rs:147:40
+      28:           0x2171ef - test::run_test_in_process::{closure#0}
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:726:60
+      29:           0x9c899c - <std::panic::AssertUnwindSafe<{closure@test::run_test_in_process::{closure#0}}> as std::ops::FnOnce<()>>::call_once
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:273:9
+      30:           0x37914e - std::panicking::catch_unwind::do_call::<std::panic::AssertUnwindSafe<{closure@test::run_test_in_process::{closure#0}}>, std::result::Result<(), std::string::String>>
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43
+      31:           0x378bb2 - std::panicking::catch_unwind::<std::result::Result<(), std::string::String>, std::panic::AssertUnwindSafe<{closure@test::run_test_in_process::{closure#0}}>>
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:541:19
+      32:           0x20d698 - std::panic::catch_unwind::<std::panic::AssertUnwindSafe<{closure@test::run_test_in_process::{closure#0}}>, std::result::Result<(), std::string::String>>
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14
+      33:           0x217205 - test::run_test_in_process
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:726:27
+      34:           0x2166c1 - test::run_test::{closure#0}
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:646:43
+      35:           0x216baa - test::run_test::{closure#1}
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:677:41
+      36:           0x561f71 - std::sys::backtrace::__rust_begin_short_backtrace::<{closure@test::run_test::{closure#1}}, ()>
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:166:18
+      37:           0x992d26 - std::thread::lifecycle::spawn_unchecked::<'_, {closure@test::run_test::{closure#1}}, ()>::{closure#1}::{closure#0}
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:70:13
+      38:           0x9c89f9 - <std::panic::AssertUnwindSafe<{closure@std::thread::lifecycle::spawn_unchecked<'_, {closure@test::run_test::{closure#1}}, ()>::{closure#1}::{closure#0}}> as std::ops::FnOnce<()>>::call_once
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:273:9
+      39:           0x3791af - std::panicking::catch_unwind::do_call::<std::panic::AssertUnwindSafe<{closure@std::thread::lifecycle::spawn_unchecked<'_, {closure@test::run_test::{closure#1}}, ()>::{closure#1}::{closure#0}}>, ()>
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573:43
+      40:           0x378c14 - std::panicking::catch_unwind::<(), std::panic::AssertUnwindSafe<{closure@std::thread::lifecycle::spawn_unchecked<'_, {closure@test::run_test::{closure#1}}, ()>::{closure#1}::{closure#0}}>>
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:541:19
+      41:           0x20d6f3 - std::panic::catch_unwind::<std::panic::AssertUnwindSafe<{closure@std::thread::lifecycle::spawn_unchecked<'_, {closure@test::run_test::{closure#1}}, ()>::{closure#1}::{closure#0}}>, ()>
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359:14
+      42:           0x992ccb - std::thread::lifecycle::spawn_unchecked::<'_, {closure@test::run_test::{closure#1}}, ()>::{closure#1}
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:68:26
+      43:           0x25abce - <{closure@std::thread::lifecycle::spawn_unchecked<'_, {closure@test::run_test::{closure#1}}, ()>::{closure#1}} as std::ops::FnOnce<()>>::call_once - shim(vtable)
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250:5
+      44:           0x3691f4 - <std::boxed::Box<dyn std::ops::FnOnce() + std::marker::Send> as std::ops::FnOnce<()>>::call_once
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/boxed.rs:2468:9
+      45:           0x848093 - std::sys::thread::unix::Thread::new::thread_start
+                                   at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/thread/unix.rs:127:17
+    thread caused non-unwinding panic. aborting.
+    error: abnormal termination: the program aborted execution
+       --> /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:833:9
+        |
+    833 |         crate::process::abort();
+        |         ^^^^^^^^^^^^^^^^^^^^^^^ abnormal termination occurred here
+        |
+        = note: this is on thread `bad_calls_stop_`
+        = note: stack backtrace:
+                0: std::panicking::panic_with_hook
+                    at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:833:9: 833:32
+                1: std::panicking::panic_handler::{closure#0}
+                    at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:678:13: 683:14
+                2: std::sys::backtrace::__rust_end_short_backtrace::<{closure@std::panicking::panic_handler::{closure#0}}, !>
+                    at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:182:18: 182:21
+                3: std::panicking::panic_handler
+                    at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:676:5: 692:7
+                4: core::panicking::panic_nounwind
+                    at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panicking.rs:225:5: 225:87
+                5: core::panicking::panic_cannot_unwind
+                    at /root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panicking.rs:350:5: 350:61
+                6: b3_servil::b3_hash_many
+                    at src/lib.rs:183:1: 188:2
+                7: bad_call
+                    at tests/guards.rs:126:33: 126:110
+                8: bad_calls_stop_at_the_guard
+                    at tests/guards.rs:164:18: 164:33
+                9: bad_calls_stop_at_the_guard::{closure#0}
+                    at tests/guards.rs:158:33: 158:33
+
+    note: some details are omitted, run with `MIRIFLAGS=-Zmiri-backtrace=full` for a verbose backtrace
+
+    error: aborting due to 1 previous error
+
+
+    (test failed with exit code 1)
+
+  Cancelling due to test failure
+────────────
+     Summary [   1.646s] 1 test run: 0 passed, 1 failed, 7 skipped
+        FAIL [   1.645s] (1/1) blake3-servil-c::guards bad_calls_stop_at_the_guard
+error: test run failed
+

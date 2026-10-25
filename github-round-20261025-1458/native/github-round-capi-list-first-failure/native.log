@@ -1,0 +1,48 @@
+    Blocking waiting for file lock on package cache
+    Updating crates.io index
+    Blocking waiting for file lock on package cache
+     Locking 19 packages to highest Rust 1.99.1 compatible versions
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling find-msvc-tools v0.1.15
+   Compiling shlex v2.0.1
+   Compiling zmij v1.0.23
+   Compiling serde_core v1.0.229
+   Compiling arrayvec v0.7.8
+   Compiling constant_time_eq v0.4.2
+   Compiling libc v0.2.191
+   Compiling cfg-if v1.0.5
+   Compiling serde_json v1.0.154
+   Compiling memchr v2.8.3
+   Compiling itoa v1.0.18
+   Compiling cc v1.10.0
+   Compiling blake3-servil v0.3.0+2e4fa821f9db07b945dbb2b0d02eb76cb19617b5 (/root/BLAKE3-capi-contract-list)
+   Compiling blake3-servil-c v0.8.0 (/root/BLAKE3-capi-contract-list/capi)
+error[E0308]: mismatched types
+   --> tests/guard_pages.rs:116:56
+    |
+116 |                     let stream = b3_stream_begin(mode, ignore, core::ptr::null_mut());
+    |                                  ---------------       ^^^^^^ expected `Option<_>`, found fn item
+    |                                  |
+    |                                  arguments to this function are incorrect
+    |
+    = note: expected enum `Option<unsafe extern "C" fn(*mut c_void, *mut b3_servil::Digest, usize)>`
+            found fn item `extern "C" fn(*mut c_void, *mut b3_servil::Digest, usize) {ignore}`
+note: function defined here
+   --> src/lib.rs:286:26
+    |
+286 | pub unsafe extern "C" fn b3_stream_begin(mode: *const B3Mode, done: Option<B3Done>, ctx: *mut c_void) -> *mut B3Stream {
+    |                          ^^^^^^^^^^^^^^^
+help: try wrapping the expression in `Some`
+    |
+116 |                     let stream = b3_stream_begin(mode, Some(ignore), core::ptr::null_mut());
+    |                                                        +++++      +
+
+For more information about this error, try `rustc --explain E0308`.
+error: could not compile `blake3-servil-c` (test "guard_pages") due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: command `/root/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo '--color=auto' test --manifest-path capi/Cargo.toml --no-run --message-format json-render-diagnostics --release` exited with code 101

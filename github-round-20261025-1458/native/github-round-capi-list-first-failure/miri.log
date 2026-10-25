@@ -1,0 +1,64 @@
+Traceback (most recent call last):
+  File "/root/BLAKE3-capi-contract-list/tools/test_capi_guards.py", line 45, in <module>
+    main()
+    ~~~~^^
+  File "/root/BLAKE3-capi-contract-list/tools/test_capi_guards.py", line 34, in main
+    assert code == 0 and len(inventories) == 1, output
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError:     Blocking waiting for file lock on package cache
+    Updating crates.io index
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling find-msvc-tools v0.1.15
+   Compiling shlex v2.0.1
+   Compiling zmij v1.0.23
+   Compiling serde_core v1.0.229
+   Compiling libc v0.2.191
+   Compiling arrayvec v0.7.8
+   Compiling serde_json v1.0.154
+   Compiling cfg-if v1.0.5
+   Compiling constant_time_eq v0.4.2
+   Compiling itoa v1.0.18
+   Compiling memchr v2.8.3
+   Compiling cc v1.10.0
+   Compiling blake3-servil v0.3.0+2e4fa821f9db07b945dbb2b0d02eb76cb19617b5 (/root/BLAKE3-capi-contract-list)
+   Compiling blake3-servil-c v0.8.0 (/root/BLAKE3-capi-contract-list/capi)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.83s
+info: for the target platform, using target runner `/root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/bin/cargo-miri runner` defined by `target.cfg(all()).runner` specified by `--config`
+info: for the host platform, using target runner `/root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/bin/cargo-miri runner` defined by `target.cfg(all()).runner` specified by `--config`
+error: creating test list failed
+
+Caused by:
+  for `blake3-servil-c::guard_pages`, command `/root/.rustup/toolchains/nightly-2026-10-24-x86_64-unknown-linux-gnu/bin/cargo-miri runner /root/target-round-capi-list-miri/miri/x86_64-unknown-linux-gnu/debug/build/blake3-servil-c/2be212d7395987f3/out/guard_pages-2be212d7395987f3 --list --format terse` exited with exit code 1
+  --- stdout:
+
+  --- stderr:
+  error[E0308]: mismatched types
+     --> tests/guard_pages.rs:116:56
+      |
+  116 |                     let stream = b3_stream_begin(mode, ignore, core::ptr::null_mut());
+      |                                  ---------------       ^^^^^^ expected `Option<_>`, found fn item
+      |                                  |
+      |                                  arguments to this function are incorrect
+      |
+      = note: expected enum `std::option::Option<unsafe extern "C" fn(*mut libc::c_void, *mut b3_servil::Digest, usize)>`
+              found fn item `extern "C" fn(*mut libc::c_void, *mut b3_servil::Digest, usize) {ignore}`
+  note: function defined here
+     --> src/lib.rs:286:26
+      |
+  286 | pub unsafe extern "C" fn b3_stream_begin(mode: *const B3Mode, done: Option<B3Done>, ctx: *mut c_void) -> *mut B3Stream {
+      |                          ^^^^^^^^^^^^^^^
+  help: try wrapping the expression in `Some`
+      |
+  116 |                     let stream = b3_stream_begin(mode, Some(ignore), core::ptr::null_mut());
+      |                                                        +++++      +
+
+  error: aborting due to 1 previous error
+
+  For more information about this error, try `rustc --explain E0308`.
+
+  ---
+
