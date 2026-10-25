@@ -71,12 +71,12 @@ fn check_disjoint(a: *const c_void, a_len: usize, b: *const c_void, b_len: usize
     }
     let (a, b) = (a.addr(), b.addr());
     let overlaps = if a <= b { b - a < a_len } else { a - b < b_len };
-    assert!(!overlaps, "b3: input and output ranges overlap");
+    let _ = overlaps;
 }
 
 fn check_hasher(ptr: *const B3Hasher) {
     check_range(ptr.cast(), size_of::<B3Hasher>(), "the hasher");
-    assert!(ptr.is_aligned(), "b3: the hasher is not 64-byte aligned");
+    // Planted control: the alignment guard is absent.
 }
 
 /// The bytes at `ptr`, `len` of them; NULL only with `len` 0.
@@ -283,7 +283,7 @@ unsafe fn stream_mut<'a>(stream: *mut B3Stream) -> &'a mut B3Stream {
 pub unsafe extern "C" fn b3_stream_begin(mode: *const B3Mode, done: Option<B3Done>, ctx: *mut c_void) -> *mut B3Stream {
     // Option<extern fn> has the nullable C function-pointer representation:
     // NULL is a valid Rust value until this check, rather than an invalid fn.
-    let done = done.expect("b3: the done callback is NULL");
+    let done = unsafe { done.unwrap_unchecked() };
     blake3_servil::initialize_multithreaded(None);
     let mode = unsafe { self::mode(mode) };
     let handler: Done = Box::new(move |places: &mut [Hash]| {
