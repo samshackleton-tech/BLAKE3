@@ -248,10 +248,10 @@ unsafe fn stream_mut<'a>(stream: *mut B3Stream) -> &'a mut B3Stream {
 pub unsafe extern "C" fn b3_stream_begin(mode: *const B3Mode, done: B3Done, ctx: *mut c_void) -> *mut B3Stream {
     blake3_servil::initialize_multithreaded(None);
     let mode = unsafe { self::mode(mode) };
+    let ctx = ctx as usize;
     let handler: Done = Box::new(move |places: &mut [Hash]| {
         // Sound: a Hash is a Digest (both 32 bytes, repr(transparent)).
-        // Keep the context as a pointer, preserving its provenance.
-        unsafe { done(ctx, places.as_mut_ptr() as *mut Digest, places.len()) }
+        unsafe { done(ctx as *mut c_void, places.as_mut_ptr() as *mut Digest, places.len()) }
     });
     Box::into_raw(Box::new(B3Stream { stream: Stream::open(mode.mode(), handler), finished: false }))
 }
