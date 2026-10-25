@@ -22,7 +22,7 @@ line's `servil` (the publisher makes every wake itself). The bench is
   check's last 16 relinked builds a side. The points are #80's one-shots
   (512 KiB to 4 MiB, nonstop and after a pause), the 14 cells from my
   October 24 run, and the i7 cascade's batches of 16384 and 32768:
-  **no cell slower; 18 cells faster**. The October 24 cells:
+  25 cells measured: **no cell slower; 18 faster, 7 level**. The October 24 cells:
 
 | cell (mt) | 16 pairs |
 |---|---|
@@ -35,8 +35,8 @@ line's `servil` (the publisher makes every wake itself). The bench is
 | solo MerkleTree 4096; shared | -4.4%; -4.4% |
 | solo LentMessages 4 MiB | -3.4% |
 
-The 14 cells where every-wake-direct was 4-12% slower on October 24 now
-read 3-12% faster. Capping the publisher's direct wakes at 8 helps the
+Of the 14 cells where every-wake-direct was 4-12% slower on October 24,
+13 now read 3-12% faster; LentMessages 1 MiB reads level. Capping the publisher's direct wakes at 8 helps the
 47-worker machine, as on the i7 (level) and John's VM (17-45% faster).
 ee4c0d7's `park.rs` is d795fd0's, with the constant named `DIRECT_WAKES`
 (`wakes8-epyc/park-vs-release.diff`).

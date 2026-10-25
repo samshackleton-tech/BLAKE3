@@ -1,0 +1,62 @@
+== setup 20:02:26
+Preparing worktree (detached HEAD 485d7ab5)
+HEAD is now at 485d7ab5 Every waker wakes at most FANOUT (8), the rest owed: the wakes spread as a tree (BLAKE3 #119)
+Note: switching to 'd21cdf36dfc02716e173be4e5b4590c04361084a'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+Preparing worktree (detached HEAD 485d7ab5)
+HEAD is now at 485d7ab5 Every waker wakes at most FANOUT (8), the rest owed: the wakes spread as a tree (BLAKE3 #119)
+Note: switching to 'd21cdf36dfc02716e173be4e5b4590c04361084a'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+replace: /root/BLAKE3-fanout64/src/park.rs: 1 replacement(s)
+--- /root/BLAKE3-fanout64/src/park.rs
++++ /root/BLAKE3-fanout64/src/park.rs (new)
+@@ -52,7 +52,7 @@
+ /// (the i7-12700K's 1-2 MiB one-shots 16-25% slower); a publisher of 8 with
+ /// workers paying the rest unbounded let one worker make every owed wake
+ /// in a quarter of the i7's 2 MiB jobs (data 2026-10-25/wake-counts).
+-pub(crate) const FANOUT: usize = 8;
++pub(crate) const FANOUT: usize = 64;
+ 
+ /// A waker's share of `need` wakes: the ones it makes now, at most
+ /// `fanout`, and the ones it leaves owed.
+/root/BLAKE3-fanout8/src/park.rs:55:pub(crate) const FANOUT: usize = 8;
+/root/BLAKE3-fanout64/src/park.rs:55:pub(crate) const FANOUT: usize = 64;
+== suites at 485d7ab 20:02:27
+suites status 0
+== A: FANOUT 8 against wakes-8 20:03:45
+A check exit 0
+ 20:36:26 up 3 days,  6:01,  2 users,  load average: 1.00, 1.00, 1.06
+== B: FANOUT 64 against FANOUT 8 20:36:26
+B check exit 1
+Sun Oct 25 20:59:29 UTC 2026
+ 20:59:29 up 3 days,  6:24,  2 users,  load average: 0.75, 0.89, 0.98

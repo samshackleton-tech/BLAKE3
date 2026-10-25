@@ -1,0 +1,23 @@
+Sun Oct 25 20:02:27 UTC 2026
+ 20:02:27 up 3 days,  5:27,  1 user,  load average: 0.83, 1.01, 1.14
+Model name:                              AMD EPYC 9255 24-Core Processor
+A new: 485d7ab538cf2d3ee04fb16ed7632c70d4adf3d8 (FANOUT 8)  old: ee4c0d7c27c4bfd5aa65973468c977dc08c848bb (wakes-8)
+B new: 2084a2597b6f1b8c3834fd9c6a1ec916198c44ca (FANOUT 64, measurement only)  old: 485d7ab538cf2d3ee04fb16ed7632c70d4adf3d8
+diff --git a/src/park.rs b/src/park.rs
+index 437b21f6..fde4f1a4 100644
+--- a/src/park.rs
++++ b/src/park.rs
+@@ -52,7 +52,7 @@ pub(crate) struct Park {
+ /// (the i7-12700K's 1-2 MiB one-shots 16-25% slower); a publisher of 8 with
+ /// workers paying the rest unbounded let one worker make every owed wake
+ /// in a quarter of the i7's 2 MiB jobs (data 2026-10-25/wake-counts).
+-pub(crate) const FANOUT: usize = 8;
++pub(crate) const FANOUT: usize = 64;
+ 
+ /// A waker's share of `need` wakes: the ones it makes now, at most
+ /// `fanout`, and the ones it leaves owed.
+/root/BLAKE3-fanout8 bench d21cdf36dfc02716e173be4e5b4590c04361084a
+?? bench-hashes/
+/root/BLAKE3-fanout64 bench d21cdf36dfc02716e173be4e5b4590c04361084a
+?? bench-hashes/
+rustc 1.99.1 (58cf8f9c3 2026-10-13)
