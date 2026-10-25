@@ -1,0 +1,21 @@
+# started on Sun Oct 25 21:54:28 2026
+
+
+ Performance counter stats for '/root/results/avx512-registers/cli-layouts16/cli-bin/b3sum-215441f-L0 --num-threads 1 /dev/shm/smt-td-1g':
+
+        1385026233      de_src_op_disp.all               #      0.5 %ops  bad_speculation       (49.56%)
+         648142863      ls_not_halted_cyc                                                       (49.56%)
+        1359308552      ex_ret_ops                       #     26.2 %slots  retiring            (49.56%)
+           2945785      de_no_dispatch_per_slot.smt_contention #      0.1 %slots  smt_contention      (50.22%)
+         648148706      ls_not_halted_cyc                                                       (50.22%)
+         347007677      de_no_dispatch_per_slot.no_ops_from_frontend #      6.7 %slots  frontend_bound      (50.44%)
+         648359410      ls_not_halted_cyc                                                       (50.44%)
+        3443357274      de_no_dispatch_per_slot.backend_stalls #     66.4 %slots  backend_bound       (49.78%)
+         648356388      ls_not_halted_cyc                                                       (49.78%)
+
+       0.176942116 seconds time elapsed
+
+       0.122942000 seconds user
+       0.053974000 seconds sys
+
+

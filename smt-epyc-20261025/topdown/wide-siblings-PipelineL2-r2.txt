@@ -1,0 +1,30 @@
+# started on Sun Oct 25 21:54:26 2026
+
+
+ Performance counter stats for '/root/results/avx512-registers/cli-layouts16/cli-bin/b3sum-215441f-L0 --num-threads 1 /dev/shm/smt-td-1g':
+
+            113881      ex_ret_brn_misp                  #      0.1 %ops  bad_speculation_from_mispredicts
+                                                         #      0.1 %ops  bad_speculation_from_pipeline_restarts  (24.86%)
+            123169      bp_redirects.resync                                                     (24.86%)
+        1314572739      de_src_op_disp.all                                                      (24.86%)
+        1068037858      ls_not_halted_cyc                                                       (24.86%)
+        1294788165      ex_ret_ops                                                              (24.86%)
+         456783715      ex_no_retire.load_not_complete   #      8.2 %slots  backend_bound_by_cpu
+                                                         #     55.2 %slots  backend_bound_by_memory  (25.05%)
+        5421420297      de_no_dispatch_per_slot.backend_stalls                                        (25.05%)
+         524915753      ex_no_retire.not_complete                                               (25.05%)
+        1067980776      ls_not_halted_cyc                                                       (25.05%)
+          14366631      ex_ret_ucode_ops                 #     15.1 %slots  retiring_from_fastpath
+                                                         #      0.2 %slots  retiring_from_microcode  (25.04%)
+        1068464776      ls_not_halted_cyc                                                       (25.04%)
+        1304964146      ex_ret_ops                                                              (25.04%)
+         430642208      de_no_dispatch_per_slot.no_ops_from_frontend #      2.8 %slots  frontend_bound_by_bandwidth  (25.05%)
+        1068784472      ls_not_halted_cyc                                                       (25.05%)
+          23685250      cpu/de_no_dispatch_per_slot.no_ops_from_frontend,cmask=0x8/ #      2.2 %slots  frontend_bound_by_latency  (25.05%)
+
+       0.271910119 seconds time elapsed
+
+       0.224901000 seconds user
+       0.046979000 seconds sys
+
+

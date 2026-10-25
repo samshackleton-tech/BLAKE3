@@ -1,0 +1,21 @@
+# started on Sun Oct 25 21:54:24 2026
+
+
+ Performance counter stats for '/root/target-smt-b3sum/release/b3sum --num-threads 1 /dev/shm/smt-td-1g':
+
+        1251070713      de_src_op_disp.all               #      0.2 %ops  bad_speculation       (49.87%)
+         895037717      ls_not_halted_cyc                                                       (49.87%)
+        1237555473      ex_ret_ops                       #     17.3 %slots  retiring            (49.87%)
+        1459734359      de_no_dispatch_per_slot.smt_contention #     20.4 %slots  smt_contention      (49.88%)
+         895059918      ls_not_halted_cyc                                                       (49.88%)
+         444409044      de_no_dispatch_per_slot.no_ops_from_frontend #      6.2 %slots  frontend_bound      (50.13%)
+         895360842      ls_not_halted_cyc                                                       (50.13%)
+        4017949611      de_no_dispatch_per_slot.backend_stalls #     56.1 %slots  backend_bound       (50.12%)
+         895338806      ls_not_halted_cyc                                                       (50.12%)
+
+       0.231483094 seconds time elapsed
+
+       0.161632000 seconds user
+       0.069841000 seconds sys
+
+

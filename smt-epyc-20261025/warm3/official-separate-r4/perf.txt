@@ -1,0 +1,21 @@
+# started on Sun Oct 25 21:57:48 2026
+
+
+ Performance counter stats for '/root/BLAKE3-release-08/target/check/new/bench-hashes-4 --contenders blake3-official --points 64 KiB,1 MiB --rounds 96':
+
+         723096606      de_src_op_disp.all               #      0.4 %ops  bad_speculation       (29.36%)
+         805551068      ls_not_halted_cyc                                                       (29.36%)
+         699206609      ex_ret_ops                       #     10.8 %slots  retiring            (29.36%)
+         107196411      de_no_dispatch_per_slot.smt_contention #      1.7 %slots  smt_contention      (29.86%)
+         805408873      ls_not_halted_cyc                                                       (29.86%)
+         951447459      de_no_dispatch_per_slot.no_ops_from_frontend #     14.7 %slots  frontend_bound      (30.63%)
+         809118116      ls_not_halted_cyc                                                       (30.63%)
+        4582588610      de_no_dispatch_per_slot.backend_stalls #     70.8 %slots  backend_bound       (29.74%)
+         809165172      ls_not_halted_cyc                                                       (29.74%)
+
+       0.184935702 seconds time elapsed
+
+       0.161774000 seconds user
+       0.026125000 seconds sys
+
+

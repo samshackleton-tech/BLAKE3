@@ -1,0 +1,30 @@
+# started on Sun Oct 25 21:58:34 2026
+
+
+ Performance counter stats for '/root/BLAKE3-v7-preview/target/check/new/bench-hashes-16 --contenders blake3-servil-st --points 64 KiB,1 MiB --rounds 96':
+
+           1276148      ex_ret_brn_misp                  #      0.8 %ops  bad_speculation_from_mispredicts
+                                                         #      0.1 %ops  bad_speculation_from_pipeline_restarts  (7.18%)
+            203925      bp_redirects.resync                                                     (7.18%)
+        1623262157      de_src_op_disp.all                                                      (7.18%)
+         838469458      ls_not_halted_cyc                                                       (7.18%)
+        1559743160      ex_ret_ops                                                              (7.18%)
+         528135957      ex_no_retire.load_not_complete   #      0.5 %slots  backend_bound_by_cpu
+                                                         #     48.0 %slots  backend_bound_by_memory  (7.57%)
+        3251649500      de_no_dispatch_per_slot.backend_stalls                                        (7.57%)
+         533661403      ex_no_retire.not_complete                                               (7.57%)
+         838787773      ls_not_halted_cyc                                                       (7.57%)
+          50359669      ex_ret_ucode_ops                 #     10.8 %slots  retiring_from_fastpath
+                                                         #      0.7 %slots  retiring_from_microcode  (25.03%)
+         839396978      ls_not_halted_cyc                                                       (25.03%)
+         777717554      ex_ret_ops                                                              (25.03%)
+         800250203      de_no_dispatch_per_slot.no_ops_from_frontend #      5.1 %slots  frontend_bound_by_bandwidth  (24.71%)
+         838789297      ls_not_halted_cyc                                                       (24.71%)
+          57484142      cpu/de_no_dispatch_per_slot.no_ops_from_frontend,cmask=0x8/ #      6.9 %slots  frontend_bound_by_latency  (24.71%)
+
+       0.195047390 seconds time elapsed
+
+       0.145797000 seconds user
+       0.048931000 seconds sys
+
+

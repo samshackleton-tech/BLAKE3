@@ -1,0 +1,21 @@
+# started on Sun Oct 25 21:40:57 2026
+
+
+ Performance counter stats for '/root/target-smt-b3sum/release/b3sum --num-threads 24 /dev/shm/smt-1024':
+
+                62      context-switches                 #    335.6 cs/sec  cs_per_second     
+                 0      cpu-migrations                   #      0.0 migrations/sec  migrations_per_second
+             16831      page-faults                      #  91105.2 faults/sec  page_faults_per_second
+            184.74 msec task-clock                       #     19.8 CPUs  CPUs_utilized       
+            117249      branch-misses                    #      0.3 %  branch_miss_rate         (39.25%)
+          29696360      branches                         #    160.7 M/sec  branch_frequency     (52.31%)
+         693268193      cpu-cycles                       #      3.8 GHz  cycles_frequency       (72.64%)
+        1224944924      instructions                     #      1.7 instructions  insn_per_cycle  (60.96%)
+          27903067      stalled-cycles-frontend          #     0.04 frontend_cycles_idle        (56.39%)
+
+       0.009184805 seconds time elapsed
+
+       0.163747000 seconds user
+       0.023254000 seconds sys
+
+

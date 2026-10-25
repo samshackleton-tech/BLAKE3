@@ -1,0 +1,30 @@
+# started on Sun Oct 25 21:54:22 2026
+
+
+ Performance counter stats for '/root/target-smt-b3sum/release/b3sum --num-threads 1 /dev/shm/smt-td-1g':
+
+            140536      ex_ret_brn_misp                  #      0.1 %ops  bad_speculation_from_mispredicts
+                                                         #      0.1 %ops  bad_speculation_from_pipeline_restarts  (25.11%)
+            108696      bp_redirects.resync                                                     (25.11%)
+        1247843550      de_src_op_disp.all                                                      (25.11%)
+         899045336      ls_not_halted_cyc                                                       (25.11%)
+        1233319357      ex_ret_ops                                                              (25.11%)
+         271034321      ex_no_retire.load_not_complete   #      7.8 %slots  backend_bound_by_cpu
+                                                         #     48.3 %slots  backend_bound_by_memory  (24.97%)
+        4036161649      de_no_dispatch_per_slot.backend_stalls                                        (24.97%)
+         315038606      ex_no_retire.not_complete                                               (24.97%)
+         898877440      ls_not_halted_cyc                                                       (24.97%)
+          14833749      ex_ret_ucode_ops                 #     17.0 %slots  retiring_from_fastpath
+                                                         #      0.2 %slots  retiring_from_microcode  (24.96%)
+         899410252      ls_not_halted_cyc                                                       (24.96%)
+        1239765221      ex_ret_ops                                                              (24.96%)
+         435633066      de_no_dispatch_per_slot.no_ops_from_frontend #      3.7 %slots  frontend_bound_by_bandwidth  (24.96%)
+         899583830      ls_not_halted_cyc                                                       (24.96%)
+          21487509      cpu/de_no_dispatch_per_slot.no_ops_from_frontend,cmask=0x8/ #      2.4 %slots  frontend_bound_by_latency  (24.96%)
+
+       0.232090075 seconds time elapsed
+
+       0.174029000 seconds user
+       0.058009000 seconds sys
+
+

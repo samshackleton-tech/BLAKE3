@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /root/BLAKE3-release-08/target/check/new/bench-hashes-7 --threads 48 "$@"

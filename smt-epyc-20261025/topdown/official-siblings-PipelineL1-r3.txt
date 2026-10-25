@@ -1,0 +1,21 @@
+# started on Sun Oct 25 21:54:29 2026
+
+
+ Performance counter stats for '/root/results/released-cli-v7/bin/b3sum-official-1.8.2-L0 --num-threads 1 /dev/shm/smt-td-1g':
+
+        1438485304      de_src_op_disp.all               #      0.7 %ops  bad_speculation       (49.75%)
+        1007437741      ls_not_halted_cyc                                                       (49.75%)
+        1385188532      ex_ret_ops                       #     17.2 %slots  retiring            (49.75%)
+        1587550093      de_no_dispatch_per_slot.smt_contention #     19.7 %slots  smt_contention      (50.19%)
+        1007430811      ls_not_halted_cyc                                                       (50.19%)
+         650282777      de_no_dispatch_per_slot.no_ops_from_frontend #      8.1 %slots  frontend_bound      (50.25%)
+        1007786359      ls_not_halted_cyc                                                       (50.25%)
+        4399957982      de_no_dispatch_per_slot.backend_stalls #     54.6 %slots  backend_bound       (49.81%)
+        1007796334      ls_not_halted_cyc                                                       (49.81%)
+
+       0.234014594 seconds time elapsed
+
+       0.182981000 seconds user
+       0.050994000 seconds sys
+
+

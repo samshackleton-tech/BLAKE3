@@ -1,0 +1,25 @@
+# started on Sun Oct 25 21:40:56 2026
+
+
+ Performance counter stats for '/root/target-smt-b3sum/release/b3sum --num-threads 24 /dev/shm/smt-4':
+
+                19      context-switches                 #   7401.3 cs/sec  cs_per_second     
+                 2      cpu-migrations                   #    779.1 migrations/sec  migrations_per_second
+               277      page-faults                      # 107902.6 faults/sec  page_faults_per_second
+              2.57 msec task-clock                       #      2.0 CPUs  CPUs_utilized       
+             27005      branch-misses                    #      2.9 %  branch_miss_rate         (89.79%)
+            913872      branches                         #    356.0 M/sec  branch_frequency   
+          10556835      cpu-cycles                       #      4.1 GHz  cycles_frequency     
+          10636965      instructions                     #      1.2 instructions  insn_per_cycle  (21.81%)
+     <not counted>      stalled-cycles-frontend          #      nan frontend_cycles_idle        (0.00%)
+
+       0.001173955 seconds time elapsed
+
+       0.001349000 seconds user
+       0.002024000 seconds sys
+
+
+Some events weren't counted. Try disabling the NMI watchdog:
+	echo 0 > /proc/sys/kernel/nmi_watchdog
+	perf stat ...
+	echo 1 > /proc/sys/kernel/nmi_watchdog
