@@ -17,7 +17,7 @@ const CASES: &[(&str, &str)] = &[
     ("batch-overlap", "input and output ranges overlap"),
     ("batch-overlap-reverse", "input and output ranges overlap"),
     ("batch-alignment", "a batch starts at a 64-byte boundary"),
-    ("stream-rounded-length", "the submitted block range overflows size_t"),
+    ("stream-rounded-length", "the submitted block range exceeds isize::MAX"),
     ("stream-input-alignment", "a submitted message starts at a 64-byte boundary"),
     ("hasher-update-overlap", "input and output ranges overlap"),
     ("hasher-output-overlap", "input and output ranges overlap"),
