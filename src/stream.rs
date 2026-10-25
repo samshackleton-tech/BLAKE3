@@ -805,14 +805,12 @@ mod test {
         }
     }
 
-    /// A body that ends without finishing panics (after the threads are
-    /// done with its messages), and so does one that panics itself.
     /// A batch written in place hashes its messages whatever `fill` leaves
     /// past each one: the stream zeroes those bytes, for every length that
     /// leaves some (an empty message's whole block, a partial last block).
     #[test]
     fn test_batch_with_zeroes_past_each_message() {
-        for len in [0, 1, 63, 100, 1000] {
+        for len in [0, 1, 63, 64, 100, 1000] {
             let count = 5;
             let mut got = places(count);
             stream(
@@ -821,12 +819,26 @@ mod test {
                 |s| {
                     s.submit_batch_with(len, |_, room| room.fill(0xAB), &mut got);
                     s.finish();
+                    // Inspect the owner's contract directly: the x86 short
+                    // path copies only message bytes, so its digest alone
+                    // cannot detect stale padding. This batch has one room
+                    // at offset zero. All workers have finished, and this
+                    // stream still owns its storage; use its original pointer.
+                    let slot = crate::many::slot_len(len);
+                    assert_eq!(s.head, count * slot);
+                    let room = unsafe { core::slice::from_raw_parts(s.s.ring_at(0), count * slot) };
+                    for message in room.chunks_exact(slot) {
+                        assert!(message[..len].iter().all(|&b| b == 0xAB), "{len}-byte message changed");
+                        assert!(message[len..].iter().all(|&b| b == 0), "{len}-byte message retained padding");
+                    }
                 },
             );
             assert_eq!(got, std::vec![crate::hash(&std::vec![0xABu8; len]); count], "{len}-byte messages");
         }
     }
 
+    /// A body that ends without finishing panics (after the threads are
+    /// done with its messages), and so does one that panics itself.
     #[test]
     #[cfg_attr(not(panic = "unwind"), ignore = "catches panics, which this target aborts on")]
     fn test_stream_panics() {
