@@ -193,13 +193,23 @@ fn hash_over_pool(input: &[u8], key: &crate::CVWords, flags: u8) -> Hash {
 /// The wide AVX-512 kernel's budget for whole-message trees (Linux): one
 /// maximum-sized piece per participant, at least two participants when
 /// available; the same budget cuts the pieces and asks for the wakes.
-/// Other kernels and work kinds keep their policy (experiment, #125).
+/// Other kernels and work kinds keep their policy. With the wide kernel
+/// (`ffi_avx512.rs`'s `WIDE`) alone: on the 16-input kernel it cost Ice
+/// Lake 10-16% at 512 KiB-1 MiB (BLAKE3 #125).
 fn tree_threads(len: usize, available: usize, degree: usize) -> usize {
-    if cfg!(all(target_arch = "x86_64", target_os = "linux", not(miri))) && degree >= 16 {
+    if cfg!(all(target_arch = "x86_64", target_os = "linux", not(miri))) && degree >= 16 && wide_kernel() {
         len.div_ceil(MAX_PIECE_LEN).max(2).min(available)
     } else {
         available
     }
+}
+
+/// Whether the wide AVX-512 kernels are dispatched (`ffi_avx512.rs`'s `WIDE`).
+fn wide_kernel() -> bool {
+    #[cfg(blake3_avx512_ffi)]
+    return crate::avx512::WIDE;
+    #[cfg(not(blake3_avx512_ffi))]
+    return false;
 }
 
 fn spare_pool() -> Option<(&'static Pool, Caller<'static>)> {
@@ -1510,7 +1520,7 @@ mod test {
 
     #[test]
     fn test_tree_thread_budget() {
-        let enabled = cfg!(all(target_arch = "x86_64", target_os = "linux", not(miri)));
+        let enabled = cfg!(all(target_arch = "x86_64", target_os = "linux", not(miri))) && wide_kernel();
         for degree in [1, 8, 16, 32] {
             for (len, available, budget) in [
                 (512 * CHUNK_LEN, 48, 4),
