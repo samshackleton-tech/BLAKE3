@@ -195,8 +195,12 @@ fn hash_over_pool(input: &[u8], key: &crate::CVWords, flags: u8) -> Hash {
 /// available; the same budget cuts the pieces and asks for the wakes.
 /// Other kernels and work kinds keep their policy (experiment, #125).
 fn tree_threads(len: usize, available: usize, degree: usize) -> usize {
+    // One half-size piece's worth per participant (experiment, #125): twice
+    // the threads of one maximum piece each, so a 2-3 MiB tree after a
+    // pause leans less on its slowest-waking workers.
+    const UNIT: usize = MAX_PIECE_LEN / 2;
     if cfg!(all(target_arch = "x86_64", target_os = "linux", not(miri))) && degree >= 16 {
-        len.div_ceil(MAX_PIECE_LEN).max(2).min(available)
+        len.div_ceil(UNIT).max(2).min(available)
     } else {
         available
     }
@@ -1523,15 +1527,17 @@ mod test {
         let enabled = cfg!(all(target_arch = "x86_64", target_os = "linux", not(miri)));
         for degree in [1, 8, 16, 32] {
             for (len, available, budget) in [
-                (512 * CHUNK_LEN, 48, 4),
-                (1024 * CHUNK_LEN, 48, 8),
+                (512 * CHUNK_LEN, 48, 8),
+                (1024 * CHUNK_LEN, 48, 16),
+                (2048 * CHUNK_LEN, 48, 32),
+                (3072 * CHUNK_LEN, 48, 48),
                 (8192 * CHUNK_LEN, 48, 48),
                 (1024 * CHUNK_LEN, 2, 2),
                 (1024 * CHUNK_LEN, 1, 1),
                 (1, 48, 2),
                 (MAX_PIECE_LEN, 48, 2),
-                (MAX_PIECE_LEN + 1, 48, 2),
-                (2 * MAX_PIECE_LEN + 1, 48, 3),
+                (MAX_PIECE_LEN + 1, 48, 3),
+                (2 * MAX_PIECE_LEN + 1, 48, 5),
             ] {
                 assert_eq!(tree_threads(len, available, degree), if enabled && degree >= 16 { budget } else { available });
             }
