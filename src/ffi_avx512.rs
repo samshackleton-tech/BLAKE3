@@ -35,7 +35,9 @@ pub unsafe fn hash_many<const N: usize>(
         // other shape, the older kernel (experiment, BLAKE3 #119/#125).
         #[cfg(target_os = "linux")]
         let (inputs, counter, out) = {
-            let done = if N == crate::CHUNK_LEN {
+            // Measurement only (#125): the wide kernels never run; degree 32 stays.
+            const WIDE: bool = false;
+            let done = if WIDE && N == crate::CHUNK_LEN {
                 // Bounded iterators own progress, rather than a mutable
                 // arithmetic cursor. Every call gets exactly one output group.
                 for (group, (batch, outputs)) in inputs.chunks_exact(32).zip(out.chunks_exact_mut(32 * OUT_LEN)).enumerate() {
@@ -59,7 +61,7 @@ pub unsafe fn hash_many<const N: usize>(
                     return;
                 }
                 done
-            } else if N == BLOCK_LEN && !increment_counter.yes() && flags & crate::PARENT != 0 {
+            } else if WIDE && N == BLOCK_LEN && !increment_counter.yes() && flags & crate::PARENT != 0 {
                 // Parent nodes only, not batches of short roots.
                 for (batch, outputs) in inputs.chunks_exact(16).zip(out.chunks_exact_mut(16 * OUT_LEN)) {
                     crate::avx512_32::hash16(batch, key, counter, flags, flags_start, flags_end, outputs);
