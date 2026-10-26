@@ -3,3 +3,44 @@ suites status 0
 == wide kernel: 8c34ead4 against the same without the wide dispatch 14:46:26
 wide exit 1
 == release check: 8c34ead4 against 07540667 15:39:13
+release exit 1
+== CLI builds 16:21:04
+== CLI mt run 1 16:22:30
+cli mt r1 exit 0
+cp: will not overwrite just-created '/root/results/release/cli-mt-r1/b3sum.result.txt' with 'benchmark-results/AppleM4Max.darwin25/b3sum.result.txt'
+cp: will not overwrite just-created '/root/results/release/cli-mt-r1/b3sum.samples.tsv' with 'benchmark-results/AppleM4Max.darwin25/b3sum.samples.tsv'
+cp: will not overwrite just-created '/root/results/release/cli-mt-r1/b3sum.result.txt' with 'benchmark-results/IntelRXeonRGold6330CPU200GHz.linux70038generic/b3sum.result.txt'
+cp: will not overwrite just-created '/root/results/release/cli-mt-r1/b3sum.samples.tsv' with 'benchmark-results/IntelRXeonRGold6330CPU200GHz.linux70038generic/b3sum.samples.tsv'
+cp: will not overwrite just-created '/root/results/release/cli-mt-r1/b3sum.chart.svg' with 'benchmark-results/aarch64.linux618520virt/b3sum.chart.svg'
+cp: will not overwrite just-created '/root/results/release/cli-mt-r1/b3sum.result.txt' with 'benchmark-results/aarch64.linux618520virt/b3sum.result.txt'
+cp: will not overwrite just-created '/root/results/release/cli-mt-r1/b3sum.samples.tsv' with 'benchmark-results/aarch64.linux618520virt/b3sum.samples.tsv'
+== CLI mt run 2 16:24:38
+cli mt r2 exit 0
+cp: will not overwrite just-created '/root/results/release/cli-mt-r2/b3sum.result.txt' with 'benchmark-results/AppleM4Max.darwin25/b3sum.result.txt'
+cp: will not overwrite just-created '/root/results/release/cli-mt-r2/b3sum.samples.tsv' with 'benchmark-results/AppleM4Max.darwin25/b3sum.samples.tsv'
+cp: will not overwrite just-created '/root/results/release/cli-mt-r2/b3sum.result.txt' with 'benchmark-results/IntelRXeonRGold6330CPU200GHz.linux70038generic/b3sum.result.txt'
+cp: will not overwrite just-created '/root/results/release/cli-mt-r2/b3sum.samples.tsv' with 'benchmark-results/IntelRXeonRGold6330CPU200GHz.linux70038generic/b3sum.samples.tsv'
+cp: will not overwrite just-created '/root/results/release/cli-mt-r2/b3sum.chart.svg' with 'benchmark-results/aarch64.linux618520virt/b3sum.chart.svg'
+cp: will not overwrite just-created '/root/results/release/cli-mt-r2/b3sum.result.txt' with 'benchmark-results/aarch64.linux618520virt/b3sum.result.txt'
+cp: will not overwrite just-created '/root/results/release/cli-mt-r2/b3sum.samples.tsv' with 'benchmark-results/aarch64.linux618520virt/b3sum.samples.tsv'
+== CLI st run 1 16:27:22
+cli st r1 exit 0
+cp: will not overwrite just-created '/root/results/release/cli-st-r1/b3sum.result.txt' with 'benchmark-results/AppleM4Max.darwin25/b3sum.result.txt'
+cp: will not overwrite just-created '/root/results/release/cli-st-r1/b3sum.samples.tsv' with 'benchmark-results/AppleM4Max.darwin25/b3sum.samples.tsv'
+cp: will not overwrite just-created '/root/results/release/cli-st-r1/b3sum.result.txt' with 'benchmark-results/IntelRXeonRGold6330CPU200GHz.linux70038generic/b3sum.result.txt'
+cp: will not overwrite just-created '/root/results/release/cli-st-r1/b3sum.samples.tsv' with 'benchmark-results/IntelRXeonRGold6330CPU200GHz.linux70038generic/b3sum.samples.tsv'
+cp: will not overwrite just-created '/root/results/release/cli-st-r1/b3sum.chart.svg' with 'benchmark-results/aarch64.linux618520virt/b3sum.chart.svg'
+cp: will not overwrite just-created '/root/results/release/cli-st-r1/b3sum.result.txt' with 'benchmark-results/aarch64.linux618520virt/b3sum.result.txt'
+cp: will not overwrite just-created '/root/results/release/cli-st-r1/b3sum.samples.tsv' with 'benchmark-results/aarch64.linux618520virt/b3sum.samples.tsv'
+== CLI st run 2 16:31:30
+cli st r2 exit 0
+cp: will not overwrite just-created '/root/results/release/cli-st-r2/b3sum.result.txt' with 'benchmark-results/AppleM4Max.darwin25/b3sum.result.txt'
+cp: will not overwrite just-created '/root/results/release/cli-st-r2/b3sum.samples.tsv' with 'benchmark-results/AppleM4Max.darwin25/b3sum.samples.tsv'
+cp: will not overwrite just-created '/root/results/release/cli-st-r2/b3sum.result.txt' with 'benchmark-results/IntelRXeonRGold6330CPU200GHz.linux70038generic/b3sum.result.txt'
+cp: will not overwrite just-created '/root/results/release/cli-st-r2/b3sum.samples.tsv' with 'benchmark-results/IntelRXeonRGold6330CPU200GHz.linux70038generic/b3sum.samples.tsv'
+cp: will not overwrite just-created '/root/results/release/cli-st-r2/b3sum.chart.svg' with 'benchmark-results/aarch64.linux618520virt/b3sum.chart.svg'
+cp: will not overwrite just-created '/root/results/release/cli-st-r2/b3sum.result.txt' with 'benchmark-results/aarch64.linux618520virt/b3sum.result.txt'
+cp: will not overwrite just-created '/root/results/release/cli-st-r2/b3sum.samples.tsv' with 'benchmark-results/aarch64.linux618520virt/b3sum.samples.tsv'
+== done 16:35:35
+Mon Oct 26 16:35:35 UTC 2026
+ 16:35:35 up  2:09,  0 users,  load average: 1.07, 4.09, 5.48
