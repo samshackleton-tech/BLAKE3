@@ -14,6 +14,15 @@ pub unsafe fn compress_xof(cv: &CVWords, block: &[u8; BLOCK_LEN], block_len: u8,
     }
 }
 
+/// Whether hash_many dispatches to the 32-input chunk and 16-input parent
+/// kernels (`c/blake3_avx512_32.S`, Linux). Off in 0.8: measured against
+/// the 16-input kernel alone, they took about 20% less time on Zen 5 (EPYC
+/// 9255) but 3-5% more on Zen 4 (EPYC 9124) and Intel Ice Lake (Xeon Gold
+/// 6330) for one thread hashing large inputs (BLAKE3 #125). The kernels,
+/// their proofs and their tests stay; the startup self-test checks them
+/// only where they can run (`self_test::run`).
+pub(crate) const WIDE: bool = false;
+
 // Unsafe because this may only be called on platforms supporting AVX-512.
 pub unsafe fn hash_many<const N: usize>(
     inputs: &[&[u8; N]],
@@ -30,12 +39,12 @@ pub unsafe fn hash_many<const N: usize>(
         // array, but the C implementations don't. Even though this is an unsafe
         // function, assert the bounds here.
         assert!(out.len() >= inputs.len() * OUT_LEN);
-        // Linux: groups of 32 whole chunks take the 32-input kernel, and
-        // groups of 16 parent nodes the 16-input one; the rest, and every
-        // other shape, the older kernel (experiment, BLAKE3 #119/#125).
+        // Linux, with WIDE: groups of 32 whole chunks take the 32-input
+        // kernel, and groups of 16 parent nodes the 16-input one; the rest,
+        // and every other shape, the older kernel (BLAKE3 #119/#125).
         #[cfg(target_os = "linux")]
         let (inputs, counter, out) = {
-            let done = if N == crate::CHUNK_LEN {
+            let done = if WIDE && N == crate::CHUNK_LEN {
                 // Bounded iterators own progress, rather than a mutable
                 // arithmetic cursor. Every call gets exactly one output group.
                 for (group, (batch, outputs)) in inputs.chunks_exact(32).zip(out.chunks_exact_mut(32 * OUT_LEN)).enumerate() {
@@ -59,7 +68,7 @@ pub unsafe fn hash_many<const N: usize>(
                     return;
                 }
                 done
-            } else if N == BLOCK_LEN && !increment_counter.yes() && flags & crate::PARENT != 0 {
+            } else if WIDE && N == BLOCK_LEN && !increment_counter.yes() && flags & crate::PARENT != 0 {
                 // Parent nodes only, not batches of short roots.
                 for (batch, outputs) in inputs.chunks_exact(16).zip(out.chunks_exact_mut(16 * OUT_LEN)) {
                     crate::avx512_32::hash16(batch, key, counter, flags, flags_start, flags_end, outputs);
@@ -153,11 +162,11 @@ mod test {
                 crate::RAN_ENTRIES.with(|r| r.borrow_mut().clear());
                 unsafe { hash_many(&inputs[..n], key, counter, increment, crate::KEYED_HASH, crate::CHUNK_START, crate::CHUNK_END, &mut out) };
                 let mut expected_entries = std::collections::BTreeSet::new();
-                if n >= 32 {
+                if WIDE && n >= 32 {
                     let entry = crate::avx512_32::entries()[if increment.yes() { 0 } else { 1 }].1;
                     expected_entries.insert(entry as usize);
                 }
-                if n % 32 != 0 {
+                if !WIDE || n % 32 != 0 {
                     expected_entries.insert(legacy);
                 }
                 assert_eq!(crate::RAN_ENTRIES.with(|r| r.borrow().clone()), expected_entries, "dispatch for {n} inputs");
@@ -223,10 +232,10 @@ mod test {
                 if increment.yes() {
                     expected_entries.insert(legacy);
                 } else {
-                    if n >= 16 {
+                    if WIDE && n >= 16 {
                         expected_entries.insert(parent);
                     }
-                    if n % 16 != 0 {
+                    if !WIDE || n % 16 != 0 {
                         expected_entries.insert(legacy);
                     }
                 }
