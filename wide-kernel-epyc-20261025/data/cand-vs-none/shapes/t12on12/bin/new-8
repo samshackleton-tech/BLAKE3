@@ -1,0 +1,2 @@
+#!/bin/sh
+exec taskset -c 0-11 /root/BLAKE3-cand-351/target/check/new/bench-hashes-20 --threads 12 "$@"

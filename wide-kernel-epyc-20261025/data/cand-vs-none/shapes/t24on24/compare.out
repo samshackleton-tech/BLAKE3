@@ -1,0 +1,8 @@
+blake3-servil-mt|solo|OneMessage|512 KiB: 0.122 -> 0.110 ns/unit  x0.904 faster, 12 of 12 pairs faster
+blake3-servil-mt|solo|OneMessage|1 MiB: 0.100 -> 0.0991 ns/unit  x0.986 level, 6 of 12 pairs faster
+blake3-servil-mt|solo|OneMessage|2 MiB: 0.0883 -> 0.0849 ns/unit  x0.961 faster, 12 of 12 pairs faster
+blake3-servil-mt|solo|IdleOneMessage|512 KiB: 0.126 -> 0.108 ns/unit  x0.860 faster, 12 of 12 pairs faster
+blake3-servil-mt|solo|IdleOneMessage|1 MiB: 0.0984 -> 0.0976 ns/unit  x0.992 level, 5 of 12 pairs faster
+blake3-servil-mt|solo|IdleOneMessage|2 MiB: 0.0830 -> 0.0796 ns/unit  x0.958 faster, 12 of 12 pairs faster
+blake3-servil-mt|solo|LentMessages|1 MiB: 0.0988 -> 0.0958 ns/unit  x0.970 level, 9 of 12 pairs faster; CPU time x0.765; energy x0.924
+blake3-servil-mt|shared|LentMessages|1 MiB: 0.103 -> 0.0975 ns/unit  x0.951 level, 10 of 12 pairs faster
