@@ -186,6 +186,33 @@ fn hash_over_pool(input: &[u8], key: &crate::CVWords, flags: u8) -> Hash {
     merge_root(&pieces, &mut cvs, key, flags)
 }
 
+/// Trees below this length take a thread budget ([`tree_threads`]).
+const BUDGET_BELOW: usize = 2 << 20;
+
+/// How many threads a whole-message tree of `len` bytes takes, of the
+/// `available`: below [`BUDGET_BELOW`], one maximum-sized piece's worth
+/// each, at least two; from there on, all of them (experiment, #125).
+///
+/// Waking a parked worker costs a system call and a core's return from
+/// idle, 15-70 us on every machine measured, and more workers to wake on
+/// bigger machines; a piece is worth a wake when it hashes for about as
+/// long. On the EPYC 9255 (48 threads) a 512 KiB tree on 4 threads, not
+/// 48, ran 15-20% faster and used about 10% less energy. The cost is
+/// bounded on any machine: below the limit a participant hashes at most
+/// about one maximum piece more than it would have, and from the limit on
+/// nothing changes. The limit is a length, so the range it touches does
+/// not grow with the machine: on the EPYC, 2-3 MiB after a pause on 16-24
+/// threads ran 4-6% slower than on 48. The same budget cuts the pieces
+/// and asks for the wakes. Under Miri, which splits from 16 KiB, every
+/// thread, so its tests keep reaching every worker.
+fn tree_threads(len: usize, available: usize) -> usize {
+    if cfg!(not(miri)) && len < BUDGET_BELOW {
+        len.div_ceil(MAX_PIECE_LEN).max(2).min(available)
+    } else {
+        available
+    }
+}
+
 /// The pool, this caller counted until the guard drops; or None with no
 /// CPU to spare (every one has a caller, or the process has one CPU), when
 /// the call hashes on its own thread. The count lets concurrent callers
@@ -201,8 +228,8 @@ fn spare_pool() -> Option<(&'static Pool, Caller<'static>)> {
 /// values, hashed over the pool (the SME2 thread's prefix first, where it
 /// takes one).
 fn tree_cvs(pool: &Pool, input: &[u8], key: &crate::CVWords, counter: u64, flags: u8) -> (Vec<Piece>, Vec<ChainingValue>) {
-    let threads = pool.threads;
     let turn = crate::platform::Sme2Turn::take(Platform::detect(), true);
+    let threads = tree_threads(input.len(), pool.threads);
     let (pieces, own) = cut_with_prefix(input.len(), threads, prefix_for(&turn, input.len(), threads));
     let mut cvs = vec![ChainingValue::default(); pieces.len()];
     let work = Work::Tree { input, pieces: &pieces, cvs: cvs.as_mut_ptr(), key: *key, counter, flags };
@@ -669,7 +696,11 @@ impl Pool {
         let published = AbortOnUnwind;
         let target = source.publish_job(ptr, pieces, own);
         if slot.is_some() && pieces > own + 1 {
-            self.wake_for(pieces - own - 1);
+            let budget = match &job.work {
+                Work::Tree { input, .. } => tree_threads(input.len(), self.threads).saturating_sub(1),
+                _ => pieces - own - 1,
+            };
+            self.wake_for((pieces - own - 1).min(budget));
         }
         for index in 0..own {
             // Sound: the workers' pieces start past these.
@@ -1499,6 +1530,33 @@ mod test {
                     }
                 }
             }
+        }
+    }
+
+    #[test]
+    fn test_tree_thread_budget() {
+        // (length, threads available, the budget): one maximum piece a
+        // participant, at least two, at most what is available, below
+        // BUDGET_BELOW; every thread from there on.
+        for (len, available, budget) in [
+            (512 * CHUNK_LEN, 48, 4),
+            (512 * CHUNK_LEN, 20, 4),
+            (512 * CHUNK_LEN, 3, 3),
+            (1024 * CHUNK_LEN, 48, 8),
+            (1024 * CHUNK_LEN, 2, 2),
+            (1024 * CHUNK_LEN, 1, 1),
+            (BUDGET_BELOW - CHUNK_LEN, 48, 16),
+            (BUDGET_BELOW - CHUNK_LEN, 192, 16),
+            (BUDGET_BELOW, 48, 48),
+            (BUDGET_BELOW, 192, 192),
+            (8192 * CHUNK_LEN, 48, 48),
+            (1, 48, 2),
+            (MAX_PIECE_LEN, 48, 2),
+            (MAX_PIECE_LEN + 1, 48, 2),
+            (2 * MAX_PIECE_LEN + 1, 48, 3),
+        ] {
+            let want = if cfg!(miri) { available } else { budget };
+            assert_eq!(tree_threads(len, available), want, "length {len}, {available} available");
         }
     }
 
