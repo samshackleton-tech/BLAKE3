@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /root/BLAKE3-budget-64k/target/check/old/bench-hashes-26 --threads 8 "$@"

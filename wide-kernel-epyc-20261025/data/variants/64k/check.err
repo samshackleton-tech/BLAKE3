@@ -1,0 +1,74 @@
+   Compiling find-msvc-tools v0.1.11
+   Compiling shlex v2.0.1
+   Compiling typenum v1.20.1
+   Compiling cfg-if v1.0.4
+   Compiling version_check v0.9.5
+   Compiling crossbeam-utils v0.8.23
+   Compiling crossbeam-epoch v0.9.21
+   Compiling libc v0.2.189
+   Compiling rayon-core v1.13.0
+   Compiling crossbeam-deque v0.8.8
+   Compiling cpufeatures v0.3.0
+   Compiling constant_time_eq v0.4.2
+   Compiling const-oid v0.9.6
+   Compiling arrayvec v0.7.8
+   Compiling cpufeatures v0.2.17
+   Compiling untrusted v0.9.0
+   Compiling rand_core v0.9.5
+   Compiling once_cell v1.21.4
+   Compiling clocks v0.1.0 (https://github.com/johnservil/BLAKE3?rev=b94e2fac72b8be346e8c012c6a749caa134e2480#b94e2fac)
+   Compiling keccak v0.2.2
+   Compiling cc v1.4.4
+   Compiling wyhash v0.6.0
+   Compiling generic-array v0.14.7
+   Compiling hybrid-array v0.4.15
+   Compiling blake3 v1.8.7
+   Compiling ring v0.17.14
+   Compiling blake3-servil v0.3.0+2e4fa821f9db07b945dbb2b0d02eb76cb19617b5 (https://github.com/devonjonte/BLAKE3?rev=87ab0a283058f4508a41c9476585f69653a2a6cd#87ab0a28)
+   Compiling getrandom v0.2.17
+   Compiling sysinfo v0.30.13
+   Compiling crypto-common v0.2.2
+   Compiling block-buffer v0.12.1
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling digest v0.10.7
+   Compiling sha1 v0.10.7
+   Compiling sha1-checked v0.10.0
+   Compiling bench-hashes v0.17.0+1b480eed20d11d7cd1417384e4a9d540b0e321be (/root/BLAKE3-budget-64k/bench-hashes)
+   Compiling digest v0.11.3
+   Compiling sha2 v0.11.0
+   Compiling sha3 v0.11.0
+    Finished `release` profile [optimized] target(s) in 20.61s
+     Running `target/release/bench-hashes check --against 433502a149afac4e44bab7491ffdd65acc7e27dd --cells all --pairs 12 --keep /root/results/wide-20261025/variants/64k/check-samples`
+check: the fork's working tree (43c318fbdb73) against 433502a149afac4e44bab7491ffdd65acc7e27dd (433502a149af)
+regress: 12 new builds against 12 old, 12 pairs over --contenders blake3-servil-st,blake3-servil-mt
+regress: pair 1 of 12 in 71.8 s
+regress: pair 2 of 12 in 70.9 s
+regress: pair 3 of 12 in 70.9 s
+regress: pair 4 of 12 in 70.0 s
+regress: pair 5 of 12 in 71.3 s
+regress: pair 6 of 12 in 69.9 s
+regress: pair 7 of 12 in 70.9 s
+regress: pair 8 of 12 in 70.1 s
+regress: pair 9 of 12 in 70.6 s
+regress: pair 10 of 12 in 69.7 s
+regress: pair 11 of 12 in 70.6 s
+regress: pair 12 of 12 in 69.9 s
+check: a second stage for 8 suspects on 16 fresh pairs: blake3-servil-mt|solo|ContinuousMessages|1 KiB, blake3-servil-mt|solo|ContinuousMessages|16 KiB, blake3-servil-mt|solo|ContinuousBatches|256, blake3-servil-mt|solo|ContinuousMessages|64 B, blake3-servil-mt|solo|ContinuousBatches|16, blake3-servil-mt|solo|ContinuousBatches|1024, blake3-servil-mt|solo|ContinuousMessages|16 MiB, blake3-servil-mt|solo|ContinuousMessages|64 KiB
+regress: 16 new builds against 16 old, 16 pairs over --contenders blake3-servil-mt --points "continuous 1 KiB,continuous 16 KiB,continuous 16 MiB,continuous 64 B,continuous 64 KiB,continuous batch 1024,continuous batch 16,continuous batch 256"
+regress: pair 1 of 16 in 0.7 s
+regress: pair 2 of 16 in 0.7 s
+regress: pair 3 of 16 in 0.7 s
+regress: pair 4 of 16 in 0.7 s
+regress: pair 5 of 16 in 0.7 s
+regress: pair 6 of 16 in 0.7 s
+regress: pair 7 of 16 in 0.7 s
+regress: pair 8 of 16 in 0.7 s
+regress: pair 9 of 16 in 0.7 s
+regress: pair 10 of 16 in 0.7 s
+regress: pair 11 of 16 in 0.6 s
+regress: pair 12 of 16 in 0.7 s
+regress: pair 13 of 16 in 0.7 s
+regress: pair 14 of 16 in 0.7 s
+regress: pair 15 of 16 in 0.7 s
+regress: pair 16 of 16 in 0.7 s

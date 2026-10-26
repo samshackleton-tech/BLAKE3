@@ -1,0 +1,74 @@
+# Map (HTML) is in "benchmark-results/AMDEPYC925524CoreProcessor.linux70038generic/bench-hashes.map.html" .
+# Overview (HTML) is in "index.html" .
+bench-hashes b3sum: how long b3sum takes to hash files, from its start to its exit
+
+machine:   AMD EPYC 9255 24-Core Processor, 48 CPUs, linux7.0.0-38-generic
+files on:  ext4 (/dev/md0 on /)
+load:      quiet: other programs kept 0.04 CPUs busy on average, 0.18 in the busiest window
+runs:      16 rounds, each contender once on each input in each
+
+contenders:
+  without        /root/results/wide-cli-bin/b3sum-433502a-L0    (b3sums 1.8.7, blake3 936976febb8a8fea)
+  without        /root/results/wide-cli-bin/b3sum-433502a-L1    (b3sums 1.8.7, blake3 4f34155bbe4fd433)
+  without        /root/results/wide-cli-bin/b3sum-433502a-L2    (b3sums 1.8.7, blake3 d6e9f377d18ef8fb)
+  without        /root/results/wide-cli-bin/b3sum-433502a-L3    (b3sums 1.8.7, blake3 23896400021358ea)
+  below-2m       /root/results/wide-cli-bin/b3sum-787aeb7-L0    (b3sums 1.8.7, blake3 62fa49b5fd537568)
+  below-2m       /root/results/wide-cli-bin/b3sum-787aeb7-L1    (b3sums 1.8.7, blake3 f5b97a3315226116)
+  below-2m       /root/results/wide-cli-bin/b3sum-787aeb7-L2    (b3sums 1.8.7, blake3 ffd4a21902b412fe)
+  below-2m       /root/results/wide-cli-bin/b3sum-787aeb7-L3    (b3sums 1.8.7, blake3 35a511196be598be)
+
+Files in the page cache (warm: read moments before)
+mean time per run, lower is better; xN: against without, the ratio judged (the geometric mean of the rounds' ratios), marked slower or faster where the rounds' pairs say so (every cell judged at once, beyond 3%)
+input                            without              below-2m
+4 KiB                            525 us               528 us x1.004
+64 KiB                           399 us               400 us x1.001
+1 MiB                            738 us 1.42 GB/s     691 us 1.52 GB/s x0.938
+16 MiB                           1.41 ms 11.9 GB/s    1.40 ms 12.0 GB/s x0.988
+256 MiB                          3.20 ms 83.9 GB/s    3.35 ms 80.2 GB/s x1.035
+1 GiB                            7.88 ms 136 GB/s     8.00 ms 134 GB/s x1.011
+1000 x 16 KiB                    2.94 ms 5.57 GB/s    3.09 ms 5.29 GB/s x1.052
+1000 x 16 KiB, a process each    236 ms 0.0696 GB/s   236 ms 0.0694 GB/s x1.003
+mixed tree, 1000 files, 74 MiB   3.44 ms 22.6 GB/s    3.67 ms 21.2 GB/s x1.063
+16 x 64 MiB                      10.3 ms 104 GB/s     10.5 ms 103 GB/s x1.010
+
+CPUs busy (CPU time over wall time) and peak memory, medians
+input                            without                below-2m
+4 KiB                            0.95 CPUs, 9 MiB       0.94 CPUs, 9 MiB
+64 KiB                           0.96 CPUs, 9 MiB       0.96 CPUs, 9 MiB
+1 MiB                            2.45 CPUs, 9 MiB       2.23 CPUs, 9 MiB
+16 MiB                           9.75 CPUs, 15 MiB      9.60 CPUs, 15 MiB
+256 MiB                          24.81 CPUs, 251 MiB    25.40 CPUs, 250 MiB
+1 GiB                            37.24 CPUs, 1018 MiB   36.98 CPUs, 1018 MiB
+1000 x 16 KiB                    12.94 CPUs, 9 MiB      10.45 CPUs, 9 MiB
+1000 x 16 KiB, a process each    0.93 CPUs, 9 MiB       0.93 CPUs, 9 MiB
+mixed tree, 1000 files, 74 MiB   12.39 CPUs, 47 MiB     11.88 CPUs, 47 MiB
+16 x 64 MiB                      30.77 CPUs, 1019 MiB   28.99 CPUs, 1018 MiB
+
+Files read from storage (cold: evicted from the page cache before each run)
+mean time per run, lower is better; xN: against without, the ratio judged (the geometric mean of the rounds' ratios), marked slower or faster where the rounds' pairs say so (every cell judged at once, beyond 3%)
+input                            without              below-2m
+4 KiB                            608 us               615 us x1.012
+64 KiB                           524 us               506 us x0.971
+1 MiB                            1.49 ms 0.704 GB/s   1.07 ms 0.983 GB/s x0.729 faster
+16 MiB                           4.31 ms 3.90 GB/s    4.28 ms 3.92 GB/s x0.993
+256 MiB                          33.4 ms 8.04 GB/s    33.0 ms 8.13 GB/s x0.989
+1 GiB                            115 ms 9.34 GB/s     115 ms 9.34 GB/s x1.000
+1000 x 16 KiB                    4.25 ms 3.86 GB/s    4.23 ms 3.87 GB/s x0.996
+1000 x 16 KiB, a process each    326 ms 0.0502 GB/s   328 ms 0.0499 GB/s x1.006
+mixed tree, 1000 files, 74 MiB   12.6 ms 6.18 GB/s    12.7 ms 6.12 GB/s x1.010
+16 x 64 MiB                      115 ms 9.35 GB/s     115 ms 9.30 GB/s x1.005
+
+CPUs busy (CPU time over wall time) and peak memory, medians
+input                            without                below-2m
+4 KiB                            0.83 CPUs, 9 MiB       0.83 CPUs, 9 MiB
+64 KiB                           0.79 CPUs, 9 MiB       0.79 CPUs, 9 MiB
+1 MiB                            5.25 CPUs, 9 MiB       3.69 CPUs, 9 MiB
+16 MiB                           24.76 CPUs, 10 MiB     25.71 CPUs, 9 MiB
+256 MiB                          6.42 CPUs, 250 MiB     6.34 CPUs, 250 MiB
+1 GiB                            3.86 CPUs, 1018 MiB    3.90 CPUs, 1019 MiB
+1000 x 16 KiB                    5.51 CPUs, 9 MiB       5.50 CPUs, 9 MiB
+1000 x 16 KiB, a process each    0.71 CPUs, 9 MiB       0.71 CPUs, 9 MiB
+mixed tree, 1000 files, 74 MiB   17.92 CPUs, 52 MiB     18.60 CPUs, 53 MiB
+16 x 64 MiB                      12.44 CPUs, 1018 MiB   12.35 CPUs, 1018 MiB
+
+Every cold run read its files from storage (by the counts).

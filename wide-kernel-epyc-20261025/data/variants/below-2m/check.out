@@ -1,0 +1,11 @@
+  faster blake3-servil-mt|shared|Collection|Nix files: -9.5% (the pairs' geometric mean; 12 pairs: -9.1% -10.9% -9.6% -12.9% -6.9% -8.5% -10.5% -8.5% -7.3% -8.3% -6.2% -14.3%)
+  faster blake3-servil-mt|shared|LentMessages|1 MiB: -10.9% (the pairs' geometric mean; 12 pairs: -12.1% -10.1% -10.7% -12.9% -12.4% -12.7% -7.7% -7.8% -8.3% -14.8% -9.0% -11.8%)
+  faster blake3-servil-mt|solo|Collection|Nix files: -14.8% (the pairs' geometric mean; 12 pairs: -14.6% -17.1% -13.3% -15.8% -16.2% -15.2% -16.9% -12.9% -15.0% -18.0% -8.3% -13.3%)
+  faster blake3-servil-mt|solo|Collection|git objects: -6.1% (the pairs' geometric mean; 12 pairs: -11.4% -6.7% -4.7% -2.6% -6.6% -8.9% -1.7% -6.5% -7.0% -2.5% -5.8% -8.9%)
+  faster blake3-servil-mt|solo|IdleOneMessage|512 KiB: -22.2% (the pairs' geometric mean; 12 pairs: -10.8% -20.4% -20.9% -18.2% -32.3% -19.4% -23.7% -17.2% -21.4% -21.3% -25.1% -33.4%)
+  faster blake3-servil-mt|solo|OneMessage|512 KiB: -16.6% (the pairs' geometric mean; 12 pairs: -8.3% -15.3% -17.4% -14.5% -24.6% -11.8% -16.0% -11.4% -17.6% -16.5% -17.6% -26.4%)
+regress: no cell slower
+regress: suspects: blake3-servil-st|solo|ManyMessages|12;blake3-servil-mt|solo|ManyMessages|12;blake3-servil-mt|solo|ManyMessages|48;blake3-servil-st|solo|ManyMessages|4;blake3-servil-st|solo|ManyMessages|24;blake3-servil-mt|solo|ManyMessages|4;blake3-servil-mt|solo|ManyMessages|24;blake3-servil-mt|solo|ManyMessages|32
+regress: power during the check: mains power, no battery, CPU frequency governor performance, energy-performance preference performance
+regress: no cell slower
+regress: power during the check: mains power, no battery, CPU frequency governor performance, energy-performance preference performance
