@@ -1,0 +1,17 @@
+Mon Oct 26 00:17:57 UTC 2026
+old a9e70b828a9ccde1c52864333fc9b3ecdf73f83e
+new 2cf9a56bf65cbc62649977ab25ce6e702ca40a51
+Experiment: the wide AVX-512 kernel on calling threads only; the pool workers keep the 16-input kernel (#125)
+?? bench-hashes/
+d21cdf36dfc02716e173be4e5b4590c04361084a
+ build.rs                         |    3 +
+ c/blake3_avx512_32.S             | 1242 ++++++++++++++++++++++++++++++++++++++
+ src/ffi_avx512.rs                |  203 +++++++
+ src/ffi_avx512_32.rs             |  298 +++++++++
+ src/ffi_avx512_32_guard_tests.rs |  129 ++++
+ src/lanes.rs                     |   60 +-
+ src/lib.rs                       |    3 +
+ src/platform.rs                  |   10 +-
+ src/self_test.rs                 |   96 ++-
+ tools/gen_avx512_32.py           |  372 ++++++++++++
+ 10 files changed, 2404 insertions(+), 12 deletions(-)

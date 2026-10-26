@@ -1,0 +1,17 @@
+   Compiling bench-hashes v0.17.0+1b480eed20d11d7cd1417384e4a9d540b0e321be (/root/BLAKE3-wide-caller/bench-hashes)
+    Finished `release` profile [optimized] target(s) in 16.29s
+     Running `target/release/bench-hashes check --against a9e70b828a9ccde1c52864333fc9b3ecdf73f83e --cells all --pairs 12 --keep /root/results/wide-20261025/caller/lib2-samples`
+check: the fork's working tree (887a8495342f) against a9e70b828a9ccde1c52864333fc9b3ecdf73f83e (a9e70b828a9c)
+regress: 12 new builds against 12 old, 12 pairs over --contenders blake3-servil-st,blake3-servil-mt
+regress: pair 1 of 12 in 71.6 s
+regress: pair 2 of 12 in 72.1 s
+regress: pair 3 of 12 in 71.2 s
+regress: pair 4 of 12 in 72.0 s
+regress: pair 5 of 12 in 71.8 s
+regress: pair 6 of 12 in 71.7 s
+regress: pair 7 of 12 in 71.2 s
+regress: pair 8 of 12 in 70.9 s
+regress: pair 9 of 12 in 71.7 s
+regress: pair 10 of 12 in 70.9 s
+regress: pair 11 of 12 in 70.7 s
+regress: pair 12 of 12 in 72.0 s
