@@ -195,7 +195,11 @@ fn hash_over_pool(input: &[u8], key: &crate::CVWords, flags: u8) -> Hash {
 /// available; the same budget cuts the pieces and asks for the wakes.
 /// Other kernels and work kinds keep their policy (experiment, #125).
 fn tree_threads(len: usize, available: usize, degree: usize) -> usize {
-    if cfg!(all(target_arch = "x86_64", target_os = "linux", not(miri))) && degree >= 16 {
+    // Below 2 MiB only (experiment, #125): from 2 MiB, every thread, as
+    // without the budget (after a pause, 2-3 MiB on 16-24 threads ran 4-6%
+    // slower than on all 48).
+    const BUDGET_BELOW: usize = 2 << 20;
+    if cfg!(all(target_arch = "x86_64", target_os = "linux", not(miri))) && degree >= 16 && len < BUDGET_BELOW {
         len.div_ceil(MAX_PIECE_LEN).max(2).min(available)
     } else {
         available
@@ -1532,6 +1536,9 @@ mod test {
                 (MAX_PIECE_LEN, 48, 2),
                 (MAX_PIECE_LEN + 1, 48, 2),
                 (2 * MAX_PIECE_LEN + 1, 48, 3),
+                (2047 * CHUNK_LEN, 48, 16),
+                (2048 * CHUNK_LEN, 48, 48),
+                (4096 * CHUNK_LEN, 48, 48),
             ] {
                 assert_eq!(tree_threads(len, available, degree), if enabled && degree >= 16 { budget } else { available });
             }
