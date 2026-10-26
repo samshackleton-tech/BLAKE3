@@ -1,0 +1,21 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Finished `release` profile [optimized] target(s) in 0.11s
+────────────
+ Nextest run ID cca96411-ab64-410e-843b-2173945ef78e with nextest profile: default
+    Starting 8 tests across 6 binaries
+        PASS [   0.007s] (1/8) blake3-servil-c test::aaa_require_nextest
+        PASS [   0.008s] (2/8) blake3-servil-c::vectors null_with_nothing
+        PASS [   0.010s] (3/8) blake3-servil-c::guards miri_adjacent_ranges_and_empty_null_ranges_are_allowed
+        PASS [   0.010s] (4/8) blake3-servil-c::provenance miri_callback_context_retains_pointer_provenance
+        PASS [   0.017s] (5/8) blake3-servil-c::vectors every_call_against_the_test_vectors
+        PASS [   0.135s] (6/8) blake3-servil-c::guard_pages every_call_inside_guard_pages
+        PASS [   2.298s] (7/8) blake3-servil-c::c from_c
+        PASS [   2.331s] (8/8) blake3-servil-c::guards bad_calls_stop_at_the_guard
+────────────
+     Summary [   2.331s] 8 tests run: 8 passed, 0 skipped

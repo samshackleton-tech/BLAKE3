@@ -1,0 +1,14 @@
+    Finished `release` profile [optimized] target(s) in 0.03s
+     Running tests/shuttle_park.rs (/root/target-shuttle/release/deps/shuttle_park-c06cbd420fe8cf4d)
+
+running 7 tests
+test park::test::a_waker_wakes_at_most_its_fanout_and_owes_the_rest ... ok
+test one_worker_one_publisher ... ok
+test two_wakers_wake_two_workers ... ok
+test two_workers_one_publisher ... ok
+test owed_wakes_cascade ... ok
+test two_workers_two_publishers ... ok
+test wakes_fan_out_no_waker_makes_more_than_its_share ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+
