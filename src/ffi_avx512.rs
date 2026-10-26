@@ -35,7 +35,11 @@ pub unsafe fn hash_many<const N: usize>(
         // other shape, the older kernel (experiment, BLAKE3 #119/#125).
         #[cfg(target_os = "linux")]
         let (inputs, counter, out) = {
-            let done = if N == crate::CHUNK_LEN {
+            // Calling threads only: the pool's workers keep the older
+            // kernel (experiment, #125), so a pooled job's threads don't
+            // run the wide kernel on both threads of a core.
+            let wide = !pool_worker();
+            let done = if wide && N == crate::CHUNK_LEN {
                 // Bounded iterators own progress, rather than a mutable
                 // arithmetic cursor. Every call gets exactly one output group.
                 for (group, (batch, outputs)) in inputs.chunks_exact(32).zip(out.chunks_exact_mut(32 * OUT_LEN)).enumerate() {
@@ -59,7 +63,7 @@ pub unsafe fn hash_many<const N: usize>(
                     return;
                 }
                 done
-            } else if N == BLOCK_LEN && !increment_counter.yes() && flags & crate::PARENT != 0 {
+            } else if wide && N == BLOCK_LEN && !increment_counter.yes() && flags & crate::PARENT != 0 {
                 // Parent nodes only, not batches of short roots.
                 for (batch, outputs) in inputs.chunks_exact(16).zip(out.chunks_exact_mut(16 * OUT_LEN)) {
                     crate::avx512_32::hash16(batch, key, counter, flags, flags_start, flags_end, outputs);
@@ -88,6 +92,16 @@ pub unsafe fn hash_many<const N: usize>(
             out.as_mut_ptr(),
         )
     }
+}
+
+/// Whether this thread is one of the pool's workers (never, without std).
+#[cfg(target_os = "linux")]
+#[inline]
+fn pool_worker() -> bool {
+    #[cfg(feature = "std")]
+    return crate::lanes::on_worker();
+    #[cfg(not(feature = "std"))]
+    return false;
 }
 
 /// The most blocks one call of the AVX-512 extended-output kernel makes:
@@ -132,6 +146,43 @@ pub mod ffi {
 #[cfg(all(test, unix))]
 mod test {
     use super::*;
+
+    /// On the pool's workers, groups of 32 chunks and of 16 parents take
+    /// the older kernel; on a calling thread, the wide ones (#125).
+    #[test]
+    #[cfg(all(target_os = "linux", feature = "std"))]
+    fn test_wide_kernel_on_calling_threads_only() {
+        if !crate::platform::avx512_detected() {
+            return;
+        }
+        let mut data = std::vec![[0u8; crate::CHUNK_LEN]; 32];
+        crate::test::paint_test_input(data.as_flattened_mut());
+        let chunks: std::vec::Vec<_> = data.iter().collect();
+        let parents_data = std::vec![[0x5au8; BLOCK_LEN]; 16];
+        let parents: std::vec::Vec<_> = parents_data.iter().collect();
+        let legacy = ffi::blake3_servil_hash_many_avx512 as *const () as usize;
+        let k32 = crate::avx512_32::entries()[0].1 as usize;
+        let p16 = crate::avx512_32::parent_entry() as usize;
+        for worker in [false, true] {
+            crate::lanes::set_on_worker(worker);
+            let mut out = [0u8; 32 * OUT_LEN];
+            crate::RAN_ENTRIES.with(|r| r.borrow_mut().clear());
+            unsafe { hash_many(&chunks, &crate::IV, 0, IncrementCounter::Yes, 0, crate::CHUNK_START, crate::CHUNK_END, &mut out) };
+            let expected: std::collections::BTreeSet<usize> = [if worker { legacy } else { k32 }].into_iter().collect();
+            assert_eq!(crate::RAN_ENTRIES.with(|r| r.borrow().clone()), expected, "chunks, worker {worker}");
+            for (i, &input) in chunks.iter().enumerate() {
+                let mut want = [0u8; OUT_LEN];
+                crate::portable::hash1(input, &crate::IV, i as u64, 0, crate::CHUNK_START, crate::CHUNK_END, &mut want);
+                assert_eq!(&out[i * OUT_LEN..][..OUT_LEN], &want);
+            }
+            let mut out = [0u8; 16 * OUT_LEN];
+            crate::RAN_ENTRIES.with(|r| r.borrow_mut().clear());
+            unsafe { hash_many(&parents, &crate::IV, 0, IncrementCounter::No, crate::PARENT, 0, 0, &mut out) };
+            let expected: std::collections::BTreeSet<usize> = [if worker { legacy } else { p16 }].into_iter().collect();
+            assert_eq!(crate::RAN_ENTRIES.with(|r| r.borrow().clone()), expected, "parents, worker {worker}");
+        }
+        crate::lanes::set_on_worker(false);
+    }
 
     #[test]
     #[cfg(all(target_os = "linux", feature = "std"))]

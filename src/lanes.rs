@@ -1360,7 +1360,27 @@ pub(crate) fn run_task(task: Task) {
     task.run(pool_platform());
 }
 
+std::thread_local! {
+    /// Whether this thread is one of the pool's workers. Experiment
+    /// (BLAKE3 #125): the wide AVX-512 kernel hashes on calling threads
+    /// alone; the workers keep the 16-input kernel, so that the threads
+    /// of a core running a pooled job don't both run the wide kernel.
+    static ON_WORKER: core::cell::Cell<bool> = const { core::cell::Cell::new(false) };
+}
+
+/// Whether the current thread is one of the pool's workers.
+#[inline]
+pub(crate) fn on_worker() -> bool {
+    ON_WORKER.with(|w| w.get())
+}
+
+#[cfg(test)]
+pub(crate) fn set_on_worker(on: bool) {
+    ON_WORKER.with(|w| w.set(on));
+}
+
 fn worker_main(me: usize) {
+    ON_WORKER.with(|w| w.set(true));
     // A worker that panicked would die quietly while callers wait for its
     // piece forever (their stacks are the work); the process ends instead,
     // the panic's message printed first by the panic hook.
