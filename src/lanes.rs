@@ -195,11 +195,9 @@ fn hash_over_pool(input: &[u8], key: &crate::CVWords, flags: u8) -> Hash {
 /// available; the same budget cuts the pieces and asks for the wakes.
 /// Other kernels and work kinds keep their policy (experiment, #125).
 fn tree_threads(len: usize, available: usize, degree: usize) -> usize {
-    if cfg!(all(target_arch = "x86_64", target_os = "linux", not(miri))) && degree >= 16 {
-        len.div_ceil(MAX_PIECE_LEN).max(2).min(available)
-    } else {
-        available
-    }
+    // Measurement only (#125): no budget, every thread.
+    let _ = (len, degree);
+    available
 }
 
 fn spare_pool() -> Option<(&'static Pool, Caller<'static>)> {
@@ -1533,7 +1531,8 @@ mod test {
                 (MAX_PIECE_LEN + 1, 48, 2),
                 (2 * MAX_PIECE_LEN + 1, 48, 3),
             ] {
-                assert_eq!(tree_threads(len, available, degree), if enabled && degree >= 16 { budget } else { available });
+                let _ = (enabled, budget);
+                assert_eq!(tree_threads(len, available, degree), available);
             }
         }
     }
