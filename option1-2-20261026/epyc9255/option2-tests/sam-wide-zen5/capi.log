@@ -1,0 +1,23 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling blake3-servil v0.3.0+2e4fa821f9db07b945dbb2b0d02eb76cb19617b5 (/root/BLAKE3-sam-wide-zen5)
+   Compiling blake3-servil-c v0.8.0 (/root/BLAKE3-sam-wide-zen5/capi)
+    Finished `release` profile [optimized] target(s) in 1.55s
+────────────
+ Nextest run ID 0925ee2c-ce27-49e6-853f-f307f53808d0 with nextest profile: default
+    Starting 8 tests across 6 binaries
+        PASS [   0.008s] (1/8) blake3-servil-c::guards miri_adjacent_ranges_and_empty_null_ranges_are_allowed
+        PASS [   0.010s] (2/8) blake3-servil-c::vectors null_with_nothing
+        PASS [   0.010s] (3/8) blake3-servil-c test::aaa_require_nextest
+        PASS [   0.016s] (4/8) blake3-servil-c::provenance miri_callback_context_retains_pointer_provenance
+        PASS [   0.018s] (5/8) blake3-servil-c::vectors every_call_against_the_test_vectors
+        PASS [   0.066s] (6/8) blake3-servil-c::guard_pages every_call_inside_guard_pages
+        PASS [   1.781s] (7/8) blake3-servil-c::guards bad_calls_stop_at_the_guard
+        PASS [   2.148s] (8/8) blake3-servil-c::c from_c
+────────────
+     Summary [   2.148s] 8 tests run: 8 passed, 0 skipped

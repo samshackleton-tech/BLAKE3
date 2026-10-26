@@ -1,0 +1,60 @@
+   Compiling find-msvc-tools v0.1.11
+   Compiling shlex v2.0.1
+   Compiling typenum v1.20.1
+   Compiling cfg-if v1.0.4
+   Compiling version_check v0.9.5
+   Compiling crossbeam-utils v0.8.23
+   Compiling libc v0.2.189
+   Compiling crossbeam-epoch v0.9.21
+   Compiling crossbeam-deque v0.8.8
+   Compiling rayon-core v1.13.0
+   Compiling arrayvec v0.7.8
+   Compiling cpufeatures v0.3.0
+   Compiling constant_time_eq v0.4.2
+   Compiling const-oid v0.9.6
+   Compiling cpufeatures v0.2.17
+   Compiling untrusted v0.9.0
+   Compiling rand_core v0.9.5
+   Compiling once_cell v1.21.4
+   Compiling clocks v0.1.0 (https://github.com/johnservil/BLAKE3?rev=b94e2fac72b8be346e8c012c6a749caa134e2480#b94e2fac)
+   Compiling keccak v0.2.2
+   Compiling cc v1.4.4
+   Compiling wyhash v0.6.0
+   Compiling generic-array v0.14.7
+   Compiling hybrid-array v0.4.15
+   Compiling blake3 v1.8.7
+   Compiling ring v0.17.14
+   Compiling blake3-servil v0.3.0+2e4fa821f9db07b945dbb2b0d02eb76cb19617b5 (https://github.com/devonjonte/BLAKE3?rev=87ab0a283058f4508a41c9476585f69653a2a6cd#87ab0a28)
+   Compiling getrandom v0.2.17
+   Compiling sysinfo v0.30.13
+   Compiling block-buffer v0.12.1
+   Compiling crypto-common v0.2.2
+   Compiling crypto-common v0.1.7
+   Compiling block-buffer v0.10.4
+   Compiling digest v0.10.7
+   Compiling sha1 v0.10.7
+   Compiling sha1-checked v0.10.0
+   Compiling bench-hashes v0.17.0+1b480eed20d11d7cd1417384e4a9d540b0e321be (/root/BLAKE3-1a/bench-hashes)
+   Compiling digest v0.11.3
+   Compiling sha2 v0.11.0
+   Compiling sha3 v0.11.0
+    Finished `release` profile [optimized] target(s) in 50.33s
+     Running `target/release/bench-hashes check --against 0754066791424e571b7bfcb4f8ec85ee814b2706 --cells all --pairs 12 --keep /root/results/variants-option1/rel1a-samples`
+check: the fork's working tree (5967cd58fb5e) against 0754066791424e571b7bfcb4f8ec85ee814b2706 (075406679142)
+regress: 12 new builds against 12 old, 12 pairs over --contenders blake3-servil-st,blake3-servil-mt
+clocks: other programs kept 1.02 CPUs busy from 93.3 s to 94.3 s; measurements in that time may read slower than this machine runs
+regress: pair 1 again: busy: other programs kept 0.08 CPUs busy on average, 1.02 in the busiest window; busy in 1 of 77 windows (93.3-94.3 s)
+regress: pair 1 of 12 in 309.6 s
+regress: pair 2 of 12 in 153.8 s
+regress: pair 3 of 12 in 153.8 s
+regress: pair 4 of 12 in 157.3 s
+regress: pair 5 of 12 in 156.0 s
+regress: pair 6 of 12 in 157.0 s
+regress: pair 7 of 12 in 153.9 s
+regress: pair 8 of 12 in 154.2 s
+regress: pair 9 of 12 in 155.7 s
+regress: pair 10 of 12 in 158.1 s
+clocks: other programs kept 1.04 CPUs busy from 1857.9 s to 1858.9 s; measurements in that time may read slower than this machine runs
+regress: pair 11 again: busy: other programs kept 0.05 CPUs busy on average, 1.04 in the busiest window; busy in 1 of 77 windows (1857.9-1858.9 s)
+regress: pair 11 of 12 in 311.8 s
+regress: pair 12 of 12 in 157.3 s

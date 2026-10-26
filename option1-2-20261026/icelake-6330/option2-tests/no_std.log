@@ -1,0 +1,120 @@
+    Blocking waiting for file lock on package cache
+    Updating crates.io index
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling proc-macro2 v1.0.107
+   Compiling cfg-if v1.0.5
+   Compiling unicode-ident v1.0.27
+   Compiling quote v1.0.47
+   Compiling libc v0.2.191
+   Compiling shlex v2.0.1
+   Compiling find-msvc-tools v0.1.15
+   Compiling zerocopy v0.8.63
+   Compiling rustversion v1.0.23
+   Compiling typenum v1.20.1
+   Compiling serde_core v1.0.229
+   Compiling getrandom v0.4.3
+   Compiling radium v0.7.0
+   Compiling rand_core v0.10.1
+   Compiling once_cell v1.21.4
+   Compiling serde v1.0.229
+   Compiling tap v1.0.1
+   Compiling cpufeatures v0.3.1
+   Compiling zmij v1.0.23
+   Compiling cmov v0.5.4
+   Compiling rustix v1.1.5
+   Compiling serde_json v1.0.154
+   Compiling arrayvec v0.7.8
+   Compiling constant_time_eq v0.4.2
+   Compiling ciborium-io v0.2.2
+   Compiling funty v2.0.0
+   Compiling pin-project-lite v0.2.17
+   Compiling bitflags v2.13.2
+   Compiling linux-raw-sys v0.12.1
+   Compiling log v0.4.34
+   Compiling hex v0.4.3
+   Compiling smallvec v1.16.4
+   Compiling memchr v2.8.3
+   Compiling itoa v1.0.18
+   Compiling owo-colors v3.5.0
+   Compiling fastrand v2.5.0
+   Compiling assoc v0.1.3
+   Compiling scoped-tls v1.0.1
+   Compiling clocks v0.1.0 (/root/BLAKE3-zen5/clocks)
+   Compiling reference_impl v0.0.0 (/root/BLAKE3-zen5/reference_impl)
+   Compiling wyz v0.5.1
+   Compiling cc v1.10.0
+   Compiling chacha20 v0.10.2
+   Compiling tracing-core v0.1.36
+   Compiling ctutils v0.4.6
+   Compiling tracing v0.1.44
+   Compiling bitvec v1.1.1
+   Compiling syn v2.0.119
+   Compiling syn v3.0.9
+   Compiling hybrid-array v0.4.15
+   Compiling generator v0.8.11
+   Compiling blake3-servil v0.3.0+2e4fa821f9db07b945dbb2b0d02eb76cb19617b5 (/root/BLAKE3-zen5)
+   Compiling blake3 v1.8.7
+   Compiling getrandom v0.2.17
+   Compiling rand_core v0.6.4
+   Compiling rand v0.10.3
+   Compiling rand_pcg v0.3.1
+   Compiling crypto-common v0.2.2
+   Compiling block-buffer v0.12.1
+   Compiling tempfile v3.27.0
+   Compiling digest v0.11.3
+   Compiling hmac v0.13.0
+   Compiling serde_derive v1.0.229
+   Compiling zerocopy-derive v0.8.63
+   Compiling ppv-lite86 v0.2.21
+   Compiling half v2.7.1
+   Compiling ciborium-ll v0.2.2
+   Compiling rand_chacha v0.3.1
+   Compiling ciborium v0.2.2
+   Compiling rand v0.8.8
+   Compiling shuttle v0.8.1
+    Finished `release` profile [optimized] target(s) in 15.86s
+────────────
+ Nextest run ID adda0679-d3d8-496d-896c-5a20a5a6f1cf with nextest profile: default
+    Starting 35 tests across 5 binaries
+        PASS [   0.006s] ( 1/35) blake3-servil many::test::test_hash_many_needs_the_input_it_names
+        PASS [   0.006s] ( 2/35) blake3-servil::initialize_contract a_call_before_initialize_panics
+        PASS [   0.007s] ( 3/35) blake3-servil test::aaa_require_nextest
+        PASS [   0.007s] ( 4/35) blake3-servil platform::x86_features_test::test_x86_detection_matches_std
+        PASS [   0.007s] ( 5/35) blake3-servil ffi_partial::test::test_params_layout_is_the_generators
+        PASS [   0.007s] ( 6/35) blake3-servil avx512::test::test_xof_many
+        PASS [   0.007s] ( 7/35) blake3-servil test::test_block_buffer_alignment
+        PASS [   0.008s] ( 8/35) blake3-servil test::test_too_much_input_should_panic
+        PASS [   0.008s] ( 9/35) blake3-servil test::test_xof_seek
+        PASS [   0.008s] (10/35) blake3-servil avx512_32::tests::parent16_unaligned_overlapping_output
+        PASS [   0.008s] (11/35) blake3-servil test::test_hash_const_conversions
+        PASS [   0.009s] (12/35) blake3-servil avx512_32::tests::short_last_blocks_unaligned_and_overlapping_output
+        PASS [   0.008s] (13/35) blake3-servil test::test_reset
+        PASS [   0.009s] (14/35) blake3-servil platform::x86_features_test::test_wide_cpu_and_family
+        PASS [   0.009s] (15/35) blake3-servil test::test_hasher_already_accepted_input_should_panic
+        PASS [   0.009s] (16/35) blake3-servil test::test_hash_conversions
+        PASS [   0.010s] (17/35) blake3-servil many::test::test_hash_blocks_without_plans
+        PASS [   0.010s] (18/35) blake3-servil test::test_unaligned_offset_should_panic
+        PASS [   0.010s] (19/35) blake3-servil test::test_empty_subtree_should_panic
+        PASS [   0.010s] (20/35) blake3-servil test::test_hash_comparisons_and_formats
+        PASS [   0.010s] (21/35) blake3-servil platform::x86_degree_test::test_detected_degree_is_the_widest_kernel
+        PASS [   0.010s] (22/35) blake3-servil platform::x86_features_test::test_x86_features_match_std
+        PASS [   0.010s] (23/35) blake3-servil test::test_miri_smoketest
+        PASS [   0.010s] (24/35) blake3-servil test::test_hex_encoding_decoding
+        PASS [   0.011s] (25/35) blake3-servil test::test_set_input_offset_cant_finalize
+        PASS [   0.011s] (26/35) blake3-servil test::test_set_input_offset_cant_finalize_xof
+        PASS [   0.012s] (27/35) blake3-servil test::test_grouped_hash
+        PASS [   0.015s] (28/35) blake3-servil ffi_partial::test::test_partial_kernels_against_portable
+        PASS [   0.016s] (29/35) blake3-servil avx512_32::tests::guarded_input_key_pointer_table_and_output_bounds
+        PASS [   0.030s] (30/35) blake3-servil many::test::test_hash_many_whole_blocks
+        PASS [   0.031s] (31/35) blake3-servil avx512_32::tests::generated_assembly_matches
+        PASS [   0.044s] (32/35) blake3-servil avx512_32::tests::randomized_counters_flags_and_block_counts
+        PASS [   0.093s] (33/35) blake3-servil many::test::test_hash_many_modes_every_platform
+        PASS [   0.175s] (34/35) blake3-servil self_test::stops::test_a_failing_self_test_stops_the_process
+        PASS [   1.909s] (35/35) blake3-servil many::test::test_whole_blocks_x86_full_width
+────────────
+     Summary [   1.910s] 35 tests run: 35 passed, 0 skipped

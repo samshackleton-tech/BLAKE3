@@ -1,0 +1,35 @@
+   Compiling bench-hashes v0.17.0+1b480eed20d11d7cd1417384e4a9d540b0e321be (/root/BLAKE3-1b/bench-hashes)
+    Finished `release` profile [optimized] target(s) in 14.78s
+     Running `target/release/bench-hashes check --against 0754066791424e571b7bfcb4f8ec85ee814b2706 --cells all --pairs 12 --keep /root/results/variants-option1/rel1b-samples`
+check: the fork's working tree (2751b496e394) against 0754066791424e571b7bfcb4f8ec85ee814b2706 (075406679142)
+regress: 12 new builds against 12 old, 12 pairs over --contenders blake3-servil-st,blake3-servil-mt
+regress: pair 1 of 12 in 106.1 s
+regress: pair 2 of 12 in 105.2 s
+regress: pair 3 of 12 in 104.4 s
+regress: pair 4 of 12 in 104.2 s
+regress: pair 5 of 12 in 105.8 s
+regress: pair 6 of 12 in 105.1 s
+regress: pair 7 of 12 in 105.6 s
+regress: pair 8 of 12 in 104.9 s
+regress: pair 9 of 12 in 104.9 s
+regress: pair 10 of 12 in 104.3 s
+regress: pair 11 of 12 in 105.4 s
+regress: pair 12 of 12 in 105.0 s
+check: a second stage for 8 suspects on 16 fresh pairs: blake3-servil-mt|shared|ContinuousBatches|16, blake3-servil-mt|shared|ContinuousBatches|4096, blake3-servil-mt|shared|ContinuousMessages|1 MiB, blake3-servil-mt|solo|ContinuousBatches|16, blake3-servil-mt|solo|ContinuousBatches|4096, blake3-servil-mt|solo|ContinuousBatches|256, blake3-servil-mt|shared|ContinuousBatches|64, blake3-servil-mt|shared|ContinuousMessages|1 KiB
+regress: 16 new builds against 16 old, 16 pairs over --contenders blake3-servil-mt --points "continuous 1 KiB,continuous 1 MiB,continuous batch 16,continuous batch 256,continuous batch 4096,continuous batch 64"
+regress: pair 1 of 16 in 0.6 s
+regress: pair 2 of 16 in 0.6 s
+regress: pair 3 of 16 in 0.6 s
+regress: pair 4 of 16 in 0.6 s
+regress: pair 5 of 16 in 0.6 s
+regress: pair 6 of 16 in 0.6 s
+regress: pair 7 of 16 in 0.6 s
+regress: pair 8 of 16 in 0.7 s
+regress: pair 9 of 16 in 0.6 s
+regress: pair 10 of 16 in 0.6 s
+regress: pair 11 of 16 in 0.6 s
+regress: pair 12 of 16 in 0.7 s
+regress: pair 13 of 16 in 0.7 s
+regress: pair 14 of 16 in 0.6 s
+regress: pair 15 of 16 in 0.6 s
+regress: pair 16 of 16 in 0.6 s
