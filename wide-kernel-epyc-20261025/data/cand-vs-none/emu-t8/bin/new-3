@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /root/BLAKE3-cand-351/target/check/new/bench-hashes-15 --threads 8 "$@"

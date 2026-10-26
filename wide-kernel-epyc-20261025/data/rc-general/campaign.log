@@ -1,0 +1,32 @@
+== setup 04:18:51
+== tests 04:18:52
+tests status 0
+== cross-check the x86 model on this AVX-512 CPU 04:19:51
+cross-check exit 0
+MEMORY vmovdqu32 zmm0, zmmword ptr [rdx]
+MEMORY vmovdqa32 zmm0, zmmword ptr [rdx]
+MEMORY vpaddd zmm0, zmm0, zmmword ptr [rdx]
+MEMORY vmovdqu32 zmmword ptr [rdx], zmm0
+332 vector instruction forms (87 memory forms), 200 random states each, 25 alignment fault controls: all agree
+Note: switching to 'd21cdf36dfc02716e173be4e5b4590c04361084a'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+== check C1 against C0 04:21:45
+check exit 1
+== pool cells 32 pairs 04:43:22
+pool exit 1
+/root/results/wide-rc-general.sh: line 70: olds[$i]: unbound variable

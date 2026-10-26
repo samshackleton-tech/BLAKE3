@@ -1,0 +1,41 @@
+== setup 05:49:15
+== tests of the ungated rule 05:49:15
+tests status 0
+Note: switching to 'd21cdf36dfc02716e173be4e5b4590c04361084a'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+== check candidate against none 05:50:05
+check exit 1
+12 relinked builds a side
+== pool cells 06:12:34
+pool exit 1
+== emulated t4 06:13:51
+emu t4 exit 0
+== emulated t8 06:14:30
+emu t8 exit 0
+== emulated t16 06:15:09
+emu t16 exit 0
+== emulated t24on12 06:15:47
+emu t24on12 exit 1
+== emulated t12on6 06:16:25
+emu t12on6 exit 0
+== CLI 06:17:01
+cli r1 exit 0
+cli r2 exit 0
+== energy 06:19:09
+== done 06:19:19
+Mon Oct 26 06:19:19 UTC 2026

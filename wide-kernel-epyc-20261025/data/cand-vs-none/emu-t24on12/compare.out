@@ -1,0 +1,21 @@
+blake3-servil-mt|solo|OneMessage|512 KiB: 0.104 -> 0.0996 ns/unit  x0.956 faster, 11 of 12 pairs faster
+blake3-servil-mt|solo|OneMessage|1 MiB: 0.0828 -> 0.0897 ns/unit  x1.083 slower, 1 of 12 pairs faster
+blake3-servil-mt|solo|OneMessage|2 MiB: 0.0746 -> 0.0725 ns/unit  x0.972 level, 12 of 12 pairs faster
+blake3-servil-mt|solo|OneMessage|3 MiB: 0.0719 -> 0.0717 ns/unit  x0.997 level, 6 of 12 pairs faster
+blake3-servil-mt|solo|OneMessage|4 MiB: 0.0718 -> 0.0715 ns/unit  x0.996 level, 6 of 12 pairs faster
+blake3-servil-mt|solo|OneMessage|8 MiB: 0.0675 -> 0.0672 ns/unit  x0.997 level, 7 of 12 pairs faster
+blake3-servil-mt|solo|OneMessage|32 MiB: 0.0380 -> 0.0380 ns/unit  x1.001 level, 6 of 12 pairs faster
+blake3-servil-mt|solo|IdleOneMessage|512 KiB: 0.103 -> 0.0958 ns/unit  x0.930 faster, 11 of 12 pairs faster
+blake3-servil-mt|solo|IdleOneMessage|1 MiB: 0.0802 -> 0.0883 ns/unit  x1.100 slower, 0 of 12 pairs faster
+blake3-servil-mt|solo|IdleOneMessage|2 MiB: 0.0708 -> 0.0683 ns/unit  x0.964 faster, 12 of 12 pairs faster
+blake3-servil-mt|solo|IdleOneMessage|3 MiB: 0.0683 -> 0.0682 ns/unit  x0.999 level, 7 of 12 pairs faster
+blake3-servil-mt|solo|IdleOneMessage|4 MiB: 0.0685 -> 0.0678 ns/unit  x0.990 level, 9 of 12 pairs faster
+blake3-servil-mt|solo|IdleOneMessage|8 MiB: 0.0625 -> 0.0621 ns/unit  x0.994 level, 8 of 12 pairs faster
+blake3-servil-mt|solo|LentMessages|1 MiB: 0.0785 -> 0.0831 ns/unit  x1.058 slower, 1 of 12 pairs faster; CPU time x0.804; energy x1.056
+blake3-servil-mt|solo|LentMessages|4 MiB: 0.0667 -> 0.0655 ns/unit  x0.982 level, 12 of 12 pairs faster; CPU time x0.991; energy x0.956
+blake3-servil-mt|solo|MerkleTree|4096: 0.102 -> 0.102 ns/unit  x0.997 level, 8 of 12 pairs faster; CPU time x1.000; energy x0.968
+blake3-servil-mt|solo|MerkleTree|16384: 0.0912 -> 0.0896 ns/unit  x0.983 level, 9 of 12 pairs faster; CPU time x0.989; energy x1.043
+blake3-servil-mt|shared|LentMessages|1 MiB: 0.0775 -> 0.0757 ns/unit  x0.977 level, 12 of 12 pairs faster
+blake3-servil-mt|shared|LentMessages|4 MiB: 0.0651 -> 0.0648 ns/unit  x0.995 level, 9 of 12 pairs faster
+blake3-servil-mt|shared|MerkleTree|4096: 0.105 -> 0.105 ns/unit  x1.005 level, 6 of 12 pairs faster
+blake3-servil-mt|shared|MerkleTree|16384: 0.101 -> 0.101 ns/unit  x0.997 level, 6 of 12 pairs faster
