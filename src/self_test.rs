@@ -422,7 +422,8 @@ fn run() -> usize {
         },
     );
     #[cfg(all(blake3_avx512_ffi, target_os = "linux"))]
-    if matches!(platform, Platform::AVX512) {
+    // Measurement only (#125): the wide cases skipped at startup.
+    if false && matches!(platform, Platform::AVX512) {
         // Sound: the detected platform has the wide kernels' ISA. Their
         // wrapper checks its bounds, and builds all arguments on the stack.
         checked += unsafe { crate::avx512_32::self_test(&previous) };
