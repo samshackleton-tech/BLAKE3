@@ -190,12 +190,13 @@ fn hash_over_pool(input: &[u8], key: &crate::CVWords, flags: u8) -> Hash {
 /// CPU to spare (every one has a caller, or the process has one CPU), when
 /// the call hashes on its own thread. The count lets concurrent callers
 /// see that this CPU already has work.
-/// The wide AVX-512 kernel's budget for whole-message trees (Linux): one
-/// maximum-sized piece per participant, at least two participants when
-/// available; the same budget cuts the pieces and asks for the wakes.
-/// Other kernels and work kinds keep their policy (experiment, #125).
-fn tree_threads(len: usize, available: usize, degree: usize) -> usize {
-    if cfg!(all(target_arch = "x86_64", target_os = "linux", not(miri))) && degree >= 16 {
+/// The thread budget for whole-message trees: one maximum-sized piece per
+/// participant, at least two participants when available; the same budget
+/// cuts the pieces and asks for the wakes. Other work kinds keep their
+/// policy. Every target but Miri, whose tests split from 16 KiB and must
+/// keep reaching every worker (experiment, #125).
+fn tree_threads(len: usize, available: usize) -> usize {
+    if cfg!(not(miri)) {
         len.div_ceil(MAX_PIECE_LEN).max(2).min(available)
     } else {
         available
@@ -214,7 +215,7 @@ fn spare_pool() -> Option<(&'static Pool, Caller<'static>)> {
 /// takes one).
 fn tree_cvs(pool: &Pool, input: &[u8], key: &crate::CVWords, counter: u64, flags: u8) -> (Vec<Piece>, Vec<ChainingValue>) {
     let turn = crate::platform::Sme2Turn::take(Platform::detect(), true);
-    let threads = tree_threads(input.len(), pool.threads, turn.platform().simd_degree());
+    let threads = tree_threads(input.len(), pool.threads);
     let (pieces, own) = cut_with_prefix(input.len(), threads, prefix_for(&turn, input.len(), threads));
     let mut cvs = vec![ChainingValue::default(); pieces.len()];
     let work = Work::Tree { input, pieces: &pieces, cvs: cvs.as_mut_ptr(), key: *key, counter, flags };
@@ -682,7 +683,7 @@ impl Pool {
         let target = source.publish_job(ptr, pieces, own);
         if slot.is_some() && pieces > own + 1 {
             let budget = match &job.work {
-                Work::Tree { input, .. } => tree_threads(input.len(), self.threads, own_platform.simd_degree()).saturating_sub(1),
+                Work::Tree { input, .. } => tree_threads(input.len(), self.threads).saturating_sub(1),
                 _ => pieces - own - 1,
             };
             self.wake_for((pieces - own - 1).min(budget));
@@ -1520,8 +1521,8 @@ mod test {
 
     #[test]
     fn test_tree_thread_budget() {
-        let enabled = cfg!(all(target_arch = "x86_64", target_os = "linux", not(miri)));
-        for degree in [1, 8, 16, 32] {
+        let enabled = cfg!(not(miri));
+        {
             for (len, available, budget) in [
                 (512 * CHUNK_LEN, 48, 4),
                 (1024 * CHUNK_LEN, 48, 8),
@@ -1533,7 +1534,7 @@ mod test {
                 (MAX_PIECE_LEN + 1, 48, 2),
                 (2 * MAX_PIECE_LEN + 1, 48, 3),
             ] {
-                assert_eq!(tree_threads(len, available, degree), if enabled && degree >= 16 { budget } else { available });
+                assert_eq!(tree_threads(len, available), if enabled { budget } else { available });
             }
         }
     }
