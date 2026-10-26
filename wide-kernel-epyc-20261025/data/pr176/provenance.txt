@@ -1,0 +1,18 @@
+Mon Oct 26 06:22:55 UTC 2026
+new 6af0e740b8f66474099fe35b277e2b46a6b284ae
+The pool wakes through Park::wake_one alone: any_parked goes, and Pool's two forwarding wrappers; the tests' mutant notes point at the list
+parent f448bb32aff6b1f3c542405282d797887fe869ff
+clocks: load is measured on Linux alone (load::MEASURED); on macOS a run says 'not measured' beside its results (Zooko, October 26)
+ src/each.rs                        |  4 ++--
+ src/lanes.rs                       | 30 +++++++++---------------------
+ src/many.rs                        |  2 +-
+ src/park.rs                        |  8 ++------
+ src/stream.rs                      |  4 ++--
+ tests/api_plan.rs                  |  2 +-
+ tests/shuttle_park.rs              |  6 ++----
+ tests/stream_collect_no_workers.rs |  2 +-
+ tests/stream_collect_one_worker.rs |  2 +-
+ tools/mutants/known-aarch64.txt    |  8 --------
+ tools/mutants/known-x86_64.txt     |  5 -----
+ tools/mutants/timeouts-x86_64.txt  |  3 ---
+ 12 files changed, 21 insertions(+), 55 deletions(-)

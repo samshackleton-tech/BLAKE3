@@ -1,0 +1,14 @@
+blake3-servil-mt|solo|OneMessage|64 B: 6.971 -> 7.222 ns/unit  x1.036 level, 6 of 16 pairs faster
+blake3-servil-mt|solo|OneMessage|2 KiB: 1.243 -> 1.289 ns/unit  x1.037 level, 6 of 16 pairs faster
+blake3-servil-mt|solo|OneMessage|2304 B: 1.316 -> 1.385 ns/unit  x1.052 level, 5 of 16 pairs faster
+blake3-servil-mt|solo|OneMessage|4 KiB: 0.652 -> 0.674 ns/unit  x1.034 level, 6 of 16 pairs faster
+blake3-servil-mt|solo|OneMessage|4470 B: 0.741 -> 0.774 ns/unit  x1.045 level, 6 of 16 pairs faster
+blake3-servil-mt|solo|ContinuousMessages|64 B: 0.759 -> 0.751 ns/unit  x0.989 level, 9 of 16 pairs faster; CPU time x1.009; energy x1.029
+blake3-servil-mt|shared|ContinuousMessages|64 B: 0.809 -> 0.807 ns/unit  x0.998 level, 9 of 16 pairs faster
+blake3-servil-st|solo|OneMessage|64 B: 6.533 -> 6.824 ns/unit  x1.045 level, 5 of 16 pairs faster
+blake3-servil-st|solo|OneMessage|2 KiB: 1.184 -> 1.216 ns/unit  x1.027 level, 7 of 16 pairs faster
+blake3-servil-st|solo|OneMessage|2304 B: 1.296 -> 1.362 ns/unit  x1.050 level, 4 of 16 pairs faster
+blake3-servil-st|solo|OneMessage|4 KiB: 0.639 -> 0.664 ns/unit  x1.039 level, 4 of 16 pairs faster
+blake3-servil-st|solo|OneMessage|4470 B: 0.737 -> 0.763 ns/unit  x1.035 level, 5 of 16 pairs faster
+blake3-servil-st|solo|ContinuousMessages|64 B: 0.972 -> 0.973 ns/unit  x1.001 level, 6 of 16 pairs faster; CPU time x1.001; energy x0.984
+blake3-servil-st|shared|ContinuousMessages|64 B: 0.976 -> 0.977 ns/unit  x1.000 level, 10 of 16 pairs faster
