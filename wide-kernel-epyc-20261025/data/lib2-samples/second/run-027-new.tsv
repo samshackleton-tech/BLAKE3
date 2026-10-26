@@ -1,0 +1,28 @@
+# bench-hashes samples v7
+# timestamp: 2026-10-25 23:29:18 UTC
+# bench-hashes version: 0.17.0+1b480eed20d11d7cd1417384e4a9d540b0e321be
+# bench-hashes source: /root/BLAKE3-release-08/bench-hashes
+# git commit: d21cdf36dfc02716e173be4e5b4590c04361084a
+# git clean status: clean
+# dependency lock: blake3 6f583425590df4e561c225f869c3e76015208e3f08f791f1b9b6f873d68c7bb5 of Cargo.lock
+# rust compiler: rustc 1.99.1 (58cf8f9c3 2026-10-13)
+# c compiler: cc: cc (Ubuntu 15.2.0-16ubuntu1) 15.2.0
+# rustflags: none
+# build target: x86_64-unknown-linux-gnu
+# target features: fxsr,sse,sse2
+# sample clock: std::time::Instant → CLOCK_MONOTONIC (stops during suspend, NTP slew only)
+# cpu type: AMD EPYC 9255 24-Core Processor
+# cpu count: 48
+# os type: linux7.0.0-38-generic
+# cpu identity: model name: AMD EPYC 9255 24-Core Processor · microcode: 0xb00215a · flags: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good amd_lbr_v2 nopl xtopology nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpuid_fault cpb cat_l3 cdp_l3 hw_pstate ssbd mba perfmon_v2 ibrs ibpb stibp ibrs_enhanced vmmcall fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid cqm rdt_a avx512f avx512dq rdseed adx smap avx512ifma clflushopt clwb avx512cd sha_ni avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local user_shstk avx_vnni avx512_bf16 clzero irperf xsaveerptr rdpru wbnoinvd amd_ppin cppc arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif x2avic v_spec_ctrl vnmi avx512vbmi umip pku ospke avx512_vbmi2 gfni vaes vpclmulqdq avx512_vnni avx512_bitalg avx512_vpopcntdq la57 rdpid bus_lock_detect movdiri movdir64b overflow_recov succor smca fsrm avx512_vp2intersect flush_l1d debug_swap amd_lbr_pmc_freeze · machine: PIO-2115GT-HNTR-NODE
+# source blake3-servil-mt: blake3-servil 0.3.0+2e4fa821f9db07b945dbb2b0d02eb76cb19617b5 (local checkout ..); source https://github.com/devonjonte/BLAKE3; branch HEAD; commit 30aab8c85273c13020888a78132dc89ea63fccc4; clean
+# contenders: --contenders blake3-servil-mt
+# rounds: 24
+# points: 2 MiB,3 MiB
+# power: mains power, no battery, CPU frequency governor performance, energy-performance preference performance
+# load: quiet: other programs kept 0.13 CPUs busy on average, 0.13 in the busiest window
+# load measured by: bench-hashes regress, around the run (the windows below are the run's own)
+# load windows (start ms-end ms:other milli-CPUs:steal milli-CPUs): 
+contender	scenario	use_case	point	unit	ns/units	start ms	cpu ns	energy nJ	core counts
+blake3-servil-mt	solo	IdleOneMessage	2 MiB	B	187421/2097152,189151/2097152,192461/2097152,179351/2097152,184750/2097152,191841/2097152,186341/2097152,188230/2097152,196810/2097152,190431/2097152,188841/2097152,189911/2097152,187391/2097152,186660/2097152,183121/2097152,186941/2097152,188551/2097152,192600/2097152,190100/2097152,183901/2097152,186621/2097152,183201/2097152,186850/2097152,178651/2097152	25,33,35,43,46,53,56,64,66,74,77,85,87,95,97,105,108,116,118,126,129,136,139,147	-	-	188160:776344:0:0,189880:782672:0:0,193201:788905:0:0,180220:752796:0:0,185570:774619:0:0,192840:799506:0:0,187100:773795:0:0,189010:789071:0:0,197690:810064:0:0,191190:796036:0:0,189770:792405:0:0,190790:792752:0:0,188290:780096:0:0,187570:782704:0:0,183880:768045:0:0,187880:772615:0:0,189250:787673:0:0,193350:806648:0:0,190800:795926:0:0,184640:770722:0:0,187390:779827:0:0,183910:763200:0:0,187560:780667:0:0,179570:746730:0:0
+blake3-servil-mt	solo	IdleOneMessage	3 MiB	B	254150/3145728,250871/3145728,246681/3145728,253800/3145728,256211/3145728,240331/3145728,238321/3145728,243961/3145728,254931/3145728,241571/3145728,256181/3145728,250381/3145728,259391/3145728,249060/3145728,247210/3145728,247601/3145728,255981/3145728,244050/3145728,248631/3145728,243031/3145728,256291/3145728,247351/3145728,246971/3145728,253151/3145728	27,30,38,40,48,51,59,61,69,72,79,82,90,92,100,103,110,113,121,123,131,134,142,144	-	-	255360:1065913:0:0,251590:1038276:0:0,247760:1038455:0:0,254640:1069708:0:0,257310:1071581:0:0,241070:1012921:0:0,239040:1003239:0:0,244690:1004560:0:0,255661:1073774:0:0,242360:1019237:0:0,257060:1071464:0:0,251110:1057035:0:0,260131:1093037:0:0,249890:1038469:0:0,248200:1041538:0:0,248500:1045175:0:0,256761:1079754:0:0,245070:1028934:0:0,249370:1049240:0:0,244010:1025343:0:0,257080:1065347:0:0,248410:1043800:0:0,247730:1040333:0:0,253861:1052845:0:0

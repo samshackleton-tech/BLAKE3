@@ -1,0 +1,88 @@
+<h2>What was compared</h2>
+<ul>
+<li><b>Old:</b> John's <code>candidate/release-0.8</code> 0754066 (servil main, plus the 0.8 integration: #164 kernel names, the two kinds of call, the proofs), with Devon's FANOUT 8 waker (485d7ab), the best waker measured on this machine: commit <code>a9e70b8</code>.
+John's <code>servil</code> branch (a92c97d) itself can't be measured fairly: it predates #164, so a bench binary would run official BLAKE3's batch kernels in its place (#151). Its 15 extra commits are documentation only.</li>
+<li><b>New:</b> the same, plus the 32-input AVX-512 chunk kernel, its 16-input parent kernel and its tree-thread budget, ported from a5e1e18 (October 23-24) with only the symbol names changed (the generated assembly is byte-identical otherwise): <code>a49ff2c</code>, branch <code>experiment/sam-wide-on-0.8</code>.</li>
+<li><b>Ablation:</b> the new kernel without the tree-thread budget, <code>433502a</code> (measurement only).</li>
+<li>EPYC 9255 (Zen 5, 24 cores, 48 threads), Linux 7.0.0-38, rustc 1.99.1, governor <code>performance</code>, under the bench lock, nothing else running. bench-hashes d21cdf36 on both sides. All timing and statistics come from the existing <code>check</code>/<code>regress</code>/<code>compare</code>/<code>b3sum</code>; SMT and energy come from <code>perf</code>.</li>
+<li><b>Correctness on this machine (both sides):</b> release 123, debug 124, pure 106, no_std 34, C API 8, doc 19, Shuttle 7, proof helpers 34, b3sum, check-builds: all pass. The new side's run includes the wide kernel's guard-page tests, the dispatch tests, and the startup self-test with its corruption test.</li>
+</ul>
+
+<h2>Headline</h2>
+<table>
+<tr><th>cell group (library, 2 runs × 12 relinked pairs; same-code control for scale)</th><th>cells</th><th>same-code control</th><th>run 1</th><th>run 2</th></tr>
+<tr><td>messages ≥ 32 KiB on one thread (or below the pool's 512 KiB split)</td><td>74</td><td>1.000</td><td><b>0.795</b></td><td><b>0.796</b></td></tr>
+<tr><td>collections and interleaved</td><td>24</td><td>0.999</td><td>0.976</td><td>0.944</td></tr>
+<tr><td>multithreaded pooled one-shots ≥ 512 KiB</td><td>26</td><td>0.997</td><td>0.991</td><td>0.996</td></tr>
+<tr><td>one message &lt; 32 KiB (can't reach the wide kernel)</td><td>100</td><td>0.999</td><td>1.000</td><td>1.000</td></tr>
+<tr><td>batches of 64 B messages (can't reach it)</td><td>152</td><td>0.998</td><td>0.997</td><td>0.997</td></tr>
+<tr><td>Merkle trees</td><td>20</td><td>1.000</td><td>0.998</td><td>0.998</td></tr>
+</table>
+<p>Medians of new/old time. Verdicts: run 1 judged 78 cells faster and 2 slower (mt after a pause, 3 MiB +3.4% and 64 MiB +3.1%; no second stage, because a first-stage slower verdict ends the check). Run 2: no cell slower in either stage, 75 faster (its second stage read the two mt after-a-pause 2-3 MiB suspects at +0.9-1.0% on 16 fresh pairs). The same-code control: no cell slower in either stage.</p>
+
+<h2>Major pros and cons</h2>
+<table>
+<tr><th style="width:50%">Pros</th><th>Cons</th></tr>
+<tr><td><b>About 20% less time for one thread hashing bulk data</b> (≥ 32 KiB): library median 0.795 over 74 cells, both runs alike; CLI single-threaded 16 MiB-1 GiB −16% to −20% in all three runs; mixed file tree −10%.</td>
+<td><b>No proof.</b> 0.8's claim is that every assembly kernel is proved (#166, the quality manual, ANNOUNCE). These kernels (k32/p32/p16) are not in tools/verify, and have no mutation coverage. Shipping needs proofs, or a narrower claim.</td></tr>
+<tr><td><b>Calls below the pool's split gain the same:</b> multithreaded calls of 64-256 KiB run on one thread, −12% to −27%. Collections −5% to −16% (Nix −16% one thread, −15% every thread).</td>
+<td><b>No gain from SMT.</b> With the core's other thread busy, each wide thread takes 17-18% <i>more</i> time than the old kernel's (0.184 against 0.157 ns/B); one core with two threads does ×1.10 the work of one, against ×1.62 for the old kernel. Two copies of the wide kernel compete for the same core resources (dispatch slots, PipelineL1).</td></tr>
+<tr><td><b>No cost on paths it doesn't take:</b> small messages, batches of 64 B messages and Merkle trees match the same-code control (medians 0.997-1.000).</td>
+<td><b>Small cost when the pool runs every thread on bulk data:</b> library mt 32-128 MiB +1.6% to +3.1%, with 0 of 12 pairs faster in both runs (the ablation shows it's the kernel's own); CLI warm 1 GiB with every thread +1.8%, +5.2%, +6.5% (never judged slower); b3sum's pool on 1 GiB in the energy run, 12% more time.</td></tr>
+<tr><td><b>Less energy with a core to itself:</b> one thread hashing 1 GiB, 7% less time and 5% less package energy per GiB; one process per core, −4%.</td>
+<td><b>More energy with every thread busy:</b> b3sum's default pool on 1 GiB, +9% package and +16% core energy per GiB; 48 single-threaded processes, +0.5% package and +5.5% core. Its own cores draw more power (+13% single-threaded).</td></tr>
+<tr><td><b>Cold files, every thread:</b> CLI 1 MiB from storage −19% to −24% in all three runs.</td>
+<td><b>A small per-process cost:</b> "1000 × 16 KiB, a process each" +1.2% to +2.3% in all six CLI runs (about 5 µs a process: three more startup self-test cases, more code). Small files lean +2-3% without being judged slower.</td></tr>
+<tr><td><b>Correct on this machine</b> by every suite here, including the guard-page tests (any out-of-bounds read or write faults), and the startup self-test, which checks the three entry points on every AVX-512 start.</td>
+<td><b>One machine.</b> It would run on every Linux AVX-512 CPU: Intel Xeon (Skylake-SP to Granite Rapids), Ice/Tiger/Rocket Lake clients, and AMD Zen 4, which executes 512-bit instructions in two halves and may well run it slower than the old kernel. None of these has been measured. Nearly all of them have SMT.</td></tr>
+<tr><td><b>Small and generated:</b> 7.2 KB of machine code (k32 and p32 share one body; p16 2.7 KB), about 11% of the fork's x86 assembly; 1,242 lines generated by a 372-line generator; Linux only, so no other assembler form is needed (Windows isn't supported, #169).</td>
+<td><b>More to maintain:</b> another generator, a second AVX-512 dispatch path (groups of 32 chunks and 16 parents, the old kernel for the rest), a degree of 32 on Linux (buffers sized by it), and a longer startup self-test chain.</td></tr>
+<tr><td><b>A separable gain in its tree-thread budget:</b> multithreaded 512 KiB −20% to −23% and 1 MiB −5% (the ablation shows this is the budget, not the kernel: one 128 KiB piece a participant, so fewer threads are woken for a medium tree).</td>
+<td><b>The budget has its own small cost:</b> mt after a pause, 2-3 MiB +3.0% to +3.6% at 12 pairs (judged slower once at 3 MiB; +0.9-1.0% at 16 fresh pairs). It should be judged on its own, and could apply to the old kernel too.</td></tr>
+</table>
+
+<h2>A possible middle way (not measured)</h2>
+<p>Both costs come from many wide threads sharing cores. The wide kernel could hash only on the calling thread, with the pool's workers keeping the old kernel. That would keep the single-thread wins (one-shots, streams, lent messages, collections, every call below the split) and avoid the all-core cost. a5e1e18 already did this for pooled group work. It's a small dispatch change, but it would need its own measurement.</p>
+
+<h2>CLI (bench-hashes b3sum, 16 rounds, 4 relinked layouts a side, new judged against old; three runs, all quiet)</h2>
+<table>
+<tr><th>input</th><th>every thread, warm</th><th>every thread, cold</th><th>one thread, warm</th><th>one thread, cold</th></tr>
+<tr><td>4 KiB</td><td>0.936 / 0.987 / 1.010</td><td>1.005 / 0.994 / 1.027</td><td>1.047 / 0.992 / 1.034</td><td>1.053 / 0.952 / 0.986</td></tr>
+<tr><td>64 KiB</td><td>0.955 / 1.014 / 1.031</td><td>1.073 / 1.032 / 1.015</td><td><b>1.243 slower</b> / 0.985 / 1.073</td><td>0.961 / 1.041 / 1.049</td></tr>
+<tr><td>1 MiB</td><td>0.982 / 0.966 / 0.909</td><td><b>0.761 / 0.811 / 0.774 faster</b></td><td>0.989 / 0.971 / 1.031</td><td>1.008 / 1.033 / 0.979</td></tr>
+<tr><td>16 MiB</td><td>1.025 / 0.998 / 0.999</td><td>1.004 / 0.988 / 0.999</td><td><b>0.832 / 0.843 / 0.826 faster</b></td><td>0.975 / 0.967 faster / 0.965 faster</td></tr>
+<tr><td>256 MiB</td><td>1.016 / 1.000 / 1.048</td><td>0.978 / 1.012 / 1.029</td><td><b>0.817 / 0.821 / 0.818 faster</b></td><td>0.963 / 0.963 / 0.962, all faster</td></tr>
+<tr><td>1 GiB</td><td>1.065 / 1.052 / 1.018</td><td>1.000 / 0.999 / 1.003</td><td><b>0.806 / 0.805 / 0.808 faster</b></td><td>0.958 / 0.957 / 0.960, all faster</td></tr>
+<tr><td>1000 × 16 KiB</td><td>1.029 / 0.998 / 0.990</td><td>1.001 / 0.984 / 1.001</td><td>1.012 / 0.998 / 1.028</td><td>1.000 / 1.012 / 1.008</td></tr>
+<tr><td>1000 × 16 KiB, a process each</td><td>1.021 / 1.020 / 1.023</td><td>1.015 / 1.014 / 1.016</td><td>1.020 / 1.021 / 1.017</td><td>1.012 / 1.014 / 1.015</td></tr>
+<tr><td>mixed tree, 1000 files, 74 MiB</td><td>0.948 / 0.978 / 0.998</td><td>0.957 / 1.000 / 0.962</td><td><b>0.902 / 0.896 / 0.902 faster</b></td><td>0.973 / 0.969 faster / 0.971</td></tr>
+<tr><td>16 × 64 MiB</td><td>0.980 / 0.942 / 1.019</td><td>0.999 / 0.989 / 1.009</td><td><b>0.804 / 0.807 / 0.806 faster</b></td><td>0.958 / 0.959 / 0.962</td></tr>
+</table>
+<p>new/old time, the bench's paired geometric means for runs 1 / 2 / 3; "faster"/"slower" where the bench judged it (a bold row of three is judged in every run). The 64 KiB single-thread verdict didn't repeat (1.243, then 0.985, then 1.073). An earlier run with official first (one of them read busy) is kept, unused here.</p>
+
+<h2>SMT (the bench's warm one-shot cells on CPU 0; the same build's b3sum looping on the SMT sibling, or on another core)</h2>
+<table>
+<tr><th>side</th><th>1 MiB alone</th><th>other core busy</th><th>sibling busy</th><th>one core, two threads</th><th>64 KiB alone</th><th>sibling busy</th></tr>
+<tr><td>old</td><td>0.1276 ns/B</td><td>0.1296</td><td>0.1574</td><td>×1.62</td><td>0.1653</td><td>0.2032 (×1.63)</td></tr>
+<tr><td>new</td><td><b>0.1017</b></td><td>0.1046</td><td><b>0.1840</b></td><td><b>×1.10</b></td><td><b>0.1301</b></td><td><b>0.2397</b> (×1.09)</td></tr>
+</table>
+
+<h2>Energy (RAPL, system-wide, 5 repetitions, medians; idle package 62.8 W)</h2>
+<table>
+<tr><th>workload, 1 GiB in memory each</th><th>wall new/old</th><th>package J/GiB new/old</th><th>core J/GiB new/old</th></tr>
+<tr><td>one process, one thread</td><td>0.932</td><td>0.951</td><td>1.046</td></tr>
+<tr><td>24 processes, one per core</td><td>0.955</td><td>0.962</td><td>0.994</td></tr>
+<tr><td>48 processes, every logical CPU</td><td>1.018</td><td>1.005</td><td>1.055</td></tr>
+<tr><td>b3sum's default pool (every thread)</td><td><b>1.124</b></td><td><b>1.086</b></td><td><b>1.162</b></td></tr>
+</table>
+
+<h2>Ablation: the kernel without its tree budget (433502a against old, 12 pairs)</h2>
+<p>One cell judged slower: mt one-shot <b>2304 B +13.2%</b>, pairs −8.5% to +38.7%. That input can't reach the wide kernel, and the same-code control moved such cells by up to ±19%: layout noise. Single-thread cells are the same as with the budget (median ratio ×1.002). Multithreaded:</p>
+<table>
+<tr><th>mt one message (solo)</th><th>kernel only</th><th>kernel + budget</th></tr>
+<tr><td>512 KiB / after a pause</td><td>1.015 / 1.003</td><td><b>0.804 / 0.768</b></td></tr>
+<tr><td>1 MiB / after a pause</td><td>1.008 / 1.002</td><td>0.940 / 0.951</td></tr>
+<tr><td>2-3 MiB after a pause</td><td>0.99</td><td>1.033</td></tr>
+<tr><td>32-128 MiB</td><td>1.012-1.026</td><td>1.011-1.029</td></tr>
+</table>
+<h2>The library, every cell with a size axis</h2>

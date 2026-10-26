@@ -1,0 +1,21 @@
+# started on Sun Oct 25 23:55:56 2026
+
+
+ Performance counter stats for '/root/BLAKE3-wide-new/target/check/old/bench-hashes-0 --contenders blake3-servil-st --points 64 KiB,1 MiB --rounds 96':
+
+         727855106      de_src_op_disp.all               #     -0.0 %ops  bad_speculation       (29.28%)
+        1134287044      ls_not_halted_cyc                                                       (29.28%)
+         731145561      ex_ret_ops                       #      8.1 %slots  retiring            (29.28%)
+        5112400339      de_no_dispatch_per_slot.smt_contention #     56.3 %slots  smt_contention      (29.55%)
+        1134615164      ls_not_halted_cyc                                                       (29.55%)
+        1167274079      de_no_dispatch_per_slot.no_ops_from_frontend #     12.9 %slots  frontend_bound      (29.65%)
+        1135087216      ls_not_halted_cyc                                                       (29.65%)
+        2061397565      de_no_dispatch_per_slot.backend_stalls #     22.7 %slots  backend_bound       (29.47%)
+        1134808924      ls_not_halted_cyc                                                       (29.47%)
+
+       0.263446639 seconds time elapsed
+
+       0.229377000 seconds user
+       0.034055000 seconds sys
+
+

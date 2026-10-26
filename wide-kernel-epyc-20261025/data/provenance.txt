@@ -1,0 +1,24 @@
+Sun Oct 25 22:24:49 UTC 2026
+ 22:24:49 up 3 days,  7:49,  1 user,  load average: 7.38, 3.38, 1.41
+Model name:                              AMD EPYC 9255 24-Core Processor
+performance
+old a9e70b828a9ccde1c52864333fc9b3ecdf73f83e
+  Every waker wakes at most FANOUT (8), the rest owed: the wakes spread as a tree (BLAKE3 #119)
+new a49ff2cbf63519aefc83a4351b5a9bb492029783
+  WIP experiment: the 32-input AVX-512 chunk kernel (a5e1e18) on candidate/release-0.8 + FANOUT 8
+?? bench-hashes/
+bench d21cdf36dfc02716e173be4e5b4590c04361084a
+ build.rs                         |    3 +
+ c/blake3_avx512_32.S             | 1242 ++++++++++++++++++++++++++++++++++++++
+ src/ffi_avx512.rs                |  152 +++++
+ src/ffi_avx512_32.rs             |  298 +++++++++
+ src/ffi_avx512_32_guard_tests.rs |  129 ++++
+ src/lanes.rs                     |   40 +-
+ src/lib.rs                       |    3 +
+ src/platform.rs                  |   10 +-
+ src/self_test.rs                 |   96 ++-
+ tools/gen_avx512_32.py           |  372 ++++++++++++
+ 10 files changed, 2333 insertions(+), 12 deletions(-)
+rustc 1.99.1 (58cf8f9c3 2026-10-13)
+cargo 1.99.1 (5f94df478 2026-08-27)
+cc (Ubuntu 15.2.0-16ubuntu1) 15.2.0

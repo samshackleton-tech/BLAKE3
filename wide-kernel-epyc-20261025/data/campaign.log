@@ -1,0 +1,33 @@
+== setup 22:24:49
+Note: switching to 'd21cdf36dfc02716e173be4e5b4590c04361084a'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+== same-code control 22:25:19
+aa exit 0
+== library comparison run 1 22:43:25
+lib1 exit 1
+== library comparison run 2 23:05:35
+lib2 exit 0
+ 23:29:20 up 3 days,  8:54,  2 users,  load average: 0.85, 0.97, 0.99
+== CLI builds 23:29:20
+== CLI multithreaded 23:29:42
+cli-mt exit 0
+== CLI one thread 23:31:29
+cli-st exit 0
+== done 23:33:29
+Sun Oct 25 23:33:29 UTC 2026
+ 23:33:29 up 3 days,  8:58,  2 users,  load average: 3.08, 4.74, 2.78

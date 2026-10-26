@@ -1,0 +1,35 @@
+    Blocking waiting for file lock on package cache
+    Updating crates.io index
+    Blocking waiting for file lock on package cache
+     Locking 19 packages to highest Rust 1.99.1 compatible versions
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling find-msvc-tools v0.1.15
+   Compiling shlex v2.0.1
+   Compiling zmij v1.0.23
+   Compiling serde_core v1.0.229
+   Compiling arrayvec v0.7.8
+   Compiling constant_time_eq v0.4.2
+   Compiling libc v0.2.191
+   Compiling cfg-if v1.0.5
+   Compiling serde_json v1.0.154
+   Compiling memchr v2.8.3
+   Compiling itoa v1.0.18
+   Compiling cc v1.10.0
+   Compiling blake3-servil v0.3.0+2e4fa821f9db07b945dbb2b0d02eb76cb19617b5 (/root/BLAKE3-wide-new)
+   Compiling blake3-servil-c v0.8.0 (/root/BLAKE3-wide-new/capi)
+    Finished `release` profile [optimized] target(s) in 4.07s
+────────────
+ Nextest run ID e379bd2e-435b-47d0-8217-329e31334d82 with nextest profile: default
+    Starting 8 tests across 6 binaries
+        PASS [   0.003s] (1/8) blake3-servil-c test::aaa_require_nextest
+        PASS [   0.004s] (2/8) blake3-servil-c::guards miri_adjacent_ranges_and_empty_null_ranges_are_allowed
+        PASS [   0.004s] (3/8) blake3-servil-c::provenance miri_callback_context_retains_pointer_provenance
+        PASS [   0.004s] (4/8) blake3-servil-c::vectors null_with_nothing
+        PASS [   0.008s] (5/8) blake3-servil-c::vectors every_call_against_the_test_vectors
+        PASS [   0.049s] (6/8) blake3-servil-c::guard_pages every_call_inside_guard_pages
+        PASS [   1.092s] (7/8) blake3-servil-c::guards bad_calls_stop_at_the_guard
+        PASS [   2.040s] (8/8) blake3-servil-c::c from_c
+────────────
+     Summary [   2.041s] 8 tests run: 8 passed, 0 skipped
