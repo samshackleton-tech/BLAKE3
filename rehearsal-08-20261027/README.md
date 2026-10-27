@@ -11,3 +11,9 @@ EPYC only: `split-15/` A = same library (4fa4d555) both sides, old bench 3f9edd1
 B = bfbda192 + 5be5f236 against 4fa4d555 + 3f9edd1. `diag-256/`: mt ContinuousMessages 256 B alone and after other points, two
 processes each (bistable 0.19 / 0.30 ns/B). EPYC's b3sum rehearsal results are not here (98 MB; kept on the machine).
 Samples in *.tar.xz. Dual manifests cover this directory except themselves.
+
+**Correction (October 27, 20:50; Devon on #125):** every `rehearsal-4fa4d55/full.out` here measured the
+bench's pinned servil (0.3.0+2e4fa821, commit 49b43b1d), not 4fa4d555: the full runs were built with a
+`--config` patch that Cargo left unused (the lock pins 0.3.0; the fork is 0.8.0). They are not runs of
+4fa4d555. The checks are unaffected (check builds its sides with build-against). The release full runs at
+934dee89 were redone with `bench-hashes build-against ..` and verified (bench-hashes data/2026-10-27/release-0.8-x86).
