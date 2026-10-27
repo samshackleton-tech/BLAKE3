@@ -1,0 +1,36 @@
+{
+ "expect": [
+  {
+   "contains": [
+    "blake3-servil 0.8.0+f7ce4e4e7bd41bd14e9e55d35279af4c6ad6d3ab (local checkout ..); source https://github.com/johnservil/BLAKE3; branch HEAD; commit 934dee8902889186e3da9b62edf43699dd1c6305; clean",
+    "commit 67bae864751ae766f170be94ac38a9b3723fc181",
+    "B3 official mt",
+    "load during the run: quiet"
+   ],
+   "file": "out/bench-hashes.result.txt"
+  }
+ ],
+ "forbid": [
+  "was not used in the crate graph",
+  "raw profile version mismatch"
+ ],
+ "host": "root@88.216.222.150",
+ "launched": "2026-10-27T21:37:38Z",
+ "lock": "/root/bench-native-afk.lock",
+ "name": "table-supp-epyc9255",
+ "repos": [
+  {
+   "commit": "934dee8902889186e3da9b62edf43699dd1c6305",
+   "path": "src",
+   "url": "https://github.com/johnservil/BLAKE3"
+  },
+  {
+   "commit": "67bae864751ae766f170be94ac38a9b3723fc181",
+   "path": "b018",
+   "url": "https://github.com/johnservil/bench-hashes"
+  }
+ ],
+ "script": "supp.sh",
+ "script_sha256": "e768015e8092023322d2b2aaeea7c8679bb1e2f6187bb14858ba9b7e93e92f30",
+ "tool_sha256": "c610e1c00faf84c6e625aac08333f0f7d9d14674d2cf6beddc64585f4d39488c"
+}
