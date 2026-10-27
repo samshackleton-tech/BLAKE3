@@ -1,0 +1,37 @@
+    Updating crates.io index
+    Blocking waiting for file lock on package cache
+     Locking 77 packages to highest Rust 1.99.1 compatible versions
+      Adding constant_time_eq v0.4.2 (available: v0.6.1)
+      Adding shuttle v0.8.1 (available: v0.9.8)
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling clocks v0.1.0 (/root/BLAKE3-195/clocks)
+   Compiling blake3-servil v0.8.0+4a47bbfaa80861eb423d5fa57701697fdea4afde (/root/BLAKE3-195)
+    Finished `test` profile [optimized] target(s) in 6.93s
+   Doc-tests blake3_servil
+
+running 19 tests
+test src/incremental.rs - incremental::Hasher::update_reader (line 343) - compile ... ok
+test src/convenience.rs - convenience::hash (line 11) ... ok
+test src/convenience.rs - convenience::hash_with (line 47) ... ok
+test src/each.rs - each::update_each (line 63) ... ok
+test src/convenience.rs - convenience::hash_xof (line 65) ... ok
+test src/block.rs - block::Batch (line 73) ... ok
+test src/incremental.rs - incremental::Hasher (line 15) ... ok
+test src/lib.rs - (line 7) ... ok
+test src/lib.rs - initialize (line 892) ... ok
+test src/performance.rs - performance::hash_many (line 68) ... ok
+test src/performance.rs - performance::context_key (line 182) ... ok
+test src/each.rs - each::hash_each (line 231) ... ok
+test src/stream.rs - stream::stream (line 136) ... ok
+test src/lib.rs - initialize_multithreaded (line 939) ... ok
+test src/performance.rs - performance::hash_multithreaded (line 130) ... ok
+test src/performance.rs - performance::hash_many_multithreaded (line 99) ... ok
+test src/each.rs - each::hash_each_multithreaded (line 20) ... ok
+test src/incremental.rs - incremental::Hasher::update_multithreaded (line 277) ... ok
+test src/performance.rs - performance::hash (line 38) ... ok
+
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+all doctests ran in 0.71s; merged doctests compilation took 0.69s

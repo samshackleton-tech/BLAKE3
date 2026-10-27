@@ -1,0 +1,101 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+ Downloading crates ...
+  Downloaded cfg-if v1.0.4
+  Downloaded clap_lex v1.1.0
+  Downloaded bitflags v2.13.1
+  Downloaded os_pipe v1.2.3
+  Downloaded find-msvc-tools v0.1.11
+  Downloaded signal-hook-registry v1.4.8
+  Downloaded clap_derive v4.6.4
+  Downloaded duct v1.1.1
+  Downloaded clap v4.6.6
+  Downloaded cc v1.4.3
+  Downloaded clap_builder v4.6.6
+  Downloaded rustix v1.1.4
+warning: Cargo.toml: version requirement `=0.8.0+4a47bbfaa80861eb423d5fa57701697fdea4afde` for dependency `blake3` includes semver metadata which will be ignored, removing the metadata is recommended to avoid confusion
+warning: `b3sums` (manifest) generated 1 warning
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling libc v0.2.189
+   Compiling rustix v1.1.4
+   Compiling proc-macro2 v1.0.107
+   Compiling linux-raw-sys v0.12.1
+   Compiling bitflags v2.13.1
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.24
+   Compiling shlex v2.0.1
+   Compiling find-msvc-tools v0.1.11
+   Compiling signal-hook v0.3.18
+   Compiling utf8parse v0.2.2
+   Compiling cfg-if v1.0.4
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling anstyle v1.0.14
+   Compiling colorchoice v1.0.5
+   Compiling anstyle-query v1.1.5
+   Compiling strsim v0.11.1
+   Compiling clap_lex v1.1.0
+   Compiling getrandom v0.4.3
+   Compiling heck v0.5.0
+   Compiling anyhow v1.0.104
+   Compiling constant_time_eq v0.4.2
+   Compiling arrayvec v0.7.8
+   Compiling shared_thread v0.2.0
+   Compiling hex v0.4.3
+   Compiling once_cell v1.21.4
+   Compiling fastrand v2.5.0
+   Compiling anstyle-parse v1.0.0
+   Compiling cc v1.4.3
+   Compiling anstream v1.0.0
+   Compiling syn v3.0.3
+   Compiling blake3-servil v0.8.0+4a47bbfaa80861eb423d5fa57701697fdea4afde (/root/BLAKE3)
+   Compiling errno v0.3.14
+   Compiling os_pipe v1.2.3
+   Compiling memmap2 v0.9.11
+   Compiling signal-hook-registry v1.4.8
+   Compiling sigchld v0.2.4
+   Compiling shared_child v1.1.1
+   Compiling duct v1.1.1
+   Compiling terminal_size v0.4.4
+   Compiling tempfile v3.27.0
+   Compiling clap_builder v4.6.6
+   Compiling clap_derive v4.6.4
+   Compiling clap v4.6.6
+   Compiling b3sums v0.8.0+4a47bbfaa80861eb423d5fa57701697fdea4afde (/root/BLAKE3/b3sum)
+    Finished `release` profile [optimized] target(s) in 10.08s
+────────────
+ Nextest run ID ecd4e8a8-2f0e-4543-b37f-1623dd29e6d4 with nextest profile: default
+    Starting 29 tests across 2 binaries
+        PASS [   0.009s] ( 1/29) b3sums::cli_tests test_hash_one_raw
+        PASS [   0.009s] ( 2/29) b3sums::cli_tests test_globbing
+        PASS [   0.010s] ( 3/29) b3sums::cli_tests test_derive_key
+        PASS [   0.010s] ( 4/29) b3sums::cli_tests test_check_invalid_characters
+        PASS [   0.024s] ( 5/29) b3sums::bin/b3sum unit_tests::test_parse_check_line
+        PASS [   0.006s] ( 6/29) b3sums::bin/b3sum test::aaa_require_nextest
+        PASS [   0.007s] ( 7/29) b3sums::bin/b3sum test::test_args
+        PASS [   0.007s] ( 8/29) b3sums::bin/b3sum unit_tests::test_filepath_to_string
+        PASS [   0.008s] ( 9/29) b3sums::bin/b3sum readahead::test::read_to_end_reads_all_whatever_the_hint
+        PASS [   0.025s] (10/29) b3sums::cli_tests test_hash_many_tag
+        PASS [   0.026s] (11/29) b3sums::cli_tests test_hash_one
+        PASS [   0.025s] (12/29) b3sums::cli_tests test_pseudo_files_among_many
+        PASS [   0.026s] (13/29) b3sums::cli_tests test_invalid_unicode_on_unix
+        PASS [   0.026s] (14/29) b3sums::cli_tests test_no_mmap
+        PASS [   0.026s] (15/29) b3sums::cli_tests test_length_without_value_is_an_error
+        PASS [   0.026s] (16/29) b3sums::cli_tests test_missing_files
+        PASS [   0.026s] (17/29) b3sums::cli_tests test_newline_and_backslash_escaping_on_unix
+        PASS [   0.027s] (18/29) b3sums::cli_tests test_hash_one_tag
+        PASS [   0.027s] (19/29) b3sums::cli_tests test_hash_many
+        PASS [   0.010s] (20/29) b3sums::cli_tests test_raw_with_multi_files_is_an_error
+        PASS [   0.028s] (21/29) b3sums::cli_tests test_check
+        PASS [   0.029s] (22/29) b3sums::cli_tests test_hash_length_and_seek
+        PASS [   0.031s] (23/29) b3sums::cli_tests test_keyed
+        PASS [   0.025s] (24/29) b3sums::cli_tests test_pseudo_file
+        PASS [   0.054s] (25/29) b3sums::cli_tests test_one_thread_matches_the_default
+        PASS [   0.061s] (26/29) b3sums::cli_tests test_reader_gone
+        PASS [   0.084s] (27/29) b3sums::cli_tests test_num_threads
+        PASS [   0.112s] (28/29) b3sums::cli_tests test_hash_many_sizes
+        PASS [   0.174s] (29/29) b3sums::cli_tests test_inputs_around_the_read_piece
+────────────
+     Summary [   0.174s] 29 tests run: 29 passed, 0 skipped

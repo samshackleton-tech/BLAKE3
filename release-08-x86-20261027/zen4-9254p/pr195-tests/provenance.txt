@@ -1,0 +1,10 @@
+Tue Oct 27 05:51:00 UTC 2026
+356e4ead6dbb4b4c73c4cf065dab73183f9c4dff x86 rows on a CPU without AVX-512: #189's vendor test and WIDE bit sit inside the AVX-512 block, two more places that read the same here (i7)
+rustc 1.99.1 (58cf8f9c3 2026-10-13)
+cargo-nextest 0.9.149 (3fe4ef319 2026-10-20)
+model name	: AMD EPYC 9254 24-Core Processor
+vendor_id	: AuthenticAMD
+cpu family	: 25
+avx512f avx512vl 
+avx2
+48

@@ -1,0 +1,1276 @@
+   Compiling cfg-if v1.0.5
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.27
+   Compiling libc v0.2.191
+   Compiling find-msvc-tools v0.1.15
+   Compiling shlex v2.0.1
+   Compiling zerocopy v0.8.63
+   Compiling rustversion v1.0.23
+   Compiling typenum v1.20.1
+   Compiling serde_core v1.0.229
+   Compiling radium v0.7.0
+   Compiling rand_core v0.10.1
+   Compiling once_cell v1.21.4
+   Compiling getrandom v0.4.3
+   Compiling cmov v0.5.4
+   Compiling serde v1.0.229
+   Compiling zmij v1.0.23
+   Compiling tap v1.0.1
+   Compiling cpufeatures v0.3.1
+   Compiling rustix v1.1.6
+   Compiling linux-raw-sys v0.12.1
+   Compiling funty v2.0.0
+   Compiling constant_time_eq v0.4.2
+   Compiling arrayvec v0.7.8
+   Compiling log v0.4.34
+   Compiling bitflags v2.13.2
+   Compiling serde_json v1.0.154
+   Compiling ciborium-io v0.2.2
+   Compiling pin-project-lite v0.2.17
+   Compiling smallvec v1.16.4
+   Compiling fastrand v2.5.0
+   Compiling scoped-tls v1.0.1
+   Compiling itoa v1.0.18
+   Compiling memchr v2.8.3
+   Compiling hex v0.4.3
+   Compiling assoc v0.1.3
+   Compiling owo-colors v3.5.0
+   Compiling clocks v0.1.0 (/root/BLAKE3-195/clocks)
+   Compiling cc v1.10.0
+   Compiling chacha20 v0.10.2
+   Compiling wyz v0.5.1
+   Compiling tracing-core v0.1.36
+   Compiling ctutils v0.4.6
+   Compiling bitvec v1.1.1
+   Compiling tracing v0.1.44
+   Compiling syn v2.0.119
+   Compiling syn v3.0.9
+   Compiling hybrid-array v0.4.15
+   Compiling getrandom v0.2.17
+   Compiling generator v0.8.11
+   Compiling blake3-servil v0.8.0+4a47bbfaa80861eb423d5fa57701697fdea4afde (/root/BLAKE3-195)
+   Compiling blake3 v1.8.7
+   Compiling rand_core v0.6.4
+   Compiling rand v0.10.3
+   Compiling crypto-common v0.2.2
+   Compiling block-buffer v0.12.1
+   Compiling rand_pcg v0.3.1
+   Compiling digest v0.11.3
+   Compiling hmac v0.13.0
+   Compiling tempfile v3.27.0
+   Compiling serde_derive v1.0.229
+   Compiling zerocopy-derive v0.8.63
+   Compiling ppv-lite86 v0.2.21
+   Compiling half v2.7.1
+   Compiling ciborium-ll v0.2.2
+   Compiling rand_chacha v0.3.1
+   Compiling ciborium v0.2.2
+   Compiling rand v0.8.8
+   Compiling shuttle v0.8.1
+    Finished `release` profile [optimized] target(s) in 10.12s
+────────────
+ Nextest run ID 65e10bd7-73e8-4f73-b7ee-17ae90923951 with nextest profile: default
+    Starting 127 tests across 14 binaries
+       START [         ] (  1/127) blake3-servil avx512::test::test_parent16_dispatch_and_legacy_incrementing_route
+
+running 1 test
+test avx512::test::test_parent16_dispatch_and_legacy_incrementing_route ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.002s] (  1/127) blake3-servil avx512::test::test_parent16_dispatch_and_legacy_incrementing_route
+       START [         ] (  2/127) blake3-servil avx512::test::test_wide_dispatch_groups_tails_and_bounds
+
+running 1 test
+
+thread 'avx512::test::test_wide_dispatch_groups_tails_and_bounds' (325904) panicked at src/ffi_avx512.rs:32:9:
+assertion failed: out.len() >= inputs.len() * OUT_LEN
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test avx512::test::test_wide_dispatch_groups_tails_and_bounds ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.004s] (  2/127) blake3-servil avx512::test::test_wide_dispatch_groups_tails_and_bounds
+       START [         ] (  3/127) blake3-servil avx512::test::test_xof_many
+
+running 1 test
+test avx512::test::test_xof_many ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.002s] (  3/127) blake3-servil avx512::test::test_xof_many
+       START [         ] (  4/127) blake3-servil avx512_32::tests::generated_assembly_matches
+
+running 1 test
+test avx512_32::tests::generated_assembly_matches ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.01s
+
+        PASS [   0.014s] (  4/127) blake3-servil avx512_32::tests::generated_assembly_matches
+       START [         ] (  5/127) blake3-servil avx512_32::tests::guarded_input_key_pointer_table_and_output_bounds
+
+running 1 test
+test avx512_32::tests::guarded_input_key_pointer_table_and_output_bounds ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.007s] (  5/127) blake3-servil avx512_32::tests::guarded_input_key_pointer_table_and_output_bounds
+       START [         ] (  6/127) blake3-servil avx512_32::tests::parent16_unaligned_overlapping_output
+
+running 1 test
+test avx512_32::tests::parent16_unaligned_overlapping_output ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.002s] (  6/127) blake3-servil avx512_32::tests::parent16_unaligned_overlapping_output
+       START [         ] (  7/127) blake3-servil avx512_32::tests::randomized_counters_flags_and_block_counts
+
+running 1 test
+test avx512_32::tests::randomized_counters_flags_and_block_counts ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.02s
+
+        PASS [   0.024s] (  7/127) blake3-servil avx512_32::tests::randomized_counters_flags_and_block_counts
+       START [         ] (  8/127) blake3-servil avx512_32::tests::short_last_blocks_unaligned_and_overlapping_output
+
+running 1 test
+test avx512_32::tests::short_last_blocks_unaligned_and_overlapping_output ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.003s] (  8/127) blake3-servil avx512_32::tests::short_last_blocks_unaligned_and_overlapping_output
+       START [         ] (  9/127) blake3-servil block::test::test_a_batch_describes_itself
+
+running 1 test
+test block::test::test_a_batch_describes_itself ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.003s] (  9/127) blake3-servil block::test::test_a_batch_describes_itself
+       START [         ] ( 10/127) blake3-servil block::test::test_a_batch_keeps_the_bytes_past_its_messages_zero
+
+running 1 test
+test block::test::test_a_batch_keeps_the_bytes_past_its_messages_zero ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.003s] ( 10/127) blake3-servil block::test::test_a_batch_keeps_the_bytes_past_its_messages_zero
+       START [         ] ( 11/127) blake3-servil block::test::test_a_merkle_layer_lands_in_the_next_layers_blocks
+
+running 1 test
+test block::test::test_a_merkle_layer_lands_in_the_next_layers_blocks ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.003s] ( 11/127) blake3-servil block::test::test_a_merkle_layer_lands_in_the_next_layers_blocks
+       START [         ] ( 12/127) blake3-servil block::test::test_blocks_mut_refuses_messages_with_padding
+
+running 1 test
+
+thread 'block::test::test_blocks_mut_refuses_messages_with_padding' (325962) panicked at src/block.rs:149:9:
+a batch whose messages leave no bytes past their ends (100 B)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test block::test::test_blocks_mut_refuses_messages_with_padding - should panic ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.003s] ( 12/127) blake3-servil block::test::test_blocks_mut_refuses_messages_with_padding
+       START [         ] ( 13/127) blake3-servil block::test::test_from_bytes_takes_aligned_whole_blocks_only
+
+running 1 test
+test block::test::test_from_bytes_takes_aligned_whole_blocks_only ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.002s] ( 13/127) blake3-servil block::test::test_from_bytes_takes_aligned_whole_blocks_only
+       START [         ] ( 14/127) blake3-servil chunk_root::test::test_chunk_root_kernel_touches_no_stack
+
+running 1 test
+test chunk_root::test::test_chunk_root_kernel_touches_no_stack ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.002s] ( 14/127) blake3-servil chunk_root::test::test_chunk_root_kernel_touches_no_stack
+       START [         ] ( 15/127) blake3-servil chunk_root::test::test_chunk_root_line_placements
+
+running 1 test
+test chunk_root::test::test_chunk_root_line_placements ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.10s
+
+        PASS [   0.101s] ( 15/127) blake3-servil chunk_root::test::test_chunk_root_line_placements
+       START [         ] ( 16/127) blake3-servil chunk_root::test::test_chunk_root_matches_portable
+
+running 1 test
+test chunk_root::test::test_chunk_root_matches_portable ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.04s
+
+        PASS [   0.046s] ( 16/127) blake3-servil chunk_root::test::test_chunk_root_matches_portable
+       START [         ] ( 17/127) blake3-servil each::test::test_hash_each_matches_hash_with
+
+running 1 test
+test each::test::test_hash_each_matches_hash_with ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.005s] ( 17/127) blake3-servil each::test::test_hash_each_matches_hash_with
+       START [         ] ( 18/127) blake3-servil each::test::test_hash_each_multithreaded
+
+running 1 test
+test each::test::test_hash_each_multithreaded ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.15s
+
+        PASS [   0.153s] ( 18/127) blake3-servil each::test::test_hash_each_multithreaded
+       START [         ] ( 19/127) blake3-servil each::test::test_hash_each_multithreaded_past_the_split
+
+running 1 test
+test each::test::test_hash_each_multithreaded_past_the_split ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.005s] ( 19/127) blake3-servil each::test::test_hash_each_multithreaded_past_the_split
+       START [         ] ( 20/127) blake3-servil each::test::test_update_each
+
+running 1 test
+test each::test::test_update_each ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.004s] ( 20/127) blake3-servil each::test::test_update_each
+       START [         ] ( 21/127) blake3-servil each::test::test_update_each_at_offsets
+
+running 1 test
+test each::test::test_update_each_at_offsets ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.003s] ( 21/127) blake3-servil each::test::test_update_each_at_offsets
+       START [         ] ( 22/127) blake3-servil each::test::test_update_each_holds_groups_together
+
+running 1 test
+test each::test::test_update_each_holds_groups_together ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.003s] ( 22/127) blake3-servil each::test::test_update_each_holds_groups_together
+       START [         ] ( 23/127) blake3-servil ffi_partial::test::test_params_layout_is_the_generators
+
+running 1 test
+test ffi_partial::test::test_params_layout_is_the_generators ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.002s] ( 23/127) blake3-servil ffi_partial::test::test_params_layout_is_the_generators
+       START [         ] ( 24/127) blake3-servil ffi_partial::test::test_partial_kernels_against_portable
+
+running 1 test
+test ffi_partial::test::test_partial_kernels_against_portable ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.01s
+
+        PASS [   0.007s] ( 24/127) blake3-servil ffi_partial::test::test_partial_kernels_against_portable
+       START [         ] ( 25/127) blake3-servil finish::tests::a_spurious_wake_is_slept_through
+
+running 1 test
+test finish::tests::a_spurious_wake_is_slept_through ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.02s
+
+        PASS [   0.023s] ( 25/127) blake3-servil finish::tests::a_spurious_wake_is_slept_through
+       START [         ] ( 26/127) blake3-servil finish::tests::every_atomic_in_the_handshake_files_is_seqcst
+
+running 1 test
+test finish::tests::every_atomic_in_the_handshake_files_is_seqcst ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.002s] ( 26/127) blake3-servil finish::tests::every_atomic_in_the_handshake_files_is_seqcst
+       START [         ] ( 27/127) blake3-servil lanes::sources::test::test_a_finished_threads_source_is_the_next_threads
+
+running 1 test
+test lanes::sources::test::test_a_finished_threads_source_is_the_next_threads ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.002s] ( 27/127) blake3-servil lanes::sources::test::test_a_finished_threads_source_is_the_next_threads
+       START [         ] ( 28/127) blake3-servil lanes::sources::test::test_find_reaches_every_registered_source
+
+running 1 test
+test lanes::sources::test::test_find_reaches_every_registered_source ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.002s] ( 28/127) blake3-servil lanes::sources::test::test_find_reaches_every_registered_source
+       START [         ] ( 29/127) blake3-servil lanes::sources::test::test_unregister_gives_the_slot_back
+
+running 1 test
+test lanes::sources::test::test_unregister_gives_the_slot_back ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.002s] ( 29/127) blake3-servil lanes::sources::test::test_unregister_gives_the_slot_back
+       START [         ] ( 30/127) blake3-servil lanes::sources::test::test_unregister_leaves_the_other_sources_registered
+
+running 1 test
+test lanes::sources::test::test_unregister_leaves_the_other_sources_registered ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.002s] ( 30/127) blake3-servil lanes::sources::test::test_unregister_leaves_the_other_sources_registered
+       START [         ] ( 31/127) blake3-servil lanes::sources::test::test_visible_sees_a_waiting_item_and_its_kind
+
+running 1 test
+test lanes::sources::test::test_visible_sees_a_waiting_item_and_its_kind ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.002s] ( 31/127) blake3-servil lanes::sources::test::test_visible_sees_a_waiting_item_and_its_kind
+       START [         ] ( 32/127) blake3-servil lanes::test::equal_members_match_the_reference
+
+running 1 test
+golden equal_members: 0xd9842e3410d3c4ae
+test lanes::test::equal_members_match_the_reference ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.08s
+
+        PASS [   0.083s] ( 32/127) blake3-servil lanes::test::equal_members_match_the_reference
+       START [         ] ( 33/127) blake3-servil lanes::test::test_a_caller_gives_its_place_back
+
+running 1 test
+test lanes::test::test_a_caller_gives_its_place_back ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.006s] ( 33/127) blake3-servil lanes::test::test_a_caller_gives_its_place_back
+       START [         ] ( 34/127) blake3-servil lanes::test::test_a_parked_caller_is_woken_by_the_last_piece
+
+running 1 test
+test lanes::test::test_a_parked_caller_is_woken_by_the_last_piece ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.009s] ( 34/127) blake3-servil lanes::test::test_a_parked_caller_is_woken_by_the_last_piece
+       START [         ] ( 35/127) blake3-servil lanes::test::test_concurrent_batch_callers_agree
+
+running 1 test
+test lanes::test::test_concurrent_batch_callers_agree ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.02s
+
+        PASS [   0.028s] ( 35/127) blake3-servil lanes::test::test_concurrent_batch_callers_agree
+       START [         ] ( 36/127) blake3-servil lanes::test::test_concurrent_callers_agree
+
+running 1 test
+test lanes::test::test_concurrent_callers_agree ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.03s
+
+        PASS [   0.036s] ( 36/127) blake3-servil lanes::test::test_concurrent_callers_agree
+       START [         ] ( 37/127) blake3-servil lanes::test::test_cut_messages_shapes
+
+running 1 test
+test lanes::test::test_cut_messages_shapes ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.003s] ( 37/127) blake3-servil lanes::test::test_cut_messages_shapes
+       START [         ] ( 38/127) blake3-servil lanes::test::test_cut_with_prefix_shapes_and_hashes
+
+running 1 test
+test lanes::test::test_cut_with_prefix_shapes_and_hashes ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.01s
+
+        PASS [   0.011s] ( 38/127) blake3-servil lanes::test::test_cut_with_prefix_shapes_and_hashes
+       START [         ] ( 39/127) blake3-servil lanes::test::test_hash_many_pool_agrees
+
+running 1 test
+test lanes::test::test_hash_many_pool_agrees ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.01s
+
+        PASS [   0.012s] ( 39/127) blake3-servil lanes::test::test_hash_many_pool_agrees
+       START [         ] ( 40/127) blake3-servil lanes::test::test_hash_matches_serial
+
+running 1 test
+test lanes::test::test_hash_matches_serial ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.01s
+
+        PASS [   0.011s] ( 40/127) blake3-servil lanes::test::test_hash_matches_serial
+       START [         ] ( 41/127) blake3-servil lanes::test::test_idle_workers_park_while_a_stream_is_open
+
+running 1 test
+test lanes::test::test_idle_workers_park_while_a_stream_is_open ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.005s] ( 41/127) blake3-servil lanes::test::test_idle_workers_park_while_a_stream_is_open
+       START [         ] ( 42/127) blake3-servil lanes::test::test_next_piece_len
+
+running 1 test
+test lanes::test::test_next_piece_len ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.003s] ( 42/127) blake3-servil lanes::test::test_next_piece_len
+       START [         ] ( 43/127) blake3-servil lanes::test::test_simd_merge_matches_recursive
+
+running 1 test
+test lanes::test::test_simd_merge_matches_recursive ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.003s] ( 43/127) blake3-servil lanes::test::test_simd_merge_matches_recursive
+       START [         ] ( 44/127) blake3-servil lanes::test::test_tree_thread_budget
+
+running 1 test
+test lanes::test::test_tree_thread_budget ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.002s] ( 44/127) blake3-servil lanes::test::test_tree_thread_budget
+       START [         ] ( 45/127) blake3-servil lanes::test::test_update_multithreaded_matches_hash
+
+running 1 test
+test lanes::test::test_update_multithreaded_matches_hash ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.09s
+
+        PASS [   0.094s] ( 45/127) blake3-servil lanes::test::test_update_multithreaded_matches_hash
+       START [         ] ( 46/127) blake3-servil many::test::across_partial_chunks_matches_published_vectors
+
+running 1 test
+test many::test::across_partial_chunks_matches_published_vectors ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.005s] ( 46/127) blake3-servil many::test::across_partial_chunks_matches_published_vectors
+       START [         ] ( 47/127) blake3-servil many::test::four_chunk_batch_matches_published_vectors
+
+running 1 test
+test many::test::four_chunk_batch_matches_published_vectors ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.011s] ( 47/127) blake3-servil many::test::four_chunk_batch_matches_published_vectors
+       START [         ] ( 48/127) blake3-servil many::test::test_hash_blocks_without_plans
+
+running 1 test
+test many::test::test_hash_blocks_without_plans ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.006s] ( 48/127) blake3-servil many::test::test_hash_blocks_without_plans
+       START [         ] ( 49/127) blake3-servil many::test::test_hash_many_modes_every_platform
+
+running 1 test
+test many::test::test_hash_many_modes_every_platform ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.02s
+
+        PASS [   0.027s] ( 49/127) blake3-servil many::test::test_hash_many_modes_every_platform
+       START [         ] ( 50/127) blake3-servil many::test::test_hash_many_needs_the_input_it_names
+
+running 1 test
+
+thread 'many::test::test_hash_many_needs_the_input_it_names' (330194) panicked at src/many.rs:40:5:
+assertion `left == right` failed: input holds one slot of whole blocks per output
+  left: Some(64)
+ right: Some(128)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test many::test::test_hash_many_needs_the_input_it_names - should panic ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.004s] ( 50/127) blake3-servil many::test::test_hash_many_needs_the_input_it_names
+       START [         ] ( 51/127) blake3-servil many::test::test_hash_many_whole_blocks
+
+running 1 test
+test many::test::test_hash_many_whole_blocks ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.02s
+
+        PASS [   0.022s] ( 51/127) blake3-servil many::test::test_hash_many_whole_blocks
+       START [         ] ( 52/127) blake3-servil many::test::test_small_batches_after_a_pause
+
+running 1 test
+test many::test::test_small_batches_after_a_pause ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.09s
+
+        PASS [   0.095s] ( 52/127) blake3-servil many::test::test_small_batches_after_a_pause
+       START [         ] ( 53/127) blake3-servil many::test::test_whole_blocks_x86_full_width
+
+running 1 test
+golden whole_blocks_x86_full_width: 0xba67a57a036242e7
+test many::test::test_whole_blocks_x86_full_width ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.52s
+
+        PASS [   0.528s] ( 53/127) blake3-servil many::test::test_whole_blocks_x86_full_width
+       START [         ] ( 54/127) blake3-servil many::test::two_chunk_batch_matches_published_vectors
+
+running 1 test
+test many::test::two_chunk_batch_matches_published_vectors ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.003s] ( 54/127) blake3-servil many::test::two_chunk_batch_matches_published_vectors
+       START [         ] ( 55/127) blake3-servil park::test::a_waker_wakes_at_most_its_fanout_and_owes_the_rest
+
+running 1 test
+test park::test::a_waker_wakes_at_most_its_fanout_and_owes_the_rest ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.003s] ( 55/127) blake3-servil park::test::a_waker_wakes_at_most_its_fanout_and_owes_the_rest
+       START [         ] ( 56/127) blake3-servil platform::x86_degree_test::test_detected_degree_is_the_widest_kernel
+
+running 1 test
+test platform::x86_degree_test::test_detected_degree_is_the_widest_kernel ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.002s] ( 56/127) blake3-servil platform::x86_degree_test::test_detected_degree_is_the_widest_kernel
+       START [         ] ( 57/127) blake3-servil platform::x86_features_test::test_a_cpu_runs_its_widest_kernel_and_one_without_sse41_none
+
+running 1 test
+test platform::x86_features_test::test_a_cpu_runs_its_widest_kernel_and_one_without_sse41_none ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.003s] ( 57/127) blake3-servil platform::x86_features_test::test_a_cpu_runs_its_widest_kernel_and_one_without_sse41_none
+       START [         ] ( 58/127) blake3-servil platform::x86_features_test::test_wide_bit_matches_cpuinfo
+
+running 1 test
+test platform::x86_features_test::test_wide_bit_matches_cpuinfo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.003s] ( 58/127) blake3-servil platform::x86_features_test::test_wide_bit_matches_cpuinfo
+       START [         ] ( 59/127) blake3-servil platform::x86_features_test::test_wide_cpu_and_family
+
+running 1 test
+test platform::x86_features_test::test_wide_cpu_and_family ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.003s] ( 59/127) blake3-servil platform::x86_features_test::test_wide_cpu_and_family
+       START [         ] ( 60/127) blake3-servil platform::x86_features_test::test_x86_detection_matches_std
+
+running 1 test
+test platform::x86_features_test::test_x86_detection_matches_std ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.002s] ( 60/127) blake3-servil platform::x86_features_test::test_x86_detection_matches_std
+       START [         ] ( 61/127) blake3-servil platform::x86_features_test::test_x86_features_match_std
+
+running 1 test
+test platform::x86_features_test::test_x86_features_match_std ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.002s] ( 61/127) blake3-servil platform::x86_features_test::test_x86_features_match_std
+       START [         ] ( 62/127) blake3-servil self_test::stops::test_a_failing_self_test_stops_the_process
+
+running 1 test
+test self_test::stops::test_a_failing_self_test_stops_the_process ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.08s
+
+        PASS [   0.078s] ( 62/127) blake3-servil self_test::stops::test_a_failing_self_test_stops_the_process
+       START [         ] ( 63/127) blake3-servil self_test::test::self_test_matches_official_blake3
+
+running 1 test
+test self_test::test::self_test_matches_official_blake3 ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.003s] ( 63/127) blake3-servil self_test::test::self_test_matches_official_blake3
+       START [         ] ( 64/127) blake3-servil self_test::test::test_a_waiting_thread_takes_the_verdict
+
+running 1 test
+test self_test::test::test_a_waiting_thread_takes_the_verdict ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.004s] ( 64/127) blake3-servil self_test::test::test_a_waiting_thread_takes_the_verdict
+       START [         ] ( 65/127) blake3-servil self_test::test::test_self_test_run_checks_every_case
+
+running 1 test
+test self_test::test::test_self_test_run_checks_every_case ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.004s] ( 65/127) blake3-servil self_test::test::test_self_test_run_checks_every_case
+       START [         ] ( 66/127) blake3-servil self_test::test::wide_self_test_matches_reference
+
+running 1 test
+test self_test::test::wide_self_test_matches_reference ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.004s] ( 66/127) blake3-servil self_test::test::wide_self_test_matches_reference
+       START [         ] ( 67/127) blake3-servil self_test::test::wide_self_test_rejects_corruption
+
+running 1 test
+
+thread 'self_test::test::wide_self_test_rejects_corruption' (333357) panicked at src/ffi_avx512_32.rs:61:5:
+assertion `left == right` failed: blake3-servil startup self-test failed: AVX-512 k32: this build or CPU computes wrong digests
+  left: 9518597857695014502
+ right: 9518598957206642713
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread 'self_test::test::wide_self_test_rejects_corruption' (333357) panicked at src/ffi_avx512_32.rs:61:5:
+assertion `left == right` failed: blake3-servil startup self-test failed: AVX-512 p32: this build or CPU computes wrong digests
+  left: 7448354657613545353
+ right: 7448353558101917142
+
+thread 'self_test::test::wide_self_test_rejects_corruption' (333357) panicked at src/ffi_avx512_32.rs:61:5:
+assertion `left == right` failed: blake3-servil startup self-test failed: AVX-512 p16: this build or CPU computes wrong digests
+  left: 13958570757188326315
+ right: 13958569657676698104
+test self_test::test::wide_self_test_rejects_corruption ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.004s] ( 67/127) blake3-servil self_test::test::wide_self_test_rejects_corruption
+       START [         ] ( 68/127) blake3-servil stream::test::test_batch_with_zeroes_past_each_message
+
+running 1 test
+test stream::test::test_batch_with_zeroes_past_each_message ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.005s] ( 68/127) blake3-servil stream::test::test_batch_with_zeroes_past_each_message
+       START [         ] ( 69/127) blake3-servil stream::test::test_small_stream
+
+running 1 test
+test stream::test::test_small_stream ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.007s] ( 69/127) blake3-servil stream::test::test_small_stream
+       START [         ] ( 70/127) blake3-servil stream::test::test_stream_against_hash_with
+
+running 1 test
+test stream::test::test_stream_against_hash_with ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.60s
+
+        PASS [   0.601s] ( 70/127) blake3-servil stream::test::test_stream_against_hash_with
+       START [         ] ( 71/127) blake3-servil stream::test::test_stream_panics
+
+running 1 test
+
+thread 'stream::test::test_stream_panics' (338511) panicked at src/stream.rs:155:5:
+assertion `left == right` failed: a stream's body calls finish last
+  left: 0
+ right: 9
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread 'stream::test::test_stream_panics' (338511) panicked at src/stream.rs:853:25:
+the body panics
+test stream::test::test_stream_panics ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.003s] ( 71/127) blake3-servil stream::test::test_stream_panics
+       START [         ] ( 72/127) blake3-servil test::aaa_require_nextest
+
+running 1 test
+test test::aaa_require_nextest ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.003s] ( 72/127) blake3-servil test::aaa_require_nextest
+       START [         ] ( 73/127) blake3-servil test::guard_pages::test_chunk_root_against_a_guard_page
+
+running 1 test
+golden chunk_root_against_a_guard_page: 0x5372bd18346a3525
+test test::guard_pages::test_chunk_root_against_a_guard_page ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.002s] ( 73/127) blake3-servil test::guard_pages::test_chunk_root_against_a_guard_page
+       START [         ] ( 74/127) blake3-servil test::guard_pages::test_each_item_against_a_guard_page
+
+running 1 test
+golden each_item_against_a_guard_page: 0x4cef5685667ec43d
+test test::guard_pages::test_each_item_against_a_guard_page ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.32s
+
+        PASS [   0.322s] ( 74/127) blake3-servil test::guard_pages::test_each_item_against_a_guard_page
+       START [         ] ( 75/127) blake3-servil test::guard_pages::test_every_call_inside_guard_pages
+
+running 1 test
+golden every_call_inside_guard_pages: 0x9bfe90db92a75d95
+test test::guard_pages::test_every_call_inside_guard_pages ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.07s
+
+        PASS [   0.070s] ( 75/127) blake3-servil test::guard_pages::test_every_call_inside_guard_pages
+       START [         ] ( 76/127) blake3-servil test::guard_pages::test_hash_inside_guard_pages
+
+running 1 test
+golden hash_inside_guard_pages: 0x477cad8a62ac89d1
+test test::guard_pages::test_hash_inside_guard_pages ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.08s
+
+        PASS [   0.089s] ( 76/127) blake3-servil test::guard_pages::test_hash_inside_guard_pages
+       START [         ] ( 77/127) blake3-servil test::guard_pages::test_hash_many_each_input_against_a_guard_page
+
+running 1 test
+golden hash_many_guard_64: 0x6127895af4d255cf
+golden hash_many_guard_128: 0xebfbfdda86c4864b
+golden hash_many_guard_1024: 0xe3228fd868305079
+golden hash_many_guard_1024_inc: 0x5fc8b871ccbb233c
+test test::guard_pages::test_hash_many_each_input_against_a_guard_page ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.007s] ( 77/127) blake3-servil test::guard_pages::test_hash_many_each_input_against_a_guard_page
+       START [         ] ( 78/127) blake3-servil test::guard_pages::test_hash_many_inside_guard_pages
+
+running 1 test
+test test::guard_pages::test_hash_many_inside_guard_pages ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.15s
+
+        PASS [   0.159s] ( 78/127) blake3-servil test::guard_pages::test_hash_many_inside_guard_pages
+       START [         ] ( 79/127) blake3-servil test::guard_pages::test_xof_inside_guard_pages
+
+running 1 test
+test test::guard_pages::test_xof_inside_guard_pages ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.005s] ( 79/127) blake3-servil test::guard_pages::test_xof_inside_guard_pages
+       START [         ] ( 80/127) blake3-servil test::test_block_buffer_alignment
+
+running 1 test
+test test::test_block_buffer_alignment ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.003s] ( 80/127) blake3-servil test::test_block_buffer_alignment
+       START [         ] ( 81/127) blake3-servil test::test_compress_chunks_parallel_every_cpu_platform
+
+running 1 test
+golden compress_chunks_parallel: 0x17d8ef758412b936
+test test::test_compress_chunks_parallel_every_cpu_platform ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.02s
+
+        PASS [   0.024s] ( 81/127) blake3-servil test::test_compress_chunks_parallel_every_cpu_platform
+       START [         ] ( 82/127) blake3-servil test::test_debug_leaves_out_the_bytes
+
+running 1 test
+test test::test_debug_leaves_out_the_bytes ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.003s] ( 82/127) blake3-servil test::test_debug_leaves_out_the_bytes
+       START [         ] ( 83/127) blake3-servil test::test_empty_subtree_should_panic
+
+running 1 test
+
+thread 'test::test_empty_subtree_should_panic' (343088) panicked at src/test.rs:1443:9:
+assertion `left != right` failed: empty subtrees are never valid
+  left: 0
+ right: 0
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test test::test_empty_subtree_should_panic - should panic ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.003s] ( 83/127) blake3-servil test::test_empty_subtree_should_panic
+       START [         ] ( 84/127) blake3-servil test::test_every_assembly_symbol_carries_the_crate_prefix
+
+running 1 test
+test test::test_every_assembly_symbol_carries_the_crate_prefix ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.008s] ( 84/127) blake3-servil test::test_every_assembly_symbol_carries_the_crate_prefix
+       START [         ] ( 85/127) blake3-servil test::test_grouped_hash
+
+running 1 test
+test test::test_grouped_hash ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.005s] ( 85/127) blake3-servil test::test_grouped_hash
+       START [         ] ( 86/127) blake3-servil test::test_hash_comparisons_and_formats
+
+running 1 test
+test test::test_hash_comparisons_and_formats ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.004s] ( 86/127) blake3-servil test::test_hash_comparisons_and_formats
+       START [         ] ( 87/127) blake3-servil test::test_hash_const_conversions
+
+running 1 test
+test test::test_hash_const_conversions ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.004s] ( 87/127) blake3-servil test::test_hash_const_conversions
+       START [         ] ( 88/127) blake3-servil test::test_hash_conversions
+
+running 1 test
+test test::test_hash_conversions ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.006s] ( 88/127) blake3-servil test::test_hash_conversions
+       START [         ] ( 89/127) blake3-servil test::test_hasher_already_accepted_input_should_panic
+
+running 1 test
+
+thread 'test::test_hasher_already_accepted_input_should_panic' (343501) panicked at src/test.rs:1437:9:
+assertion `left == right` failed: hasher has already accepted input
+  left: 1
+ right: 0
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test test::test_hasher_already_accepted_input_should_panic - should panic ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.006s] ( 89/127) blake3-servil test::test_hasher_already_accepted_input_should_panic
+       START [         ] ( 90/127) blake3-servil test::test_hasher_gathers
+
+running 1 test
+test test::test_hasher_gathers ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.008s] ( 90/127) blake3-servil test::test_hasher_gathers
+       START [         ] ( 91/127) blake3-servil test::test_hasher_io_write
+
+running 1 test
+test test::test_hasher_io_write ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.005s] ( 91/127) blake3-servil test::test_hasher_io_write
+       START [         ] ( 92/127) blake3-servil test::test_hex_encoding_decoding
+
+running 1 test
+test test::test_hex_encoding_decoding ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.004s] ( 92/127) blake3-servil test::test_hex_encoding_decoding
+       START [         ] ( 93/127) blake3-servil test::test_official_kernels_and_ours_stay_apart
+
+running 1 test
+test test::test_official_kernels_and_ours_stay_apart ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.003s] ( 93/127) blake3-servil test::test_official_kernels_and_ours_stay_apart
+       START [         ] ( 94/127) blake3-servil test::test_reset
+
+running 1 test
+test test::test_reset ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.003s] ( 94/127) blake3-servil test::test_reset
+       START [         ] ( 95/127) blake3-servil test::test_set_input_offset_cant_finalize
+
+running 1 test
+
+thread 'test::test_set_input_offset_cant_finalize' (343853) panicked at src/incremental.rs:298:9:
+assertion `left == right` failed: set_input_offset must be used with finalize_non_root
+  left: 1
+ right: 0
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test test::test_set_input_offset_cant_finalize - should panic ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.004s] ( 95/127) blake3-servil test::test_set_input_offset_cant_finalize
+       START [         ] ( 96/127) blake3-servil test::test_set_input_offset_cant_finalize_xof
+
+running 1 test
+
+thread 'test::test_set_input_offset_cant_finalize_xof' (343916) panicked at src/incremental.rs:310:9:
+assertion `left == right` failed: set_input_offset must be used with finalize_non_root
+  left: 1
+ right: 0
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test test::test_set_input_offset_cant_finalize_xof - should panic ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.004s] ( 96/127) blake3-servil test::test_set_input_offset_cant_finalize_xof
+       START [         ] ( 97/127) blake3-servil test::test_too_much_input_should_panic
+
+running 1 test
+
+thread 'test::test_too_much_input_should_panic' (343975) panicked at src/incremental.rs:516:13:
+the subtree starting at 1024 contains at most 1024 bytes (found 1025)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test test::test_too_much_input_should_panic - should panic ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.004s] ( 97/127) blake3-servil test::test_too_much_input_should_panic
+       START [         ] ( 98/127) blake3-servil test::test_unaligned_offset_should_panic
+
+running 1 test
+
+thread 'test::test_unaligned_offset_should_panic' (344027) panicked at src/incremental.rs:525:9:
+assertion `left == right` failed: offset (1) must be a chunk boundary (divisible by 1024)
+  left: 1
+ right: 0
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test test::test_unaligned_offset_should_panic - should panic ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.003s] ( 98/127) blake3-servil test::test_unaligned_offset_should_panic
+       START [         ] ( 99/127) blake3-servil test::test_update_reader_interrupted
+
+running 1 test
+test test::test_update_reader_interrupted ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.003s] ( 99/127) blake3-servil test::test_update_reader_interrupted
+       START [         ] (100/127) blake3-servil test::test_update_reader_keeps_every_byte_across_errors
+
+running 1 test
+test test::test_update_reader_keeps_every_byte_across_errors ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.01s
+
+        PASS [   0.012s] (100/127) blake3-servil test::test_update_reader_keeps_every_byte_across_errors
+       START [         ] (101/127) blake3-servil test::test_xof_groups_sweep_on_this_cpu
+
+running 1 test
+golden xof_groups: 0x7fb1a8bd9825109c
+test test::test_xof_groups_sweep_on_this_cpu ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.003s] (101/127) blake3-servil test::test_xof_groups_sweep_on_this_cpu
+       START [         ] (102/127) blake3-servil test::test_xof_many_every_cpu_platform
+
+running 1 test
+golden xof_many_every_cpu_platform: 0xce209f7b4d1fa413
+test test::test_xof_many_every_cpu_platform ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.004s] (102/127) blake3-servil test::test_xof_many_every_cpu_platform
+       START [         ] (103/127) blake3-servil test::test_xof_seek
+
+running 1 test
+test test::test_xof_seek ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.003s] (103/127) blake3-servil test::test_xof_seek
+       START [         ] (104/127) blake3-servil test::unsafe_paths::test_batches_small
+
+running 1 test
+test test::unsafe_paths::test_batches_small ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.004s] (104/127) blake3-servil test::unsafe_paths::test_batches_small
+       START [         ] (105/127) blake3-servil test::unsafe_paths::test_pool_from_two_callers
+
+running 1 test
+test test::unsafe_paths::test_pool_from_two_callers ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.004s] (105/127) blake3-servil test::unsafe_paths::test_pool_from_two_callers
+       START [         ] (106/127) blake3-servil::api_plan a_batch_whose_buffer_is_short_of_its_messages_is_refused
+
+running 1 test
+
+thread 'a_batch_whose_buffer_is_short_of_its_messages_is_refused' (344443) panicked at src/many.rs:40:5:
+assertion `left == right` failed: input holds one slot of whole blocks per output
+  left: Some(64)
+ right: Some(128)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test a_batch_whose_buffer_is_short_of_its_messages_is_refused - should panic ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.00s
+
+        PASS [   0.004s] (106/127) blake3-servil::api_plan a_batch_whose_buffer_is_short_of_its_messages_is_refused
+       START [         ] (107/127) blake3-servil::api_plan a_message_in_pieces_matches_the_fixed_values
+
+running 1 test
+golden api_plan pieces: 0x575c859901743801
+test a_message_in_pieces_matches_the_fixed_values ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.04s
+
+        PASS [   0.048s] (107/127) blake3-servil::api_plan a_message_in_pieces_matches_the_fixed_values
+       START [         ] (108/127) blake3-servil::api_plan a_panicking_handler_unwinds_and_the_pool_goes_on
+
+running 1 test
+
+thread 'a_panicking_handler_unwinds_and_the_pool_goes_on' (345049) panicked at tests/api_plan.rs:442:30:
+a handler's panic
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+golden api_plan after_a_panic: 0xf68c9575d37348b1
+test a_panicking_handler_unwinds_and_the_pool_goes_on ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.01s
+
+        PASS [   0.012s] (108/127) blake3-servil::api_plan a_panicking_handler_unwinds_and_the_pool_goes_on
+       START [         ] (109/127) blake3-servil::api_plan a_stream_cycles_a_fixed_set_of_places
+
+running 1 test
+golden api_plan cycled_places: 0xa66bc6c0375fe2db
+test a_stream_cycles_a_fixed_set_of_places ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.01s
+
+        PASS [   0.014s] (109/127) blake3-servil::api_plan a_stream_cycles_a_fixed_set_of_places
+       START [         ] (110/127) blake3-servil::api_plan a_stream_puts_every_digest_in_its_place_and_hands_the_places_back_in_order
+
+running 1 test
+golden api_plan stream_places: 0x2fdca7f8f6c8b56f
+test a_stream_puts_every_digest_in_its_place_and_hands_the_places_back_in_order ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.02s
+
+        PASS [   0.025s] (110/127) blake3-servil::api_plan a_stream_puts_every_digest_in_its_place_and_hands_the_places_back_in_order
+       START [         ] (111/127) blake3-servil::api_plan a_streams_batches_fill_the_callers_places
+
+running 1 test
+golden api_plan stream_batches: 0x9901b3bce75924b7
+test a_streams_batches_fill_the_callers_places ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.01s
+
+        PASS [   0.013s] (111/127) blake3-servil::api_plan a_streams_batches_fill_the_callers_places
+       START [         ] (112/127) blake3-servil::api_plan batches_every_form_match_the_fixed_values
+
+running 1 test
+golden api_plan batches: 0x2ae4ad5b866b2797
+test batches_every_form_match_the_fixed_values ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.04s
+
+        PASS [   0.041s] (112/127) blake3-servil::api_plan batches_every_form_match_the_fixed_values
+       START [         ] (113/127) blake3-servil::api_plan bursts_of_large_batches_after_pauses_complete
+
+running 1 test
+golden api_plan bursts: 0x7ede5248630d5d6a
+test bursts_of_large_batches_after_pauses_complete ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.17s
+
+        PASS [   0.177s] (113/127) blake3-servil::api_plan bursts_of_large_batches_after_pauses_complete
+       START [         ] (114/127) blake3-servil::api_plan one_message_every_form_matches_the_vectors
+
+running 1 test
+test one_message_every_form_matches_the_vectors ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.00s
+
+        PASS [   0.008s] (114/127) blake3-servil::api_plan one_message_every_form_matches_the_vectors
+       START [         ] (115/127) blake3-servil::api_plan one_message_large_inputs_match_the_fixed_values
+
+running 1 test
+golden api_plan large: 0x9c470e731760fb6d
+test one_message_large_inputs_match_the_fixed_values ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.04s
+
+        PASS [   0.047s] (115/127) blake3-servil::api_plan one_message_large_inputs_match_the_fixed_values
+       START [         ] (116/127) blake3-servil::api_plan streams_on_several_threads_keep_their_own_order
+
+running 1 test
+golden api_plan threads: 0x0e566a20c0cfb109
+test streams_on_several_threads_keep_their_own_order ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.04s
+
+        PASS [   0.050s] (116/127) blake3-servil::api_plan streams_on_several_threads_keep_their_own_order
+       START [         ] (117/127) blake3-servil::forked_child a_forked_childs_multithreaded_calls_panic_and_its_single_threaded_ones_work
+
+running 1 test
+
+thread 'a_forked_childs_multithreaded_calls_panic_and_its_single_threaded_ones_work' (346687) panicked at src/lanes.rs:645:5:
+blake3-servil: this process was forked after initialize_multithreaded started its threads, and a forked child has none: initialize the pool in the process that hashes, after any fork (single-threaded calls work anywhere)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test a_forked_childs_multithreaded_calls_panic_and_its_single_threaded_ones_work ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+        PASS [   0.004s] (117/127) blake3-servil::forked_child a_forked_childs_multithreaded_calls_panic_and_its_single_threaded_ones_work
+       START [         ] (118/127) blake3-servil::initialize_contract a_call_before_initialize_panics
+
+running 1 test
+
+thread 'a_call_before_initialize_panics' (346711) panicked at src/platform.rs:130:5:
+blake3-servil: call blake3_servil::initialize() once, before any other call: it runs the startup self-test and detects the CPU
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test a_call_before_initialize_panics - should panic ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+        PASS [   0.003s] (118/127) blake3-servil::initialize_contract a_call_before_initialize_panics
+       START [         ] (119/127) blake3-servil::initialize_multithreaded_contract a_multithreaded_call_before_initialize_multithreaded_panics
+
+running 1 test
+
+thread 'a_multithreaded_call_before_initialize_multithreaded_panics' (346747) panicked at src/lanes.rs:681:5:
+blake3-servil: call blake3_servil::initialize_multithreaded(None) once, before any multithreaded call or stream: it starts the threads they use
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test a_multithreaded_call_before_initialize_multithreaded_panics - should panic ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+        PASS [   0.003s] (119/127) blake3-servil::initialize_multithreaded_contract a_multithreaded_call_before_initialize_multithreaded_panics
+       START [         ] (120/127) blake3-servil::pool_threads one_thread_starts_no_workers
+
+running 1 test
+
+thread 'one_thread_starts_no_workers' (346757) panicked at src/lib.rs:956:9:
+assertion `left == right` failed: blake3-servil: the multithreaded calls were started with 1 threads; initialize_multithreaded cannot change that to 3
+  left: 1
+ right: 3
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test one_thread_starts_no_workers ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+        PASS [   0.013s] (120/127) blake3-servil::pool_threads one_thread_starts_no_workers
+       START [         ] (121/127) blake3-servil::stream_collect_no_workers a_caller_looping_on_collect_makes_progress_without_workers
+
+running 1 test
+test a_caller_looping_on_collect_makes_progress_without_workers ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+        PASS [   0.008s] (121/127) blake3-servil::stream_collect_no_workers a_caller_looping_on_collect_makes_progress_without_workers
+       START [         ] (122/127) blake3-servil::stream_collect_one_worker a_caller_looping_on_collect_makes_progress_without_workers
+
+running 1 test
+test a_caller_looping_on_collect_makes_progress_without_workers ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+        PASS [   0.009s] (122/127) blake3-servil::stream_collect_one_worker a_caller_looping_on_collect_makes_progress_without_workers
+       START [         ] (123/127) blake3-servil::stream_collect_parked_workers a_caller_looping_on_collect_wakes_a_parked_worker
+
+running 1 test
+test a_caller_looping_on_collect_wakes_a_parked_worker ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+        PASS [   0.007s] (123/127) blake3-servil::stream_collect_parked_workers a_caller_looping_on_collect_wakes_a_parked_worker
+       START [         ] (124/127) blake3-servil::stream_collect_with_workers a_caller_looping_on_collect_makes_progress_with_sleeping_workers
+
+running 1 test
+test a_caller_looping_on_collect_makes_progress_with_sleeping_workers ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
+
+        PASS [   0.209s] (124/127) blake3-servil::stream_collect_with_workers a_caller_looping_on_collect_makes_progress_with_sleeping_workers
+       START [         ] (125/127) blake3-servil::stream_finish_parked_workers a_finishing_caller_hashes_its_lone_task_with_every_worker_parked
+
+running 1 test
+test a_finishing_caller_hashes_its_lone_task_with_every_worker_parked ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+        PASS [   0.004s] (125/127) blake3-servil::stream_finish_parked_workers a_finishing_caller_hashes_its_lone_task_with_every_worker_parked
+       START [         ] (126/127) blake3-servil::stream_finish_parked_workers a_panicking_body_unwinds_with_its_lone_task_and_every_worker_parked
+
+running 1 test
+
+thread 'a_panicking_body_unwinds_with_its_lone_task_and_every_worker_parked' (348308) panicked at tests/stream_finish_parked_workers.rs:43:25:
+the body's panic, the stream's to unwind through
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread 'a_panicking_body_unwinds_with_its_lone_task_and_every_worker_parked' (348308) panicked at tests/stream_finish_parked_workers.rs:43:25:
+the body's panic, the stream's to unwind through
+
+thread 'a_panicking_body_unwinds_with_its_lone_task_and_every_worker_parked' (348308) panicked at tests/stream_finish_parked_workers.rs:43:25:
+the body's panic, the stream's to unwind through
+
+thread 'a_panicking_body_unwinds_with_its_lone_task_and_every_worker_parked' (348308) panicked at tests/stream_finish_parked_workers.rs:43:25:
+the body's panic, the stream's to unwind through
+
+thread 'a_panicking_body_unwinds_with_its_lone_task_and_every_worker_parked' (348308) panicked at tests/stream_finish_parked_workers.rs:43:25:
+the body's panic, the stream's to unwind through
+
+thread 'a_panicking_body_unwinds_with_its_lone_task_and_every_worker_parked' (348308) panicked at tests/stream_finish_parked_workers.rs:43:25:
+the body's panic, the stream's to unwind through
+
+thread 'a_panicking_body_unwinds_with_its_lone_task_and_every_worker_parked' (348308) panicked at tests/stream_finish_parked_workers.rs:43:25:
+the body's panic, the stream's to unwind through
+
+thread 'a_panicking_body_unwinds_with_its_lone_task_and_every_worker_parked' (348308) panicked at tests/stream_finish_parked_workers.rs:43:25:
+the body's panic, the stream's to unwind through
+
+thread 'a_panicking_body_unwinds_with_its_lone_task_and_every_worker_parked' (348308) panicked at tests/stream_finish_parked_workers.rs:43:25:
+the body's panic, the stream's to unwind through
+
+thread 'a_panicking_body_unwinds_with_its_lone_task_and_every_worker_parked' (348308) panicked at tests/stream_finish_parked_workers.rs:43:25:
+the body's panic, the stream's to unwind through
+
+thread 'a_panicking_body_unwinds_with_its_lone_task_and_every_worker_parked' (348308) panicked at tests/stream_finish_parked_workers.rs:43:25:
+the body's panic, the stream's to unwind through
+
+thread 'a_panicking_body_unwinds_with_its_lone_task_and_every_worker_parked' (348308) panicked at tests/stream_finish_parked_workers.rs:43:25:
+the body's panic, the stream's to unwind through
+
+thread 'a_panicking_body_unwinds_with_its_lone_task_and_every_worker_parked' (348308) panicked at tests/stream_finish_parked_workers.rs:43:25:
+the body's panic, the stream's to unwind through
+
+thread 'a_panicking_body_unwinds_with_its_lone_task_and_every_worker_parked' (348308) panicked at tests/stream_finish_parked_workers.rs:43:25:
+the body's panic, the stream's to unwind through
+
+thread 'a_panicking_body_unwinds_with_its_lone_task_and_every_worker_parked' (348308) panicked at tests/stream_finish_parked_workers.rs:43:25:
+the body's panic, the stream's to unwind through
+
+thread 'a_panicking_body_unwinds_with_its_lone_task_and_every_worker_parked' (348308) panicked at tests/stream_finish_parked_workers.rs:43:25:
+the body's panic, the stream's to unwind through
+
+thread 'a_panicking_body_unwinds_with_its_lone_task_and_every_worker_parked' (348308) panicked at tests/stream_finish_parked_workers.rs:43:25:
+the body's panic, the stream's to unwind through
+
+thread 'a_panicking_body_unwinds_with_its_lone_task_and_every_worker_parked' (348308) panicked at tests/stream_finish_parked_workers.rs:43:25:
+the body's panic, the stream's to unwind through
+
+thread 'a_panicking_body_unwinds_with_its_lone_task_and_every_worker_parked' (348308) panicked at tests/stream_finish_parked_workers.rs:43:25:
+the body's panic, the stream's to unwind through
+
+thread 'a_panicking_body_unwinds_with_its_lone_task_and_every_worker_parked' (348308) panicked at tests/stream_finish_parked_workers.rs:43:25:
+the body's panic, the stream's to unwind through
+test a_panicking_body_unwinds_with_its_lone_task_and_every_worker_parked ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+        PASS [   0.004s] (126/127) blake3-servil::stream_finish_parked_workers a_panicking_body_unwinds_with_its_lone_task_and_every_worker_parked
+       START [         ] (127/127) blake3-servil::stream_one_cpu every_stream_completes_on_one_cpu
+
+running 1 test
+test every_stream_completes_on_one_cpu ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+        PASS [   0.014s] (127/127) blake3-servil::stream_one_cpu every_stream_completes_on_one_cpu
+────────────
+     Summary [   3.694s] 127 tests run: 127 passed, 0 skipped

@@ -1,0 +1,24 @@
+check: the fork's working tree (8adf5f1773d4) against 2907ea5dda304ba36a3308df90aa033701fd3dfc (2907ea5dda30)
+regress: 4 new builds against 4 old, 4 pairs over --contenders blake3-servil-st,blake3-servil-mt
+regress: pair 1 of 4 in 79.0 s
+regress: pair 2 of 4 in 78.4 s
+regress: pair 3 of 4 in 78.9 s
+regress: pair 4 of 4 in 78.0 s
+check: a second stage for 8 suspects on 16 fresh pairs: blake3-servil-mt|shared|ContinuousMessages|16 KiB, blake3-servil-mt|solo|LentMessages|16 MiB, blake3-servil-mt|shared|ContinuousMessages|512 B, blake3-servil-mt|shared|ContinuousMessages|256 KiB, blake3-servil-mt|shared|ContinuousCollection|git objects, blake3-servil-mt|shared|ContinuousBatches|4096, blake3-servil-mt|shared|ContinuousMessages|1 MiB, blake3-servil-mt|shared|ContinuousMessages|64 KiB
+regress: 16 new builds against 16 old, 16 pairs over --contenders blake3-servil-mt --points "continuous 1 MiB,continuous 16 KiB,continuous 256 KiB,continuous 512 B,continuous 64 KiB,continuous batch 4096,continuous collection git objects,lent 16 MiB"
+regress: pair 1 of 16 in 0.7 s
+regress: pair 2 of 16 in 0.7 s
+regress: pair 3 of 16 in 0.7 s
+regress: pair 4 of 16 in 0.7 s
+regress: pair 5 of 16 in 0.7 s
+regress: pair 6 of 16 in 0.7 s
+regress: pair 7 of 16 in 0.7 s
+regress: pair 8 of 16 in 0.7 s
+regress: pair 9 of 16 in 0.7 s
+regress: pair 10 of 16 in 0.7 s
+regress: pair 11 of 16 in 0.7 s
+regress: pair 12 of 16 in 0.7 s
+regress: pair 13 of 16 in 0.7 s
+regress: pair 14 of 16 in 0.7 s
+regress: pair 15 of 16 in 0.7 s
+regress: pair 16 of 16 in 0.7 s

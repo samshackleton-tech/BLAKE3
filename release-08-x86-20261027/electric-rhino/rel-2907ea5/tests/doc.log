@@ -1,0 +1,107 @@
+    Updating crates.io index
+    Blocking waiting for file lock on package cache
+     Locking 78 packages to highest Rust 1.99.1 compatible versions
+      Adding constant_time_eq v0.4.2 (available: v0.6.1)
+      Adding shuttle v0.8.1 (available: v0.9.8)
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling proc-macro2 v1.0.107
+   Compiling cfg-if v1.0.5
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.27
+   Compiling libc v0.2.191
+   Compiling shlex v2.0.1
+   Compiling find-msvc-tools v0.1.15
+   Compiling zerocopy v0.8.63
+   Compiling serde_core v1.0.229
+   Compiling rustversion v1.0.23
+   Compiling typenum v1.20.1
+   Compiling serde v1.0.229
+   Compiling once_cell v1.21.4
+   Compiling rand_core v0.10.1
+   Compiling radium v0.7.0
+   Compiling getrandom v0.4.3
+   Compiling zeroize v1.9.1
+   Compiling zmij v1.0.23
+   Compiling cmov v0.5.4
+   Compiling tap v1.0.1
+   Compiling cpufeatures v0.3.1
+   Compiling rustix v1.1.6
+   Compiling pin-project-lite v0.2.17
+   Compiling serde_json v1.0.154
+   Compiling log v0.4.34
+   Compiling ciborium-io v0.2.2
+   Compiling funty v2.0.0
+   Compiling constant_time_eq v0.4.2
+   Compiling linux-raw-sys v0.12.1
+   Compiling bitflags v2.13.2
+   Compiling owo-colors v3.5.0
+   Compiling scoped-tls v1.0.1
+   Compiling itoa v1.0.18
+   Compiling smallvec v1.16.4
+   Compiling fastrand v2.5.0
+   Compiling memchr v2.8.3
+   Compiling hex v0.4.3
+   Compiling assoc v0.1.3
+   Compiling clocks v0.1.0 (/root/BLAKE3-rel-2907ea5/clocks)
+   Compiling reference_impl v0.0.0 (/root/BLAKE3-rel-2907ea5/reference_impl)
+   Compiling cc v1.10.0
+   Compiling arrayvec v0.7.8
+   Compiling wyz v0.5.1
+   Compiling chacha20 v0.10.2
+   Compiling tracing-core v0.1.36
+   Compiling ctutils v0.4.6
+   Compiling tracing v0.1.44
+   Compiling bitvec v1.1.1
+   Compiling syn v2.0.119
+   Compiling syn v3.0.9
+   Compiling hybrid-array v0.4.15
+   Compiling generator v0.8.11
+   Compiling blake3-servil v0.8.0+4a47bbfaa80861eb423d5fa57701697fdea4afde (/root/BLAKE3-rel-2907ea5)
+   Compiling blake3 v1.8.7
+   Compiling crypto-common v0.2.2
+   Compiling block-buffer v0.12.1
+   Compiling getrandom v0.2.17
+   Compiling rand_core v0.6.4
+   Compiling rand v0.10.3
+   Compiling rand_pcg v0.3.1
+   Compiling digest v0.11.3
+   Compiling tempfile v3.27.0
+   Compiling hmac v0.13.0
+   Compiling serde_derive v1.0.229
+   Compiling zerocopy-derive v0.8.63
+   Compiling ppv-lite86 v0.2.21
+   Compiling half v2.7.1
+   Compiling ciborium-ll v0.2.2
+   Compiling rand_chacha v0.3.1
+   Compiling ciborium v0.2.2
+   Compiling rand v0.8.8
+   Compiling shuttle v0.8.1
+    Finished `test` profile [optimized] target(s) in 10.59s
+   Doc-tests blake3_servil
+
+running 19 tests
+test src/incremental.rs - incremental::Hasher::update_reader (line 343) - compile ... ok
+test src/convenience.rs - convenience::hash_xof (line 65) ... ok
+test src/block.rs - block::Batch (line 73) ... ok
+test src/convenience.rs - convenience::hash (line 11) ... ok
+test src/each.rs - each::hash_each (line 231) ... ok
+test src/incremental.rs - incremental::Hasher (line 15) ... ok
+test src/performance.rs - performance::hash_many (line 68) ... ok
+test src/stream.rs - stream::stream (line 136) ... ok
+test src/performance.rs - performance::hash (line 38) ... ok
+test src/lib.rs - initialize (line 917) ... ok
+test src/each.rs - each::update_each (line 63) ... ok
+test src/lib.rs - (line 7) ... ok
+test src/performance.rs - performance::context_key (line 182) ... ok
+test src/convenience.rs - convenience::hash_with (line 47) ... ok
+test src/incremental.rs - incremental::Hasher::update_multithreaded (line 277) ... ok
+test src/lib.rs - initialize_multithreaded (line 964) ... ok
+test src/each.rs - each::hash_each_multithreaded (line 20) ... ok
+test src/performance.rs - performance::hash_many_multithreaded (line 99) ... ok
+test src/performance.rs - performance::hash_multithreaded (line 130) ... ok
+
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+all doctests ran in 0.37s; merged doctests compilation took 0.36s

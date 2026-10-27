@@ -1,0 +1,82 @@
+    Finished `release` profile [optimized] target(s) in 0.05s
+────────────
+ Nextest run ID c6577366-1140-49b2-bcde-4c561e253a9c with nextest profile: default
+    Starting 7 tests across 14 binaries (120 tests skipped)
+       START [         ] (1/7) blake3-servil avx512::test::test_wide_dispatch_groups_tails_and_bounds
+
+running 1 test
+
+thread 'avx512::test::test_wide_dispatch_groups_tails_and_bounds' (61676) panicked at src/ffi_avx512.rs:32:9:
+assertion failed: out.len() >= inputs.len() * OUT_LEN
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test avx512::test::test_wide_dispatch_groups_tails_and_bounds ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.007s] (1/7) blake3-servil avx512::test::test_wide_dispatch_groups_tails_and_bounds
+       START [         ] (2/7) blake3-servil platform::x86_degree_test::test_detected_degree_is_the_widest_kernel
+
+running 1 test
+test platform::x86_degree_test::test_detected_degree_is_the_widest_kernel ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.005s] (2/7) blake3-servil platform::x86_degree_test::test_detected_degree_is_the_widest_kernel
+       START [         ] (3/7) blake3-servil platform::x86_features_test::test_a_cpu_runs_its_widest_kernel_and_one_without_sse41_none
+
+running 1 test
+test platform::x86_features_test::test_a_cpu_runs_its_widest_kernel_and_one_without_sse41_none ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.005s] (3/7) blake3-servil platform::x86_features_test::test_a_cpu_runs_its_widest_kernel_and_one_without_sse41_none
+       START [         ] (4/7) blake3-servil platform::x86_features_test::test_wide_bit_matches_cpuinfo
+
+running 1 test
+test platform::x86_features_test::test_wide_bit_matches_cpuinfo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.007s] (4/7) blake3-servil platform::x86_features_test::test_wide_bit_matches_cpuinfo
+       START [         ] (5/7) blake3-servil platform::x86_features_test::test_wide_cpu_and_family
+
+running 1 test
+test platform::x86_features_test::test_wide_cpu_and_family ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.005s] (5/7) blake3-servil platform::x86_features_test::test_wide_cpu_and_family
+       START [         ] (6/7) blake3-servil self_test::test::wide_self_test_matches_reference
+
+running 1 test
+test self_test::test::wide_self_test_matches_reference ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.005s] (6/7) blake3-servil self_test::test::wide_self_test_matches_reference
+       START [         ] (7/7) blake3-servil self_test::test::wide_self_test_rejects_corruption
+
+running 1 test
+
+thread 'self_test::test::wide_self_test_rejects_corruption' (61688) panicked at src/ffi_avx512_32.rs:61:5:
+assertion `left == right` failed: blake3-servil startup self-test failed: AVX-512 k32: this build or CPU computes wrong digests
+  left: 9518597857695014502
+ right: 9518598957206642713
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread 'self_test::test::wide_self_test_rejects_corruption' (61688) panicked at src/ffi_avx512_32.rs:61:5:
+assertion `left == right` failed: blake3-servil startup self-test failed: AVX-512 p32: this build or CPU computes wrong digests
+  left: 7448354657613545353
+ right: 7448353558101917142
+
+thread 'self_test::test::wide_self_test_rejects_corruption' (61688) panicked at src/ffi_avx512_32.rs:61:5:
+assertion `left == right` failed: blake3-servil startup self-test failed: AVX-512 p16: this build or CPU computes wrong digests
+  left: 13958570757188326315
+ right: 13958569657676698104
+test self_test::test::wide_self_test_rejects_corruption ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 104 filtered out; finished in 0.00s
+
+        PASS [   0.005s] (7/7) blake3-servil self_test::test::wide_self_test_rejects_corruption
+────────────
+     Summary [   0.039s] 7 tests run: 7 passed, 120 skipped

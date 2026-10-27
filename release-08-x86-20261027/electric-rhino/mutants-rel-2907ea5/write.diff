@@ -1,0 +1,159 @@
+diff --git a/tools/mutants/known-x86_64.txt b/tools/mutants/known-x86_64.txt
+index 1afd6833..3b1815c8 100644
+--- a/tools/mutants/known-x86_64.txt
++++ b/tools/mutants/known-x86_64.txt
+@@ -29,6 +29,28 @@ src/hasher.rs	replace | with ^ in ChunkState<P>::absorb	1	equivalent: | made ^ o
+ src/hasher.rs	replace | with ^ in ChunkState<P>::output	2	equivalent: | made ^ on flag bits that never overlap (the mode's flag beside CHUNK_START, CHUNK_END, PARENT, or ROOT)
+ src/hasher.rs	replace | with ^ in Output<P>::root_bytes	1	equivalent: | made ^ on flag bits that never overlap (the mode's flag beside CHUNK_START, CHUNK_END, PARENT, or ROOT)
+ src/hasher.rs	replace | with ^ in parent_output	1	equivalent: | made ^ on flag bits that never overlap (the mode's flag beside CHUNK_START, CHUNK_END, PARENT, or ROOT)
++src/incremental.rs	delete ! in <impl hasher::Hooks for HasherHooks<'_>>::subtree_cv	1	speed: chooses between equally correct paths
++src/incremental.rs	delete ! in HasherCore::update_pooled	1	speed: whether the update takes the SME2 turn
++src/incremental.rs	replace && with || in <impl hasher::Hooks for HasherHooks<'_>>::subtree_cv	2	equally correct paths: the flat subtree value where the kernels have one (SME2); without it the walk computes the same value
++src/incremental.rs	replace && with || in Hasher::update	1	speed: whether and what to prefetch after a pause (no effect on results)
++src/incremental.rs	replace && with || in HasherCore::update_pooled	1	speed: whether the update takes the SME2 turn
++src/incremental.rs	replace * with / in Hasher::gather_part	1	speed: whether the Hasher stages input or hashes it at once (equally correct)
++src/incremental.rs	replace + with * in Hasher::update	1	speed: whether and what to prefetch after a pause (no effect on results)
++src/incremental.rs	replace + with - in Hasher::gather_part	1	equally correct paths: where the stage is cut; every cut hashes the same bytes in the end
++src/incremental.rs	replace + with - in Hasher::update	1	speed: whether and what to prefetch after a pause (no effect on results)
++src/incremental.rs	replace + with - in HasherCore::update_part_with_results	1	equally correct paths: where the results are consumed; every boundary hashes the same bytes
++src/incremental.rs	replace / with * in HasherCore::update_part_with_results	1	equivalent: a power of two times or over 2 has the same one bit, so the stack merges alike
++src/incremental.rs	replace <impl hasher::Hooks for HasherHooks<'_>>::subtree_cv -> Option<CVBytes> with None	1	speed: chooses between equally correct paths
++src/incremental.rs	replace == with != in Hasher::update	1	speed: whether and what to prefetch after a pause (no effect on results)
++src/incremental.rs	replace > with >= in HasherCore::update_part_with_results	2	equivalent for its one caller: a held group is exactly 16 KiB (16 chunks), so no length it compares equals one chunk
++src/incremental.rs	replace >= with < in <impl hasher::Hooks for HasherHooks<'_>>::children	1	speed: chooses between equally correct paths
++src/incremental.rs	replace >= with < in HasherCore::update_pooled	1	speed: whether the update takes the SME2 turn
++src/incremental.rs	replace Hasher::held_group -> Option<(u64, &[u8; STAGE_LEN])> with None	1	speed: whether the Hasher stages input or hashes it at once (equally correct)
++src/incremental.rs	replace Hasher::held_group -> Option<(u64, &[u8; STAGE_LEN])> with Some((0, Box::leak(Box::new([0; STAGE_LEN]))))	1	speed: whether the Hasher stages input or hashes it at once (equally correct)
++src/incremental.rs	replace Hasher::held_group -> Option<(u64, &[u8; STAGE_LEN])> with Some((0, Box::leak(Box::new([1; STAGE_LEN]))))	1	speed: whether the Hasher stages input or hashes it at once (equally correct)
++src/incremental.rs	replace Hasher::held_group -> Option<(u64, &[u8; STAGE_LEN])> with Some((1, Box::leak(Box::new([0; STAGE_LEN]))))	1	speed: whether the Hasher stages input or hashes it at once (equally correct)
++src/incremental.rs	replace Hasher::held_group -> Option<(u64, &[u8; STAGE_LEN])> with Some((1, Box::leak(Box::new([1; STAGE_LEN]))))	1	speed: whether the Hasher stages input or hashes it at once (equally correct)
++src/incremental.rs	replace || with && in Hasher::gather_part	1	speed: whether the Hasher stages input or hashes it at once (equally correct)
+ src/io.rs	replace < with <= in fill	1	equivalent: one more read into an empty buffer, which returns 0 and ends the loop
+ src/lanes.rs	delete ! in initialize	1	another machine's code: the SME2 condition; cfg!(blake3_sme2) is false on x86, so the whole condition is
+ src/lanes.rs	delete ! in spin_for_work	1	speed: how long an idle worker spins before it parks (no effect on results)
+@@ -128,8 +150,6 @@ src/lanes.rs	replace wake_sme2 with ()	1	another machine's code: the SME2 thread
+ src/lanes.rs	replace | with ^ in Task::run_equal_members	4	equivalent: | and ^ agree on flag bits that never overlap
+ src/lanes.rs	replace || with && in hash_each	1	speed: the cut's piece sizes; any cut of the items into consecutive pieces of one or more hashes every item alike (the cut, not the digests, is what changes)
+ src/lanes.rs	replace || with && in hash_many	1	speed: moves a threshold between equally correct paths (the serial path and the pool, both right)
+-src/incremental.rs	delete ! in <impl hasher::Hooks for HasherHooks<'_>>::subtree_cv	1	speed: chooses between equally correct paths
+-src/incremental.rs	delete ! in HasherCore::update_pooled	1	speed: whether the update takes the SME2 turn
+ src/lib.rs	delete ! in batch_after_pause	3	speed: whether and what to prefetch after a pause (no effect on results)
+ src/lib.rs	delete ! in compress_chunks_parallel	1	NEON and SME2 only: the hybrid partial-chunk block in compress_chunks_parallel is compiled out on x86
+ src/lib.rs	delete ! in prefetch_kernels	1	speed: whether and what to prefetch after a pause (no effect on results)
+@@ -139,9 +159,6 @@ src/lib.rs	delete match arm (Platform::SSE41 | Platform::AVX2, 3) in spare_lane
+ src/lib.rs	delete match arm Mode::Plain in Mode<'_>::key	1	equivalent: without the arm, Mode::Plain takes the general arm, which writes the same IV and flags into the room; the arm saves the copy
+ src/lib.rs	replace % with + in prefetch_kernels	1	speed: whether and what to prefetch after a pause (no effect on results)
+ src/lib.rs	replace % with / in prefetch_kernels	1	speed: whether and what to prefetch after a pause (no effect on results)
+-src/incremental.rs	replace && with || in <impl hasher::Hooks for HasherHooks<'_>>::subtree_cv	2	equally correct paths: the flat subtree value where the kernels have one (SME2); without it the walk computes the same value
+-src/incremental.rs	replace && with || in Hasher::update	1	speed: whether and what to prefetch after a pause (no effect on results)
+-src/incremental.rs	replace && with || in HasherCore::update_pooled	1	speed: whether the update takes the SME2 turn
+ src/lib.rs	replace && with || in batch_after_pause	1	speed: whether and what to prefetch after a pause (no effect on results)
+ src/lib.rs	replace && with || in compress_chunks_parallel	3	NEON and SME2 only: the hybrid partial-chunk block in compress_chunks_parallel is compiled out on x86
+ src/lib.rs	replace && with || in hash_many_serial_from	2	equally correct paths: the serial and pooled cuts agree
+@@ -151,15 +168,10 @@ src/lib.rs	replace * with +	2	speed: the lengths PREFETCH_BELOW and SME2_SIZED_L
+ src/lib.rs	replace * with + in hash_one_chunk_root	1	AArch64 only: the scalar one-chunk kernel serves NEON platforms; x86 chunk roots take ChunkState
+ src/lib.rs	replace * with + in spare_lane	1	equally correct paths: any lane can be the spare, or none (the partial chunk then runs serially); speed, measured: with it off, 7935 B +29% and +53% after a pause (data 2026-10-24/shortcuts)
+ src/lib.rs	replace * with /	2	speed: the lengths PREFETCH_BELOW and SME2_SIZED_LEN, between equally correct paths
+-src/incremental.rs	replace * with / in Hasher::gather_part	1	speed: whether the Hasher stages input or hashes it at once (equally correct)
+ src/lib.rs	replace * with / in hash_one_chunk_root	1	AArch64 only: the scalar one-chunk kernel serves NEON platforms; x86 chunk roots take ChunkState
+ src/lib.rs	replace * with / in spare_lane	1	equally correct paths: any lane can be the spare, or none (the partial chunk then runs serially); speed, measured: with it off, 7935 B +29% and +53% after a pause (data 2026-10-24/shortcuts)
+-src/incremental.rs	replace + with * in Hasher::update	1	speed: whether and what to prefetch after a pause (no effect on results)
+ src/lib.rs	replace + with * in compress_chunks_parallel	1	NEON only: the hybrid partial-chunk block in compress_chunks_parallel is compiled out on x86
+ src/lib.rs	replace + with * in hash_serial_from	1	speed: moves a threshold between equally correct paths
+-src/incremental.rs	replace + with - in Hasher::gather_part	1	equally correct paths: where the stage is cut; every cut hashes the same bytes in the end
+-src/incremental.rs	replace + with - in Hasher::update	1	speed: whether and what to prefetch after a pause (no effect on results)
+-src/incremental.rs	replace + with - in HasherCore::update_part_with_results	1	equally correct paths: where the results are consumed; every boundary hashes the same bytes
+ src/lib.rs	replace + with - in compress_chunks_parallel	1	NEON only: the hybrid partial-chunk block in compress_chunks_parallel is compiled out on x86
+ src/lib.rs	replace + with - in hash_serial_from	1	speed: moves a threshold between equally correct paths
+ src/lib.rs	replace += with *= in prefetch_update_kernels	2	speed: whether and what to prefetch after a pause (no effect on results)
+@@ -171,14 +183,11 @@ src/lib.rs	replace -= with /= in prefetch_update_kernels	2	speed: whether and wh
+ src/lib.rs	replace / with % in compress_parents_parallel	1	equivalent: | and ^ agree on flag bits that never overlap
+ src/lib.rs	replace / with % in prefetch_kernels	1	speed: whether and what to prefetch after a pause (no effect on results)
+ src/lib.rs	replace / with % in prefetch_update_kernels	1	speed: whether and what to prefetch after a pause (no effect on results)
+-src/incremental.rs	replace / with * in HasherCore::update_part_with_results	1	equivalent: a power of two times or over 2 has the same one bit, so the stack merges alike
+ src/lib.rs	replace / with * in compress_parents_parallel	1	equivalent: | and ^ agree on flag bits that never overlap
+ src/lib.rs	replace / with * in prefetch_kernels	1	speed: whether and what to prefetch after a pause (no effect on results)
+ src/lib.rs	replace / with * in prefetch_update_kernels	1	speed: whether and what to prefetch after a pause (no effect on results)
+ src/lib.rs	replace << with >>	1	equivalent: 1 << 0 and 1 >> 0 are both 1
+ src/lib.rs	replace <= with > in hash_many_serial_from	1	equally correct paths: the serial and pooled cuts agree
+-src/incremental.rs	replace <impl hasher::Hooks for HasherHooks<'_>>::subtree_cv -> Option<CVBytes> with None	1	speed: chooses between equally correct paths
+-src/incremental.rs	replace == with != in Hasher::update	1	speed: whether and what to prefetch after a pause (no effect on results)
+ src/lib.rs	replace == with != in batch_after_pause	1	speed: whether a batch after a pause takes the pooled path; both paths agree
+ src/lib.rs	replace == with != in prefetch_kernels	1	speed: whether and what to prefetch after a pause (no effect on results)
+ src/lib.rs	replace > with < in code_may_be_cold	1	speed: a prefetch decision; no effect on results
+@@ -187,22 +196,14 @@ src/lib.rs	replace > with < in spare_lane	3	equally correct paths: any lane can
+ src/lib.rs	replace > with == in code_may_be_cold	1	speed: whether and what to prefetch after a pause (no effect on results)
+ src/lib.rs	replace > with == in prefetch_update_kernels	1	speed: whether and what to prefetch after a pause (no effect on results)
+ src/lib.rs	replace > with == in spare_lane	3	equally correct paths: any lane can be the spare, or none (the partial chunk then runs serially); speed, measured: with it off, 7935 B +29% and +53% after a pause (data 2026-10-24/shortcuts)
+-src/incremental.rs	replace > with >= in HasherCore::update_part_with_results	2	equivalent for its one caller: a held group is exactly 16 KiB (16 chunks), so no length it compares equals one chunk
+ src/lib.rs	replace > with >= in OutputReader::fill	1	equivalent: | and ^ agree on flag bits that never overlap
+ src/lib.rs	replace > with >= in code_may_be_cold	1	speed: whether and what to prefetch after a pause (no effect on results)
+ src/lib.rs	replace > with >= in prefetch_update_kernels	1	speed: whether and what to prefetch after a pause (no effect on results)
+ src/lib.rs	replace > with >= in spare_lane	3	equally correct paths: any lane can be the spare, or none (the partial chunk then runs serially); speed, measured: with it off, 7935 B +29% and +53% after a pause (data 2026-10-24/shortcuts)
+-src/incremental.rs	replace >= with < in <impl hasher::Hooks for HasherHooks<'_>>::children	1	speed: chooses between equally correct paths
+-src/incremental.rs	replace >= with < in HasherCore::update_pooled	1	speed: whether the update takes the SME2 turn
+ src/lib.rs	replace >= with < in batch_after_pause	1	speed: whether and what to prefetch after a pause (no effect on results)
+ src/lib.rs	replace >= with < in hash_serial_from	1	speed: moves a threshold between equally correct paths
+ src/lib.rs	replace >= with < in prefetch_kernels	1	speed: whether and what to prefetch after a pause (no effect on results)
+ src/lib.rs	replace >= with < in prefetch_update_kernels	1	speed: whether and what to prefetch after a pause (no effect on results)
+-src/incremental.rs	replace Hasher::held_group -> Option<(u64, &[u8; STAGE_LEN])> with None	1	speed: whether the Hasher stages input or hashes it at once (equally correct)
+-src/incremental.rs	replace Hasher::held_group -> Option<(u64, &[u8; STAGE_LEN])> with Some((0, Box::leak(Box::new([0; STAGE_LEN]))))	1	speed: whether the Hasher stages input or hashes it at once (equally correct)
+-src/incremental.rs	replace Hasher::held_group -> Option<(u64, &[u8; STAGE_LEN])> with Some((0, Box::leak(Box::new([1; STAGE_LEN]))))	1	speed: whether the Hasher stages input or hashes it at once (equally correct)
+-src/incremental.rs	replace Hasher::held_group -> Option<(u64, &[u8; STAGE_LEN])> with Some((1, Box::leak(Box::new([0; STAGE_LEN]))))	1	speed: whether the Hasher stages input or hashes it at once (equally correct)
+-src/incremental.rs	replace Hasher::held_group -> Option<(u64, &[u8; STAGE_LEN])> with Some((1, Box::leak(Box::new([1; STAGE_LEN]))))	1	speed: whether the Hasher stages input or hashes it at once (equally correct)
+ src/lib.rs	replace __all_workers_parked -> bool with true	1	a test-only hook (__all_workers_parked, the stream tests' wait for every worker parked): a yes too soon only shortens their wait, and they check what they checked before
+ src/lib.rs	replace batch_after_pause -> bool with false	1	speed: whether and what to prefetch after a pause (no effect on results)
+ src/lib.rs	replace batch_after_pause -> bool with true	1	speed: whether a batch after a pause takes the pooled path; both paths agree
+@@ -227,7 +228,6 @@ src/lib.rs	replace | with ^ in compress_parents_parallel	1	equivalent: | and ^ a
+ src/lib.rs	replace | with ^ in hash_all_at_once	1	equivalent: | and ^ agree on flag bits that never overlap
+ src/lib.rs	replace | with ^ in hash_one_chunk_root	1	equivalent: | and ^ agree on flag bits that never overlap
+ src/lib.rs	replace | with ^ in ran	1	test-only record of which kernels ran; on x86 nothing reads it (AArch64's kernel-coverage test does)
+-src/incremental.rs	replace || with && in Hasher::gather_part	1	speed: whether the Hasher stages input or hashes it at once (equally correct)
+ src/lib.rs	replace || with && in batch_after_pause	1	speed: whether a batch after a pause takes the pooled path; both paths agree
+ src/lib.rs	replace || with && in compress_chunks_parallel	1	NEON and SME2 only: the hybrid partial-chunk block in compress_chunks_parallel is compiled out on x86
+ src/many.rs	delete ! in across_from	1	equally correct paths: whether a batch hashes across messages or message by message; both give the same digests; speed, measured when written: 0.35-0.52x for batches of 2-15-chunk messages (2478d66); no benchmark cell covers it (data 2026-10-24/shortcuts)
+@@ -361,20 +361,22 @@ src/platform.rs	replace & with ^ in read_x86_features	2	[cpu has avx512f avx512v
+ src/platform.rs	replace & with ^ in read_x86_features	4	[cpu lacks avx512f avx512vl] on this CPU every tested bit reads the same under these forms (SSE4.1 and AVX2 present, AVX-512 absent); the forms differ on CPUs with other feature sets
+ src/platform.rs	replace & with ^ in sme2_reported	1	detection, on a machine with SME2: a wrong no runs NEON (equally correct), a wrong yes is this machine's answer (a machine without SME2 would stop on it)
+ src/platform.rs	replace & with ^ in sse41_detected	1	on this CPU every tested bit reads the same under these forms (SSE4.1 and AVX2 present, AVX-512 absent); the forms differ on CPUs with other feature sets
++src/platform.rs	replace & with ^ in wide_avx512	1	[cpu has avx512f avx512vl amd_family_ge_1a] equivalent: on AMD Zen 5 and later with AVX-512 the wide kernels run, and every form of the test reads the bit set (any other CPU catches it: test_wide_bit_matches_cpuinfo)
+ src/platform.rs	replace & with | in avx2_detected	1	on this CPU every tested bit reads the same under these forms (SSE4.1 and AVX2 present, AVX-512 absent); the forms differ on CPUs with other feature sets
+ src/platform.rs	replace & with | in avx512_detected	1	[cpu has avx512f avx512vl] on this CPU every tested bit reads the same under these forms (SSE4.1, AVX2 and AVX-512 present: an EPYC 9255, October 22)
+ src/platform.rs	replace & with | in read_x86_features	2	[cpu has avx512f avx512vl] on this CPU every tested bit reads the same under these forms (SSE4.1, AVX2 and AVX-512 present: an EPYC 9255, October 22)
+ src/platform.rs	replace & with | in read_x86_features	4	[cpu lacks avx512f avx512vl] on this CPU every tested bit reads the same under these forms (SSE4.1 and AVX2 present, AVX-512 absent); the forms differ on CPUs with other feature sets
+ src/platform.rs	replace & with | in sme2_reported	1	detection, on a machine with SME2: a wrong no runs NEON (equally correct), a wrong yes is this machine's answer (a machine without SME2 would stop on it)
+ src/platform.rs	replace & with | in sse41_detected	1	on this CPU every tested bit reads the same under these forms (SSE4.1 and AVX2 present, AVX-512 absent); the forms differ on CPUs with other feature sets
++src/platform.rs	replace & with | in wide_avx512	1	[cpu has avx512f avx512vl amd_family_ge_1a] equivalent: on AMD Zen 5 and later with AVX-512 the wide kernels run, and every form of the test reads the bit set (any other CPU catches it: test_wide_bit_matches_cpuinfo)
+ src/platform.rs	replace && with || in Sme2Turn::take	1	SME2 only: on x86 no SME2 turn is held; take returns the platform unchanged and drop releases nothing
+ src/platform.rs	replace && with || in read_x86_features	2	on this CPU every tested bit reads the same under these forms (SSE4.1 and AVX2 present, AVX-512 absent); the forms differ on CPUs with other feature sets
+ src/platform.rs	replace && with || in sme2_reported	1	detection, on a machine with SME2: a wrong no runs NEON (equally correct), a wrong yes is this machine's answer (a machine without SME2 would stop on it)
+ src/platform.rs	replace * with + in Platform::xof_many	1	speed: moves a threshold between equally correct paths
+ src/platform.rs	replace * with / in Platform::xof_many	1	speed: moves a threshold between equally correct paths
+-src/platform.rs	replace += with *= in Platform::xof_many	2	code for another machine: the SME2 and NEON blocks in xof_many are compiled out on x86
++src/platform.rs	replace += with *= in Platform::xof_many	1	code for another machine: the SME2 and NEON blocks in xof_many are compiled out on x86
+ src/platform.rs	replace += with *= in prefetch_code	1	speed: whether and what to prefetch after a pause (no effect on results)
+-src/platform.rs	replace += with -= in Platform::xof_many	2	code for another machine: the SME2 and NEON blocks in xof_many are compiled out on x86
++src/platform.rs	replace += with -= in Platform::xof_many	1	code for another machine: the SME2 and NEON blocks in xof_many are compiled out on x86
+ src/platform.rs	replace += with -= in prefetch_code	1	AArch64 only: prefetch_code is cfg(blake3_neon), compiled out on x86; prefetching changes no result
+ src/platform.rs	replace / with % in Platform::xof_many	2	code for another machine: the SME2 and NEON blocks in xof_many are compiled out on x86
+ src/platform.rs	replace / with % in ticks_in_100_us	1	AArch64 only: ticks_in_100_us is cfg(blake3_neon), compiled out on x86
+@@ -403,10 +405,6 @@ src/platform.rs	replace Platform::sme2 -> Option<Self> with None	1	a test-only c
+ src/platform.rs	replace Platform::sme2 -> Option<Self> with Some(Default::default())	1	a test-only constructor: no x86 test calls it (SME2 platforms are AArch64)
+ src/platform.rs	replace avx2_detected -> bool with true	1	[cpu has avx2] equivalent: this CPU has AVX2, so the forced yes is its own answer
+ src/platform.rs	replace avx512_detected -> bool with false	1	[cpu lacks avx512f avx512vl] equivalent: this CPU lacks AVX-512, so the forced no is its own answer (a CPU with it catches it: test_detected_degree_is_the_widest_kernel)
+-src/platform.rs	replace & with ^ in wide_avx512	1	[cpu has avx512f avx512vl amd_family_ge_1a] equivalent: on AMD Zen 5 and later with AVX-512 the wide kernels run, and every form of the test reads the bit set (any other CPU catches it: test_wide_bit_matches_cpuinfo)
+-src/platform.rs	replace & with | in wide_avx512	1	[cpu has avx512f avx512vl amd_family_ge_1a] equivalent: on AMD Zen 5 and later with AVX-512 the wide kernels run, and every form of the test reads the bit set (any other CPU catches it: test_wide_bit_matches_cpuinfo)
+-src/platform.rs	replace wide_avx512 -> bool with false	1	[cpu lacks avx512f avx512vl amd_family_ge_1a] equivalent: off AMD Zen 5 and later the forced no is this CPU's answer (a Zen 5 catches it: test_wide_bit_matches_cpuinfo)
+-src/platform.rs	replace wide_avx512 -> bool with true	1	[cpu has avx512f avx512vl amd_family_ge_1a] equivalent: on AMD Zen 5 and later with AVX-512 the forced yes is this CPU's answer (any other CPU catches it: test_wide_bit_matches_cpuinfo)
+ src/platform.rs	replace avx512_detected -> bool with true	1	[cpu has avx512f avx512vl] equivalent: this CPU has AVX-512, so the forced yes is its own answer
+ src/platform.rs	replace counter -> u64 with 0	1	speed: whether and what to prefetch after a pause (no effect on results)
+ src/platform.rs	replace counter -> u64 with 1	1	speed: whether and what to prefetch after a pause (no effect on results)
+@@ -420,6 +418,8 @@ src/platform.rs	replace sme2_reported -> bool with true	2	detection, on a machin
+ src/platform.rs	replace sse41_detected -> bool with true	1	[cpu has sse4_1] equivalent: this CPU has SSE4.1, so the forced yes is its own answer
+ src/platform.rs	replace ticks_in_100_us -> u64 with 0	1	AArch64 only: ticks_in_100_us is cfg(blake3_neon), compiled out on x86
+ src/platform.rs	replace ticks_in_100_us -> u64 with 1	1	AArch64 only: ticks_in_100_us is cfg(blake3_neon), compiled out on x86
++src/platform.rs	replace wide_avx512 -> bool with false	1	[cpu lacks avx512f avx512vl amd_family_ge_1a] equivalent: off AMD Zen 5 and later the forced no is this CPU's answer (a Zen 5 catches it: test_wide_bit_matches_cpuinfo)
++src/platform.rs	replace wide_avx512 -> bool with true	1	[cpu has avx512f avx512vl amd_family_ge_1a] equivalent: on AMD Zen 5 and later with AVX-512 the forced yes is this CPU's answer (any other CPU catches it: test_wide_bit_matches_cpuinfo)
+ src/platform.rs	replace | with & in read_x86_features	3	on this CPU every tested bit reads the same under these forms (SSE4.1 and AVX2 present, AVX-512 absent); the forms differ on CPUs with other feature sets
+ src/platform.rs	replace | with ^ in Platform::compress_blocks	1	equivalent: | and ^ agree on flag bits that never overlap
+ src/platform.rs	replace | with ^ in read_x86_features	3	on this CPU every tested bit reads the same under these forms (SSE4.1 and AVX2 present, AVX-512 absent); the forms differ on CPUs with other feature sets

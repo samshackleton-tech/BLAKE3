@@ -1,0 +1,26 @@
+#!/bin/bash
+# The full x86 mutation run on the EPYC 9255 (AVX-512 F/VL: the wide kernel's
+# Rust paths live), at #195 356e4ea (no portable Rust, reference or Miri), in a clean worktree.
+# The project's own tool; its exit status and full output are the result.
+set -u
+out=/root/results/mutants-195-356e4ea
+mkdir -p $out
+exec > $out/runner.log 2>&1
+. /root/.cargo/env
+export GIT_AUTHOR_NAME='Sam Shackleton' GIT_COMMITTER_NAME='Sam Shackleton'
+export GIT_AUTHOR_EMAIL='samshackleton-tech@users.noreply.github.com'
+export GIT_COMMITTER_EMAIL='samshackleton-tech@users.noreply.github.com'
+exec 9>/root/bench-native-afk.lock
+flock -w 7200 9 || { echo "lock busy"; exit 75; }
+R=/root/BLAKE3-round-pr164; D=/root/BLAKE3-mut-356e4ea
+git -C $R fetch -q https://github.com/devonjonte/BLAKE3 candidate/devon-no-portable || exit 10
+[ -d $D ] || git -C $R worktree add -q --detach $D 356e4ead6d || exit 11
+cd $D
+{ date -u; git rev-parse HEAD; git status --short; lscpu | grep -E 'Model name|Flags' | cut -c1-300; cargo mutants --version; cargo nextest --version; rustc -V; } > $out/provenance.txt 2>&1
+echo "start $(date -u)"
+python3 tools/mutants/check.py > $out/check.log 2>&1
+status=$?
+[ $status = 0 ] || python3 tools/mutants/check.py --write > $out/check-write.log 2>&1; git diff > $out/write.diff
+echo "check exit $status $(date -u)"
+cp -a tmp/mutants-last $out/mutants-last 2>/dev/null
+exit $status

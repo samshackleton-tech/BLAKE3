@@ -1,0 +1,175 @@
+check: the fork's working tree (acb6d8657549) against 2907ea5dda304ba36a3308df90aa033701fd3dfc (2907ea5dda30)
+
+thread 'main' (2444250) panicked at src/check.rs:483:5:
+check: old: building bench-hashes against the fork at 2907ea5dda30:
+error[E0599]: no variant, associated function, or constant named `Hash` found for enum `blake3_servil::Mode<'a>` in the current scope
+    --> src/main.rs:2704:46
+     |
+2704 |                         blake3_servil::Mode::Hash,
+     |                                              ^^^^ variant, associated function, or constant not found in `blake3_servil::Mode<'_>`
+
+error[E0599]: no variant, associated function, or constant named `Hash` found for enum `blake3_servil::Mode<'a>` in the current scope
+    --> src/main.rs:2712:46
+     |
+2712 |                         blake3_servil::Mode::Hash,
+     |                                              ^^^^ variant, associated function, or constant not found in `blake3_servil::Mode<'_>`
+
+error[E0599]: no variant, associated function, or constant named `Hash` found for enum `blake3_servil::Mode<'a>` in the current scope
+    --> src/main.rs:2852:42
+     |
+2852 |                     blake3_servil::Mode::Hash,
+     |                                          ^^^^ variant, associated function, or constant not found in `blake3_servil::Mode<'_>`
+
+error[E0599]: no variant, associated function, or constant named `Hash` found for enum `blake3_servil::Mode<'a>` in the current scope
+    --> src/main.rs:3008:38
+     |
+3008 |                 blake3_servil::Mode::Hash,
+     |                                      ^^^^ variant, associated function, or constant not found in `blake3_servil::Mode<'_>`
+
+error[E0599]: no variant, associated function, or constant named `Hash` found for enum `blake3_servil::Mode<'a>` in the current scope
+    --> src/main.rs:3079:50
+     |
+3079 | ...                   blake3_servil::Mode::Hash,
+     |                                            ^^^^ variant, associated function, or constant not found in `blake3_servil::Mode<'_>`
+
+error[E0599]: no variant, associated function, or constant named `Hash` found for enum `blake3_servil::Mode<'a>` in the current scope
+    --> src/main.rs:3123:42
+     |
+3123 |                     blake3_servil::Mode::Hash,
+     |                                          ^^^^ variant, associated function, or constant not found in `blake3_servil::Mode<'_>`
+
+error[E0599]: no variant, associated function, or constant named `Hash` found for enum `blake3_servil::Mode<'a>` in the current scope
+    --> src/main.rs:3194:34
+     |
+3194 |             blake3_servil::Mode::Hash,
+     |                                  ^^^^ variant, associated function, or constant not found in `blake3_servil::Mode<'_>`
+
+error[E0599]: no variant, associated function, or constant named `Hash` found for enum `blake3_servil::Mode<'a>` in the current scope
+    --> src/main.rs:3266:39
+     |
+3266 |             each(blake3_servil::Mode::Hash, black_box(&slices), &mut digests);
+     |                                       ^^^^ variant, associated function, or constant not found in `blake3_servil::Mode<'_>`
+
+error[E0061]: this function takes 1 argument but 0 arguments were supplied
+    --> src/main.rs:3326:34
+     |
+3326 |                 let mut hasher = blake3_servil::performance::Hasher::new();
+     |                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-- argument #1 of type `blake3_servil::Mode<'_>` is missing
+     |
+note: associated function defined here
+    --> /root/BLAKE3-195/target/check/old/src/src/incremental.rs:234:12
+     |
+ 234 |     pub fn new(mode: Mode) -> Self {
+     |            ^^^
+help: provide the argument
+     |
+3326 |                 let mut hasher = blake3_servil::performance::Hasher::new(/* Mode<'_> */);
+     |                                                                          ++++++++++++++
+
+error[E0061]: this function takes 1 argument but 0 arguments were supplied
+    --> src/main.rs:3338:34
+     |
+3338 |                 let mut hasher = blake3_servil::performance::Hasher::new();
+     |                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-- argument #1 of type `blake3_servil::Mode<'_>` is missing
+     |
+note: associated function defined here
+    --> /root/BLAKE3-195/target/check/old/src/src/incremental.rs:234:12
+     |
+ 234 |     pub fn new(mode: Mode) -> Self {
+     |            ^^^
+help: provide the argument
+     |
+3338 |                 let mut hasher = blake3_servil::performance::Hasher::new(/* Mode<'_> */);
+     |                                                                          ++++++++++++++
+
+error[E0593]: function is expected to take 0 arguments, but it takes 1 argument
+    --> src/main.rs:3455:17
+     |
+3450 |             each_interleaved(
+     |             ---------------- required by a bound introduced by this call
+...
+3455 |                 blake3_servil::performance::Hasher::new,
+     |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected function that takes 0 arguments
+     |
+note: required by a bound in `each_interleaved`
+    --> src/main.rs:3581:15
+     |
+3576 | fn each_interleaved<S: 'static>(
+     |    ---------------- required by a bound in this function
+...
+3581 |     new: impl Fn() -> S,
+     |               ^^^^^^^^^ required by this bound in `each_interleaved`
+
+error[E0599]: no variant, associated function, or constant named `Hash` found for enum `blake3_servil::Mode<'a>` in the current scope
+    --> src/main.rs:3720:34
+     |
+3720 |             blake3_servil::Mode::Hash,
+     |                                  ^^^^ variant, associated function, or constant not found in `blake3_servil::Mode<'_>`
+
+error[E0599]: no variant, associated function, or constant named `Hash` found for enum `blake3_servil::Mode<'a>` in the current scope
+    --> src/main.rs:3791:34
+     |
+3791 |             blake3_servil::Mode::Hash,
+     |                                  ^^^^ variant, associated function, or constant not found in `blake3_servil::Mode<'_>`
+
+error[E0061]: this function takes 1 argument but 0 arguments were supplied
+   --> src/b3sum.rs:183:5
+    |
+183 |     blake3_servil::performance::Hasher::new()
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-- argument #1 of type `blake3_servil::Mode<'_>` is missing
+    |
+note: associated function defined here
+   --> /root/BLAKE3-195/target/check/old/src/src/incremental.rs:234:12
+    |
+234 |     pub fn new(mode: Mode) -> Self {
+    |            ^^^
+help: provide the argument
+    |
+183 |     blake3_servil::performance::Hasher::new(/* Mode<'_> */)
+    |                                             ++++++++++++++
+
+error[E0061]: this function takes 1 argument but 0 arguments were supplied
+   --> src/check.rs:891:21
+    |
+891 |         let mut h = blake3_servil::performance::Hasher::new();
+    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-- argument #1 of type `blake3_servil::Mode<'_>` is missing
+    |
+note: associated function defined here
+   --> /root/BLAKE3-195/target/check/old/src/src/incremental.rs:234:12
+    |
+234 |     pub fn new(mode: Mode) -> Self {
+    |            ^^^
+help: provide the argument
+    |
+891 |         let mut h = blake3_servil::performance::Hasher::new(/* Mode<'_> */);
+    |                                                             ++++++++++++++
+
+error[E0599]: no variant, associated function, or constant named `Hash` found for enum `blake3_servil::Mode<'a>` in the current scope
+  --> src/leaves.rs:84:42
+   |
+84 |                     blake3_servil::Mode::Hash,
+   |                                          ^^^^ variant, associated function, or constant not found in `blake3_servil::Mode<'_>`
+
+error[E0599]: no variant, associated function, or constant named `Hash` found for enum `blake3_servil::Mode<'a>` in the current scope
+   --> src/leaves.rs:104:42
+    |
+104 |                     blake3_servil::Mode::Hash,
+    |                                          ^^^^ variant, associated function, or constant not found in `blake3_servil::Mode<'_>`
+
+error[E0599]: no variant, associated function, or constant named `Hash` found for enum `blake3_servil::Mode<'a>` in the current scope
+   --> src/leaves.rs:118:42
+    |
+118 |                     blake3_servil::Mode::Hash,
+    |                                          ^^^^ variant, associated function, or constant not found in `blake3_servil::Mode<'_>`
+
+error[E0599]: no variant, associated function, or constant named `Hash` found for enum `blake3_servil::Mode<'a>` in the current scope
+   --> src/leaves.rs:134:42
+    |
+134 |                     blake3_servil::Mode::Hash,
+    |                                          ^^^^ variant, associated function, or constant not found in `blake3_servil::Mode<'_>`
+
+Some errors have detailed explanations: E0061, E0593, E0599.
+For more information about an error, try `rustc --explain E0061`.
+error: could not compile `bench-hashes` (bin "bench-hashes") due to 19 previous errors
+
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

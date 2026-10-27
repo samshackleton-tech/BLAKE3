@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "/root/BLAKE3-rel-2907ea5/tools/test_capi_guards.py", line 42, in <module>
+    main()
+    ~~~~^^
+  File "/root/BLAKE3-rel-2907ea5/tools/test_capi_guards.py", line 31, in main
+    assert code == 0 and len(inventories) == 1, output
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: error: the 'miri' component which provides the command 'cargo-miri' is not available for the 'stable-x86_64-unknown-linux-gnu' toolchain
+
