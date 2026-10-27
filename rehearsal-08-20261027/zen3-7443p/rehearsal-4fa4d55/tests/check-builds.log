@@ -1,0 +1,184 @@
+== cargo nextest run --cargo-quiet --release --no-default-features
+────────────
+ Nextest run ID d902d2f4-946c-424d-952c-e1a757f9f0cf with nextest profile: default
+    Starting 34 tests across 5 binaries
+        PASS [   0.006s] ( 1/34) blake3-servil ffi_partial::test::test_params_layout_is_the_generators
+        PASS [   0.007s] ( 2/34) blake3-servil avx512_32::tests::parent16_unaligned_overlapping_output
+        PASS [   0.007s] ( 3/34) blake3-servil avx512_32::tests::short_last_blocks_unaligned_and_overlapping_output
+        PASS [   0.007s] ( 4/34) blake3-servil avx512_32::tests::guarded_input_key_pointer_table_and_output_bounds
+        PASS [   0.007s] ( 5/34) blake3-servil test::test_xof_seek
+        PASS [   0.007s] ( 6/34) blake3-servil platform::x86_features_test::test_x86_features_match_std
+        PASS [   0.007s] ( 7/34) blake3-servil test::test_block_buffer_alignment
+        PASS [   0.008s] ( 8/34) blake3-servil many::test::test_hash_blocks_without_plans
+        PASS [   0.008s] ( 9/34) blake3-servil avx512_32::tests::randomized_counters_flags_and_block_counts
+        PASS [   0.008s] (10/34) blake3-servil many::test::test_hash_many_needs_the_input_it_names
+        PASS [   0.008s] (11/34) blake3-servil test::test_reset
+        PASS [   0.008s] (12/34) blake3-servil::initialize_contract a_call_before_initialize_panics
+        PASS [   0.009s] (13/34) blake3-servil test::test_unaligned_offset_should_panic
+        PASS [   0.009s] (14/34) blake3-servil test::test_hash_const_conversions
+        PASS [   0.009s] (15/34) blake3-servil test::test_empty_subtree_should_panic
+        PASS [   0.009s] (16/34) blake3-servil test::test_hash_comparisons_and_formats
+        PASS [   0.009s] (17/34) blake3-servil platform::x86_features_test::test_wide_cpu_and_family
+        PASS [   0.009s] (18/34) blake3-servil test::test_hasher_already_accepted_input_should_panic
+        PASS [   0.009s] (19/34) blake3-servil test::test_set_input_offset_cant_finalize_xof
+        PASS [   0.009s] (20/34) blake3-servil avx512::test::test_xof_many
+        PASS [   0.009s] (21/34) blake3-servil test::test_hash_conversions
+        PASS [   0.009s] (22/34) blake3-servil test::test_hex_encoding_decoding
+        PASS [   0.010s] (23/34) blake3-servil platform::x86_features_test::test_a_cpu_runs_its_widest_kernel_and_one_without_sse41_none
+        PASS [   0.009s] (24/34) blake3-servil test::test_too_much_input_should_panic
+        PASS [   0.010s] (25/34) blake3-servil platform::x86_degree_test::test_detected_degree_is_the_widest_kernel
+        PASS [   0.010s] (26/34) blake3-servil test::test_grouped_hash
+        PASS [   0.010s] (27/34) blake3-servil test::test_set_input_offset_cant_finalize
+        PASS [   0.010s] (28/34) blake3-servil test::aaa_require_nextest
+        PASS [   0.010s] (29/34) blake3-servil platform::x86_features_test::test_x86_detection_matches_std
+        PASS [   0.013s] (30/34) blake3-servil ffi_partial::test::test_partial_kernels_against_portable
+        PASS [   0.027s] (31/34) blake3-servil avx512_32::tests::generated_assembly_matches
+        PASS [   0.028s] (32/34) blake3-servil many::test::test_hash_many_whole_blocks
+        PASS [   0.036s] (33/34) blake3-servil many::test::test_hash_many_modes_every_platform
+        PASS [   0.137s] (34/34) blake3-servil self_test::stops::test_a_failing_self_test_stops_the_process
+────────────
+     Summary [   0.137s] 34 tests run: 34 passed, 0 skipped
+== cargo test -q --release --doc --no-default-features
+
+running 9 tests
+.........
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+all doctests ran in 0.19s; merged doctests compilation took 0.19s
+== taskset -c 0 cargo nextest run --cargo-quiet --release --lib
+────────────
+ Nextest run ID 344832ee-22b1-41f1-81dd-3e5c84180f15 with nextest profile: default
+    Starting 105 tests across 1 binary
+        PASS [   0.005s] (  1/105) blake3-servil avx512::test::test_parent16_dispatch_and_legacy_incrementing_route
+        PASS [   0.005s] (  2/105) blake3-servil avx512::test::test_wide_dispatch_groups_tails_and_bounds
+        PASS [   0.005s] (  3/105) blake3-servil avx512::test::test_xof_many
+        PASS [   0.025s] (  4/105) blake3-servil avx512_32::tests::generated_assembly_matches
+        PASS [   0.005s] (  5/105) blake3-servil avx512_32::tests::guarded_input_key_pointer_table_and_output_bounds
+        PASS [   0.005s] (  6/105) blake3-servil avx512_32::tests::parent16_unaligned_overlapping_output
+        PASS [   0.005s] (  7/105) blake3-servil avx512_32::tests::randomized_counters_flags_and_block_counts
+        PASS [   0.005s] (  8/105) blake3-servil avx512_32::tests::short_last_blocks_unaligned_and_overlapping_output
+        PASS [   0.005s] (  9/105) blake3-servil block::test::test_a_batch_describes_itself
+        PASS [   0.005s] ( 10/105) blake3-servil block::test::test_a_batch_keeps_the_bytes_past_its_messages_zero
+        PASS [   0.005s] ( 11/105) blake3-servil block::test::test_a_merkle_layer_lands_in_the_next_layers_blocks
+        PASS [   0.005s] ( 12/105) blake3-servil block::test::test_blocks_mut_refuses_messages_with_padding
+        PASS [   0.005s] ( 13/105) blake3-servil block::test::test_from_bytes_takes_aligned_whole_blocks_only
+        PASS [   0.005s] ( 14/105) blake3-servil chunk_root::test::test_chunk_root_kernel_touches_no_stack
+        PASS [   0.045s] ( 15/105) blake3-servil chunk_root::test::test_chunk_root_line_placements
+        PASS [   0.022s] ( 16/105) blake3-servil chunk_root::test::test_chunk_root_matches_portable
+        PASS [   0.006s] ( 17/105) blake3-servil each::test::test_hash_each_matches_hash_with
+        PASS [   0.412s] ( 18/105) blake3-servil each::test::test_hash_each_multithreaded
+        PASS [   0.008s] ( 19/105) blake3-servil each::test::test_hash_each_multithreaded_past_the_split
+        PASS [   0.008s] ( 20/105) blake3-servil each::test::test_update_each
+        PASS [   0.007s] ( 21/105) blake3-servil each::test::test_update_each_at_offsets
+        PASS [   0.006s] ( 22/105) blake3-servil each::test::test_update_each_holds_groups_together
+        PASS [   0.005s] ( 23/105) blake3-servil ffi_partial::test::test_params_layout_is_the_generators
+        PASS [   0.010s] ( 24/105) blake3-servil ffi_partial::test::test_partial_kernels_against_portable
+        PASS [   0.026s] ( 25/105) blake3-servil finish::tests::a_spurious_wake_is_slept_through
+        PASS [   0.005s] ( 26/105) blake3-servil finish::tests::every_atomic_in_the_handshake_files_is_seqcst
+        PASS [   0.005s] ( 27/105) blake3-servil lanes::sources::test::test_a_finished_threads_source_is_the_next_threads
+        PASS [   0.005s] ( 28/105) blake3-servil lanes::sources::test::test_find_reaches_every_registered_source
+        PASS [   0.005s] ( 29/105) blake3-servil lanes::sources::test::test_unregister_gives_the_slot_back
+        PASS [   0.005s] ( 30/105) blake3-servil lanes::sources::test::test_unregister_leaves_the_other_sources_registered
+        PASS [   0.005s] ( 31/105) blake3-servil lanes::sources::test::test_visible_sees_a_waiting_item_and_its_kind
+        PASS [   0.055s] ( 32/105) blake3-servil lanes::test::equal_members_match_the_reference
+        PASS [   0.006s] ( 33/105) blake3-servil lanes::test::test_a_caller_gives_its_place_back
+        PASS [   0.007s] ( 34/105) blake3-servil lanes::test::test_a_parked_caller_is_woken_by_the_last_piece
+        PASS [   0.230s] ( 35/105) blake3-servil lanes::test::test_concurrent_batch_callers_agree
+        PASS [   0.753s] ( 36/105) blake3-servil lanes::test::test_concurrent_callers_agree
+        PASS [   0.005s] ( 37/105) blake3-servil lanes::test::test_cut_messages_shapes
+        PASS [   0.027s] ( 38/105) blake3-servil lanes::test::test_cut_with_prefix_shapes_and_hashes
+        PASS [   0.025s] ( 39/105) blake3-servil lanes::test::test_hash_many_pool_agrees
+        PASS [   0.028s] ( 40/105) blake3-servil lanes::test::test_hash_matches_serial
+        PASS [   0.005s] ( 41/105) blake3-servil lanes::test::test_idle_workers_park_while_a_stream_is_open
+        PASS [   0.005s] ( 42/105) blake3-servil lanes::test::test_next_piece_len
+        PASS [   0.005s] ( 43/105) blake3-servil lanes::test::test_simd_merge_matches_recursive
+        PASS [   0.005s] ( 44/105) blake3-servil lanes::test::test_tree_thread_budget
+        PASS [   0.287s] ( 45/105) blake3-servil lanes::test::test_update_multithreaded_matches_hash
+        PASS [   0.006s] ( 46/105) blake3-servil many::test::across_partial_chunks_matches_published_vectors
+        PASS [   0.005s] ( 47/105) blake3-servil many::test::four_chunk_batch_matches_published_vectors
+        PASS [   0.005s] ( 48/105) blake3-servil many::test::test_hash_blocks_without_plans
+        PASS [   0.031s] ( 49/105) blake3-servil many::test::test_hash_many_modes_every_platform
+        PASS [   0.005s] ( 50/105) blake3-servil many::test::test_hash_many_needs_the_input_it_names
+        PASS [   0.026s] ( 51/105) blake3-servil many::test::test_hash_many_whole_blocks
+        PASS [   0.096s] ( 52/105) blake3-servil many::test::test_small_batches_after_a_pause
+        PASS [   0.414s] ( 53/105) blake3-servil many::test::test_whole_blocks_x86_full_width
+        PASS [   0.005s] ( 54/105) blake3-servil many::test::two_chunk_batch_matches_published_vectors
+        PASS [   0.005s] ( 55/105) blake3-servil park::test::a_waker_wakes_at_most_its_fanout_and_owes_the_rest
+        PASS [   0.005s] ( 56/105) blake3-servil platform::x86_degree_test::test_detected_degree_is_the_widest_kernel
+        PASS [   0.005s] ( 57/105) blake3-servil platform::x86_features_test::test_a_cpu_runs_its_widest_kernel_and_one_without_sse41_none
+        PASS [   0.006s] ( 58/105) blake3-servil platform::x86_features_test::test_wide_bit_matches_cpuinfo
+        PASS [   0.005s] ( 59/105) blake3-servil platform::x86_features_test::test_wide_cpu_and_family
+        PASS [   0.005s] ( 60/105) blake3-servil platform::x86_features_test::test_x86_detection_matches_std
+        PASS [   0.005s] ( 61/105) blake3-servil platform::x86_features_test::test_x86_features_match_std
+        PASS [   0.130s] ( 62/105) blake3-servil self_test::stops::test_a_failing_self_test_stops_the_process
+        PASS [   0.005s] ( 63/105) blake3-servil self_test::test::self_test_matches_official_blake3
+        PASS [   0.006s] ( 64/105) blake3-servil self_test::test::test_a_waiting_thread_takes_the_verdict
+        PASS [   0.005s] ( 65/105) blake3-servil self_test::test::test_self_test_run_checks_every_case
+        PASS [   0.005s] ( 66/105) blake3-servil self_test::test::wide_self_test_matches_reference
+        PASS [   0.005s] ( 67/105) blake3-servil self_test::test::wide_self_test_rejects_corruption
+        PASS [   0.005s] ( 68/105) blake3-servil stream::test::test_batch_with_zeroes_past_each_message
+        PASS [   0.006s] ( 69/105) blake3-servil stream::test::test_small_stream
+        PASS [   1.820s] ( 70/105) blake3-servil stream::test::test_stream_against_hash_with
+        PASS [   0.006s] ( 71/105) blake3-servil stream::test::test_stream_panics
+        PASS [   0.005s] ( 72/105) blake3-servil test::aaa_require_nextest
+        PASS [   0.005s] ( 73/105) blake3-servil test::guard_pages::test_chunk_root_against_a_guard_page
+        PASS [   0.768s] ( 74/105) blake3-servil test::guard_pages::test_each_item_against_a_guard_page
+        PASS [   0.152s] ( 75/105) blake3-servil test::guard_pages::test_every_call_inside_guard_pages
+        PASS [   0.193s] ( 76/105) blake3-servil test::guard_pages::test_hash_inside_guard_pages
+        PASS [   0.016s] ( 77/105) blake3-servil test::guard_pages::test_hash_many_each_input_against_a_guard_page
+        PASS [   0.294s] ( 78/105) blake3-servil test::guard_pages::test_hash_many_inside_guard_pages
+        PASS [   0.006s] ( 79/105) blake3-servil test::guard_pages::test_xof_inside_guard_pages
+        PASS [   0.005s] ( 80/105) blake3-servil test::test_block_buffer_alignment
+        PASS [   0.012s] ( 81/105) blake3-servil test::test_compress_chunks_parallel_every_cpu_platform
+        PASS [   0.005s] ( 82/105) blake3-servil test::test_debug_leaves_out_the_bytes
+        PASS [   0.005s] ( 83/105) blake3-servil test::test_empty_subtree_should_panic
+        PASS [   0.008s] ( 84/105) blake3-servil test::test_every_assembly_symbol_carries_the_crate_prefix
+        PASS [   0.007s] ( 85/105) blake3-servil test::test_grouped_hash
+        PASS [   0.005s] ( 86/105) blake3-servil test::test_hash_comparisons_and_formats
+        PASS [   0.005s] ( 87/105) blake3-servil test::test_hash_const_conversions
+        PASS [   0.005s] ( 88/105) blake3-servil test::test_hash_conversions
+        PASS [   0.005s] ( 89/105) blake3-servil test::test_hasher_already_accepted_input_should_panic
+        PASS [   0.011s] ( 90/105) blake3-servil test::test_hasher_gathers
+        PASS [   0.005s] ( 91/105) blake3-servil test::test_hasher_io_write
+        PASS [   0.005s] ( 92/105) blake3-servil test::test_hex_encoding_decoding
+        PASS [   0.005s] ( 93/105) blake3-servil test::test_official_kernels_and_ours_stay_apart
+        PASS [   0.005s] ( 94/105) blake3-servil test::test_reset
+        PASS [   0.005s] ( 95/105) blake3-servil test::test_set_input_offset_cant_finalize
+        PASS [   0.005s] ( 96/105) blake3-servil test::test_set_input_offset_cant_finalize_xof
+        PASS [   0.005s] ( 97/105) blake3-servil test::test_too_much_input_should_panic
+        PASS [   0.005s] ( 98/105) blake3-servil test::test_unaligned_offset_should_panic
+        PASS [   0.005s] ( 99/105) blake3-servil test::test_update_reader_interrupted
+        PASS [   0.021s] (100/105) blake3-servil test::test_update_reader_keeps_every_byte_across_errors
+        PASS [   0.005s] (101/105) blake3-servil test::test_xof_groups_sweep_on_this_cpu
+        PASS [   0.005s] (102/105) blake3-servil test::test_xof_many_every_cpu_platform
+        PASS [   0.005s] (103/105) blake3-servil test::test_xof_seek
+        PASS [   0.006s] (104/105) blake3-servil test::unsafe_paths::test_batches_small
+        PASS [   0.006s] (105/105) blake3-servil test::unsafe_paths::test_pool_from_two_callers
+────────────
+     Summary [   6.349s] 105 tests run: 105 passed, 0 skipped
+== cargo check -q --release --tests --examples
+== cargo check -q --release --manifest-path b3sum/Cargo.toml
+== cargo nextest run --cargo-quiet --release --manifest-path capi/Cargo.toml
+────────────
+ Nextest run ID 5816ea7a-9bf6-4341-b91e-64bd2661ccb0 with nextest profile: default
+    Starting 8 tests across 6 binaries
+        PASS [   0.005s] (1/8) blake3-servil-c::vectors null_with_nothing
+        PASS [   0.006s] (2/8) blake3-servil-c::guards adjacent_ranges_and_empty_null_ranges_are_allowed
+        PASS [   0.006s] (3/8) blake3-servil-c test::aaa_require_nextest
+        PASS [   0.006s] (4/8) blake3-servil-c::provenance callback_context_reaches_the_callback
+        PASS [   0.012s] (5/8) blake3-servil-c::vectors every_call_against_the_test_vectors
+        PASS [   0.103s] (6/8) blake3-servil-c::guard_pages every_call_inside_guard_pages
+        PASS [   2.035s] (7/8) blake3-servil-c::guards bad_calls_stop_at_the_guard
+        PASS [   2.793s] (8/8) blake3-servil-c::c from_c
+────────────
+     Summary [   2.794s] 8 tests run: 8 passed, 0 skipped
+== cargo check -q --tests --examples --target x86_64-unknown-linux-gnu
+== cargo check -q --tests --target x86_64-unknown-linux-gnu --no-default-features
+== sh -c cargo check -q --keep-going --target x86_64-pc-windows-msvc 2>&1 | grep -q 'for x86_64-pc-windows-msvc, use official BLAKE3'
+== sh -c cargo check -q --keep-going --target wasm32-unknown-unknown 2>&1 | grep -q 'for wasm32-unknown-unknown, use official BLAKE3'
+== sh -c CC=/nonexistent/cc cargo check -q 2>&1 | grep -q 'use official BLAKE3 for a build without assembly'
+== sh -c python3 tools/gen_neon_hybrid.py | cmp - c/blake3_neon_hybrid_aarch64.S && python3 tools/gen_sme2_hybrid.py | cmp - c/blake3_sme2_hybrid_aarch64.S
+== sh -c python3 tools/gen_x86.py | cmp - c/blake3_partial_x86-64_unix.S
+== sh -c python3 tools/gen_x86_chunk_root.py | cmp - c/blake3_chunk_root_x86-64_unix.S
+== sh -c python3 tools/gen_avx512_32.py | cmp - c/blake3_avx512_32.S
+check-builds: every build passes

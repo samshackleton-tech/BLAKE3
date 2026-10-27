@@ -1,0 +1,40 @@
+MEMORY movdqa xmmword ptr [rdx], xmm0
+MEMORY pand xmm0, xmmword ptr [rdx]
+MEMORY pxor xmm0, xmmword ptr [rdx]
+MEMORY movdqu xmm0, xmmword ptr [rdx]
+MEMORY movdqa xmm0, xmmword ptr [rdx]
+MEMORY paddd xmm0, xmmword ptr [rdx]
+MEMORY movdqu xmmword ptr [rdx], xmm0
+MEMORY movups xmm0, xmmword ptr [rdx]
+MEMORY movd xmm0, dword ptr [rdx]
+MEMORY pinsrd xmm0, dword ptr [rdx], 0x1
+MEMORY pinsrd xmm0, dword ptr [rdx], 0x2
+MEMORY movaps xmmword ptr [rdx], xmm0
+MEMORY movaps xmm0, xmmword ptr [rdx]
+MEMORY movups xmmword ptr [rdx], xmm0
+MEMORY vmovdqa ymmword ptr [rdx], ymm0
+MEMORY vpand ymm0, ymm1, ymmword ptr [rdx]
+MEMORY vpxor ymm0, ymm0, ymmword ptr [rdx]
+MEMORY vpbroadcastd ymm0, dword ptr [rdx]
+MEMORY vmovups xmm0, xmmword ptr [rdx]
+MEMORY vinsertf128 ymm0, ymm0, xmmword ptr [rdx], 0x1
+MEMORY vmovaps ymmword ptr [rdx], ymm0
+MEMORY vpaddd ymm0, ymm0, ymmword ptr [rdx]
+MEMORY vpxor ymm0, ymm1, ymmword ptr [rdx]
+MEMORY vbroadcasti128 ymm0, xmmword ptr [rdx]
+MEMORY vpaddd ymm0, ymm1, ymmword ptr [rdx]
+MEMORY vmovups ymmword ptr [rdx], ymm0
+MEMORY vmovdqa ymm0, ymmword ptr [rdx]
+MEMORY vmovdqu xmmword ptr [rdx], xmm0
+MEMORY vextracti128 xmmword ptr [rdx], ymm0, 0x1
+MEMORY vmovaps xmm0, xmmword ptr [rdx]
+MEMORY vmovaps xmmword ptr [rdx], xmm0
+MEMORY vmovd xmm0, dword ptr [rdx]
+MEMORY vpinsrd xmm0, xmm0, dword ptr [rdx], 0x1
+MEMORY vpinsrd xmm0, xmm0, dword ptr [rdx], 0x2
+MEMORY vmovaps ymm0, ymmword ptr [rdx]
+MEMORY vmovups ymm0, ymmword ptr [rdx]
+MEMORY vmovdqu xmm0, xmmword ptr [rdx]
+MEMORY vpinsrd xmm0, xmm1, dword ptr [rdx], 0x2
+MEMORY vmovdqa xmm0, xmmword ptr [rdx]
+155 vector instruction forms (39 memory forms), 200 random states each, 14 alignment fault controls: all agree; 177 AVX-512 forms skipped (no AVX-512 here)

@@ -1,0 +1,11 @@
+check: the fork's working tree (b745a3d8ccbf) against bfbda1920283335ff3802723db11c209159f47fc (bfbda1920283)
+check: the old side with the bench at 5be5f23699ee7146ada56a08777173a4ee1c7bde (5be5f23699ee)
+regress: 4 new builds against 4 old, 4 pairs over --contenders blake3-servil-st,blake3-servil-mt
+
+thread 'main' (2494815) panicked at src/main.rs:5594:5:
+/root/BLAKE3-rel-4fa4d555/target/check/old/bench-hashes-0 failed
+
+thread 'main' (2494916) panicked at src/main.rs:1925:13:
+--points: no point "4 KiB batch 4"; the points named so are 64 B, 128 B, 256 B, 512 B, 1 KiB, 1536 B, 2 KiB, 2304 B, 3 KiB, 3839 B, 4 KiB, 4470 B, 7935 B, 8 KiB, 16 KiB, 32 KiB, 64 KiB, 128 KiB, 256 KiB, 512 KiB, 1 MiB, 2 MiB, 3 MiB, 4 MiB, 8 MiB, 32 MiB, 64 MiB, 128 MiB, 1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

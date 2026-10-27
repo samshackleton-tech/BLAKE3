@@ -1,0 +1,20 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Finished `release` profile [optimized] target(s) in 0.07s
+────────────
+ Nextest run ID 62138636-69d6-4e75-a5da-10d04dd1eb2c with nextest profile: default
+    Starting 8 tests across 6 binaries
+        PASS [   0.002s] (1/8) blake3-servil-c test::aaa_require_nextest
+        PASS [   0.003s] (2/8) blake3-servil-c::guards adjacent_ranges_and_empty_null_ranges_are_allowed
+        PASS [   0.003s] (3/8) blake3-servil-c::provenance callback_context_reaches_the_callback
+        PASS [   0.003s] (4/8) blake3-servil-c::vectors null_with_nothing
+        PASS [   0.007s] (5/8) blake3-servil-c::vectors every_call_against_the_test_vectors
+        PASS [   0.051s] (6/8) blake3-servil-c::guard_pages every_call_inside_guard_pages
+        PASS [   0.878s] (7/8) blake3-servil-c::c from_c
+        PASS [   1.237s] (8/8) blake3-servil-c::guards bad_calls_stop_at_the_guard
+────────────
+     Summary [   1.237s] 8 tests run: 8 passed, 0 skipped

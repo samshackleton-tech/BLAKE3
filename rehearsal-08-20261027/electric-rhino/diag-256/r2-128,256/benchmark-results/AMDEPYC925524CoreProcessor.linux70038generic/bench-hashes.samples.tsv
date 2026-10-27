@@ -1,0 +1,29 @@
+# bench-hashes samples v7
+# timestamp: 2026-10-27 17:01:03 UTC
+# bench-hashes version: 0.17.0+1b480eed20d11d7cd1417384e4a9d540b0e321be
+# bench-hashes source: https://github.com/johnservil/bench-hashes
+# git commit: 72b90f9b5a2d6d45a449b11da80eff66993e35fe
+# git clean status: dirty-43c8bc0538550683cf1aa27c2a249c4450eddf957ac6463fca795aab3794ee72
+# dependency lock: blake3 41ce648caa6b37cc68af96bd4c670a88b5629c121e6600f53cc91b333ae4c826 of Cargo.lock
+# rust compiler: rustc 1.99.1 (58cf8f9c3 2026-10-13)
+# c compiler: cc: cc (Ubuntu 15.2.0-16ubuntu1) 15.2.0
+# rustflags: none
+# build target: x86_64-unknown-linux-gnu
+# target features: fxsr,sse,sse2
+# sample clock: std::time::Instant → CLOCK_MONOTONIC (stops during suspend, NTP slew only)
+# cpu type: AMD EPYC 9255 24-Core Processor
+# cpu count: 48
+# os type: linux7.0.0-38-generic
+# cpu identity: model name: AMD EPYC 9255 24-Core Processor · microcode: 0xb00215a · flags: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good amd_lbr_v2 nopl xtopology nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpuid_fault cpb cat_l3 cdp_l3 hw_pstate ssbd mba perfmon_v2 ibrs ibpb stibp ibrs_enhanced vmmcall fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid cqm rdt_a avx512f avx512dq rdseed adx smap avx512ifma clflushopt clwb avx512cd sha_ni avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local user_shstk avx_vnni avx512_bf16 clzero irperf xsaveerptr rdpru wbnoinvd amd_ppin cppc arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif x2avic v_spec_ctrl vnmi avx512vbmi umip pku ospke avx512_vbmi2 gfni vaes vpclmulqdq avx512_vnni avx512_bitalg avx512_vpopcntdq la57 rdpid bus_lock_detect movdiri movdir64b overflow_recov succor smca fsrm avx512_vp2intersect flush_l1d debug_swap amd_lbr_pmc_freeze · machine: PIO-2115GT-HNTR-NODE
+# source blake3-servil-mt: blake3-servil 0.3.0+2e4fa821f9db07b945dbb2b0d02eb76cb19617b5; source https://github.com/johnservil/BLAKE3; commit 49b43b1d317305dbd25e1aa93d56f307430a1205; clean
+# contenders: --contenders blake3-servil-mt
+# rounds: 24
+# points: 128 B,256 B
+# power: mains power, no battery, CPU frequency governor performance, energy-performance preference performance
+# load: not measured: the run lasted under half a second
+# load windows (start ms-end ms:other milli-CPUs:steal milli-CPUs): 
+contender	scenario	use_case	point	unit	ns/units	start ms	cpu ns	energy nJ	core counts
+blake3-servil-mt	solo	ContinuousMessages	128 B	B	1339015/3744384,1191705/3744384,1162144/3744384,1257315/3744384,1152704/3744384,989923/3744384	6,11,17,22,28,33	3212771,3071686,3127582,3176404,3008162,2534590	99044800,96511841,92102051,96069336,90911865,96618652	1339381:5040810:0:0,1192011:4969365:0:0,1162441:4867529:0:0,1257641:5264430:0:0,1153021:4836230:0:0,990240:4134386:0:0
+blake3-servil-mt	solo	ContinuousMessages	256 B	B	1047763/5408768,1094844/5408768,1019464/5408768,1076493/5408768,1095914/5408768,861243/5408768	3,9,14,20,25,31	2744490,2723082,2610040,2819983,2958510,2570253	87509155,98464966,95886231,94787598,96282959,91674804	1048570:3787734:0:0,1095171:4574888:0:0,1019960:4269069:0:0,1076821:4486566:0:0,1096230:4575806:0:0,861551:3605517:0:0
+blake3-servil-mt	shared	ContinuousMessages	128 B	B	1700545/3744384,1655805/3744384,1665955/3744384,1669095/3744384,1662725/3744384,1642275/3744384,1628685/3744384,1652955/3744384,1635936/3744384,1644746/3744384,1628386/3744384,1650896/3744384	7,7,13,13,18,18,24,24,29,29,34,34	-	-	1701021:7041513:0:0,1656291:6970485:0:0,1666671:7146585:0:0,1669591:7008220:0:0,1663071:7010744:0:0,1642591:7024219:0:0,1628991:7001484:0:0,1653361:6951865:0:0,1636231:7018952:0:0,1645061:6874951:0:0,1628691:7017477:0:0,1651211:6953353:0:0
+blake3-servil-mt	shared	ContinuousMessages	256 B	B	1740356/5408768,1587896/5408768,1533195/5408768,1571575/5408768,1547465/5408768,1568055/5408768,1509615/5408768,1551845/5408768,1513225/5408768,1566435/5408768,1560995/5408768,1563815/5408768	4,4,10,10,15,15,21,21,26,26,32,32	-	-	1741241:5456304:0:0,1588631:6759594:0:0,1534091:6629675:0:0,1571991:6671353:0:0,1547781:6674545:0:0,1568451:6656458:0:0,1509941:6520000:0:0,1552141:6574721:0:0,1513541:6525730:0:0,1566751:6590937:0:0,1561311:6722886:0:0,1564121:6578013:0:0
