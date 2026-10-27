@@ -1,0 +1,27 @@
+# bench-hashes samples v7
+# timestamp: 2026-10-27 20:59:23 UTC
+# bench-hashes version: 0.18.0+85e695290346024702b6ffc662949748077249a2
+# bench-hashes source: https://github.com/johnservil/bench-hashes
+# git commit: 67bae864751ae766f170be94ac38a9b3723fc181
+# git clean status: clean
+# dependency lock: blake3 b7d0b85e7caae9f4bc635961a22a659be47dd254e334b84eee8ee0ef2a455983 of Cargo.lock
+# rust compiler: rustc 1.99.1 (58cf8f9c3 2026-10-13)
+# c compiler: cc: cc (Ubuntu 15.2.0-16ubuntu1) 15.2.0
+# rustflags: none
+# build target: x86_64-unknown-linux-gnu
+# target features: fxsr,sse,sse2
+# sample clock: std::time::Instant → CLOCK_MONOTONIC (stops during suspend, NTP slew only)
+# cpu type: AMD EPYC 9255 24-Core Processor
+# cpu count: 48
+# os type: linux7.0.0-38-generic
+# cpu identity: model name: AMD EPYC 9255 24-Core Processor · microcode: 0xb00215a · flags: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good amd_lbr_v2 nopl xtopology nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpuid_fault cpb cat_l3 cdp_l3 hw_pstate ssbd mba perfmon_v2 ibrs ibpb stibp ibrs_enhanced vmmcall fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid cqm rdt_a avx512f avx512dq rdseed adx smap avx512ifma clflushopt clwb avx512cd sha_ni avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local user_shstk avx_vnni avx512_bf16 clzero irperf xsaveerptr rdpru wbnoinvd amd_ppin cppc arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif x2avic v_spec_ctrl vnmi avx512vbmi umip pku ospke avx512_vbmi2 gfni vaes vpclmulqdq avx512_vnni avx512_bitalg avx512_vpopcntdq la57 rdpid bus_lock_detect movdiri movdir64b overflow_recov succor smca fsrm avx512_vp2intersect flush_l1d debug_swap amd_lbr_pmc_freeze · machine: PIO-2115GT-HNTR-NODE
+# source blake3-servil-mt: blake3-servil 0.8.0+f7ce4e4e7bd41bd14e9e55d35279af4c6ad6d3ab (local checkout ..); source https://github.com/johnservil/BLAKE3; branch HEAD; commit 934dee8902889186e3da9b62edf43699dd1c6305; clean
+# contenders: --contenders blake3-servil-mt
+# rounds: 24
+# points: 256 B
+# power: mains power, no battery, CPU frequency governor performance, energy-performance preference performance
+# load: not measured: the run lasted under half a second
+# load windows (start ms-end ms:other milli-CPUs:steal milli-CPUs): 
+contender	scenario	use_case	point	unit	ns/units	start ms	cpu ns	energy nJ	core counts
+blake3-servil-mt	solo	ContinuousMessages	256 B	B	1049773/5004544,1145344/5004544,954863/5004544,1055093/5004544,1015693/5004544,1031563/5004544	2,4,6,8,10,12	2790320,2964982,2664960,3102560,3095155,2893823	87844848,87020874,95031738,187271118,186355591,187728882	1050380:3862281:0:0,1145891:4354193:0:0,955740:3850837:0:0,1055580:4330872:0:0,1016071:4189570:0:0,1031961:4288814:0:0
+blake3-servil-mt	shared	ContinuousMessages	256 B	B	1014374/5004544,1152804/5004544,1050954/5004544,936153/5004544,948963/5004544,921713/5004544,928653/5004544,906703/5004544,964553/5004544,752862/5004544,817263/5004544,852663/5004544	3,3,5,5,7,7,9,9,11,11,13,13	-	-	1015031:4000517:0:0,1153821:3121594:0:0,1051381:4145298:0:0,931721:3933595:0:0,949291:4061203:0:0,922331:3917071:0:0,928981:3995199:0:0,907131:3861090:0:0,964860:4115480:0:0,753290:3174471:0:0,817570:3525844:0:0,853070:3634257:0:0

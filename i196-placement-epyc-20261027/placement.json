@@ -1,0 +1,33 @@
+{
+ "name": "i196-placement",
+ "host": "root@88.216.222.150",
+ "lock": "/root/bench-native-afk.lock",
+ "repos": [
+  {
+   "url": "https://github.com/johnservil/BLAKE3",
+   "commit": "934dee8902889186e3da9b62edf43699dd1c6305",
+   "path": "src"
+  },
+  {
+   "url": "https://github.com/johnservil/bench-hashes",
+   "commit": "67bae864751ae766f170be94ac38a9b3723fc181",
+   "path": "b018"
+  }
+ ],
+ "script": "placement.sh",
+ "expect": [
+  {
+   "file": "out/result-A.txt",
+   "contains": [
+    "blake3-servil 0.8.0+f7ce4e4e7bd41bd14e9e55d35279af4c6ad6d3ab (local checkout ..); source https://github.com/johnservil/BLAKE3; branch HEAD; commit 934dee8902889186e3da9b62edf43699dd1c6305; clean",
+    "commit 67bae864751ae766f170be94ac38a9b3723fc181"
+   ]
+  },
+  {
+   "file": "out/runs/*/result.txt",
+   "contains": [
+    "commit 934dee8902889186e3da9b62edf43699dd1c6305; clean"
+   ]
+  }
+ ]
+}

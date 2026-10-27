@@ -1,0 +1,34 @@
+$ ['git', '-C', '/root/pinned-runs/cache/c538c938b44ec0ad.git', 'fetch', '-q', '--prune', 'origin']
+exit 0
+$ ['sh', '-c', 'git -C /root/pinned-runs/cache/c538c938b44ec0ad.git cat-file -e 934dee8902889186e3da9b62edf43699dd1c6305^{commit} || git -C /root/pinned-runs/cache/c538c938b44ec0ad.git fetch -q https://github.com/johnservil/BLAKE3 934dee8902889186e3da9b62edf43699dd1c6305']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/cache/c538c938b44ec0ad.git', 'update-ref', 'refs/pinned/934dee8902889186e3da9b62edf43699dd1c6305', '934dee8902889186e3da9b62edf43699dd1c6305']
+exit 0
+$ ['git', 'init', '-q', '/root/pinned-runs/i196-placement-20261027T205836-66a7c9bc/src']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/i196-placement-20261027T205836-66a7c9bc/src', 'remote', 'add', 'origin', 'https://github.com/johnservil/BLAKE3']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/i196-placement-20261027T205836-66a7c9bc/src', 'fetch', '-q', '/root/pinned-runs/cache/c538c938b44ec0ad.git', '+refs/*:refs/cache/*']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/i196-placement-20261027T205836-66a7c9bc/src', 'checkout', '-q', '--detach', '934dee8902889186e3da9b62edf43699dd1c6305']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/i196-placement-20261027T205836-66a7c9bc/src', 'rev-parse', 'HEAD']
+934dee8902889186e3da9b62edf43699dd1c6305
+exit 0
+$ ['git', '-C', '/root/pinned-runs/cache/cb13eb3cfeb7ef4f.git', 'fetch', '-q', '--prune', 'origin']
+exit 0
+$ ['sh', '-c', 'git -C /root/pinned-runs/cache/cb13eb3cfeb7ef4f.git cat-file -e 67bae864751ae766f170be94ac38a9b3723fc181^{commit} || git -C /root/pinned-runs/cache/cb13eb3cfeb7ef4f.git fetch -q https://github.com/johnservil/bench-hashes 67bae864751ae766f170be94ac38a9b3723fc181']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/cache/cb13eb3cfeb7ef4f.git', 'update-ref', 'refs/pinned/67bae864751ae766f170be94ac38a9b3723fc181', '67bae864751ae766f170be94ac38a9b3723fc181']
+exit 0
+$ ['git', 'init', '-q', '/root/pinned-runs/i196-placement-20261027T205836-66a7c9bc/b018']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/i196-placement-20261027T205836-66a7c9bc/b018', 'remote', 'add', 'origin', 'https://github.com/johnservil/bench-hashes']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/i196-placement-20261027T205836-66a7c9bc/b018', 'fetch', '-q', '/root/pinned-runs/cache/cb13eb3cfeb7ef4f.git', '+refs/*:refs/cache/*']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/i196-placement-20261027T205836-66a7c9bc/b018', 'checkout', '-q', '--detach', '67bae864751ae766f170be94ac38a9b3723fc181']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/i196-placement-20261027T205836-66a7c9bc/b018', 'rev-parse', 'HEAD']
+67bae864751ae766f170be94ac38a9b3723fc181
+exit 0
