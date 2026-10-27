@@ -1,0 +1,31 @@
+check: the fork's working tree (5f1ba9620dea) against fb2cbda (fb2cbdaade77)
+check: recording which lines each point executes on the new side (once per change to the bench or the fork)
+check: recording which lines each point executes on the old side (once per change to the bench or the fork)
+check: 160 cells execute a changed line: blake3-servil-mt at 160 points: 1, 1 KiB, 1 MiB, 1024, 12, 128, 128 B, 128 KiB, 128 MiB, 131072, 1536 B, 16, 16 KiB, 16384, 2, 2 KiB, 2 MiB, 2048, 2304 B, 24, 256, 256 B, 256 KiB, 262144, 3, 3 KiB, 3 MiB, 32, 32 KiB, 32 MiB, 32768, 3839 B, 4, 4 KiB, 4 KiB batch 16, 4 KiB batch 256, 4 KiB batch 4, 4 KiB batch 64, 4 MiB, 4096, 4470 B, 48, 512, 512 B, 512 KiB, 6, 64, 64 B, 64 KiB, 64 MiB, 65536, 7935 B, 8, 8 KiB, 8 MiB, 8192, collection Nix files, collection git objects, continuous 1 KiB, continuous 1 MiB, continuous 128 B, continuous 16 KiB, continuous 16 MiB, continuous 256 B, continuous 256 KiB, continuous 4 KiB, continuous 4 MiB, continuous 512 B, continuous 64 B, continuous 64 KiB, continuous 64 MiB, continuous batch 1024, continuous batch 16, continuous batch 16384, continuous batch 256, continuous batch 4096, continuous batch 64, continuous batch 65536, continuous collection Nix files, continuous collection git objects, idle 1, idle 1 KiB, idle 1 MiB, idle 1024, idle 12, idle 128, idle 128 B, idle 128 KiB, idle 128 MiB, idle 131072, idle 1536 B, idle 16, idle 16 KiB, idle 16384, idle 2, idle 2 KiB, idle 2 MiB, idle 2048, idle 2304 B, idle 24, idle 256, idle 256 B, idle 256 KiB, idle 262144, idle 3, idle 3 KiB, idle 3 MiB, idle 32, idle 32 KiB, idle 32 MiB, idle 32768, idle 3839 B, idle 4, idle 4 KiB, idle 4 MiB, idle 4096, idle 4470 B, idle 48, idle 512, idle 512 B, idle 512 KiB, idle 6, idle 64, idle 64 B, idle 64 KiB, idle 64 MiB, idle 65536, idle 7935 B, idle 8, idle 8 KiB, idle 8 MiB, idle 8192, idle turn 256, interleaved 256, lent 1 KiB, lent 1 MiB, lent 128 B, lent 16 KiB, lent 16 MiB, lent 256 B, lent 256 KiB, lent 4 KiB, lent 4 MiB, lent 512 B, lent 64 B, lent 64 KiB, lent 64 MiB, lent batch 1024, lent batch 16, lent batch 16384, lent batch 256, lent batch 4096, lent batch 64, lent batch 65536, merkle 1024, merkle 16384, merkle 262144, merkle 4096, merkle 65536, turn 256
+regress: 8 new builds against 8 old, 8 pairs over --contenders blake3-servil-mt --points "1,1 KiB,1 MiB,1024,12,128,128 B,128 KiB,128 MiB,131072,1536 B,16,16 KiB,16384,2,2 KiB,2 MiB,2048,2304 B,24,256,256 B,256 KiB,262144,3,3 KiB,3 MiB,32,32 KiB,32 MiB,32768,3839 B,4,4 KiB,4 KiB batch 16,4 KiB batch 256,4 KiB batch 4,4 KiB batch 64,4 MiB,4096,4470 B,48,512,512 B,512 KiB,6,64,64 B,64 KiB,64 MiB,65536,7935 B,8,8 KiB,8 MiB,8192,collection Nix files,collection git objects,continuous 1 KiB,continuous 1 MiB,continuous 128 B,continuous 16 KiB,continuous 16 MiB,continuous 256 B,continuous 256 KiB,continuous 4 KiB,continuous 4 MiB,continuous 512 B,continuous 64 B,continuous 64 KiB,continuous 64 MiB,continuous batch 1024,continuous batch 16,continuous batch 16384,continuous batch 256,continuous batch 4096,continuous batch 64,continuous batch 65536,continuous collection Nix files,continuous collection git objects,idle 1,idle 1 KiB,idle 1 MiB,idle 1024,idle 12,idle 128,idle 128 B,idle 128 KiB,idle 128 MiB,idle 131072,idle 1536 B,idle 16,idle 16 KiB,idle 16384,idle 2,idle 2 KiB,idle 2 MiB,idle 2048,idle 2304 B,idle 24,idle 256,idle 256 B,idle 256 KiB,idle 262144,idle 3,idle 3 KiB,idle 3 MiB,idle 32,idle 32 KiB,idle 32 MiB,idle 32768,idle 3839 B,idle 4,idle 4 KiB,idle 4 MiB,idle 4096,idle 4470 B,idle 48,idle 512,idle 512 B,idle 512 KiB,idle 6,idle 64,idle 64 B,idle 64 KiB,idle 64 MiB,idle 65536,idle 7935 B,idle 8,idle 8 KiB,idle 8 MiB,idle 8192,idle turn 256,interleaved 256,lent 1 KiB,lent 1 MiB,lent 128 B,lent 16 KiB,lent 16 MiB,lent 256 B,lent 256 KiB,lent 4 KiB,lent 4 MiB,lent 512 B,lent 64 B,lent 64 KiB,lent 64 MiB,lent batch 1024,lent batch 16,lent batch 16384,lent batch 256,lent batch 4096,lent batch 64,lent batch 65536,merkle 1024,merkle 16384,merkle 262144,merkle 4096,merkle 65536,turn 256"
+regress: pair 1 of 8 in 34.6 s
+regress: pair 2 of 8 in 35.3 s
+regress: pair 3 of 8 in 35.5 s
+regress: pair 4 of 8 in 35.1 s
+regress: pair 5 of 8 in 34.6 s
+regress: pair 6 of 8 in 34.9 s
+regress: pair 7 of 8 in 34.8 s
+regress: pair 8 of 8 in 35.0 s
+check: a second stage for 8 suspects on 16 fresh pairs: blake3-servil-mt|solo|ManyMessages|3, blake3-servil-mt|solo|ManyMessages|4, blake3-servil-mt|solo|ManyMessages|16, blake3-servil-mt|solo|ManyMessages|6, blake3-servil-mt|solo|ManyMessages|8, blake3-servil-mt|solo|ManyMessages|12, blake3-servil-mt|solo|ManyMessages|48, blake3-servil-mt|solo|ManyMessages|24
+regress: 16 new builds against 16 old, 16 pairs over --contenders blake3-servil-mt --points "12,16,24,3,4,48,6,8"
+regress: pair 1 of 16 in 3.6 s
+regress: pair 2 of 16 in 3.6 s
+regress: pair 3 of 16 in 3.5 s
+regress: pair 4 of 16 in 3.6 s
+regress: pair 5 of 16 in 3.6 s
+regress: pair 6 of 16 in 3.6 s
+regress: pair 7 of 16 in 3.6 s
+regress: pair 8 of 16 in 3.6 s
+regress: pair 9 of 16 in 3.5 s
+regress: pair 10 of 16 in 3.7 s
+regress: pair 11 of 16 in 3.6 s
+regress: pair 12 of 16 in 3.6 s
+regress: pair 13 of 16 in 3.6 s
+regress: pair 14 of 16 in 3.6 s
+regress: pair 15 of 16 in 3.6 s
+regress: pair 16 of 16 in 3.6 s

@@ -1,0 +1,13 @@
+   Compiling blake3-servil v0.8.0+4a47bbfaa80861eb423d5fa57701697fdea4afde (/root/BLAKE3-sam-wide-zen5)
+    Finished `test` profile [optimized] target(s) in 0.19s
+     Running unittests src/lib.rs (/root/target-sam-wide-zen5-miri/miri/x86_64-unknown-linux-gnu/debug/build/blake3-servil/0a766d69f120115e/out/blake3_servil-0a766d69f120115e)
+warning: Miri does not support optimizations: the opt-level is ignored. The only effect of selecting a Cargo profile that enables optimizations (such as --release) is to apply its remaining settings, such as whether debug assertions and overflow checks are enabled.
+
+
+running 1 test
+test lanes::test::test_tree_thread_budget ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 97 filtered out; finished in 0.17s
+
+warning: 1 warning emitted
+

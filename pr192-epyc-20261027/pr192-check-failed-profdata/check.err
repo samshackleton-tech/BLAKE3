@@ -1,0 +1,9 @@
+check: the fork's working tree (5f1ba9620dea) against fb2cbda (fb2cbdaade77)
+check: recording which lines each point executes on the new side (once per change to the bench or the fork)
+
+thread 'main' (3641028) panicked at src/check.rs:971:9:
+llvm-profdata: warning: /root/BLAKE3-fork-panic/target/check/coverage-work/p.profraw: raw profile version mismatch: Profile uses raw profile format version = 11; expected version = 10
+PLEASE update this tool to version in the raw profile, or regenerate raw profile with expected version.
+error: no profile can be merged
+
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
