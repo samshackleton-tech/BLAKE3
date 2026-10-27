@@ -1,0 +1,13 @@
+diff --git a/src/many.rs b/src/many.rs
+index a115463f..3cac55ea 100644
+--- a/src/many.rs
++++ b/src/many.rs
+@@ -574,7 +574,7 @@ fn hash_four_at_a_time<const N: usize>(lanes: &[&[u8; N]], key: &CVWords, flags:
+     let (start, end) = (CHUNK_START, CHUNK_END | ROOT);
+     // Keep the padded fourth lane for remainders of three. For other
+     // x86 tails, the existing platform kernel avoids separate scalar hashes.
+-    if cfg!(target_arch = "x86_64") && lanes.len() % 4 != 3 {
++    if cfg!(target_arch = "x86_64") {
+         platform.hash_many::<N>(lanes, key, 0, IncrementCounter::No, flags, start, end, outputs.as_flattened_mut());
+         return;
+     }
