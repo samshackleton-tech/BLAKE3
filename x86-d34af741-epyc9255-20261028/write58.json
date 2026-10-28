@@ -1,0 +1,33 @@
+{
+ "name": "x86-list-58381c42-epyc9255",
+ "host": "root@88.216.222.150",
+ "lock": "/root/bench-native-afk.lock",
+ "repos": [
+  {
+   "url": "https://github.com/johnservil/BLAKE3",
+   "commit": "58381c421e9a50182b7f86070b1c7e54b2c51771",
+   "path": "src"
+  }
+ ],
+ "script": "write85.sh",
+ "expect": [
+  {
+   "file": "out/commit.txt",
+   "contains": [
+    "58381c421e9a50182b7f86070b1c7e54b2c51771"
+   ]
+  },
+  {
+   "file": "out/status.txt",
+   "contains": [
+    "mutants --write exit 0"
+   ]
+  },
+  {
+   "file": "out/mutants-check.log",
+   "contains": [
+    "mutants: the fork at 58381c421e9a50182b7f86070b1c7e54b2c51771"
+   ]
+  }
+ ]
+}

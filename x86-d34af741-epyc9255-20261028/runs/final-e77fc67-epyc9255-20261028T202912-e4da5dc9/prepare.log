@@ -1,0 +1,17 @@
+$ ['git', '-C', '/root/pinned-runs/cache/c538c938b44ec0ad.git', 'fetch', '-q', '--prune', 'origin']
+exit 0
+$ ['sh', '-c', 'git -C /root/pinned-runs/cache/c538c938b44ec0ad.git cat-file -e e77fc67e81cfb6fef604d7f45aa236813146044d^{commit} || git -C /root/pinned-runs/cache/c538c938b44ec0ad.git fetch -q https://github.com/johnservil/BLAKE3 e77fc67e81cfb6fef604d7f45aa236813146044d']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/cache/c538c938b44ec0ad.git', 'update-ref', 'refs/pinned/e77fc67e81cfb6fef604d7f45aa236813146044d', 'e77fc67e81cfb6fef604d7f45aa236813146044d']
+exit 0
+$ ['git', 'init', '-q', '/root/pinned-runs/final-e77fc67-epyc9255-20261028T202912-e4da5dc9/src']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/final-e77fc67-epyc9255-20261028T202912-e4da5dc9/src', 'remote', 'add', 'origin', 'https://github.com/johnservil/BLAKE3']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/final-e77fc67-epyc9255-20261028T202912-e4da5dc9/src', 'fetch', '-q', '/root/pinned-runs/cache/c538c938b44ec0ad.git', '+refs/*:refs/cache/*']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/final-e77fc67-epyc9255-20261028T202912-e4da5dc9/src', 'checkout', '-q', '--detach', 'e77fc67e81cfb6fef604d7f45aa236813146044d']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/final-e77fc67-epyc9255-20261028T202912-e4da5dc9/src', 'rev-parse', 'HEAD']
+e77fc67e81cfb6fef604d7f45aa236813146044d
+exit 0

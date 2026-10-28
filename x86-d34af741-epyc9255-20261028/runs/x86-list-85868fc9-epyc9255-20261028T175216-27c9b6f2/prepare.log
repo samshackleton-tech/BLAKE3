@@ -1,0 +1,17 @@
+$ ['git', '-C', '/root/pinned-runs/cache/c538c938b44ec0ad.git', 'fetch', '-q', '--prune', 'origin']
+exit 0
+$ ['sh', '-c', 'git -C /root/pinned-runs/cache/c538c938b44ec0ad.git cat-file -e 85868fc91863ec205f8ed8b2de72e36c7aa896d9^{commit} || git -C /root/pinned-runs/cache/c538c938b44ec0ad.git fetch -q https://github.com/johnservil/BLAKE3 85868fc91863ec205f8ed8b2de72e36c7aa896d9']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/cache/c538c938b44ec0ad.git', 'update-ref', 'refs/pinned/85868fc91863ec205f8ed8b2de72e36c7aa896d9', '85868fc91863ec205f8ed8b2de72e36c7aa896d9']
+exit 0
+$ ['git', 'init', '-q', '/root/pinned-runs/x86-list-85868fc9-epyc9255-20261028T175216-27c9b6f2/src']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/x86-list-85868fc9-epyc9255-20261028T175216-27c9b6f2/src', 'remote', 'add', 'origin', 'https://github.com/johnservil/BLAKE3']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/x86-list-85868fc9-epyc9255-20261028T175216-27c9b6f2/src', 'fetch', '-q', '/root/pinned-runs/cache/c538c938b44ec0ad.git', '+refs/*:refs/cache/*']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/x86-list-85868fc9-epyc9255-20261028T175216-27c9b6f2/src', 'checkout', '-q', '--detach', '85868fc91863ec205f8ed8b2de72e36c7aa896d9']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/x86-list-85868fc9-epyc9255-20261028T175216-27c9b6f2/src', 'rev-parse', 'HEAD']
+85868fc91863ec205f8ed8b2de72e36c7aa896d9
+exit 0

@@ -1,0 +1,46 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+warning: Cargo.toml: version requirement `=0.8.0+302bae1534161c0339937669ab7067f12788597a` for dependency `blake3` includes semver metadata which will be ignored, removing the metadata is recommended to avoid confusion
+warning: `b3sums` (manifest) generated 1 warning
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling blake3-servil v0.8.0+302bae1534161c0339937669ab7067f12788597a (/root/pinned-runs/final-e77fc67-epyc9255-20261028T202912-e4da5dc9/src)
+   Compiling b3sums v0.8.0+302bae1534161c0339937669ab7067f12788597a (/root/pinned-runs/final-e77fc67-epyc9255-20261028T202912-e4da5dc9/src/b3sum)
+    Finished `release` profile [optimized] target(s) in 2.08s
+────────────
+ Nextest run ID 5465b9d3-98b0-4c5d-88bc-f1186011e797 with nextest profile: default
+    Starting 29 tests across 2 binaries
+        PASS [   0.004s] ( 1/29) b3sums::bin/b3sum unit_tests::test_parse_check_line
+        PASS [   0.004s] ( 2/29) b3sums::cli_tests test_hash_one_raw
+        PASS [   0.004s] ( 3/29) b3sums::cli_tests test_hash_one
+        PASS [   0.004s] ( 4/29) b3sums::cli_tests test_invalid_unicode_on_unix
+        PASS [   0.004s] ( 5/29) b3sums::cli_tests test_hash_many
+        PASS [   0.005s] ( 6/29) b3sums::cli_tests test_globbing
+        PASS [   0.005s] ( 7/29) b3sums::cli_tests test_derive_key
+        PASS [   0.005s] ( 8/29) b3sums::cli_tests test_check_invalid_characters
+        PASS [   0.012s] ( 9/29) b3sums::cli_tests test_check
+        PASS [   0.017s] (10/29) b3sums::cli_tests test_no_mmap
+        PASS [   0.004s] (11/29) b3sums::bin/b3sum test::aaa_require_nextest
+        PASS [   0.004s] (12/29) b3sums::bin/b3sum test::test_args
+        PASS [   0.018s] (13/29) b3sums::cli_tests test_missing_files
+        PASS [   0.004s] (14/29) b3sums::cli_tests test_hash_one_tag
+        PASS [   0.004s] (15/29) b3sums::bin/b3sum unit_tests::test_filepath_to_string
+        PASS [   0.018s] (16/29) b3sums::bin/b3sum readahead::test::read_to_end_reads_all_whatever_the_hint
+        PASS [   0.004s] (17/29) b3sums::cli_tests test_pseudo_file
+        PASS [   0.018s] (18/29) b3sums::cli_tests test_pseudo_files_among_many
+        PASS [   0.018s] (19/29) b3sums::cli_tests test_length_without_value_is_an_error
+        PASS [   0.005s] (20/29) b3sums::cli_tests test_hash_many_tag
+        PASS [   0.019s] (21/29) b3sums::cli_tests test_newline_and_backslash_escaping_on_unix
+        PASS [   0.019s] (22/29) b3sums::cli_tests test_raw_with_multi_files_is_an_error
+        PASS [   0.006s] (23/29) b3sums::cli_tests test_hash_length_and_seek
+        PASS [   0.020s] (24/29) b3sums::cli_tests test_keyed
+        PASS [   0.029s] (25/29) b3sums::cli_tests test_one_thread_matches_the_default
+        PASS [   0.035s] (26/29) b3sums::cli_tests test_reader_gone
+        PASS [   0.049s] (27/29) b3sums::cli_tests test_hash_many_sizes
+        PASS [   0.052s] (28/29) b3sums::cli_tests test_num_threads
+        PASS [   0.071s] (29/29) b3sums::cli_tests test_inputs_around_the_read_piece
+────────────
+     Summary [   0.085s] 29 tests run: 29 passed, 0 skipped
