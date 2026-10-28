@@ -1,0 +1,60 @@
+{
+ "expect": [
+  {
+   "contains": [
+    "83d59db22f6d606d96a5e38223d411123e8cbd18"
+   ],
+   "file": "out/commit.txt"
+  },
+  {
+   "contains": [
+    "differs from clean: True",
+    "checked, dirty padding: panicked: True",
+    "checked-or, dirty padding: panicked: True"
+   ],
+   "file": "out/correctness.txt"
+  },
+  {
+   "contains": [
+    "+    assert!(len % BLOCK_LEN == 0"
+   ],
+   "file": "out/checked.diff"
+  },
+  {
+   "contains": [
+    "fold(0u8"
+   ],
+   "file": "out/checked-or.diff"
+  },
+  {
+   "contains": [
+    "count  len"
+   ],
+   "file": "out/speed.txt"
+  },
+  {
+   "contains": [
+    "count"
+   ],
+   "file": "out/speed-mt.txt"
+  }
+ ],
+ "forbid": [
+  "was not used in the crate graph",
+  "raw profile version mismatch"
+ ],
+ "host": "root@88.216.222.150",
+ "launched": "2026-10-28T04:36:51Z",
+ "lock": "/root/bench-native-afk.lock",
+ "name": "i205-padcheck",
+ "repos": [
+  {
+   "commit": "83d59db22f6d606d96a5e38223d411123e8cbd18",
+   "path": "src",
+   "url": "https://github.com/johnservil/BLAKE3"
+  }
+ ],
+ "script": "job.sh",
+ "script_sha256": "fa29203f64fc3eb3ca6ff80bea754d4630fe2654ac9d5431bdf144fb51ecf48d",
+ "tool_sha256": "c610e1c00faf84c6e625aac08333f0f7d9d14674d2cf6beddc64585f4d39488c"
+}

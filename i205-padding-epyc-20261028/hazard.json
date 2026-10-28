@@ -1,0 +1,32 @@
+{
+ "name": "i205-hazard-x86",
+ "host": "root@88.216.222.150",
+ "lock": "/root/bench-native-afk.lock",
+ "repos": [
+  {
+   "url": "https://github.com/johnservil/BLAKE3",
+   "commit": "83d59db22f6d606d96a5e38223d411123e8cbd18",
+   "path": "src"
+  }
+ ],
+ "script": "hazard.sh",
+ "expect": [
+  {
+   "file": "out/commit.txt",
+   "contains": [
+    "83d59db22f6d606d96a5e38223d411123e8cbd18",
+    "0.8.0+2aa17489537c922634b53035ab0a635682ba4a1c"
+   ]
+  },
+  {
+   "file": "out/hazard.txt",
+   "contains": [
+    "st count     1:",
+    "mt count 16384:"
+   ]
+  }
+ ],
+ "forbid": [
+  "! "
+ ]
+}

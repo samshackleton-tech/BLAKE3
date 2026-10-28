@@ -1,0 +1,53 @@
+{
+ "name": "i205-padcheck",
+ "host": "root@88.216.222.150",
+ "lock": "/root/bench-native-afk.lock",
+ "repos": [
+  {
+   "url": "https://github.com/johnservil/BLAKE3",
+   "commit": "83d59db22f6d606d96a5e38223d411123e8cbd18",
+   "path": "src"
+  }
+ ],
+ "script": "job.sh",
+ "expect": [
+  {
+   "file": "out/commit.txt",
+   "contains": [
+    "83d59db22f6d606d96a5e38223d411123e8cbd18"
+   ]
+  },
+  {
+   "file": "out/correctness.txt",
+   "contains": [
+    "differs from clean: True",
+    "checked, dirty padding: panicked: True",
+    "checked-or, dirty padding: panicked: True"
+   ]
+  },
+  {
+   "file": "out/checked.diff",
+   "contains": [
+    "+    assert!(len % BLOCK_LEN == 0"
+   ]
+  },
+  {
+   "file": "out/checked-or.diff",
+   "contains": [
+    "fold(0u8"
+   ]
+  },
+  {
+   "file": "out/speed.txt",
+   "contains": [
+    "count  len"
+   ]
+  },
+  {
+   "file": "out/speed-mt.txt",
+   "contains": [
+    "count"
+   ]
+  }
+ ]
+}
