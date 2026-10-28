@@ -1,0 +1,48 @@
+{
+ "expect": [
+  {
+   "contains": [
+    "blake3-servil 0.8.0+f7ce4e4e7bd41bd14e9e55d35279af4c6ad6d3ab (local checkout ..); source https://github.com/johnservil/BLAKE3; branch HEAD; commit 934dee8902889186e3da9b62edf43699dd1c6305; clean",
+    "commit 2c9633ae69712b2e40363584387ba5665261997b",
+    "BLAKE3 official mt: blake3 1.8.7",
+    "load during the run: quiet"
+   ],
+   "file": "out/full/bench-hashes.result.txt"
+  },
+  {
+   "contains": [
+    "performance"
+   ],
+   "file": "out/governor.txt"
+  },
+  {
+   "contains": [
+    "<html"
+   ],
+   "file": "out/full/bench-hashes.map.html"
+  }
+ ],
+ "forbid": [
+  "was not used in the crate graph",
+  "raw profile version mismatch"
+ ],
+ "host": "root@185.8.106.176",
+ "launched": "2026-10-27T22:39:13Z",
+ "lock": "/root/bench-native-afk.lock",
+ "name": "full0181-xeon6330x2",
+ "repos": [
+  {
+   "commit": "934dee8902889186e3da9b62edf43699dd1c6305",
+   "path": "src",
+   "url": "https://github.com/johnservil/BLAKE3"
+  },
+  {
+   "commit": "2c9633ae69712b2e40363584387ba5665261997b",
+   "path": "b018",
+   "url": "https://github.com/johnservil/bench-hashes"
+  }
+ ],
+ "script": "full.sh",
+ "script_sha256": "7ec61da2a2acfc5a273178226a3d80a90b969235a43f7abb3340077971b864d0",
+ "tool_sha256": "c610e1c00faf84c6e625aac08333f0f7d9d14674d2cf6beddc64585f4d39488c"
+}

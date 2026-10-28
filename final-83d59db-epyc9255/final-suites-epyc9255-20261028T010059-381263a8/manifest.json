@@ -1,0 +1,45 @@
+{
+ "expect": [
+  {
+   "contains": [
+    "all status 0",
+    "wide-tests exit 0",
+    "cross-check exit 0",
+    "check-builds exit 0"
+   ],
+   "file": "out/tests/runner.log"
+  },
+  {
+   "contains": [
+    "0.8.0+2aa17489537c922634b53035ab0a635682ba4a1c"
+   ],
+   "file": "out/version.txt"
+  },
+  {
+   "contains": [
+    "83d59db22f6d606d96a5e38223d411123e8cbd18",
+    "AuthenticAMD",
+    "cpu family\t: 26"
+   ],
+   "file": "out/tests/provenance.txt"
+  }
+ ],
+ "forbid": [
+  "was not used in the crate graph",
+  "raw profile version mismatch"
+ ],
+ "host": "root@88.216.222.150",
+ "launched": "2026-10-28T01:00:59Z",
+ "lock": "/root/bench-native-afk.lock",
+ "name": "final-suites-epyc9255",
+ "repos": [
+  {
+   "commit": "83d59db22f6d606d96a5e38223d411123e8cbd18",
+   "path": "src",
+   "url": "https://github.com/johnservil/BLAKE3"
+  }
+ ],
+ "script": "suites.sh",
+ "script_sha256": "2cb6a2e58705cf5934c3e97f806682d90f3023dd4c367f9e1a9b9db1b7c1c07d",
+ "tool_sha256": "c610e1c00faf84c6e625aac08333f0f7d9d14674d2cf6beddc64585f4d39488c"
+}

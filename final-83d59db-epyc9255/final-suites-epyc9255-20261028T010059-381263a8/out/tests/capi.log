@@ -1,0 +1,25 @@
+    Blocking waiting for file lock on package cache
+    Updating crates.io index
+    Blocking waiting for file lock on package cache
+     Locking 19 packages to highest Rust 1.99.1 compatible versions
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling blake3-servil v0.8.0+2aa17489537c922634b53035ab0a635682ba4a1c (/root/pinned-runs/final-suites-epyc9255-20261028T010059-381263a8/src)
+   Compiling blake3-servil-c v0.8.0+2aa17489537c922634b53035ab0a635682ba4a1c (/root/pinned-runs/final-suites-epyc9255-20261028T010059-381263a8/src/capi)
+    Finished `release` profile [optimized] target(s) in 1.45s
+────────────
+ Nextest run ID 5b39d3df-2b05-4bdd-950c-a174ed80cd1a with nextest profile: default
+    Starting 8 tests across 6 binaries
+        PASS [   0.003s] (1/8) blake3-servil-c::vectors null_with_nothing
+        PASS [   0.003s] (2/8) blake3-servil-c test::aaa_require_nextest
+        PASS [   0.004s] (3/8) blake3-servil-c::provenance callback_context_reaches_the_callback
+        PASS [   0.004s] (4/8) blake3-servil-c::guards adjacent_ranges_and_empty_null_ranges_are_allowed
+        PASS [   0.009s] (5/8) blake3-servil-c::vectors every_call_against_the_test_vectors
+        PASS [   0.049s] (6/8) blake3-servil-c::guard_pages every_call_inside_guard_pages
+        PASS [   1.444s] (7/8) blake3-servil-c::guards bad_calls_stop_at_the_guard
+        PASS [   1.843s] (8/8) blake3-servil-c::c from_c
+────────────
+     Summary [   1.843s] 8 tests run: 8 passed, 0 skipped

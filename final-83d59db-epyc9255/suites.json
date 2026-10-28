@@ -1,0 +1,38 @@
+{
+ "name": "final-suites-epyc9255",
+ "host": "root@88.216.222.150",
+ "lock": "/root/bench-native-afk.lock",
+ "repos": [
+  {
+   "url": "https://github.com/johnservil/BLAKE3",
+   "commit": "83d59db22f6d606d96a5e38223d411123e8cbd18",
+   "path": "src"
+  }
+ ],
+ "script": "suites.sh",
+ "expect": [
+  {
+   "file": "out/tests/runner.log",
+   "contains": [
+    "all status 0",
+    "wide-tests exit 0",
+    "cross-check exit 0",
+    "check-builds exit 0"
+   ]
+  },
+  {
+   "file": "out/version.txt",
+   "contains": [
+    "0.8.0+2aa17489537c922634b53035ab0a635682ba4a1c"
+   ]
+  },
+  {
+   "file": "out/tests/provenance.txt",
+   "contains": [
+    "83d59db22f6d606d96a5e38223d411123e8cbd18",
+    "AuthenticAMD",
+    "cpu family\t: 26"
+   ]
+  }
+ ]
+}
