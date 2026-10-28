@@ -9,3 +9,4 @@ Both runs through pinned-run (inputs by hash, outputs' identities verified; mani
   OR-fold, no early exit): out/speed.txt, user cycles per warm call pinned to CPU 2, 5 rounds rotating builds;
   out/correctness.txt: both checked builds stop on nonzero padding. (Its mt part failed: the probe lacked
   initialize_multithreaded.)
+- runs/i205-devon-12c75ec5-epyc-*: Devon's prototype (devonjonte exp/devon-padding-checked 12c75ec5) against 83d59db: its nextest suite on this machine, the dirty-padding refusal, and out/speed.txt (same probe and method).

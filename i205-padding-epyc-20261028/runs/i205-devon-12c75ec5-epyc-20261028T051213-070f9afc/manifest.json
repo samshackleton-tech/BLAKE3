@@ -1,0 +1,51 @@
+{
+ "expect": [
+  {
+   "contains": [
+    "83d59db22f6d606d96a5e38223d411123e8cbd18"
+   ],
+   "file": "out/commit.txt"
+  },
+  {
+   "contains": [
+    "devon, dirty padding: panicked: True"
+   ],
+   "file": "out/correctness.txt"
+  },
+  {
+   "contains": [
+    "devon tests exit 0"
+   ],
+   "file": "out/devon-tests.log"
+  },
+  {
+   "contains": [
+    "count  len"
+   ],
+   "file": "out/speed.txt"
+  }
+ ],
+ "forbid": [
+  "was not used in the crate graph",
+  "raw profile version mismatch"
+ ],
+ "host": "root@88.216.222.150",
+ "launched": "2026-10-28T05:12:13Z",
+ "lock": "/root/bench-native-afk.lock",
+ "name": "i205-devon-12c75ec5-epyc",
+ "repos": [
+  {
+   "commit": "83d59db22f6d606d96a5e38223d411123e8cbd18",
+   "path": "src",
+   "url": "https://github.com/johnservil/BLAKE3"
+  },
+  {
+   "commit": "12c75ec5496abd71d092f74f61114cd1bbaa1339",
+   "path": "devon",
+   "url": "https://github.com/devonjonte/BLAKE3"
+  }
+ ],
+ "script": "job-devon.sh",
+ "script_sha256": "200c19bc7993846a1bc3947da77cd41b79a395c4bf5851150e139fc3e6873750",
+ "tool_sha256": "c610e1c00faf84c6e625aac08333f0f7d9d14674d2cf6beddc64585f4d39488c"
+}
