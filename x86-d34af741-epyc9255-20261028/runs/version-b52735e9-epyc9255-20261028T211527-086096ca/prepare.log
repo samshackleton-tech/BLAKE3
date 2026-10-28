@@ -1,0 +1,34 @@
+$ ['git', '-C', '/root/pinned-runs/cache/c538c938b44ec0ad.git', 'fetch', '-q', '--prune', 'origin']
+exit 0
+$ ['sh', '-c', 'git -C /root/pinned-runs/cache/c538c938b44ec0ad.git cat-file -e b52735e9c49d48f9db48da57f364d692bc84258d^{commit} || git -C /root/pinned-runs/cache/c538c938b44ec0ad.git fetch -q https://github.com/johnservil/BLAKE3 b52735e9c49d48f9db48da57f364d692bc84258d']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/cache/c538c938b44ec0ad.git', 'update-ref', 'refs/pinned/b52735e9c49d48f9db48da57f364d692bc84258d', 'b52735e9c49d48f9db48da57f364d692bc84258d']
+exit 0
+$ ['git', 'init', '-q', '/root/pinned-runs/version-b52735e9-epyc9255-20261028T211527-086096ca/src']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/version-b52735e9-epyc9255-20261028T211527-086096ca/src', 'remote', 'add', 'origin', 'https://github.com/johnservil/BLAKE3']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/version-b52735e9-epyc9255-20261028T211527-086096ca/src', 'fetch', '-q', '/root/pinned-runs/cache/c538c938b44ec0ad.git', '+refs/*:refs/cache/*']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/version-b52735e9-epyc9255-20261028T211527-086096ca/src', 'checkout', '-q', '--detach', 'b52735e9c49d48f9db48da57f364d692bc84258d']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/version-b52735e9-epyc9255-20261028T211527-086096ca/src', 'rev-parse', 'HEAD']
+b52735e9c49d48f9db48da57f364d692bc84258d
+exit 0
+$ ['git', '-C', '/root/pinned-runs/cache/cb13eb3cfeb7ef4f.git', 'fetch', '-q', '--prune', 'origin']
+exit 0
+$ ['sh', '-c', 'git -C /root/pinned-runs/cache/cb13eb3cfeb7ef4f.git cat-file -e f17a161b6c19a2a639da0e19f82d44975a841bef^{commit} || git -C /root/pinned-runs/cache/cb13eb3cfeb7ef4f.git fetch -q https://github.com/johnservil/bench-hashes f17a161b6c19a2a639da0e19f82d44975a841bef']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/cache/cb13eb3cfeb7ef4f.git', 'update-ref', 'refs/pinned/f17a161b6c19a2a639da0e19f82d44975a841bef', 'f17a161b6c19a2a639da0e19f82d44975a841bef']
+exit 0
+$ ['git', 'init', '-q', '/root/pinned-runs/version-b52735e9-epyc9255-20261028T211527-086096ca/src/bench-hashes']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/version-b52735e9-epyc9255-20261028T211527-086096ca/src/bench-hashes', 'remote', 'add', 'origin', 'https://github.com/johnservil/bench-hashes']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/version-b52735e9-epyc9255-20261028T211527-086096ca/src/bench-hashes', 'fetch', '-q', '/root/pinned-runs/cache/cb13eb3cfeb7ef4f.git', '+refs/*:refs/cache/*']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/version-b52735e9-epyc9255-20261028T211527-086096ca/src/bench-hashes', 'checkout', '-q', '--detach', 'f17a161b6c19a2a639da0e19f82d44975a841bef']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/version-b52735e9-epyc9255-20261028T211527-086096ca/src/bench-hashes', 'rev-parse', 'HEAD']
+f17a161b6c19a2a639da0e19f82d44975a841bef
+exit 0

@@ -1,0 +1,65 @@
+{
+ "expect": [
+  {
+   "contains": [
+    "b52735e9c49d48f9db48da57f364d692bc84258d",
+    "f17a161b6c19a2a639da0e19f82d44975a841bef"
+   ],
+   "file": "out/commit.txt"
+  },
+  {
+   "contains": [
+    "all status 0"
+   ],
+   "file": "out/tests/runner.log"
+  },
+  {
+   "contains": [
+    "against 83d59db22f6d606d96a5e38223d411123e8cbd18",
+    "2c9633ae69712b2e40363584387ba5665261997b"
+   ],
+   "file": "out/check.err"
+  },
+  {
+   "contains": [
+    "regress: "
+   ],
+   "file": "out/check.out"
+  },
+  {
+   "contains": [
+    "mutants exit 0"
+   ],
+   "file": "out/status.txt"
+  },
+  {
+   "contains": [
+    "mutants: the fork at b52735e9c49d48f9db48da57f364d692bc84258d"
+   ],
+   "file": "out/mutants-check.log"
+  }
+ ],
+ "forbid": [
+  "was not used in the crate graph",
+  "raw profile version mismatch"
+ ],
+ "host": "root@88.216.222.150",
+ "launched": "2026-10-28T21:15:27Z",
+ "lock": "/root/bench-native-afk.lock",
+ "name": "version-b52735e9-epyc9255",
+ "repos": [
+  {
+   "commit": "b52735e9c49d48f9db48da57f364d692bc84258d",
+   "path": "src",
+   "url": "https://github.com/johnservil/BLAKE3"
+  },
+  {
+   "commit": "f17a161b6c19a2a639da0e19f82d44975a841bef",
+   "path": "src/bench-hashes",
+   "url": "https://github.com/johnservil/bench-hashes"
+  }
+ ],
+ "script": "job-b527.sh",
+ "script_sha256": "c6af03c3699faa2b8e3c15d7ec2d9c8a357f3510e1802fd41bb653b94f165382",
+ "tool_sha256": "c610e1c00faf84c6e625aac08333f0f7d9d14674d2cf6beddc64585f4d39488c"
+}

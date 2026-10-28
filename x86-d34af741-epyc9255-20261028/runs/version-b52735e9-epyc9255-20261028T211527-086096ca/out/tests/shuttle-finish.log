@@ -1,0 +1,11 @@
+   Compiling blake3-servil v0.8.0+8abaf0c77871cd40d64a82fa3bd6b1468f79967d (/root/pinned-runs/version-b52735e9-epyc9255-20261028T211527-086096ca/src)
+    Finished `release` profile [optimized] target(s) in 0.25s
+     Running tests/shuttle_finish.rs (/root/target-release-tests-s/release/deps/shuttle_finish-a62bd6113269220d)
+
+running 3 tests
+test one_piece_one_worker ... ok
+test a_caller_sleeping_at_once_is_woken_by_the_last_piece ... ok
+test a_caller_polling_once_then_sleeping_is_woken ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
