@@ -1,0 +1,34 @@
+$ ['git', '-C', '/root/pinned-runs/cache/10cc0ae95e0f1969.git', 'fetch', '-q', '--prune', 'origin']
+exit 0
+$ ['sh', '-c', 'git -C /root/pinned-runs/cache/10cc0ae95e0f1969.git cat-file -e c09e2100cadc7e23da11c42ef3e7cb3ae202b67d^{commit} || git -C /root/pinned-runs/cache/10cc0ae95e0f1969.git fetch -q https://github.com/devonjonte/BLAKE3 c09e2100cadc7e23da11c42ef3e7cb3ae202b67d']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/cache/10cc0ae95e0f1969.git', 'update-ref', 'refs/pinned/c09e2100cadc7e23da11c42ef3e7cb3ae202b67d', 'c09e2100cadc7e23da11c42ef3e7cb3ae202b67d']
+exit 0
+$ ['git', 'init', '-q', '/root/pinned-runs/i204-fill-epyc-20261028T054457-d76b4f69/src']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/i204-fill-epyc-20261028T054457-d76b4f69/src', 'remote', 'add', 'origin', 'https://github.com/devonjonte/BLAKE3']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/i204-fill-epyc-20261028T054457-d76b4f69/src', 'fetch', '-q', '/root/pinned-runs/cache/10cc0ae95e0f1969.git', '+refs/*:refs/cache/*']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/i204-fill-epyc-20261028T054457-d76b4f69/src', 'checkout', '-q', '--detach', 'c09e2100cadc7e23da11c42ef3e7cb3ae202b67d']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/i204-fill-epyc-20261028T054457-d76b4f69/src', 'rev-parse', 'HEAD']
+c09e2100cadc7e23da11c42ef3e7cb3ae202b67d
+exit 0
+$ ['git', '-C', '/root/pinned-runs/cache/0359f08d7acf54fd.git', 'fetch', '-q', '--prune', 'origin']
+exit 0
+$ ['sh', '-c', 'git -C /root/pinned-runs/cache/0359f08d7acf54fd.git cat-file -e 946555d2cff8ae2cf59562ea3dbea8b62e508d40^{commit} || git -C /root/pinned-runs/cache/0359f08d7acf54fd.git fetch -q https://github.com/devonjonte/bench-hashes 946555d2cff8ae2cf59562ea3dbea8b62e508d40']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/cache/0359f08d7acf54fd.git', 'update-ref', 'refs/pinned/946555d2cff8ae2cf59562ea3dbea8b62e508d40', '946555d2cff8ae2cf59562ea3dbea8b62e508d40']
+exit 0
+$ ['git', 'init', '-q', '/root/pinned-runs/i204-fill-epyc-20261028T054457-d76b4f69/src/bench-hashes']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/i204-fill-epyc-20261028T054457-d76b4f69/src/bench-hashes', 'remote', 'add', 'origin', 'https://github.com/devonjonte/bench-hashes']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/i204-fill-epyc-20261028T054457-d76b4f69/src/bench-hashes', 'fetch', '-q', '/root/pinned-runs/cache/0359f08d7acf54fd.git', '+refs/*:refs/cache/*']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/i204-fill-epyc-20261028T054457-d76b4f69/src/bench-hashes', 'checkout', '-q', '--detach', '946555d2cff8ae2cf59562ea3dbea8b62e508d40']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/i204-fill-epyc-20261028T054457-d76b4f69/src/bench-hashes', 'rev-parse', 'HEAD']
+946555d2cff8ae2cf59562ea3dbea8b62e508d40
+exit 0

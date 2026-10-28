@@ -1,0 +1,25 @@
+check: the fork's working tree (eec9b919eb70) against 83d59db22f6d606d96a5e38223d411123e8cbd18 (83d59db22f6d)
+check: the old side with the bench at 2c9633ae69712b2e40363584387ba5665261997b (2c9633ae6971)
+regress: 4 new builds against 4 old, 4 pairs over --contenders blake3-servil-st,blake3-servil-mt
+regress: pair 1 of 4 in 73.3 s
+regress: pair 2 of 4 in 73.3 s
+regress: pair 3 of 4 in 74.4 s
+regress: pair 4 of 4 in 72.7 s
+check: a second stage for 8 suspects on 16 fresh pairs: blake3-servil-mt|solo|ContinuousMessages|1 KiB, blake3-servil-mt|solo|IdleOneMessage|512 KiB, blake3-servil-mt|solo|IdleOneMessage|1 MiB, blake3-servil-mt|solo|ContinuousMessages|4 KiB, blake3-servil-mt|solo|OneMessage|1 MiB, blake3-servil-mt|solo|ContinuousBatches|4096, blake3-servil-mt|solo|ContinuousMessages|512 B, blake3-servil-mt|solo|OneMessage|512 KiB
+regress: 16 new builds against 16 old, 16 pairs over --contenders blake3-servil-mt --points "1 MiB,512 KiB,continuous 1 KiB,continuous 4 KiB,continuous 512 B,continuous batch 4096,idle 1 MiB,idle 512 KiB"
+regress: pair 1 of 16 in 1.0 s
+regress: pair 2 of 16 in 1.0 s
+regress: pair 3 of 16 in 1.0 s
+regress: pair 4 of 16 in 1.0 s
+regress: pair 5 of 16 in 1.0 s
+regress: pair 6 of 16 in 1.0 s
+regress: pair 7 of 16 in 1.0 s
+regress: pair 8 of 16 in 1.0 s
+regress: pair 9 of 16 in 1.0 s
+regress: pair 10 of 16 in 1.0 s
+regress: pair 11 of 16 in 1.0 s
+regress: pair 12 of 16 in 1.0 s
+regress: pair 13 of 16 in 1.0 s
+regress: pair 14 of 16 in 1.0 s
+regress: pair 15 of 16 in 1.0 s
+regress: pair 16 of 16 in 1.0 s

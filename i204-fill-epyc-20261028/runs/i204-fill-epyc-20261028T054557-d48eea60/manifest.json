@@ -1,0 +1,64 @@
+{
+ "expect": [
+  {
+   "contains": [
+    "c09e2100cadc7e23da11c42ef3e7cb3ae202b67d",
+    "946555d2cff8ae2cf59562ea3dbea8b62e508d40"
+   ],
+   "file": "out/commit.txt"
+  },
+  {
+   "contains": [
+    "tests exit 0"
+   ],
+   "file": "out/tests.log"
+  },
+  {
+   "contains": [
+    "tests exit 0"
+   ],
+   "file": "out/tests-nostd.log"
+  },
+  {
+   "contains": [
+    "against 83d59db22f6d606d96a5e38223d411123e8cbd18",
+    "2c9633ae69712b2e40363584387ba5665261997b"
+   ],
+   "file": "out/check.err"
+  },
+  {
+   "contains": [
+    "regress: "
+   ],
+   "file": "out/check.out"
+  }
+ ],
+ "forbid": [
+  "was not used in the crate graph",
+  "raw profile version mismatch"
+ ],
+ "host": "root@88.216.222.150",
+ "launched": "2026-10-28T05:45:57Z",
+ "lock": "/root/bench-native-afk.lock",
+ "name": "i204-fill-epyc",
+ "repos": [
+  {
+   "commit": "c09e2100cadc7e23da11c42ef3e7cb3ae202b67d",
+   "path": "src",
+   "url": "https://github.com/devonjonte/BLAKE3"
+  },
+  {
+   "commit": "946555d2cff8ae2cf59562ea3dbea8b62e508d40",
+   "path": "src/bench-hashes",
+   "url": "https://github.com/devonjonte/bench-hashes"
+  },
+  {
+   "commit": "2c9633ae69712b2e40363584387ba5665261997b",
+   "path": "b0181",
+   "url": "https://github.com/johnservil/bench-hashes"
+  }
+ ],
+ "script": "job.sh",
+ "script_sha256": "032dc90c013e405fde2bf2450c335f9ac317c95d075a50303da920f04425a35a",
+ "tool_sha256": "c610e1c00faf84c6e625aac08333f0f7d9d14674d2cf6beddc64585f4d39488c"
+}
