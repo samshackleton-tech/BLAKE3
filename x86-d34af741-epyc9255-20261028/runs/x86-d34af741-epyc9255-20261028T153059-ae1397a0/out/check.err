@@ -1,0 +1,28 @@
+   Compiling bench-hashes v0.18.3+7e002a05faed6b9de63faf0cc2e4c188c5abc1e8 (/root/pinned-runs/x86-d34af741-epyc9255-20261028T153059-ae1397a0/src/bench-hashes)
+    Finished `release` profile [optimized] target(s) in 17.11s
+     Running `target/release/bench-hashes check --against 83d59db22f6d606d96a5e38223d411123e8cbd18 --old-bench 2c9633ae69712b2e40363584387ba5665261997b --cells all --keep /root/pinned-runs/x86-d34af741-epyc9255-20261028T153059-ae1397a0/out/check-samples`
+check: the fork's working tree (36e32644a718) against 83d59db22f6d606d96a5e38223d411123e8cbd18 (83d59db22f6d)
+check: the old side with the bench at 2c9633ae69712b2e40363584387ba5665261997b (2c9633ae6971)
+regress: 4 new builds against 4 old, 4 pairs over --contenders blake3-servil-st,blake3-servil-mt
+regress: pair 1 of 4 in 72.7 s
+regress: pair 2 of 4 in 72.6 s
+regress: pair 3 of 4 in 73.6 s
+regress: pair 4 of 4 in 71.7 s
+check: a second stage for 8 suspects on 16 fresh pairs: blake3-servil-mt|solo|LentMessages|16 MiB, blake3-servil-st|solo|ManyMessages|8, blake3-servil-st|solo|ManyMessages|16, blake3-servil-mt|solo|ManyMessages|16, blake3-servil-mt|solo|ManyMessages|8, blake3-servil-mt|solo|ManyMessages|24, blake3-servil-st|solo|OneMessage|256 B, blake3-servil-mt|solo|ManyMessages|12
+regress: 16 new builds against 16 old, 16 pairs over --contenders blake3-servil-mt,blake3-servil-st --points "12,16,24,256 B,8,lent 16 MiB"
+regress: pair 1 of 16 in 5.4 s
+regress: pair 2 of 16 in 5.3 s
+regress: pair 3 of 16 in 5.4 s
+regress: pair 4 of 16 in 5.4 s
+regress: pair 5 of 16 in 5.3 s
+regress: pair 6 of 16 in 5.2 s
+regress: pair 7 of 16 in 5.3 s
+regress: pair 8 of 16 in 5.3 s
+regress: pair 9 of 16 in 5.3 s
+regress: pair 10 of 16 in 5.3 s
+regress: pair 11 of 16 in 5.4 s
+regress: pair 12 of 16 in 5.3 s
+regress: pair 13 of 16 in 5.4 s
+regress: pair 14 of 16 in 5.4 s
+regress: pair 15 of 16 in 5.3 s
+regress: pair 16 of 16 in 5.4 s

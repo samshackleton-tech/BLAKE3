@@ -1,0 +1,40 @@
+{
+ "expect": [
+  {
+   "contains": [
+    "877f51464cafc0ceabedf53fa59ce81576702f67"
+   ],
+   "file": "out/commit.txt"
+  },
+  {
+   "contains": [
+    "mutants exit 0"
+   ],
+   "file": "out/status.txt"
+  },
+  {
+   "contains": [
+    "mutants: the fork at 877f51464cafc0ceabedf53fa59ce81576702f67"
+   ],
+   "file": "out/mutants-check.log"
+  }
+ ],
+ "forbid": [
+  "was not used in the crate graph",
+  "raw profile version mismatch"
+ ],
+ "host": "root@88.216.222.150",
+ "launched": "2026-10-28T17:11:19Z",
+ "lock": "/root/bench-native-afk.lock",
+ "name": "x86-list-207-epyc9255",
+ "repos": [
+  {
+   "commit": "877f51464cafc0ceabedf53fa59ce81576702f67",
+   "path": "src",
+   "url": "https://github.com/devonjonte/BLAKE3"
+  }
+ ],
+ "script": "mut207.sh",
+ "script_sha256": "5fdf41f29b2905f6b8f9bf8ee81cfcd1fe64e1583cd082b30fe9e80ffc6d5f31",
+ "tool_sha256": "c610e1c00faf84c6e625aac08333f0f7d9d14674d2cf6beddc64585f4d39488c"
+}

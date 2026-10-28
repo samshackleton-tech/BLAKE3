@@ -1,0 +1,360 @@
+mutants: the fork at d34af7413177284655b95cb718a1a306a2d15ccd
+Found 338 mutants to test
+Found 338 mutants to test
+Found 336 mutants to test
+Found 338 mutants to test
+Found 338 mutants to test
+Found 338 mutants to test
+ok       Unmutated baseline in 12s build + 1s test
+ok       Unmutated baseline in 13s build + 1s test
+ok       Unmutated baseline in 12s build + 1s test
+ok       Unmutated baseline in 13s build + 1s test
+ok       Unmutated baseline in 13s build + 1s test
+ok       Unmutated baseline in 13s build + 1s test
+MISSED   src/lanes.rs:999:9: replace sources::open -> bool with true in 1s build + 1s test
+MISSED   src/lanes.rs:999:9: replace sources::open -> bool with false in 1s build + 1s test
+MISSED   src/tree.rs:64:33: replace + with - in wide in 0s build + 1s test
+MISSED   src/many.rs:498:5: replace neon_plans_last_len with () in 1s build + 1s test
+MISSED   src/tree.rs:64:33: replace + with * in wide in 0s build + 1s test
+MISSED   src/lanes.rs:999:38: replace > with == in sources::open in 1s build + 1s test
+MISSED   src/lib.rs:271:32: replace | with ^ in ran in 1s build + 1s test
+MISSED   src/lanes.rs:999:38: replace > with < in sources::open in 1s build + 1s test
+MISSED   src/lanes.rs:999:38: replace > with >= in sources::open in 1s build + 1s test
+MISSED   src/tree.rs:96:29: replace * with + in root_children in 1s build + 3s test
+MISSED   src/tree.rs:96:29: replace * with / in root_children in 1s build + 3s test
+MISSED   src/tree.rs:98:47: replace / with * in root_children in 1s build + 3s test
+MISSED   src/tree.rs:102:45: replace / with * in root_children in 1s build + 2s test
+MISSED   src/many.rs:580:37: replace && with || in hash_four_at_a_time in 0s build + 1s test
+MISSED   src/many.rs:580:56: replace != with == in hash_four_at_a_time in 0s build + 1s test
+MISSED   src/many.rs:580:52: replace % with / in hash_four_at_a_time in 0s build + 0s test
+MISSED   src/each.rs:197:74: replace | with ^ in hash_held in 0s build + 1s test
+MISSED   src/many.rs:580:52: replace % with + in hash_four_at_a_time in 0s build + 1s test
+MISSED   src/many.rs:584:33: replace * with / in hash_four_at_a_time in 0s build + 1s test
+MISSED   src/many.rs:585:14: replace > with >= in hash_four_at_a_time in 0s build + 0s test
+MISSED   src/many.rs:589:9: delete match arm 3 in hash_four_at_a_time in 1s build + 0s test
+MISSED   src/many.rs:588:23: replace - with + in hash_four_at_a_time in 1s build + 0s test
+MISSED   src/many.rs:613:5: replace platform_is_sme2 -> bool with false in 2s build + 2s test
+MISSED   src/many.rs:631:5: replace takes_platform -> bool with false in 0s build + 1s test
+MISSED   src/many.rs:632:9: delete match arm Platform::AVX2 in takes_platform in 1s build + 1s test
+MISSED   src/many.rs:634:9: delete match arm Platform::AVX512 in takes_platform in 3s build + 4s test
+MISSED   src/pair.rs:26:5: replace takes -> bool with false in 2s build + 3s test
+MISSED   src/each.rs:279:34: replace >= with < in hash_each_on in 1s build + 3s test
+MISSED   src/pair.rs:26:44: replace + with * in takes in 2s build + 3s test
+MISSED   src/pair.rs:26:63: replace * with + in takes in 1s build + 3s test
+MISSED   src/pair.rs:26:63: replace * with / in takes in 2s build + 3s test
+MISSED   src/pair.rs:33:5: replace takes_platform -> bool with false in 2s build + 2s test
+MISSED   src/finish.rs:76:35: replace && with || in Finish::finished in 2s build + 1s test
+MISSED   src/pair.rs:34:9: delete match arm Platform::AVX2 in takes_platform in 1s build + 0s test
+MISSED   src/lanes.rs:1023:33: replace >= with < in sources::run_one in 1s build + 1s test
+MISSED   src/pair.rs:36:9: delete match arm Platform::AVX512 in takes_platform in 0s build + 0s test
+MISSED   src/lanes.rs:1043:9: replace sources::take_stream_task -> Option<Task> with None in 1s build + 0s test
+MISSED   src/each.rs:282:50: replace / with * in hash_each_on in 1s build + 31s test
+MISSED   src/pair.rs:65:96: replace | with ^ in parent in 0s build + 1s test
+MISSED   src/lib.rs:581:118: replace | with ^ in Output::root_output_block in 0s build + 0s test
+MISSED   src/finish.rs:76:19: replace & with | in Finish::finished in 1s build + 1s test
+MISSED   src/finish.rs:76:19: replace & with ^ in Finish::finished in 1s build + 5s test
+MISSED   src/lib.rs:686:5: replace spare_lane -> Option<usize> with None in 4s build + 3s test
+MISSED   src/lib.rs:690:9: delete match arm (Platform::SSE41 | Platform::AVX2, 3) in spare_lane in 3s build + 2s test
+MISSED   src/lib.rs:691:9: delete match arm (Platform::AVX2, 6..= 7) in spare_lane in 1s build + 1s test
+MISSED   src/lib.rs:687:32: replace match guard partial > BLOCK_LEN with true in spare_lane in 1s build + 1s test
+MISSED   src/lib.rs:687:32: replace match guard partial > BLOCK_LEN with false in spare_lane in 0s build + 0s test
+MISSED   src/lanes.rs:1226:42: replace > with >= in Task::run in 0s build + 1s test
+MISSED   src/lib.rs:689:34: replace match guard partial > BLOCK_LEN with true in spare_lane in 0s build + 1s test
+MISSED   src/hasher.rs:174:33: replace - with + in feed in 1s build + 1s test
+MISSED   src/lib.rs:689:34: replace match guard partial > BLOCK_LEN with false in spare_lane in 0s build + 1s test
+MISSED   src/hasher.rs:174:33: replace - with / in feed in 1s build + 1s test
+MISSED   src/lib.rs:692:32: replace match guard partial > 5 * BLOCK_LEN with true in spare_lane in 0s build + 1s test
+MISSED   src/lib.rs:692:32: replace match guard partial > 5 * BLOCK_LEN with false in spare_lane in 0s build + 0s test
+MISSED   src/lib.rs:687:40: replace > with == in spare_lane in 0s build + 0s test
+MISSED   src/lib.rs:687:40: replace > with < in spare_lane in 0s build + 0s test
+MISSED   src/lib.rs:687:40: replace > with >= in spare_lane in 0s build + 0s test
+MISSED   src/lib.rs:689:42: replace > with == in spare_lane in 0s build + 0s test
+MISSED   src/lib.rs:689:42: replace > with < in spare_lane in 0s build + 0s test
+MISSED   src/platform.rs:108:9: replace <impl Drop for Sme2Turn>::drop with () in 1s build + 1s test
+MISSED   src/lib.rs:689:42: replace > with >= in spare_lane in 0s build + 0s test
+MISSED   src/lib.rs:692:40: replace > with == in spare_lane in 0s build + 0s test
+MISSED   src/lib.rs:692:40: replace > with < in spare_lane in 0s build + 0s test
+MISSED   src/lib.rs:692:40: replace > with >= in spare_lane in 0s build + 1s test
+MISSED   src/lib.rs:692:44: replace * with + in spare_lane in 0s build + 1s test
+MISSED   src/lib.rs:692:44: replace * with / in spare_lane in 0s build + 1s test
+MISSED   src/platform.rs:207:9: replace Platform::name -> &'static str with "" in 1s build + 1s test
+MISSED   src/platform.rs:207:9: replace Platform::name -> &'static str with "xyzzy" in 0s build + 1s test
+MISSED   src/platform.rs:282:41: replace | with ^ in Platform::compress_blocks in 1s build + 0s test
+MISSED   src/platform.rs:365:13: delete match arm Platform::AVX512 in Platform::xof_many in 1s build + 0s test
+MISSED   src/lib.rs:786:15: replace | with ^ in compress_parents_parallel in 0s build + 0s test
+MISSED   src/lanes.rs:1255:26: replace >= with < in Task::run_members in 0s build + 0s test
+MISSED   src/lib.rs:832:5: replace hash_one_chunk_root -> Hash with Default::default() in 1s build + 0s test
+MISSED   src/lanes.rs:1255:63: replace == with != in Task::run_members in 0s build + 0s test
+MISSED   src/lanes.rs:1257:17: delete match arm crate::BLOCK_LEN in Task::run_members in 1s build + 0s test
+MISSED   src/lanes.rs:1258:17: delete match arm 128 in Task::run_members in 1s build + 1s test
+MISSED   src/lanes.rs:1260:17: delete match arm 256 in Task::run_members in 1s build + 0s test
+MISSED   src/platform.rs:501:18: replace & with | in read_x86_features in 1s build + 0s test
+MISSED   src/platform.rs:501:18: replace & with ^ in read_x86_features in 1s build + 0s test
+MISSED   src/lanes.rs:1262:17: delete match arm 512 in Task::run_members in 1s build + 0s test
+MISSED   src/lib.rs:882:22: replace | with ^ in hash_all_at_once in 1s build + 0s test
+MISSED   src/lanes.rs:1264:17: delete match arm CHUNK_LEN in Task::run_members in 1s build + 1s test
+MISSED   src/platform.rs:504:37: replace | with & in read_x86_features in 1s build + 1s test
+MISSED   src/lib.rs:971:5: replace __all_workers_parked -> bool with true in 1s build + 0s test
+MISSED   src/platform.rs:504:25: replace | with & in read_x86_features in 1s build + 1s test
+MISSED   src/platform.rs:504:18: replace << with >> in read_x86_features in 0s build + 0s test
+MISSED   src/platform.rs:504:30: replace << with >> in read_x86_features in 1s build + 0s test
+MISSED   src/lanes.rs:1293:25: replace | with ^ in Task::run_equal_members in 0s build + 1s test
+MISSED   src/platform.rs:504:42: replace << with >> in read_x86_features in 1s build + 1s test
+MISSED   src/lanes.rs:1313:5: replace sme2_main with () in 1s build + 0s test
+MISSED   src/platform.rs:512:30: replace && with || in read_x86_features in 1s build + 1s test
+MISSED   src/lanes.rs:1352:5: replace wake_sme2 with () in 1s build + 0s test
+MISSED   src/platform.rs:512:43: replace & with | in read_x86_features in 1s build + 0s test
+MISSED   src/platform.rs:512:43: replace & with ^ in read_x86_features in 1s build + 0s test
+MISSED   src/hasher.rs:341:25: replace > with >= in ChunkState<P>::absorb in 0s build + 1s test
+MISSED   src/platform.rs:515:30: replace | with & in read_x86_features in 1s build + 0s test
+MISSED   src/platform.rs:515:23: replace << with >> in read_x86_features in 1s build + 1s test
+MISSED   src/hasher.rs:345:46: replace | with ^ in ChunkState<P>::absorb in 1s build + 1s test
+MISSED   src/platform.rs:515:35: replace << with >> in read_x86_features in 1s build + 0s test
+MISSED   src/platform.rs:516:30: replace && with || in read_x86_features in 1s build + 1s test
+MISSED   src/lib.rs:1020:13: delete match arm Mode::Plain in Mode<'_>::key in 1s build + 1s test
+MISSED   src/lib.rs:1091:5: replace prefetch_after_pause with () in 1s build + 0s test
+MISSED   src/lib.rs:1107:5: replace code_may_be_cold -> bool with true in 1s build + 0s test
+MISSED   src/hasher.rs:407:93: replace | with ^ in Output<P>::root_bytes in 0s build + 1s test
+MISSED   src/lib.rs:1107:5: replace code_may_be_cold -> bool with false in 0s build + 1s test
+MISSED   src/lib.rs:1138:5: replace batch_after_pause -> bool with true in 1s build + 1s test
+MISSED   src/lib.rs:1138:5: replace batch_after_pause -> bool with false in 0s build + 1s test
+MISSED   src/hasher.rs:420:31: replace | with ^ in ChunkState<P>::output in 1s build + 1s test
+MISSED   src/finish.rs:91:16: delete ! in Finish::wait in 0s build + 1s test
+MISSED   src/hasher.rs:431:102: replace | with ^ in parent_output in 1s build + 1s test
+MISSED   src/lib.rs:1170:5: replace prefetch_kernels with () in 1s build + 1s test
+MISSED   src/many.rs:39:5: replace assert_slots with () in 1s build + 1s test
+MISSED   src/platform.rs:558:5: replace wide_avx512 -> bool with true in 1s build + 1s test
+MISSED   src/many.rs:57:42: replace >= with < in hash_many_on in 0s build + 1s test
+MISSED   src/platform.rs:558:20: replace & with | in wide_avx512 in 0s build + 1s test
+MISSED   src/lib.rs:1195:5: replace prefetch_update_kernels with () in 1s build + 1s test
+MISSED   src/platform.rs:558:20: replace & with ^ in wide_avx512 in 0s build + 0s test
+MISSED   src/hasher.rs:461:9: replace CvStack::array -> Option<&[Cv; DEPTH]> with Some(Box::leak(Box::new([Default::default(); DEPTH]))) in 0s build + 1s test
+MISSED   src/platform.rs:568:5: replace avx512_detected -> bool with true in 1s build + 1s test
+MISSED   src/incremental.rs:84:9: replace <impl hasher::Hooks for HasherHooks<'_>>::subtree_cv -> Option<CVBytes> with None in 6s build + 4s test
+MISSED   src/platform.rs:572:20: replace & with | in avx512_detected in 4s build + 4s test
+MISSED   src/platform.rs:572:20: replace & with ^ in avx512_detected in 5s build + 4s test
+MISSED   src/platform.rs:583:5: replace avx2_detected -> bool with true in 4s build + 0s test
+MISSED   src/lib.rs:1221:45: replace * with + in 1s build + 1s test
+MISSED   src/many.rs:78:22: replace < with == in hash_many_on in 0s build + 1s test
+MISSED   src/many.rs:78:22: replace < with > in hash_many_on in 1s build + 1s test
+MISSED   src/lib.rs:1221:45: replace * with / in 1s build + 1s test
+MISSED   src/many.rs:78:22: replace < with <= in hash_many_on in 0s build + 1s test
+MISSED   src/platform.rs:587:20: replace & with | in avx2_detected in 1s build + 1s test
+MISSED   src/platform.rs:587:20: replace & with ^ in avx2_detected in 1s build + 1s test
+MISSED   src/many.rs:78:33: replace > with >= in hash_many_on in 0s build + 0s test
+MISSED   src/platform.rs:598:5: replace sse41_detected -> bool with true in 1s build + 0s test
+MISSED   src/platform.rs:602:20: replace & with | in sse41_detected in 1s build + 1s test
+MISSED   src/platform.rs:602:20: replace & with ^ in sse41_detected in 1s build + 0s test
+MISSED   src/platform.rs:610:5: replace counter -> u64 with 0 in 1s build + 1s test
+MISSED   src/platform.rs:610:5: replace counter -> u64 with 1 in 0s build + 0s test
+MISSED   src/platform.rs:623:5: replace ticks_in_100_us -> u64 with 0 in 1s build + 1s test
+MISSED   src/platform.rs:623:5: replace ticks_in_100_us -> u64 with 1 in 0s build + 0s test
+MISSED   src/incremental.rs:171:62: replace || with && in Hasher::gather_part in 1s build + 1s test
+MISSED   src/platform.rs:644:5: replace prefetch_code with () in 1s build + 1s test
+MISSED   src/incremental.rs:171:83: replace + with - in Hasher::gather_part in 1s build + 1s test
+MISSED   src/lib.rs:1339:24: replace > with >= in OutputReader::fill in 0s build + 1s test
+MISSED   src/lib.rs:1346:34: replace | with ^ in OutputReader::fill in 0s build + 1s test
+MISSED   src/platform.rs:687:5: replace sme2_detected -> bool with true in 1s build + 1s test
+MISSED   src/platform.rs:687:5: replace sme2_detected -> bool with false in 0s build + 1s test
+MISSED   src/incremental.rs:175:55: replace * with / in Hasher::gather_part in 1s build + 1s test
+MISSED   src/platform.rs:705:5: replace sme2_detect_uncached -> bool with true in 0s build + 0s test
+MISSED   src/platform.rs:705:5: replace sme2_detect_uncached -> bool with false in 0s build + 0s test
+MISSED   src/platform.rs:717:5: replace sme2_reported -> bool with true in 0s build + 1s test
+MISSED   src/platform.rs:717:5: replace sme2_reported -> bool with false in 0s build + 1s test
+MISSED   src/incremental.rs:202:9: replace Hasher::held_group -> Option<(u64, &[u8; STAGE_LEN])> with None in 1s build + 1s test
+MISSED   src/platform.rs:728:5: replace sme2_reported -> bool with true in 1s build + 0s test
+MISSED   src/platform.rs:728:5: replace sme2_reported -> bool with false in 0s build + 0s test
+MISSED   src/lanes.rs:142:5: replace poll_pause with () in 1s build + 1s test
+MISSED   src/park.rs:98:27: replace & with | in Park::wake_one in 0s build + 1s test
+MISSED   src/lanes.rs:145:26: replace >= with < in poll_pause in 1s build + 1s test
+MISSED   src/many.rs:146:23: replace && with || in chunked in 1s build + 1s test
+MISSED   src/ffi_partial.rs:39:34: replace % with + in rotation in 0s build + 0s test
+MISSED   src/many.rs:156:5: replace hash_chunked with () in 1s build + 1s test
+MISSED   src/many.rs:193:5: replace hash_two_chunks with () in 1s build + 1s test
+MISSED   src/incremental.rs:462:27: replace > with >= in HasherCore::update_part_with_results in 1s build + 1s test
+MISSED   src/incremental.rs:467:36: replace > with >= in HasherCore::update_part_with_results in 1s build + 1s test
+MISSED   src/incremental.rs:469:77: replace + with - in HasherCore::update_part_with_results in 1s build + 1s test
+MISSED   src/incremental.rs:469:86: replace / with * in HasherCore::update_part_with_results in 1s build + 1s test
+MISSED   src/many.rs:256:69: replace >= with < in hash_long_or_single in 1s build + 1s test
+MISSED   src/lanes.rs:244:26: replace || with && in hash_many in 2s build + 1s test
+MISSED   src/lanes.rs:244:22: replace < with == in hash_many in 1s build + 1s test
+MISSED   src/many.rs:280:5: replace across_from -> Option<usize> with None in 1s build + 1s test
+MISSED   src/lanes.rs:244:22: replace < with > in hash_many in 1s build + 1s test
+MISSED   src/lanes.rs:244:22: replace < with <= in hash_many in 1s build + 1s test
+MISSED   src/lanes.rs:244:41: replace < with == in hash_many in 1s build + 2s test
+MISSED   src/lanes.rs:244:41: replace < with > in hash_many in 1s build + 1s test
+MISSED   src/many.rs:281:49: delete ! in across_from in 1s build + 2s test
+MISSED   src/lanes.rs:244:41: replace < with <= in hash_many in 1s build + 1s test
+MISSED   src/many.rs:284:49: replace && with || in across_from in 1s build + 1s test
+MISSED   src/many.rs:284:24: replace < with == in across_from in 1s build + 1s test
+MISSED   src/many.rs:284:24: replace < with > in across_from in 1s build + 1s test
+MISSED   src/many.rs:284:24: replace < with <= in across_from in 1s build + 1s test
+MISSED   src/many.rs:284:74: replace || with && in across_from in 1s build + 1s test
+MISSED   src/park.rs:102:33: delete ! in Park::wake_one in 0s build + 1s test
+MISSED   src/many.rs:284:69: replace != with == in across_from in 0s build + 1s test
+MISSED   src/park.rs:115:9: replace Park::wake_for -> usize with 0 in 1s build + 1s test
+MISSED   src/many.rs:284:57: replace % with / in across_from in 1s build + 1s test
+MISSED   src/park.rs:115:9: replace Park::wake_for -> usize with 1 in 0s build + 1s test
+MISSED   src/many.rs:284:57: replace % with + in across_from in 0s build + 1s test
+MISSED   src/lanes.rs:277:33: replace && with || in hash_each in 1s build + 1s test
+MISSED   src/park.rs:117:64: replace - with + in Park::wake_for in 0s build + 1s test
+MISSED   src/many.rs:284:84: replace == with != in across_from in 0s build + 1s test
+MISSED   src/each.rs:40:53: replace < with == in hash_each_multithreaded in 1s build + 1s test
+MISSED   src/park.rs:118:18: replace > with == in Park::wake_for in 1s build + 1s test
+MISSED   src/park.rs:118:18: replace > with < in Park::wake_for in 1s build + 1s test
+336 mutants tested in 11m: 23 missed, 271 caught, 42 unviable
+MISSED   src/lanes.rs:277:50: replace || with && in hash_each in 0s build + 1s test
+MISSED   src/each.rs:40:53: replace < with <= in hash_each_multithreaded in 1s build + 1s test
+MISSED   src/park.rs:118:18: replace > with >= in Park::wake_for in 0s build + 1s test
+MISSED   src/lanes.rs:277:43: replace < with == in hash_each in 0s build + 1s test
+MISSED   src/lanes.rs:277:43: replace < with > in hash_each in 3s build + 2s test
+MISSED   src/lanes.rs:277:43: replace < with <= in hash_each in 2s build + 3s test
+MISSED   src/lanes.rs:277:57: replace == with != in hash_each in 3s build + 3s test
+MISSED   src/lanes.rs:278:19: replace += with -= in hash_each in 2s build + 3s test
+MISSED   src/io.rs:43:18: replace < with <= in fill in 3s build + 3s test
+338 mutants tested in 12m: 49 missed, 281 caught, 8 unviable
+MISSED   src/lanes.rs:278:19: replace += with *= in hash_each in 2s build + 3s test
+338 mutants tested in 12m: 40 missed, 269 caught, 29 unviable
+MISSED   src/park.rs:141:61: replace == with != in Park::park_unless in 0s build + 0s test
+MISSED   src/lanes.rs:281:19: replace -= with += in hash_each in 0s build + 0s test
+MISSED   src/park.rs:141:55: replace & with | in Park::park_unless in 0s build + 0s test
+MISSED   src/lanes.rs:281:19: replace -= with /= in hash_each in 0s build + 0s test
+MISSED   src/park.rs:141:55: replace & with ^ in Park::park_unless in 0s build + 0s test
+MISSED   src/park.rs:141:31: delete ! in Park::park_unless in 0s build + 0s test
+MISSED   src/many.rs:344:98: replace | with ^ in hash_group_across in 1s build + 2s test
+MISSED   src/lanes.rs:297:41: replace * with + in cut_messages in 1s build + 2s test
+MISSED   src/lanes.rs:297:41: replace * with / in cut_messages in 1s build + 2s test
+MISSED   src/lanes.rs:297:32: replace - with + in cut_messages in 1s build + 2s test
+MISSED   src/lanes.rs:312:9: replace <impl Drop for AbortOnUnwind>::drop with () in 1s build + 0s test
+MISSED   src/many.rs:381:30: replace | with ^ in subtree_across in 0s build + 0s test
+MISSED   src/many.rs:391:5: replace sme2_sized -> bool with true in 1s build + 0s test
+MISSED   src/many.rs:391:5: replace sme2_sized -> bool with false in 0s build + 0s test
+MISSED   src/many.rs:395:9: replace || with && in sme2_sized in 1s build + 0s test
+MISSED   src/lanes.rs:435:42: replace - with + in cut_with_prefix in 1s build + 0s test
+MISSED   src/many.rs:394:9: replace || with && in sme2_sized in 0s build + 0s test
+MISSED   src/many.rs:393:9: replace || with && in sme2_sized in 0s build + 0s test
+MISSED   src/many.rs:392:9: replace || with && in sme2_sized in 0s build + 0s test
+MISSED   src/lanes.rs:436:39: replace * with / in cut_with_prefix in 0s build + 0s test
+MISSED   src/many.rs:391:11: replace >= with < in sme2_sized in 0s build + 0s test
+MISSED   src/many.rs:392:41: replace && with || in sme2_sized in 0s build + 0s test
+MISSED   src/many.rs:392:21: replace && with || in sme2_sized in 0s build + 0s test
+MISSED   src/many.rs:392:17: replace > with == in sme2_sized in 0s build + 0s test
+MISSED   src/many.rs:392:17: replace > with < in sme2_sized in 0s build + 0s test
+MISSED   src/many.rs:392:17: replace > with >= in sme2_sized in 0s build + 0s test
+MISSED   src/many.rs:392:28: replace <= with > in sme2_sized in 0s build + 0s test
+MISSED   src/many.rs:392:50: replace >= with < in sme2_sized in 0s build + 0s test
+MISSED   src/lanes.rs:437:18: replace < with > in cut_with_prefix in 0s build + 0s test
+MISSED   src/many.rs:393:49: replace && with || in sme2_sized in 0s build + 0s test
+MISSED   src/many.rs:393:29: replace && with || in sme2_sized in 0s build + 0s test
+MISSED   src/many.rs:393:17: replace > with == in sme2_sized in 0s build + 0s test
+MISSED   src/many.rs:393:17: replace > with < in sme2_sized in 0s build + 0s test
+MISSED   src/many.rs:393:17: replace > with >= in sme2_sized in 0s build + 0s test
+MISSED   src/many.rs:393:36: replace <= with > in sme2_sized in 0s build + 0s test
+MISSED   src/many.rs:393:58: replace >= with < in sme2_sized in 0s build + 0s test
+MISSED   src/many.rs:395:42: replace && with || in sme2_sized in 0s build + 0s test
+MISSED   src/many.rs:395:17: replace >= with < in sme2_sized in 0s build + 0s test
+MISSED   src/many.rs:395:51: replace >= with < in sme2_sized in 0s build + 0s test
+MISSED   src/lanes.rs:443:26: replace > with < in cut_with_prefix in 0s build + 0s test
+MISSED   src/park.rs:156:9: replace Park::pay_owed -> usize with 0 in 0s build + 0s test
+MISSED   src/lanes.rs:444:24: replace > with >= in cut_with_prefix in 0s build + 0s test
+MISSED   src/park.rs:156:9: replace Park::pay_owed -> usize with 1 in 0s build + 0s test
+MISSED   src/lanes.rs:444:15: replace - with + in cut_with_prefix in 0s build + 0s test
+MISSED   src/park.rs:157:20: replace < with == in Park::pay_owed in 0s build + 0s test
+MISSED   src/park.rs:157:20: replace < with > in Park::pay_owed in 0s build + 0s test
+MISSED   src/many.rs:417:73: replace | with ^ in hash_run in 0s build + 0s test
+MISSED   src/park.rs:157:20: replace < with <= in Park::pay_owed in 0s build + 0s test
+MISSED   src/many.rs:425:5: replace hash_run_padded with () in 1s build + 0s test
+MISSED   src/park.rs:159:21: replace == with != in Park::pay_owed in 0s build + 0s test
+MISSED   src/lanes.rs:446:16: replace - with + in cut_with_prefix in 0s build + 0s test
+MISSED   src/park.rs:162:54: replace - with + in Park::pay_owed in 0s build + 0s test
+MISSED   src/park.rs:162:54: replace - with / in Park::pay_owed in 0s build + 1s test
+MISSED   src/park.rs:165:16: delete ! in Park::pay_owed in 0s build + 0s test
+MISSED   src/park.rs:169:18: replace += with -= in Park::pay_owed in 0s build + 0s test
+338 mutants tested in 14m: 67 missed, 234 caught, 37 unviable
+MISSED   src/park.rs:169:18: replace += with *= in Park::pay_owed in 0s build + 0s test
+MISSED   src/lanes.rs:460:5: replace prefix_for -> usize with 0 in 1s build + 0s test
+MISSED   src/lanes.rs:460:5: replace prefix_for -> usize with 1 in 0s build + 0s test
+MISSED   src/lanes.rs:482:5: replace sme2_prefix -> usize with 0 in 1s build + 0s test
+MISSED   src/lanes.rs:482:5: replace sme2_prefix -> usize with 1 in 0s build + 0s test
+MISSED   src/lanes.rs:482:59: replace * with + in sme2_prefix in 1s build + 0s test
+MISSED   src/lanes.rs:482:59: replace * with / in sme2_prefix in 0s build + 0s test
+MISSED   src/lanes.rs:482:21: replace / with % in sme2_prefix in 0s build + 0s test
+MISSED   src/lanes.rs:482:28: replace + with * in sme2_prefix in 0s build + 0s test
+MISSED   src/lanes.rs:482:52: replace / with % in sme2_prefix in 0s build + 0s test
+MISSED   src/lanes.rs:482:52: replace / with * in sme2_prefix in 0s build + 0s test
+MISSED   src/lanes.rs:482:44: replace * with + in sme2_prefix in 0s build + 0s test
+MISSED   src/lanes.rs:482:39: replace - with + in sme2_prefix in 0s build + 0s test
+MISSED   src/lanes.rs:482:39: replace - with / in sme2_prefix in 0s build + 0s test
+MISSED   src/lanes.rs:483:14: replace >= with < in sme2_prefix in 0s build + 0s test
+MISSED   src/lanes.rs:521:49: replace * with + in merge_to_children in 0s build + 0s test
+MISSED   src/lanes.rs:587:49: replace && with || in initialize in 1s build + 0s test
+MISSED   src/self_test.rs:214:50: replace * with + in chain in 1s build + 0s test
+MISSED   src/lanes.rs:587:28: replace && with || in initialize in 0s build + 0s test
+MISSED   src/self_test.rs:214:50: replace * with / in chain in 0s build + 0s test
+MISSED   src/lanes.rs:588:105: replace - with + in initialize in 0s build + 0s test
+MISSED   src/lanes.rs:588:105: replace - with / in initialize in 0s build + 0s test
+MISSED   src/self_test.rs:301:74: replace * with + in outputs in 0s build + 0s test
+MISSED   src/self_test.rs:301:74: replace * with / in outputs in 0s build + 0s test
+MISSED   src/self_test.rs:355:5: replace chunk_values -> usize with 0 in 1s build + 0s test
+MISSED   src/self_test.rs:355:5: replace chunk_values -> usize with 1 in 0s build + 0s test
+MISSED   src/self_test.rs:358:39: replace * with + in chunk_values in 1s build + 0s test
+MISSED   src/self_test.rs:358:39: replace * with / in chunk_values in 0s build + 0s test
+MISSED   src/self_test.rs:440:5: replace compiled_features_present with () in 1s build + 0s test
+MISSED   src/self_test.rs:450:43: replace && with || in compiled_features_present in 1s build + 0s test
+MISSED   src/self_test.rs:453:42: replace && with || in compiled_features_present in 0s build + 0s test
+MISSED   src/self_test.rs:660:36: replace * with + in test::reference in 1s build + 0s test
+MISSED   src/self_test.rs:660:36: replace * with / in test::reference in 0s build + 0s test
+338 mutants tested in 18m: 57 missed, 275 caught, 6 unviable
+MISSED   src/lanes.rs:654:5: replace all_workers_parked -> bool with true in 0s build + 0s test
+MISSED   src/lanes.rs:704:27: replace && with || in Pool::run_job in 1s build + 0s test
+MISSED   src/lanes.rs:704:37: replace > with == in Pool::run_job in 0s build + 0s test
+MISSED   src/lanes.rs:704:37: replace > with < in Pool::run_job in 0s build + 0s test
+MISSED   src/lanes.rs:704:37: replace > with >= in Pool::run_job in 0s build + 0s test
+MISSED   src/lanes.rs:704:43: replace + with - in Pool::run_job in 0s build + 0s test
+MISSED   src/lanes.rs:704:43: replace + with * in Pool::run_job in 0s build + 0s test
+MISSED   src/lanes.rs:706:17: delete match arm Work::Tree{input, ..} in Pool::run_job in 0s build + 0s test
+MISSED   src/lanes.rs:707:35: replace - with + in Pool::run_job in 0s build + 0s test
+MISSED   src/lanes.rs:707:35: replace - with / in Pool::run_job in 0s build + 0s test
+MISSED   src/lanes.rs:707:29: replace - with + in Pool::run_job in 0s build + 0s test
+MISSED   src/lanes.rs:709:41: replace - with + in Pool::run_job in 0s build + 0s test
+MISSED   src/lanes.rs:709:41: replace - with / in Pool::run_job in 0s build + 0s test
+MISSED   src/lanes.rs:709:35: replace - with + in Pool::run_job in 0s build + 0s test
+MISSED   src/lanes.rs:732:9: replace Pool::wake_for with () in 0s build + 0s test
+MISSED   src/lanes.rs:732:49: replace - with + in Pool::wake_for in 0s build + 0s test
+MISSED   src/lanes.rs:732:49: replace - with / in Pool::wake_for in 0s build + 0s test
+MISSED   src/lanes.rs:764:5: replace spin_for_work -> bool with false in 0s build + 0s test
+MISSED   src/lanes.rs:772:30: replace >= with < in spin_for_work in 0s build + 0s test
+MISSED   src/lanes.rs:772:41: delete ! in spin_for_work in 0s build + 0s test
+MISSED   src/lanes.rs:853:34: replace << with >> in sources::Source::unregister in 0s build + 0s test
+MISSED   src/lanes.rs:872:61: replace >= with < in sources::Source::publish in 0s build + 0s test
+MISSED   src/lanes.rs:872:22: replace - with + in sources::Source::publish in 0s build + 0s test
+MISSED   src/lanes.rs:872:18: replace + with - in sources::Source::publish in 0s build + 0s test
+MISSED   src/lanes.rs:872:18: replace + with * in sources::Source::publish in 0s build + 0s test
+MISSED   src/lanes.rs:886:37: replace + with - in sources::Source::publish_job in 1s build + 0s test
+MISSED   src/lanes.rs:906:60: replace / with % in sources::Source::take in 0s build + 0s test
+MISSED   src/lanes.rs:906:65: replace * with + in sources::Source::take in 0s build + 0s test
+MISSED   src/lanes.rs:938:31: replace > with >= in sources::Source::wake_for_waiting in 0s build + 0s test
+MISSED   src/lanes.rs:957:35: replace < with == in sources::Source::wait in 1s build + 0s test
+MISSED   src/lanes.rs:957:35: replace < with > in sources::Source::wait in 0s build + 0s test
+MISSED   src/lanes.rs:957:35: replace < with <= in sources::Source::wait in 0s build + 0s test
+MISSED   src/lanes.rs:991:9: replace sources::opened with () in 1s build + 0s test
+MISSED   src/lanes.rs:995:9: replace sources::closed with () in 0s build + 0s test
+338 mutants tested in 36m: 87 missed, 227 caught, 24 unviable
+Found 83 mutants to test
+ok       Unmutated baseline in 7s build + 0s test
+MISSED   src/finish.rs:76:35: replace && with || in Finish::finished in 0s build + 0s test
+MISSED   src/finish.rs:76:19: replace & with | in Finish::finished in 0s build + 0s test
+MISSED   src/finish.rs:91:16: delete ! in Finish::wait in 0s build + 0s test
+MISSED   src/park.rs:118:18: replace > with >= in Park::wake_for in 0s build + 0s test
+MISSED   src/park.rs:162:54: replace - with + in Park::pay_owed in 0s build + 0s test
+MISSED   src/park.rs:162:54: replace - with / in Park::pay_owed in 0s build + 0s test
+83 mutants tested in 80s: 6 missed, 73 caught, 4 unviable
+Found 6 mutants to test
+ok       Unmutated baseline in 7s build + 0s test
+MISSED   src/lanes.rs:772:30: replace >= with < in spin_for_work in 0s build + 0s test
+MISSED   src/many.rs:39:5: replace assert_slots with () in 1s build + 0s test
+6 mutants tested in 47s: 2 missed, 4 caught
+confirmed alone: 3 names whose count differed from a list
+functions: 337: 206 every mutant caught, 128 every survivor explained, 3 open; the assembly kernels are the proofs'
+/root/pinned-runs/x86-d34af741-epyc9255-20261028T153059-ae1397a0/src/tools/mutants/known-x86_64.txt: 630 survivors, 1 names new
+/root/pinned-runs/x86-d34af741-epyc9255-20261028T153059-ae1397a0/src/tools/mutants/timeouts-x86_64.txt: 32 time-outs, 0 names new

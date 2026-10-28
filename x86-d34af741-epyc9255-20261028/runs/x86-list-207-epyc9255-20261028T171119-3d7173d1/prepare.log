@@ -1,0 +1,17 @@
+$ ['git', '-C', '/root/pinned-runs/cache/10cc0ae95e0f1969.git', 'fetch', '-q', '--prune', 'origin']
+exit 0
+$ ['sh', '-c', 'git -C /root/pinned-runs/cache/10cc0ae95e0f1969.git cat-file -e 877f51464cafc0ceabedf53fa59ce81576702f67^{commit} || git -C /root/pinned-runs/cache/10cc0ae95e0f1969.git fetch -q https://github.com/devonjonte/BLAKE3 877f51464cafc0ceabedf53fa59ce81576702f67']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/cache/10cc0ae95e0f1969.git', 'update-ref', 'refs/pinned/877f51464cafc0ceabedf53fa59ce81576702f67', '877f51464cafc0ceabedf53fa59ce81576702f67']
+exit 0
+$ ['git', 'init', '-q', '/root/pinned-runs/x86-list-207-epyc9255-20261028T171119-3d7173d1/src']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/x86-list-207-epyc9255-20261028T171119-3d7173d1/src', 'remote', 'add', 'origin', 'https://github.com/devonjonte/BLAKE3']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/x86-list-207-epyc9255-20261028T171119-3d7173d1/src', 'fetch', '-q', '/root/pinned-runs/cache/10cc0ae95e0f1969.git', '+refs/*:refs/cache/*']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/x86-list-207-epyc9255-20261028T171119-3d7173d1/src', 'checkout', '-q', '--detach', '877f51464cafc0ceabedf53fa59ce81576702f67']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/x86-list-207-epyc9255-20261028T171119-3d7173d1/src', 'rev-parse', 'HEAD']
+877f51464cafc0ceabedf53fa59ce81576702f67
+exit 0

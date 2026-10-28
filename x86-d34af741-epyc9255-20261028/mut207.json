@@ -1,0 +1,33 @@
+{
+ "name": "x86-list-207-epyc9255",
+ "host": "root@88.216.222.150",
+ "lock": "/root/bench-native-afk.lock",
+ "repos": [
+  {
+   "url": "https://github.com/devonjonte/BLAKE3",
+   "commit": "877f51464cafc0ceabedf53fa59ce81576702f67",
+   "path": "src"
+  }
+ ],
+ "script": "mut207.sh",
+ "expect": [
+  {
+   "file": "out/commit.txt",
+   "contains": [
+    "877f51464cafc0ceabedf53fa59ce81576702f67"
+   ]
+  },
+  {
+   "file": "out/status.txt",
+   "contains": [
+    "mutants exit 0"
+   ]
+  },
+  {
+   "file": "out/mutants-check.log",
+   "contains": [
+    "mutants: the fork at 877f51464cafc0ceabedf53fa59ce81576702f67"
+   ]
+  }
+ ]
+}
