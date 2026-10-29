@@ -1,0 +1,64 @@
+{
+ "expect": [
+  {
+   "contains": [
+    "src release exit 0",
+    "src2 release exit 0"
+   ],
+   "file": "out/status.txt"
+  },
+  {
+   "contains": [
+    "v0.8.0+b3c5efc7c975d903762dea809066f7c0a0603861"
+   ],
+   "file": "out/src-describe.txt"
+  },
+  {
+   "contains": [
+    "0.8.0+b3c5efc7c975d903762dea809066f7c0a0603861"
+   ],
+   "file": "out/version.txt"
+  },
+  {
+   "contains": [
+    "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262"
+   ],
+   "file": "out/empty.txt"
+  },
+  {
+   "contains": [
+    "statically linked"
+   ],
+   "file": "out/file.txt"
+  },
+  {
+   "contains": [
+    ": OK"
+   ],
+   "file": "out/selfcheck.txt"
+  }
+ ],
+ "forbid": [
+  "was not used in the crate graph",
+  "raw profile version mismatch"
+ ],
+ "host": "root@88.216.222.150",
+ "launched": "2026-10-29T06:34:34Z",
+ "lock": "/root/bench-native-afk.lock",
+ "name": "b3sum-x86-release",
+ "repos": [
+  {
+   "commit": "b5b988d8982bea9490c38c79ec4b8c5c2428270c",
+   "path": "src",
+   "url": "https://github.com/johnservil/BLAKE3"
+  },
+  {
+   "commit": "b5b988d8982bea9490c38c79ec4b8c5c2428270c",
+   "path": "src2",
+   "url": "https://github.com/johnservil/BLAKE3"
+  }
+ ],
+ "script": "job.sh",
+ "script_sha256": "29ca2f77ec6d365df1cbd9c41d7ad448481179bec1b1839132a8e4338a673dbd",
+ "tool_sha256": "c610e1c00faf84c6e625aac08333f0f7d9d14674d2cf6beddc64585f4d39488c"
+}

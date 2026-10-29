@@ -1,0 +1,33 @@
+{
+ "expect": [
+  {
+   "contains": [
+    "b3sum"
+   ],
+   "file": "out/result.txt"
+  }
+ ],
+ "forbid": [
+  "was not used in the crate graph",
+  "raw profile version mismatch"
+ ],
+ "host": "root@88.216.222.150",
+ "launched": "2026-10-29T06:36:51Z",
+ "lock": "/root/bench-native-afk.lock",
+ "name": "b3sum-x86-fixedpath-test",
+ "repos": [
+  {
+   "commit": "b5b988d8982bea9490c38c79ec4b8c5c2428270c",
+   "path": "src",
+   "url": "https://github.com/johnservil/BLAKE3"
+  },
+  {
+   "commit": "b5b988d8982bea9490c38c79ec4b8c5c2428270c",
+   "path": "src2",
+   "url": "https://github.com/johnservil/BLAKE3"
+  }
+ ],
+ "script": "fixedpath.sh",
+ "script_sha256": "bbb175c36cdae60c8e97f96d39364898ea6b3f5aaa621734eacaec67172d9da1",
+ "tool_sha256": "c610e1c00faf84c6e625aac08333f0f7d9d14674d2cf6beddc64585f4d39488c"
+}

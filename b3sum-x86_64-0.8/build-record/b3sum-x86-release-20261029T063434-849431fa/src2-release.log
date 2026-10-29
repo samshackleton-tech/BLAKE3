@@ -1,0 +1,38 @@
+warning: Cargo.toml: version requirement `=0.8.0+b3c5efc7c975d903762dea809066f7c0a0603861` for dependency `blake3` includes semver metadata which will be ignored, removing the metadata is recommended to avoid confusion
+warning: `b3sums` (manifest) generated 1 warning
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.24
+   Compiling rustix v1.1.4
+   Compiling utf8parse v0.2.2
+   Compiling shlex v2.0.1
+   Compiling linux-raw-sys v0.12.1
+   Compiling bitflags v2.13.1
+   Compiling find-msvc-tools v0.1.11
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling anstyle v1.0.14
+   Compiling colorchoice v1.0.5
+   Compiling libc v0.2.189
+   Compiling anstyle-query v1.1.5
+   Compiling strsim v0.11.1
+   Compiling clap_lex v1.1.0
+   Compiling anyhow v1.0.104
+   Compiling heck v0.5.0
+   Compiling constant_time_eq v0.4.2
+   Compiling cfg-if v1.0.4
+   Compiling arrayvec v0.7.8
+   Compiling hex v0.4.3
+   Compiling anstyle-parse v1.0.0
+   Compiling cc v1.4.3
+   Compiling anstream v1.0.0
+   Compiling syn v3.0.3
+   Compiling terminal_size v0.4.4
+   Compiling blake3-servil v0.8.0+b3c5efc7c975d903762dea809066f7c0a0603861 (/root/pinned-runs/b3sum-x86-release-20261029T063434-849431fa/src2)
+   Compiling clap_builder v4.6.6
+   Compiling memmap2 v0.9.11
+   Compiling clap_derive v4.6.4
+   Compiling clap v4.6.6
+   Compiling b3sums v0.8.0+b3c5efc7c975d903762dea809066f7c0a0603861 (/root/pinned-runs/b3sum-x86-release-20261029T063434-849431fa/src2/b3sum)
+    Finished `release` profile [optimized] target(s) in 2.78s
+dist/b3sum-v0.8.0+b3c5efc7c975d903762dea809066f7c0a0603861-x86_64-unknown-linux-gnu: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), static-pie linked, for GNU/Linux 3.2.0, BuildID[sha1]=2946b6cd54a3a6ebf8b68eef57b7480da2771091, not stripped
+b3sum-release: dist/b3sum-v0.8.0+b3c5efc7c975d903762dea809066f7c0a0603861-x86_64-unknown-linux-gnu, with .sha256 and .b3 beside it

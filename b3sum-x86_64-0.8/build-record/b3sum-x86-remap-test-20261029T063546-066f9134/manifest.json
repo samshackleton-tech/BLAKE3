@@ -1,0 +1,33 @@
+{
+ "expect": [
+  {
+   "contains": [
+    "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262"
+   ],
+   "file": "out/result.txt"
+  }
+ ],
+ "forbid": [
+  "was not used in the crate graph",
+  "raw profile version mismatch"
+ ],
+ "host": "root@88.216.222.150",
+ "launched": "2026-10-29T06:35:46Z",
+ "lock": "/root/bench-native-afk.lock",
+ "name": "b3sum-x86-remap-test",
+ "repos": [
+  {
+   "commit": "b5b988d8982bea9490c38c79ec4b8c5c2428270c",
+   "path": "src",
+   "url": "https://github.com/johnservil/BLAKE3"
+  },
+  {
+   "commit": "b5b988d8982bea9490c38c79ec4b8c5c2428270c",
+   "path": "src2",
+   "url": "https://github.com/johnservil/BLAKE3"
+  }
+ ],
+ "script": "remap.sh",
+ "script_sha256": "8751610206530a4a452b099c11c10be0463daf29cc5ce87109fff180c1e2396c",
+ "tool_sha256": "c610e1c00faf84c6e625aac08333f0f7d9d14674d2cf6beddc64585f4d39488c"
+}
