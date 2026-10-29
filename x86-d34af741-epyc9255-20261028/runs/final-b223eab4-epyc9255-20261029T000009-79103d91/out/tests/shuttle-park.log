@@ -1,0 +1,16 @@
+   Compiling clocks v0.1.0 (/root/pinned-runs/final-b223eab4-epyc9255-20261029T000009-79103d91/src/clocks)
+   Compiling blake3-servil v0.8.0+b8ebc5a74a06d8d6bb4aa65465e882fc904b4e97 (/root/pinned-runs/final-b223eab4-epyc9255-20261029T000009-79103d91/src)
+    Finished `release` profile [optimized] target(s) in 2.15s
+     Running tests/shuttle_park.rs (/root/target-release-tests-s/release/deps/shuttle_park-815aa6dcfeb251c6)
+
+running 7 tests
+test park::test::a_waker_wakes_at_most_its_fanout_and_owes_the_rest ... ok
+test one_worker_one_publisher ... ok
+test two_wakers_wake_two_workers ... ok
+test two_workers_one_publisher ... ok
+test owed_wakes_cascade ... ok
+test two_workers_two_publishers ... ok
+test wakes_fan_out_no_waker_makes_more_than_its_share ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+

@@ -1,0 +1,11 @@
+Wed Oct 28 22:21:47 UTC 2026
+b8ebc5a74a06d8d6bb4aa65465e882fc904b4e97 hash_many is inline(always), and a Batch counts its messages only when asked: the small batches' cost after the Batch change goes
+?? bench-hashes/
+rustc 1.99.1 (58cf8f9c3 2026-10-13)
+cargo-nextest 0.9.149 (3fe4ef319 2026-10-20)
+model name	: AMD EPYC 9255 24-Core Processor
+vendor_id	: AuthenticAMD
+cpu family	: 26
+avx512f avx512vl 
+avx2
+48

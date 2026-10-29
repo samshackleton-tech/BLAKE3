@@ -1,0 +1,37 @@
+    Updating crates.io index
+    Blocking waiting for file lock on package cache
+     Locking 77 packages to highest Rust 1.99.1 compatible versions
+      Adding constant_time_eq v0.4.2 (available: v0.6.1)
+      Adding shuttle v0.8.1 (available: v0.9.8)
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling clocks v0.1.0 (/root/pinned-runs/final-b223eab4-epyc9255-20261029T000009-79103d91/src/clocks)
+   Compiling blake3-servil v0.8.0+b8ebc5a74a06d8d6bb4aa65465e882fc904b4e97 (/root/pinned-runs/final-b223eab4-epyc9255-20261029T000009-79103d91/src)
+    Finished `test` profile [optimized] target(s) in 3.93s
+   Doc-tests blake3_servil
+
+running 19 tests
+test src/incremental.rs - incremental::Hasher::update_reader (line 343) - compile ... ok
+test src/each.rs - each::update_each (line 63) ... ok
+test src/stream.rs - stream::stream (line 136) ... ok
+test src/each.rs - each::hash_each (line 231) ... ok
+test src/convenience.rs - convenience::hash (line 11) ... ok
+test src/performance.rs - performance::hash_many (line 61) ... ok
+test src/convenience.rs - convenience::hash_xof (line 65) ... ok
+test src/convenience.rs - convenience::hash_with (line 47) ... ok
+test src/performance.rs - performance::context_key (line 178) ... ok
+test src/lib.rs - initialize (line 892) ... ok
+test src/incremental.rs - incremental::Hasher (line 15) ... ok
+test src/performance.rs - performance::hash_multithreaded (line 126) ... ok
+test src/lib.rs - (line 7) ... ok
+test src/block.rs - block::Batch (line 65) ... ok
+test src/performance.rs - performance::hash (line 37) ... ok
+test src/lib.rs - initialize_multithreaded (line 939) ... ok
+test src/each.rs - each::hash_each_multithreaded (line 20) ... ok
+test src/incremental.rs - incremental::Hasher::update_multithreaded (line 277) ... ok
+test src/performance.rs - performance::hash_many_multithreaded (line 92) ... ok
+
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+all doctests ran in 0.46s; merged doctests compilation took 0.43s

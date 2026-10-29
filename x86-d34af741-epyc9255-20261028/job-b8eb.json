@@ -1,0 +1,58 @@
+{
+ "name": "list-b8ebc5a7-epyc9255",
+ "host": "root@88.216.222.150",
+ "lock": "/root/bench-native-afk.lock",
+ "repos": [
+  {
+   "url": "https://github.com/johnservil/BLAKE3",
+   "commit": "b8ebc5a74a06d8d6bb4aa65465e882fc904b4e97",
+   "path": "src"
+  },
+  {
+   "url": "https://github.com/johnservil/bench-hashes",
+   "commit": "f17a161b6c19a2a639da0e19f82d44975a841bef",
+   "path": "src/bench-hashes"
+  }
+ ],
+ "script": "job.sh",
+ "expect": [
+  {
+   "file": "out/commit.txt",
+   "contains": [
+    "b8ebc5a74a06d8d6bb4aa65465e882fc904b4e97",
+    "f17a161b6c19a2a639da0e19f82d44975a841bef"
+   ]
+  },
+  {
+   "file": "out/tests/runner.log",
+   "contains": [
+    "all status 0"
+   ]
+  },
+  {
+   "file": "out/check.err",
+   "contains": [
+    "against 83d59db22f6d606d96a5e38223d411123e8cbd18",
+    "2c9633ae69712b2e40363584387ba5665261997b"
+   ]
+  },
+  {
+   "file": "out/check.out",
+   "contains": [
+    "regress: "
+   ]
+  },
+  {
+   "file": "out/mutants-check.log",
+   "contains": [
+    "mutants: the fork at b8ebc5a74a06d8d6bb4aa65465e882fc904b4e97"
+   ]
+  },
+  {
+   "file": "out/status.txt",
+   "contains": [
+    "mutants --write exit"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,28 @@
+   Compiling bench-hashes v0.18.3+7e002a05faed6b9de63faf0cc2e4c188c5abc1e8 (/root/pinned-runs/list-b8ebc5a7-epyc9255-20261028T222143-244b1edf/src/bench-hashes)
+    Finished `release` profile [optimized] target(s) in 17.11s
+     Running `target/release/bench-hashes check --against 83d59db22f6d606d96a5e38223d411123e8cbd18 --old-bench 2c9633ae69712b2e40363584387ba5665261997b --cells all --keep /root/pinned-runs/list-b8ebc5a7-epyc9255-20261028T222143-244b1edf/out/check-samples`
+check: the fork's working tree (429fccaab21f) against 83d59db22f6d606d96a5e38223d411123e8cbd18 (83d59db22f6d)
+check: the old side with the bench at 2c9633ae69712b2e40363584387ba5665261997b (2c9633ae6971)
+regress: 4 new builds against 4 old, 4 pairs over --contenders blake3-servil-st,blake3-servil-mt
+regress: pair 1 of 4 in 76.5 s
+regress: pair 2 of 4 in 77.6 s
+regress: pair 3 of 4 in 76.6 s
+regress: pair 4 of 4 in 76.7 s
+check: a second stage for 8 suspects on 16 fresh pairs: blake3-servil-mt|solo|ContinuousBatches|16, blake3-servil-mt|solo|ContinuousMessages|1 KiB, blake3-servil-mt|solo|IdleOneMessage|512 KiB, blake3-servil-mt|solo|IdleOneMessage|1 MiB, blake3-servil-mt|solo|OneMessage|1 MiB, blake3-servil-mt|solo|OneMessage|512 KiB, blake3-servil-mt|solo|ContinuousBatches|4096, blake3-servil-mt|solo|ContinuousMessages|64 B
+regress: 16 new builds against 16 old, 16 pairs over --contenders blake3-servil-mt --points "1 MiB,512 KiB,continuous 1 KiB,continuous 64 B,continuous batch 16,continuous batch 4096,idle 1 MiB,idle 512 KiB"
+regress: pair 1 of 16 in 1.0 s
+regress: pair 2 of 16 in 0.9 s
+regress: pair 3 of 16 in 0.9 s
+regress: pair 4 of 16 in 1.0 s
+regress: pair 5 of 16 in 1.0 s
+regress: pair 6 of 16 in 0.9 s
+regress: pair 7 of 16 in 1.0 s
+regress: pair 8 of 16 in 1.0 s
+regress: pair 9 of 16 in 1.0 s
+regress: pair 10 of 16 in 1.0 s
+regress: pair 11 of 16 in 0.9 s
+regress: pair 12 of 16 in 1.0 s
+regress: pair 13 of 16 in 1.0 s
+regress: pair 14 of 16 in 1.0 s
+regress: pair 15 of 16 in 1.0 s
+regress: pair 16 of 16 in 1.0 s
