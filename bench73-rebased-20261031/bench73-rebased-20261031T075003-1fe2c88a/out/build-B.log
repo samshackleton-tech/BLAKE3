@@ -1,0 +1,66 @@
+     Locking 1 package to highest compatible version
+      Adding clocks v0.1.0 (/root/pinned-runs/bench73-rebased-20261031T075003-1fe2c88a/fork-clocks/clocks)
+   Compiling find-msvc-tools v0.1.11
+   Compiling shlex v2.0.1
+   Compiling typenum v1.20.1
+   Compiling cfg-if v1.0.4
+   Compiling version_check v0.9.5
+   Compiling crossbeam-utils v0.8.23
+   Compiling crossbeam-epoch v0.9.21
+   Compiling libc v0.2.189
+   Compiling crossbeam-deque v0.8.8
+   Compiling rayon-core v1.13.0
+   Compiling arrayvec v0.7.8
+   Compiling cpufeatures v0.3.0
+   Compiling constant_time_eq v0.4.2
+   Compiling const-oid v0.9.6
+   Compiling cpufeatures v0.2.17
+   Compiling rand_core v0.9.5
+   Compiling once_cell v1.21.4
+   Compiling untrusted v0.9.0
+   Compiling clocks v0.1.0 (/root/pinned-runs/bench73-rebased-20261031T075003-1fe2c88a/fork-clocks/clocks)
+   Compiling keccak v0.2.2
+   Compiling cc v1.4.4
+   Compiling wyhash v0.6.0
+   Compiling generic-array v0.14.7
+   Compiling hybrid-array v0.4.15
+   Compiling blake3 v1.8.7
+   Compiling ring v0.17.14
+   Compiling blake3-servil v0.8.0+2aa17489537c922634b53035ab0a635682ba4a1c (https://github.com/johnservil/BLAKE3?rev=d34af7413177284655b95cb718a1a306a2d15ccd#d34af741)
+   Compiling getrandom v0.2.17
+   Compiling sysinfo v0.30.13
+   Compiling block-buffer v0.12.1
+   Compiling crypto-common v0.2.2
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling digest v0.10.7
+   Compiling sha1 v0.10.7
+   Compiling sha1-checked v0.10.0
+   Compiling bench-hashes v0.18.3+7e002a05faed6b9de63faf0cc2e4c188c5abc1e8 (/root/pinned-runs/bench73-rebased-20261031T075003-1fe2c88a/bench)
+   Compiling digest v0.11.3
+   Compiling sha2 v0.11.0
+   Compiling sha3 v0.11.0
+error: failed to run custom build command for `bench-hashes v0.18.3+7e002a05faed6b9de63faf0cc2e4c188c5abc1e8 (/root/pinned-runs/bench73-rebased-20261031T075003-1fe2c88a/bench)`
+
+Caused by:
+  process didn't exit successfully: `/root/pinned-runs/bench73-rebased-20261031T075003-1fe2c88a/t-B/release/build/bench-hashes-2f5fa32e6a70d657/build-script-build` (exit status: 101)
+  --- stdout
+  cargo:rerun-if-changed=Cargo.toml
+  cargo:rustc-env=BENCH_SERVIL_GIT=https://github.com/johnservil/BLAKE3
+  cargo:rerun-if-changed=Cargo.lock
+  cargo:rerun-if-changed=README.md
+  cargo:rerun-if-changed=src
+  cargo:rustc-env=BLAKE3_SOURCE_INFO=blake3 1.8.7; crate archive SHA-256 6d9e454fc11f76977dc803893aff6304ed33d6a26efae8696573bea74baa27ae; source registry+https://github.com/rust-lang/crates.io-index
+  cargo:rustc-env=SHA2_SOURCE_INFO=sha2 0.11.0; crate archive SHA-256 446ba717509524cb3f22f17ecc096f10f4822d76ab5c0b9822c5f9c284e825f4; source registry+https://github.com/rust-lang/crates.io-index
+  cargo:rustc-env=SHA1_CHECKED_SOURCE_INFO=sha1-checked 0.10.0; crate archive SHA-256 89f599ac0c323ebb1c6082821a54962b839832b03984598375bff3975b804423; source registry+https://github.com/rust-lang/crates.io-index
+  cargo:rustc-env=SHA3_SOURCE_INFO=sha3 0.11.0; crate archive SHA-256 be176f1a57ce4e3d31c1a166222d9768de5954f811601fb7ca06fc8203905ce1; source registry+https://github.com/rust-lang/crates.io-index
+  cargo:rustc-env=RING_SOURCE_INFO=ring 0.17.14; crate archive SHA-256 a4689e6c2294d81e88dc6261c768b63bc4fcdb852be6d1352498b114f61383b7; source registry+https://github.com/rust-lang/crates.io-index
+  cargo:rustc-env=BLAKE3_SERVIL_SOURCE_INFO=blake3-servil 0.8.0+2aa17489537c922634b53035ab0a635682ba4a1c; source https://github.com/johnservil/BLAKE3; commit d34af7413177284655b95cb718a1a306a2d15ccd; clean
+  cargo:rerun-if-env-changed=BENCH_CLOCKS_CHECKOUT
+
+  --- stderr
+
+  thread 'main' (375760) panicked at build.rs:443:17:
+  clocks is patched to a local path (Cargo.lock names no source): set BENCH_CLOCKS_CHECKOUT to that clocks directory, so the run records the checkout that times it
+  note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+warning: build failed, waiting for other jobs to finish...

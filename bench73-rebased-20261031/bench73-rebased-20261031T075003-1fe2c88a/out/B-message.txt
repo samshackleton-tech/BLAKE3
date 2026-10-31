@@ -1,0 +1,2 @@
+59:  cargo:rerun-if-env-changed=BENCH_CLOCKS_CHECKOUT
+64:  clocks is patched to a local path (Cargo.lock names no source): set BENCH_CLOCKS_CHECKOUT to that clocks directory, so the run records the checkout that times it

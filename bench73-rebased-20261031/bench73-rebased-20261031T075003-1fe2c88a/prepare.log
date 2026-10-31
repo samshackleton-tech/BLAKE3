@@ -1,0 +1,68 @@
+$ ['git', 'clone', '-q', '--mirror', 'https://github.com/samshackleton-tech/bench-hashes', '/root/pinned-runs/cache/a1a330be66c799d9.git']
+exit 0
+$ ['sh', '-c', 'git -C /root/pinned-runs/cache/a1a330be66c799d9.git cat-file -e f2378f1195500131bb665c0c83549903bf348b5e^{commit} || git -C /root/pinned-runs/cache/a1a330be66c799d9.git fetch -q https://github.com/samshackleton-tech/bench-hashes f2378f1195500131bb665c0c83549903bf348b5e']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/cache/a1a330be66c799d9.git', 'update-ref', 'refs/pinned/f2378f1195500131bb665c0c83549903bf348b5e', 'f2378f1195500131bb665c0c83549903bf348b5e']
+exit 0
+$ ['git', 'init', '-q', '/root/pinned-runs/bench73-rebased-20261031T075003-1fe2c88a/bench']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/bench73-rebased-20261031T075003-1fe2c88a/bench', 'remote', 'add', 'origin', 'https://github.com/samshackleton-tech/bench-hashes']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/bench73-rebased-20261031T075003-1fe2c88a/bench', 'fetch', '-q', '/root/pinned-runs/cache/a1a330be66c799d9.git', '+refs/*:refs/cache/*']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/bench73-rebased-20261031T075003-1fe2c88a/bench', 'checkout', '-q', '--detach', 'f2378f1195500131bb665c0c83549903bf348b5e']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/bench73-rebased-20261031T075003-1fe2c88a/bench', 'rev-parse', 'HEAD']
+f2378f1195500131bb665c0c83549903bf348b5e
+exit 0
+$ ['git', '-C', '/root/pinned-runs/cache/c538c938b44ec0ad.git', 'fetch', '-q', '--prune', 'origin']
+exit 0
+$ ['sh', '-c', 'git -C /root/pinned-runs/cache/c538c938b44ec0ad.git cat-file -e f448bb32aff6b1f3c542405282d797887fe869ff^{commit} || git -C /root/pinned-runs/cache/c538c938b44ec0ad.git fetch -q https://github.com/johnservil/BLAKE3 f448bb32aff6b1f3c542405282d797887fe869ff']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/cache/c538c938b44ec0ad.git', 'update-ref', 'refs/pinned/f448bb32aff6b1f3c542405282d797887fe869ff', 'f448bb32aff6b1f3c542405282d797887fe869ff']
+exit 0
+$ ['git', 'init', '-q', '/root/pinned-runs/bench73-rebased-20261031T075003-1fe2c88a/fork-clocks']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/bench73-rebased-20261031T075003-1fe2c88a/fork-clocks', 'remote', 'add', 'origin', 'https://github.com/johnservil/BLAKE3']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/bench73-rebased-20261031T075003-1fe2c88a/fork-clocks', 'fetch', '-q', '/root/pinned-runs/cache/c538c938b44ec0ad.git', '+refs/*:refs/cache/*']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/bench73-rebased-20261031T075003-1fe2c88a/fork-clocks', 'checkout', '-q', '--detach', 'f448bb32aff6b1f3c542405282d797887fe869ff']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/bench73-rebased-20261031T075003-1fe2c88a/fork-clocks', 'rev-parse', 'HEAD']
+f448bb32aff6b1f3c542405282d797887fe869ff
+exit 0
+$ ['git', '-C', '/root/pinned-runs/cache/c538c938b44ec0ad.git', 'fetch', '-q', '--prune', 'origin']
+exit 0
+$ ['sh', '-c', 'git -C /root/pinned-runs/cache/c538c938b44ec0ad.git cat-file -e d34af7413177284655b95cb718a1a306a2d15ccd^{commit} || git -C /root/pinned-runs/cache/c538c938b44ec0ad.git fetch -q https://github.com/johnservil/BLAKE3 d34af7413177284655b95cb718a1a306a2d15ccd']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/cache/c538c938b44ec0ad.git', 'update-ref', 'refs/pinned/d34af7413177284655b95cb718a1a306a2d15ccd', 'd34af7413177284655b95cb718a1a306a2d15ccd']
+exit 0
+$ ['git', 'init', '-q', '/root/pinned-runs/bench73-rebased-20261031T075003-1fe2c88a/fork']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/bench73-rebased-20261031T075003-1fe2c88a/fork', 'remote', 'add', 'origin', 'https://github.com/johnservil/BLAKE3']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/bench73-rebased-20261031T075003-1fe2c88a/fork', 'fetch', '-q', '/root/pinned-runs/cache/c538c938b44ec0ad.git', '+refs/*:refs/cache/*']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/bench73-rebased-20261031T075003-1fe2c88a/fork', 'checkout', '-q', '--detach', 'd34af7413177284655b95cb718a1a306a2d15ccd']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/bench73-rebased-20261031T075003-1fe2c88a/fork', 'rev-parse', 'HEAD']
+d34af7413177284655b95cb718a1a306a2d15ccd
+exit 0
+$ ['git', '-C', '/root/pinned-runs/cache/a1a330be66c799d9.git', 'fetch', '-q', '--prune', 'origin']
+exit 0
+$ ['sh', '-c', 'git -C /root/pinned-runs/cache/a1a330be66c799d9.git cat-file -e f2378f1195500131bb665c0c83549903bf348b5e^{commit} || git -C /root/pinned-runs/cache/a1a330be66c799d9.git fetch -q https://github.com/samshackleton-tech/bench-hashes f2378f1195500131bb665c0c83549903bf348b5e']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/cache/a1a330be66c799d9.git', 'update-ref', 'refs/pinned/f2378f1195500131bb665c0c83549903bf348b5e', 'f2378f1195500131bb665c0c83549903bf348b5e']
+exit 0
+$ ['git', 'init', '-q', '/root/pinned-runs/bench73-rebased-20261031T075003-1fe2c88a/fork/bench-hashes']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/bench73-rebased-20261031T075003-1fe2c88a/fork/bench-hashes', 'remote', 'add', 'origin', 'https://github.com/samshackleton-tech/bench-hashes']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/bench73-rebased-20261031T075003-1fe2c88a/fork/bench-hashes', 'fetch', '-q', '/root/pinned-runs/cache/a1a330be66c799d9.git', '+refs/*:refs/cache/*']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/bench73-rebased-20261031T075003-1fe2c88a/fork/bench-hashes', 'checkout', '-q', '--detach', 'f2378f1195500131bb665c0c83549903bf348b5e']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/bench73-rebased-20261031T075003-1fe2c88a/fork/bench-hashes', 'rev-parse', 'HEAD']
+f2378f1195500131bb665c0c83549903bf348b5e
+exit 0

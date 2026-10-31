@@ -1,0 +1,72 @@
+{
+ "name": "bench73-rebased",
+ "host": "root@88.216.222.150",
+ "lock": "/root/bench-native-afk.lock",
+ "repos": [
+  {
+   "url": "https://github.com/samshackleton-tech/bench-hashes",
+   "commit": "f2378f1195500131bb665c0c83549903bf348b5e",
+   "path": "bench"
+  },
+  {
+   "url": "https://github.com/johnservil/BLAKE3",
+   "commit": "f448bb32aff6b1f3c542405282d797887fe869ff",
+   "path": "fork-clocks"
+  },
+  {
+   "url": "https://github.com/johnservil/BLAKE3",
+   "commit": "d34af7413177284655b95cb718a1a306a2d15ccd",
+   "path": "fork"
+  },
+  {
+   "url": "https://github.com/samshackleton-tech/bench-hashes",
+   "commit": "f2378f1195500131bb665c0c83549903bf348b5e",
+   "path": "fork/bench-hashes"
+  }
+ ],
+ "script": "job.sh",
+ "expect": [
+  {
+   "file": "out/status.txt",
+   "contains": [
+    "tests exit 0",
+    "C build exit 0"
+   ]
+  },
+  {
+   "file": "out/A.txt",
+   "contains": [
+    "# git clean status: clean",
+    "# clocks source: clocks 0.1.0; source https://github.com/johnservil/BLAKE3; commit f448bb32aff6b1f3c542405282d797887fe869ff; clean"
+   ]
+  },
+  {
+   "file": "out/B-message.txt",
+   "contains": [
+    "BENCH_CLOCKS_CHECKOUT"
+   ]
+  },
+  {
+   "file": "out/C.txt",
+   "contains": [
+    "# git clean status: clean",
+    "(local checkout",
+    "commit f448bb32aff6b1f3c542405282d797887fe869ff"
+   ]
+  },
+  {
+   "file": "out/D.txt",
+   "contains": [
+    "# git clean status: clean",
+    "(local checkout ..)",
+    "commit d34af7413177284655b95cb718a1a306a2d15ccd; clean"
+   ]
+  },
+  {
+   "file": "out/E.txt",
+   "contains": [
+    "# git clean status: dirty-"
+   ]
+  }
+ ]
+}

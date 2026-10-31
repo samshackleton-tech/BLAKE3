@@ -1,0 +1,93 @@
+   Compiling typenum v1.20.1
+   Compiling cfg-if v1.0.4
+   Compiling const-oid v0.9.6
+   Compiling cpufeatures v0.2.17
+   Compiling arrayvec v0.7.8
+   Compiling cpufeatures v0.3.0
+   Compiling constant_time_eq v0.4.2
+   Compiling rand_core v0.9.5
+   Compiling once_cell v1.21.4
+   Compiling untrusted v0.9.0
+   Compiling clocks v0.1.0 (https://github.com/johnservil/BLAKE3?rev=f448bb32aff6b1f3c542405282d797887fe869ff#f448bb32)
+   Compiling crossbeam-utils v0.8.23
+   Compiling libc v0.2.189
+   Compiling bench-hashes v0.18.3+7e002a05faed6b9de63faf0cc2e4c188c5abc1e8 (/root/pinned-runs/bench73-rebased-20261031T075003-1fe2c88a/bench)
+   Compiling keccak v0.2.2
+   Compiling wyhash v0.6.0
+   Compiling blake3-servil v0.8.0+2aa17489537c922634b53035ab0a635682ba4a1c (https://github.com/johnservil/BLAKE3?rev=d34af7413177284655b95cb718a1a306a2d15ccd#d34af741)
+   Compiling crossbeam-epoch v0.9.21
+   Compiling crossbeam-deque v0.8.8
+   Compiling rayon-core v1.13.0
+   Compiling generic-array v0.14.7
+   Compiling hybrid-array v0.4.15
+   Compiling getrandom v0.2.17
+   Compiling sysinfo v0.30.13
+   Compiling ring v0.17.14
+   Compiling blake3 v1.8.7
+   Compiling block-buffer v0.12.1
+   Compiling crypto-common v0.2.2
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling digest v0.10.7
+   Compiling sha1 v0.10.7
+   Compiling sha1-checked v0.10.0
+   Compiling digest v0.11.3
+   Compiling sha2 v0.11.0
+   Compiling sha3 v0.11.0
+    Finished `release` profile [optimized] target(s) in 24.29s
+────────────
+ Nextest run ID 0e700618-85a0-4cd1-baf0-33cdc74d2f0b with nextest profile: default
+    Starting 51 tests across 1 binary
+        PASS [   0.003s] ( 1/51) bench-hashes::bin/bench-hashes correctness_tests::a_batch_off_its_boundary_stops_the_run
+        PASS [   0.004s] ( 2/51) bench-hashes::bin/bench-hashes check::tests::every_cell_key_names_the_point_that_measures_it
+        PASS [   0.004s] ( 3/51) bench-hashes::bin/bench-hashes b3sum::tests::the_mixed_trees_order_is_a_permutation
+        PASS [   0.004s] ( 4/51) bench-hashes::bin/bench-hashes b3sum::tests::people_read_three_digits
+        PASS [   0.005s] ( 5/51) bench-hashes::bin/bench-hashes correctness_tests::expect_servil_takes_only_the_named_clean_commit
+        PASS [   0.005s] ( 6/51) bench-hashes::bin/bench-hashes correctness_tests::regress_merges_the_sides_sizes
+        PASS [   0.005s] ( 7/51) bench-hashes::bin/bench-hashes correctness_tests::every_map_is_seeded
+        PASS [   0.005s] ( 8/51) bench-hashes::bin/bench-hashes correctness_tests::use_case_axes_are_contiguous_and_cover_every_point
+        PASS [   0.004s] ( 9/51) bench-hashes::bin/bench-hashes correctness_tests::power_from_pmset
+        PASS [   0.004s] (10/51) bench-hashes::bin/bench-hashes harness_tests::use_digest_stores_each_digest_in_its_slot
+        PASS [   0.005s] (11/51) bench-hashes::bin/bench-hashes correctness_tests::a_message_off_its_boundary_stops_the_run
+        PASS [   0.005s] (12/51) bench-hashes::bin/bench-hashes correctness_tests::batch_observes_every_digest_and_matches_empty_vectors
+        PASS [   0.005s] (13/51) bench-hashes::bin/bench-hashes diag_alloc::tests::buffers_sit_where_the_feature_says
+        PASS [   0.005s] (14/51) bench-hashes::bin/bench-hashes harness_tests::sampled_visits_walk_the_orders_in_turn
+        PASS [   0.006s] (15/51) bench-hashes::bin/bench-hashes chart::tests::bars_from_a_samples_file
+        PASS [   0.006s] (16/51) bench-hashes::bin/bench-hashes correctness_tests::means_at_decimal_halfways_round_the_original_measurement_once
+        PASS [   0.006s] (17/51) bench-hashes::bin/bench-hashes check::tests::a_deleted_line_is_touched_on_the_old_side
+        PASS [   0.005s] (18/51) bench-hashes::bin/bench-hashes leaves::tests::recorded_batches_keep_jobs_cpu_counts_and_shared_mean
+        PASS [   0.005s] (19/51) bench-hashes::bin/bench-hashes overview::tests::the_page_draws_bars_in_proportion_and_a_legend_of_what_it_drew
+        PASS [   0.005s] (20/51) bench-hashes::bin/bench-hashes harness_tests::regress_judges_at_three_percent
+        PASS [   0.006s] (21/51) bench-hashes::bin/bench-hashes correctness_tests::fixed_point_rounds_once_and_late
+        PASS [   0.006s] (22/51) bench-hashes::bin/bench-hashes correctness_tests::mean_is_the_shared_rule_every_sample_counted
+        PASS [   0.005s] (23/51) bench-hashes::bin/bench-hashes overview::tests::a_column_a_family_its_chosen_machine_first
+        PASS [   0.006s] (24/51) bench-hashes::bin/bench-hashes harness_tests::official_batch_wrapper_hashes_each_message_with_plain_api_flags
+        PASS [   0.006s] (25/51) bench-hashes::bin/bench-hashes harness_tests::visits_follow_what_the_run_is_for
+        PASS [   0.006s] (26/51) bench-hashes::bin/bench-hashes correctness_tests::inputs_are_prefixes_of_the_largest
+        PASS [   0.006s] (27/51) bench-hashes::bin/bench-hashes b3sum::tests::the_contents_are_blake3_output_of_the_name
+        PASS [   0.006s] (28/51) bench-hashes::bin/bench-hashes overview::tests::figures_read_as_the_page_says_them
+        PASS [   0.006s] (29/51) bench-hashes::bin/bench-hashes harness_tests::every_samples_file_names_what_measured_and_where
+        PASS [   0.008s] (30/51) bench-hashes::bin/bench-hashes correctness_tests::samples_file_places_each_sample_in_the_load_windows
+        PASS [   0.008s] (31/51) bench-hashes::bin/bench-hashes harness_tests::a_merkle_tree_hashes_leaves_and_parents_apart
+        PASS [   0.008s] (32/51) bench-hashes::bin/bench-hashes harness_tests::batch_digest_storage_survives_a_smaller_cell_without_zeroing
+        PASS [   0.008s] (33/51) bench-hashes::bin/bench-hashes leaves::tests::shared_and_unavailable_cpu_figures_stay_absent
+        PASS [   0.008s] (34/51) bench-hashes::bin/bench-hashes overview::tests::a_speed_is_bytes_over_the_shared_rule_s_mean
+        PASS [   0.004s] (35/51) bench-hashes::bin/bench-hashes require_nextest::aaa_require_nextest
+        PASS [   0.008s] (36/51) bench-hashes::bin/bench-hashes harness_tests::sample_schedule_handles_short_explicit_round_counts
+        PASS [   0.005s] (37/51) bench-hashes::bin/bench-hashes overview::tests::the_picks_keep_to_the_budget
+        PASS [   0.005s] (38/51) bench-hashes::bin/bench-hashes overview::tests::vendor_strings_lose_their_trademarks_generations_and_core_counts
+        PASS [   0.009s] (39/51) bench-hashes::bin/bench-hashes correctness_tests::samples_file_reads_back_into_the_reports_figures
+        PASS [   0.010s] (40/51) bench-hashes::bin/bench-hashes correctness_tests::frozen_contract_matches_frozen_md
+        PASS [   0.013s] (41/51) bench-hashes::bin/bench-hashes harness_tests::a_merkle_tree_has_the_root_of_its_layers_hashed_node_by_node
+        PASS [   0.014s] (42/51) bench-hashes::bin/bench-hashes leaves::tests::every_variant_hashes_every_leaf
+        PASS [   0.021s] (43/51) bench-hashes::bin/bench-hashes check::tests::llvm_tool_takes_the_toolchains_copy_before_path
+        PASS [   0.040s] (44/51) bench-hashes::bin/bench-hashes overview::tests::the_index_is_the_overview_of_the_published_runs
+        PASS [   0.062s] (45/51) bench-hashes::bin/bench-hashes correctness_tests::samples_after_the_gap_leave_the_gaps_out
+        PASS [   0.069s] (46/51) bench-hashes::bin/bench-hashes correctness_tests::prepared_samples_select_the_promised_api_and_keep_digest_space
+        PASS [   0.094s] (47/51) bench-hashes::bin/bench-hashes harness_tests::every_message_in_blocks_hashes_its_own_bytes
+        PASS [   0.098s] (48/51) bench-hashes::bin/bench-hashes overview::tests::a_run_refreshes_the_overview_above_its_results
+        PASS [   0.105s] (49/51) bench-hashes::bin/bench-hashes harness_tests::a_pipelined_collection_hashes_every_item
+        PASS [   0.191s] (50/51) bench-hashes::bin/bench-hashes correctness_tests::every_batch_reaches_the_contenders_on_a_64_byte_boundary
+        PASS [   0.306s] (51/51) bench-hashes::bin/bench-hashes correctness_tests::continuous_use_cases_observe_every_digest
+────────────
+     Summary [   0.307s] 51 tests run: 51 passed, 0 skipped
