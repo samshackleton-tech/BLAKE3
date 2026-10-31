@@ -1,0 +1,58 @@
+{
+ "env": {
+  "FANOUTS": "16 32 1024"
+ },
+ "expect": [
+  {
+   "contains": [
+    "fanout 16 check exit",
+    "fanout 32 mm16384 exit",
+    "fanout 1024 mm16384 exit",
+    "done"
+   ],
+   "file": "out/status.txt"
+  },
+  {
+   "contains": [
+    "FANOUT: usize = 1024;"
+   ],
+   "file": "out/fanout-1024/patch.diff"
+  },
+  {
+   "contains": [
+    "Gold 6330",
+    "performance"
+   ],
+   "file": "out/machine.txt"
+  },
+  {
+   "contains": [
+    "regress: "
+   ],
+   "file": "out/fanout-1024/mm16384.out"
+  }
+ ],
+ "forbid": [
+  "was not used in the crate graph",
+  "raw profile version mismatch"
+ ],
+ "host": "root@185.8.106.216",
+ "launched": "2026-10-31T17:54:00Z",
+ "lock": "/root/bench-native-afk.lock",
+ "name": "i198-fanout-all-icelake",
+ "repos": [
+  {
+   "commit": "b5b988d8982bea9490c38c79ec4b8c5c2428270c",
+   "path": "src",
+   "url": "https://github.com/johnservil/BLAKE3"
+  },
+  {
+   "commit": "f17a161b6c19a2a639da0e19f82d44975a841bef",
+   "path": "bench",
+   "url": "https://github.com/johnservil/bench-hashes"
+  }
+ ],
+ "script": "fanout.sh",
+ "script_sha256": "804ebc28c8941cb490f89571adc6a894ab4d58b6083604c1cdcfebbd705fe4dd",
+ "tool_sha256": "c610e1c00faf84c6e625aac08333f0f7d9d14674d2cf6beddc64585f4d39488c"
+}

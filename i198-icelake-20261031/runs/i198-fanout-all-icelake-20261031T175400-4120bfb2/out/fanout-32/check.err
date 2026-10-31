@@ -1,0 +1,27 @@
+   Compiling bench-hashes v0.18.3+7e002a05faed6b9de63faf0cc2e4c188c5abc1e8 (/root/pinned-runs/i198-fanout-all-icelake-20261031T175400-4120bfb2/w-32/bench-hashes)
+    Finished `release` profile [optimized] target(s) in 40.13s
+     Running `target/release/bench-hashes check --against b5b988d8982bea9490c38c79ec4b8c5c2428270c --cells all`
+check: the fork's working tree (a38077a4cdd3) against b5b988d8982bea9490c38c79ec4b8c5c2428270c (b5b988d8982b)
+regress: 4 new builds against 4 old, 4 pairs over --contenders blake3-servil-st,blake3-servil-mt
+regress: pair 1 of 4 in 160.5 s
+regress: pair 2 of 4 in 161.2 s
+regress: pair 3 of 4 in 161.6 s
+regress: pair 4 of 4 in 161.5 s
+check: a second stage for 8 suspects on 16 fresh pairs: blake3-servil-st|solo|ContinuousMessages|1 KiB, blake3-servil-mt|solo|ManyMessages|8, blake3-servil-mt|solo|IdleManyMessages|24, blake3-servil-st|solo|LentMessages|1 MiB, blake3-servil-st|solo|IdleOneMessage|4 KiB, blake3-servil-mt|solo|MerkleTree|16384, blake3-servil-mt|solo|OneMessage|512 KiB, blake3-servil-mt|shared|LentBatches|16384
+regress: 16 new builds against 16 old, 16 pairs over --contenders blake3-servil-mt,blake3-servil-st --points "512 KiB,8,continuous 1 KiB,idle 24,idle 4 KiB,lent 1 MiB,lent batch 16384,merkle 16384"
+regress: pair 1 of 16 in 5.2 s
+regress: pair 2 of 16 in 5.2 s
+regress: pair 3 of 16 in 5.3 s
+regress: pair 4 of 16 in 5.3 s
+regress: pair 5 of 16 in 5.3 s
+regress: pair 6 of 16 in 5.3 s
+regress: pair 7 of 16 in 5.4 s
+regress: pair 8 of 16 in 5.2 s
+regress: pair 9 of 16 in 5.4 s
+regress: pair 10 of 16 in 5.3 s
+regress: pair 11 of 16 in 5.3 s
+regress: pair 12 of 16 in 5.3 s
+regress: pair 13 of 16 in 5.3 s
+regress: pair 14 of 16 in 5.3 s
+regress: pair 15 of 16 in 5.3 s
+regress: pair 16 of 16 in 5.3 s

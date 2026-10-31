@@ -1,0 +1,7 @@
+regress: no cell slower
+regress: suspects: blake3-servil-mt|solo|LentMessages|16 MiB;blake3-servil-mt|solo|IdleManyMessages|8192;blake3-servil-st|solo|ContinuousMessages|64 B;blake3-servil-mt|solo|MerkleTree|4096;blake3-servil-mt|solo|ContinuousMessages|256 KiB;blake3-servil-mt|solo|IdleOneMessage|1536 B;blake3-servil-mt|solo|IdleManyMessages|3;blake3-servil-st|shared|LentBatches|1024
+regress: power during the check: mains power, no battery, CPU frequency governor performance
+  SLOWER blake3-servil-mt|solo|IdleManyMessages|8192: +4.5% (the pairs' geometric mean; 16 pairs: +5.3% +7.1% -1.7% +3.5% +0.3% +0.4% +9.8% +7.8% -10.4% +7.6% +0.5% +12.6% +11.7% +10.2% +2.9% +7.3%)
+  SLOWER blake3-servil-mt|solo|MerkleTree|4096: +4.6% (the pairs' geometric mean; 16 pairs: -3.1% +1.0% +3.8% -2.4% +11.4% -8.0% +4.2% +13.3% +2.2% +6.8% +6.3% +11.3% +0.8% +3.6% +11.2% +14.7%)
+regress: REGRESSION: 2 cells slower
+regress: power during the check: mains power, no battery, CPU frequency governor performance

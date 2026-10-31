@@ -1,0 +1,51 @@
+{
+ "name": "i198-fanout-all-icelake",
+ "host": "root@185.8.106.216",
+ "lock": "/root/bench-native-afk.lock",
+ "repos": [
+  {
+   "url": "https://github.com/johnservil/BLAKE3",
+   "commit": "b5b988d8982bea9490c38c79ec4b8c5c2428270c",
+   "path": "src"
+  },
+  {
+   "url": "https://github.com/johnservil/bench-hashes",
+   "commit": "f17a161b6c19a2a639da0e19f82d44975a841bef",
+   "path": "bench"
+  }
+ ],
+ "script": "fanout.sh",
+ "env": {
+  "FANOUTS": "16 32 1024"
+ },
+ "expect": [
+  {
+   "file": "out/status.txt",
+   "contains": [
+    "fanout 16 check exit",
+    "fanout 32 mm16384 exit",
+    "fanout 1024 mm16384 exit",
+    "done"
+   ]
+  },
+  {
+   "file": "out/fanout-1024/patch.diff",
+   "contains": [
+    "FANOUT: usize = 1024;"
+   ]
+  },
+  {
+   "file": "out/machine.txt",
+   "contains": [
+    "Gold 6330",
+    "performance"
+   ]
+  },
+  {
+   "file": "out/fanout-1024/mm16384.out",
+   "contains": [
+    "regress: "
+   ]
+  }
+ ]
+}

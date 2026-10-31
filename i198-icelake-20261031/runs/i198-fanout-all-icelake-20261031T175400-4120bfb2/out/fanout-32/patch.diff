@@ -1,0 +1,13 @@
+diff --git a/src/park.rs b/src/park.rs
+index 722f27e3..8b313213 100644
+--- a/src/park.rs
++++ b/src/park.rs
+@@ -52,7 +52,7 @@ pub(crate) struct Park {
+ /// (the i7-12700K's 1-2 MiB one-shots 16-25% slower); a publisher of 8 with
+ /// workers paying the rest unbounded let one worker make every owed wake
+ /// in a quarter of the i7's 2 MiB jobs (data 2026-10-25/wake-counts).
+-pub(crate) const FANOUT: usize = 8;
++pub(crate) const FANOUT: usize = 32;
+ 
+ /// A waker's share of `need` wakes: the ones it makes now, at most
+ /// `fanout`, and the ones it leaves owed.
