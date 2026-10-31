@@ -1,0 +1,37 @@
+{
+ "env": {
+  "KNOWN_ENDS": "1"
+ },
+ "expect": [
+  {
+   "contains": [
+    "first_bad"
+   ],
+   "file": "out/bisect.json"
+  },
+  {
+   "contains": [
+    "Gold 6330",
+    "performance"
+   ],
+   "file": "out/machine.txt"
+  }
+ ],
+ "forbid": [
+  "was not used in the crate graph",
+  "raw profile version mismatch"
+ ],
+ "host": "root@185.8.106.216",
+ "launched": "2026-10-31T12:58:29Z",
+ "name": "i198-bisect-icelake",
+ "repos": [
+  {
+   "commit": "b5b988d8982bea9490c38c79ec4b8c5c2428270c",
+   "path": "src",
+   "url": "https://github.com/johnservil/BLAKE3"
+  }
+ ],
+ "script": "bisect.sh",
+ "script_sha256": "84e0c4edd335db6fda3808df78fb3d0a0d067a0ffedc5427398203f2bcf11e36",
+ "tool_sha256": "c610e1c00faf84c6e625aac08333f0f7d9d14674d2cf6beddc64585f4d39488c"
+}

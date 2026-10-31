@@ -1,0 +1,17 @@
+$ ['git', '-C', '/root/pinned-runs/cache/c538c938b44ec0ad.git', 'fetch', '-q', '--prune', 'origin']
+exit 0
+$ ['sh', '-c', 'git -C /root/pinned-runs/cache/c538c938b44ec0ad.git cat-file -e b5b988d8982bea9490c38c79ec4b8c5c2428270c^{commit} || git -C /root/pinned-runs/cache/c538c938b44ec0ad.git fetch -q https://github.com/johnservil/BLAKE3 b5b988d8982bea9490c38c79ec4b8c5c2428270c']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/cache/c538c938b44ec0ad.git', 'update-ref', 'refs/pinned/b5b988d8982bea9490c38c79ec4b8c5c2428270c', 'b5b988d8982bea9490c38c79ec4b8c5c2428270c']
+exit 0
+$ ['git', 'init', '-q', '/root/pinned-runs/i198-bisect-merge-icelake-20261031T152450-8fdcc216/src']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/i198-bisect-merge-icelake-20261031T152450-8fdcc216/src', 'remote', 'add', 'origin', 'https://github.com/johnservil/BLAKE3']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/i198-bisect-merge-icelake-20261031T152450-8fdcc216/src', 'fetch', '-q', '/root/pinned-runs/cache/c538c938b44ec0ad.git', '+refs/*:refs/cache/*']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/i198-bisect-merge-icelake-20261031T152450-8fdcc216/src', 'checkout', '-q', '--detach', 'b5b988d8982bea9490c38c79ec4b8c5c2428270c']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/i198-bisect-merge-icelake-20261031T152450-8fdcc216/src', 'rev-parse', 'HEAD']
+b5b988d8982bea9490c38c79ec4b8c5c2428270c
+exit 0

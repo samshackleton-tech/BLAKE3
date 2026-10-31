@@ -1,0 +1,30 @@
+{
+ "name": "i198-bisect-icelake",
+ "host": "root@185.8.106.216",
+ "repos": [
+  {
+   "url": "https://github.com/johnservil/BLAKE3",
+   "commit": "b5b988d8982bea9490c38c79ec4b8c5c2428270c",
+   "path": "src"
+  }
+ ],
+ "script": "bisect.sh",
+ "expect": [
+  {
+   "file": "out/bisect.json",
+   "contains": [
+    "first_bad"
+   ]
+  },
+  {
+   "file": "out/machine.txt",
+   "contains": [
+    "Gold 6330",
+    "performance"
+   ]
+  }
+ ],
+ "env": {
+  "KNOWN_ENDS": "1"
+ }
+}

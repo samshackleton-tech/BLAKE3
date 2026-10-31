@@ -1,0 +1,39 @@
+{
+ "env": {
+  "BAD0": "ee4c0d7c",
+  "BENCH": "774fb501f42734b36991dd2230a82d3385ad3127",
+  "GOOD0": "3610022730172cffd86f1a00a446436effccad2f"
+ },
+ "expect": [
+  {
+   "contains": [
+    "first_bad"
+   ],
+   "file": "out/bisect.json"
+  },
+  {
+   "contains": [
+    "Gold 6330",
+    "performance"
+   ],
+   "file": "out/machine.txt"
+  }
+ ],
+ "forbid": [
+  "was not used in the crate graph",
+  "raw profile version mismatch"
+ ],
+ "host": "root@185.8.106.216",
+ "launched": "2026-10-31T15:24:50Z",
+ "name": "i198-bisect-merge-icelake",
+ "repos": [
+  {
+   "commit": "b5b988d8982bea9490c38c79ec4b8c5c2428270c",
+   "path": "src",
+   "url": "https://github.com/johnservil/BLAKE3"
+  }
+ ],
+ "script": "bisect2.sh",
+ "script_sha256": "56771ff690d10f4674802a7e0d5d80edc6899af4222e9959df07d63b31aeeab9",
+ "tool_sha256": "c610e1c00faf84c6e625aac08333f0f7d9d14674d2cf6beddc64585f4d39488c"
+}

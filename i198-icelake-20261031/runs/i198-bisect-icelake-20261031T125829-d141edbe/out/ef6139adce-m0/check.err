@@ -1,0 +1,12 @@
+   Compiling bench-hashes v0.17.0+1b480eed20d11d7cd1417384e4a9d540b0e321be (/root/pinned-runs/i198-bisect-icelake-20261031T125829-d141edbe/w-ef6139adce-m0/bench-hashes)
+    Finished `release` profile [optimized] target(s) in 38.61s
+     Running `target/release/bench-hashes check --against bfbda1920283335ff3802723db11c209159f47fc --old-bench 5be5f23699ee7146ada56a08777173a4ee1c7bde --cells all`
+check: the fork's working tree (74135e111165) against bfbda1920283335ff3802723db11c209159f47fc (bfbda1920283)
+check: the old side with the bench at 5be5f23699ee7146ada56a08777173a4ee1c7bde (5be5f23699ee)
+regress: 4 new builds against 4 old, 4 pairs over --contenders blake3-servil-st,blake3-servil-mt
+regress: pair 1 of 4 in 154.3 s
+regress: pair 2 of 4 in 152.9 s
+regress: pair 3 of 4 in 152.8 s
+clocks: other programs kept 1.23 CPUs busy from 464.0 s to 465.0 s; measurements in that time may read slower than this machine runs
+regress: pair 4 again: busy: other programs kept 0.06 CPUs busy on average, 1.23 in the busiest window; busy in 1 of 76 windows (464.0-465.0 s)
+regress: pair 4 of 4 in 309.9 s

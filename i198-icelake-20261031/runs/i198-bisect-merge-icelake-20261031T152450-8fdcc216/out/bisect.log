@@ -1,0 +1,12 @@
+15:24:54 chain 9 commits 3610022730 .. ee4c0d7c27
+15:44:34 ee4c0d7c27 {"commit": "ee4c0d7c27c4bfd5aa65973468c977dc08c848bb", "bench": "774fb501f42734b36991dd2230a82d3385ad3127", "median": 1.0535289798533396, "slower": true, "new_slower_pairs": 29, "pairs": 32, "layouts": [4, 4], "check_exit": 1, "minutes": 18.8}
+15:44:34 endpoint ee4c0d7c27 bad
+16:04:33 3610022730 {"commit": "3610022730172cffd86f1a00a446436effccad2f", "bench": "774fb501f42734b36991dd2230a82d3385ad3127", "median": 1.0107078829338212, "slower": false, "new_slower_pairs": 18, "pairs": 32, "layouts": [4, 4], "check_exit": 1, "minutes": 19.1}
+16:04:33 endpoint 3610022730 good
+16:24:19 575b0721fe {"commit": "575b0721fe8d2e2de89f5f82424073ef2e52d046", "bench": "774fb501f42734b36991dd2230a82d3385ad3127", "median": 0.9963640567728427, "slower": false, "new_slower_pairs": 15, "pairs": 32, "layouts": [4, 4], "check_exit": 1, "minutes": 18.9}
+16:24:19 step 4 575b0721fe good
+16:44:15 66732c5180 {"commit": "66732c51803718d829ec092dff5634e16ff2a539", "bench": "774fb501f42734b36991dd2230a82d3385ad3127", "median": 1.0127914585930147, "slower": false, "new_slower_pairs": 19, "pairs": 32, "layouts": [4, 4], "check_exit": 1, "minutes": 19.0}
+16:44:15 step 6 66732c5180 good
+17:04:10 399a8f258c {"commit": "399a8f258c595159513af646b5572867a23b3a99", "bench": "774fb501f42734b36991dd2230a82d3385ad3127", "median": 1.1757055186339316, "slower": true, "new_slower_pairs": 32, "pairs": 32, "layouts": [4, 4], "check_exit": 1, "minutes": 19.0}
+17:04:10 step 7 399a8f258c bad
+17:04:10 FIRST BAD 399a8f258c595159513af646b5572867a23b3a99 The owed-wake cascade back: the publisher makes one wake and starts on its own pieces

@@ -1,0 +1,10 @@
+   Compiling bench-hashes v0.17.0+1b480eed20d11d7cd1417384e4a9d540b0e321be (/root/pinned-runs/i198-bisect-icelake-20261031T125829-d141edbe/w-a9c360c2ef-m0/bench-hashes)
+    Finished `release` profile [optimized] target(s) in 38.73s
+     Running `target/release/bench-hashes check --against bfbda1920283335ff3802723db11c209159f47fc --old-bench 5be5f23699ee7146ada56a08777173a4ee1c7bde --cells all`
+check: the fork's working tree (eaf853e3be0e) against bfbda1920283335ff3802723db11c209159f47fc (bfbda1920283)
+check: the old side with the bench at 5be5f23699ee7146ada56a08777173a4ee1c7bde (5be5f23699ee)
+regress: 4 new builds against 4 old, 4 pairs over --contenders blake3-servil-st,blake3-servil-mt
+regress: pair 1 of 4 in 154.2 s
+regress: pair 2 of 4 in 153.6 s
+regress: pair 3 of 4 in 153.2 s
+regress: pair 4 of 4 in 156.0 s
