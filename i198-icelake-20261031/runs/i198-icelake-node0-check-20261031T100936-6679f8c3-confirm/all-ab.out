@@ -1,0 +1,28 @@
+regress: 4 new builds against 4 old, 24 pairs over --contenders blake3-servil-mt,blake3-servil-st --points "lent 64 MiB,2 MiB,continuous batch 65536,16384"
+regress: pair 1 of 24 in 5.6 s
+regress: pair 2 of 24 in 5.6 s
+regress: pair 3 of 24 in 5.5 s
+regress: pair 4 of 24 in 5.6 s
+regress: pair 5 of 24 in 5.6 s
+regress: pair 6 of 24 in 5.6 s
+regress: pair 7 of 24 in 5.6 s
+regress: pair 8 of 24 in 5.6 s
+regress: pair 9 of 24 in 5.6 s
+regress: pair 10 of 24 in 5.6 s
+regress: pair 11 of 24 in 5.6 s
+regress: pair 12 of 24 in 5.6 s
+regress: pair 13 of 24 in 5.5 s
+regress: pair 14 of 24 in 5.6 s
+regress: pair 15 of 24 in 5.5 s
+regress: pair 16 of 24 in 5.6 s
+regress: pair 17 of 24 in 5.6 s
+regress: pair 18 of 24 in 5.6 s
+regress: pair 19 of 24 in 5.7 s
+regress: pair 20 of 24 in 5.6 s
+regress: pair 21 of 24 in 5.6 s
+regress: pair 22 of 24 in 5.6 s
+regress: pair 23 of 24 in 5.6 s
+regress: pair 24 of 24 in 5.6 s
+  SLOWER blake3-servil-mt|solo|ManyMessages|16384: +4.8% (the pairs' geometric mean; 24 pairs: +1.8% -9.0% +14.0% +9.6% +1.8% -4.4% +16.5% +10.2% +6.1% +8.3% +4.4% +8.4% +10.5% +6.9% +5.4% +11.2% +1.6% -0.9% +24.4% +15.3% -15.0% +8.8% -8.4% -3.6%)
+regress: REGRESSION: 1 cells slower
+regress: power during the check: mains power, no battery, CPU frequency governor performance

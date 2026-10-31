@@ -1,0 +1,56 @@
+{
+ "env": {
+  "CELL": "blake3-servil-mt|solo|IdleManyMessages|2",
+  "CONTENDER": "blake3-servil-mt",
+  "POINT": "idle 2"
+ },
+ "expect": [
+  {
+   "contains": [
+    "b5b988d8982bea9490c38c79ec4b8c5c2428270c",
+    "f17a161b6c19a2a639da0e19f82d44975a841bef",
+    "Gold 6330",
+    "performance"
+   ],
+   "file": "out/provenance.txt"
+  },
+  {
+   "contains": [
+    "against bfbda1920283335ff3802723db11c209159f47fc"
+   ],
+   "file": "out/check.err"
+  },
+  {
+   "contains": [
+    "default ab exit",
+    "l3 aa exit",
+    "node0 aa exit",
+    "done"
+   ],
+   "file": "out/status.txt"
+  }
+ ],
+ "forbid": [
+  "was not used in the crate graph",
+  "raw profile version mismatch"
+ ],
+ "host": "root@185.8.106.216",
+ "launched": "2026-10-31T10:09:36Z",
+ "lock": "/root/bench-native-afk.lock",
+ "name": "i198-icelake-node0-check",
+ "repos": [
+  {
+   "commit": "b5b988d8982bea9490c38c79ec4b8c5c2428270c",
+   "path": "src",
+   "url": "https://github.com/johnservil/BLAKE3"
+  },
+  {
+   "commit": "f17a161b6c19a2a639da0e19f82d44975a841bef",
+   "path": "src/bench-hashes",
+   "url": "https://github.com/johnservil/bench-hashes"
+  }
+ ],
+ "script": "job-node0.sh",
+ "script_sha256": "cf40342103558cf5746f81a46fd59495d2c02feec336d317333325f538913bcb",
+ "tool_sha256": "c610e1c00faf84c6e625aac08333f0f7d9d14674d2cf6beddc64585f4d39488c"
+}
