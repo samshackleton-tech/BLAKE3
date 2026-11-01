@@ -1,0 +1,46 @@
+{
+ "name": "b98-review-epyc9255",
+ "host": "root@88.216.222.150",
+ "lock": "/root/bench-native-afk.lock",
+ "repos": [
+  {
+   "url": "https://github.com/johnservil/bench-hashes",
+   "commit": "99eefde3ebb6c9135a51336c46e823153a6a714d",
+   "path": "bench"
+  },
+  {
+   "url": "https://github.com/johnservil/BLAKE3",
+   "commit": "b5b988d8982bea9490c38c79ec4b8c5c2428270c",
+   "path": "fork"
+  },
+  {
+   "url": "https://github.com/johnservil/BLAKE3",
+   "commit": "b894ae7047bf12bcc253af5c76b8d358c7e5fc0c",
+   "path": "fork-spin0"
+  },
+  {
+   "url": "https://github.com/johnservil/BLAKE3",
+   "commit": "e4d32b618cf5ac0e3d1cab48b8ebe6ed0fd97576",
+   "path": "fork-hash6"
+  }
+ ],
+ "script": "job.sh",
+ "expect": [
+  {
+   "file": "out/status.txt",
+   "contains": [
+    "aa exit",
+    "spin0 exit",
+    "hash6 exit",
+    "quick 2 exit 0",
+    "done"
+   ]
+  },
+  {
+   "file": "out/quick-1/report.txt",
+   "contains": [
+    "commit b5b988d8982bea9490c38c79ec4b8c5c2428270c; clean"
+   ]
+  }
+ ]
+}

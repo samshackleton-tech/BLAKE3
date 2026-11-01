@@ -1,0 +1,53 @@
+{
+ "expect": [
+  {
+   "contains": [
+    "aa exit",
+    "spin0 exit",
+    "hash6 exit",
+    "quick 2 exit 0",
+    "done"
+   ],
+   "file": "out/status.txt"
+  },
+  {
+   "contains": [
+    "commit b5b988d8982bea9490c38c79ec4b8c5c2428270c; clean"
+   ],
+   "file": "out/quick-1/report.txt"
+  }
+ ],
+ "forbid": [
+  "was not used in the crate graph",
+  "raw profile version mismatch"
+ ],
+ "host": "root@88.216.222.150",
+ "launched": "2026-10-31T22:28:44Z",
+ "lock": "/root/bench-native-afk.lock",
+ "name": "b98-review-epyc9255",
+ "repos": [
+  {
+   "commit": "99eefde3ebb6c9135a51336c46e823153a6a714d",
+   "path": "bench",
+   "url": "https://github.com/johnservil/bench-hashes"
+  },
+  {
+   "commit": "b5b988d8982bea9490c38c79ec4b8c5c2428270c",
+   "path": "fork",
+   "url": "https://github.com/johnservil/BLAKE3"
+  },
+  {
+   "commit": "b894ae7047bf12bcc253af5c76b8d358c7e5fc0c",
+   "path": "fork-spin0",
+   "url": "https://github.com/johnservil/BLAKE3"
+  },
+  {
+   "commit": "e4d32b618cf5ac0e3d1cab48b8ebe6ed0fd97576",
+   "path": "fork-hash6",
+   "url": "https://github.com/johnservil/BLAKE3"
+  }
+ ],
+ "script": "job.sh",
+ "script_sha256": "9a7d00b1ec21772812b3b91b29a46d203c04e67093f9ed1471628dd12604a6a0",
+ "tool_sha256": "c610e1c00faf84c6e625aac08333f0f7d9d14674d2cf6beddc64585f4d39488c"
+}

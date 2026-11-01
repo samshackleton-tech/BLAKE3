@@ -1,0 +1,36 @@
+{
+ "expect": [
+  {
+   "contains": [
+    "quiet:",
+    "spin:",
+    "urandom:",
+    "faults:"
+   ],
+   "file": "out/summary.txt"
+  }
+ ],
+ "forbid": [
+  "was not used in the crate graph",
+  "raw profile version mismatch"
+ ],
+ "host": "root@88.216.222.150",
+ "launched": "2026-10-31T22:31:43Z",
+ "lock": "/root/bench-native-afk.lock",
+ "name": "b98-load-epyc9255",
+ "repos": [
+  {
+   "commit": "99eefde3ebb6c9135a51336c46e823153a6a714d",
+   "path": "bench",
+   "url": "https://github.com/johnservil/bench-hashes"
+  },
+  {
+   "commit": "b5b988d8982bea9490c38c79ec4b8c5c2428270c",
+   "path": "fork",
+   "url": "https://github.com/johnservil/BLAKE3"
+  }
+ ],
+ "script": "load.sh",
+ "script_sha256": "db1052e6968a72af2857efbb749b679e8ead27286b23c96d975767f0fffdada8",
+ "tool_sha256": "c610e1c00faf84c6e625aac08333f0f7d9d14674d2cf6beddc64585f4d39488c"
+}

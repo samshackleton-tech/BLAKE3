@@ -1,0 +1,12 @@
+regress: no cell slower
+regress: suspects: blake3-servil-mt|solo|ContinuousMessages|64 B;blake3-servil-mt|solo|ContinuousMessages|128 B;blake3-servil-mt|shared|ContinuousMessages|16 KiB;blake3-servil-mt|shared|ContinuousMessages|4 KiB;blake3-servil-mt|shared|ContinuousMessages|64 B;blake3-servil-mt|shared|ContinuousMessages|16 MiB;blake3-servil-mt|shared|ContinuousMessages|128 B;blake3-servil-mt|solo|ContinuousBatches|1024
+regress: power during the check: mains power, no battery, CPU frequency governor performance, energy-performance preference performance
+  SLOWER blake3-servil-mt|shared|ContinuousMessages|128 B: +16.1% (the pairs' geometric mean; 16 pairs: +24.8% +32.5% +27.0% +11.0% +17.7% +7.7% +17.5% +13.9% +3.8% +20.6% +13.2% +11.2% +24.5% +10.7% +12.9% +13.0%)
+  SLOWER blake3-servil-mt|shared|ContinuousMessages|16 KiB: +22.1% (the pairs' geometric mean; 16 pairs: +7.0% +43.8% +49.7% +35.5% +24.1% +7.7% +19.6% +6.7% +9.4% +49.0% +18.8% +17.6% +15.3% +22.7% +18.6% +20.4%)
+  SLOWER blake3-servil-mt|shared|ContinuousMessages|16 MiB: +15.7% (the pairs' geometric mean; 16 pairs: +15.5% +17.8% +22.6% +17.9% +16.7% +9.0% +19.9% +10.2% +7.7% +34.2% +16.5% +8.3% +16.6% +11.9% +15.6% +13.8%)
+  SLOWER blake3-servil-mt|shared|ContinuousMessages|4 KiB: +22.2% (the pairs' geometric mean; 16 pairs: +17.8% +25.6% +34.9% +19.8% +19.4% +1.9% +28.7% +12.0% +16.9% +35.1% +24.1% +18.6% +26.1% +25.3% +37.6% +17.2%)
+  SLOWER blake3-servil-mt|shared|ContinuousMessages|64 B: +21.8% (the pairs' geometric mean; 16 pairs: +35.9% +24.0% +34.0% +15.1% +16.0% +26.4% +22.3% +12.2% +11.2% +38.1% +33.2% +3.6% +24.9% +16.6% +22.4% +19.5%)
+  SLOWER blake3-servil-mt|solo|ContinuousMessages|128 B: +9.5% (the pairs' geometric mean; 16 pairs: +10.7% +7.5% +7.7% +2.8% +10.8% +11.5% +8.3% +9.4% +9.2% -6.4% +8.1% +9.2% +40.3% +11.7% +6.8% +10.3%)
+  SLOWER blake3-servil-mt|solo|ContinuousMessages|64 B: +7.0% (the pairs' geometric mean; 16 pairs: +9.1% +5.7% +4.2% +6.0% +9.4% +9.4% +7.4% +8.5% +5.8% -11.6% +7.4% +8.2% +23.5% +9.2% +4.5% +8.6%)
+regress: REGRESSION: 7 cells slower
+regress: power during the check: mains power, no battery, CPU frequency governor performance, energy-performance preference performance
