@@ -1,0 +1,33 @@
+{
+ "name": "b0193-aa-icelake",
+ "host": "root@185.8.106.216",
+ "lock": "/root/bench-native-afk.lock",
+ "repos": [
+  {
+   "url": "https://github.com/johnservil/bench-hashes",
+   "commit": "a48ee6c7bfab3d0a93ffe3e907d649dd4f08b135",
+   "path": "bench"
+  },
+  {
+   "url": "https://github.com/johnservil/BLAKE3",
+   "commit": "b5b988d8982bea9490c38c79ec4b8c5c2428270c",
+   "path": "fork"
+  }
+ ],
+ "script": "aa.sh",
+ "expect": [
+  {
+   "file": "out/status.txt",
+   "contains": [
+    "aa exit"
+   ]
+  },
+  {
+   "file": "out/machine.txt",
+   "contains": [
+    "Gold 6330",
+    "performance"
+   ]
+  }
+ ]
+}

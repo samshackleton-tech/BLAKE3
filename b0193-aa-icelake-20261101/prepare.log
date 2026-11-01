@@ -1,0 +1,34 @@
+$ ['git', '-C', '/root/pinned-runs/cache/cb13eb3cfeb7ef4f.git', 'fetch', '-q', '--prune', 'origin']
+exit 0
+$ ['sh', '-c', 'git -C /root/pinned-runs/cache/cb13eb3cfeb7ef4f.git cat-file -e a48ee6c7bfab3d0a93ffe3e907d649dd4f08b135^{commit} || git -C /root/pinned-runs/cache/cb13eb3cfeb7ef4f.git fetch -q https://github.com/johnservil/bench-hashes a48ee6c7bfab3d0a93ffe3e907d649dd4f08b135']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/cache/cb13eb3cfeb7ef4f.git', 'update-ref', 'refs/pinned/a48ee6c7bfab3d0a93ffe3e907d649dd4f08b135', 'a48ee6c7bfab3d0a93ffe3e907d649dd4f08b135']
+exit 0
+$ ['git', 'init', '-q', '/root/pinned-runs/b0193-aa-icelake-20261101T191520-d0581160/bench']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/b0193-aa-icelake-20261101T191520-d0581160/bench', 'remote', 'add', 'origin', 'https://github.com/johnservil/bench-hashes']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/b0193-aa-icelake-20261101T191520-d0581160/bench', 'fetch', '-q', '/root/pinned-runs/cache/cb13eb3cfeb7ef4f.git', '+refs/*:refs/cache/*']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/b0193-aa-icelake-20261101T191520-d0581160/bench', 'checkout', '-q', '--detach', 'a48ee6c7bfab3d0a93ffe3e907d649dd4f08b135']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/b0193-aa-icelake-20261101T191520-d0581160/bench', 'rev-parse', 'HEAD']
+a48ee6c7bfab3d0a93ffe3e907d649dd4f08b135
+exit 0
+$ ['git', '-C', '/root/pinned-runs/cache/c538c938b44ec0ad.git', 'fetch', '-q', '--prune', 'origin']
+exit 0
+$ ['sh', '-c', 'git -C /root/pinned-runs/cache/c538c938b44ec0ad.git cat-file -e b5b988d8982bea9490c38c79ec4b8c5c2428270c^{commit} || git -C /root/pinned-runs/cache/c538c938b44ec0ad.git fetch -q https://github.com/johnservil/BLAKE3 b5b988d8982bea9490c38c79ec4b8c5c2428270c']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/cache/c538c938b44ec0ad.git', 'update-ref', 'refs/pinned/b5b988d8982bea9490c38c79ec4b8c5c2428270c', 'b5b988d8982bea9490c38c79ec4b8c5c2428270c']
+exit 0
+$ ['git', 'init', '-q', '/root/pinned-runs/b0193-aa-icelake-20261101T191520-d0581160/fork']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/b0193-aa-icelake-20261101T191520-d0581160/fork', 'remote', 'add', 'origin', 'https://github.com/johnservil/BLAKE3']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/b0193-aa-icelake-20261101T191520-d0581160/fork', 'fetch', '-q', '/root/pinned-runs/cache/c538c938b44ec0ad.git', '+refs/*:refs/cache/*']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/b0193-aa-icelake-20261101T191520-d0581160/fork', 'checkout', '-q', '--detach', 'b5b988d8982bea9490c38c79ec4b8c5c2428270c']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/b0193-aa-icelake-20261101T191520-d0581160/fork', 'rev-parse', 'HEAD']
+b5b988d8982bea9490c38c79ec4b8c5c2428270c
+exit 0

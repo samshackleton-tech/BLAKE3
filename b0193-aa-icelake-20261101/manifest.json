@@ -1,0 +1,40 @@
+{
+ "expect": [
+  {
+   "contains": [
+    "aa exit"
+   ],
+   "file": "out/status.txt"
+  },
+  {
+   "contains": [
+    "Gold 6330",
+    "performance"
+   ],
+   "file": "out/machine.txt"
+  }
+ ],
+ "forbid": [
+  "was not used in the crate graph",
+  "raw profile version mismatch"
+ ],
+ "host": "root@185.8.106.216",
+ "launched": "2026-11-01T19:15:20Z",
+ "lock": "/root/bench-native-afk.lock",
+ "name": "b0193-aa-icelake",
+ "repos": [
+  {
+   "commit": "a48ee6c7bfab3d0a93ffe3e907d649dd4f08b135",
+   "path": "bench",
+   "url": "https://github.com/johnservil/bench-hashes"
+  },
+  {
+   "commit": "b5b988d8982bea9490c38c79ec4b8c5c2428270c",
+   "path": "fork",
+   "url": "https://github.com/johnservil/BLAKE3"
+  }
+ ],
+ "script": "aa.sh",
+ "script_sha256": "949b8063fb66df99eaadaac15082eab82e47ecf3faa38270108acfff748648bc",
+ "tool_sha256": "44559588ffef1a0a78d58d6eeb6afbc69df5637401a61648736cc7507c132d78"
+}
