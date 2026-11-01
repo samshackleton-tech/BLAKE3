@@ -1,0 +1,59 @@
+{
+ "expect": [
+  {
+   "contains": [
+    "3 workers exit 0",
+    "3 none exit 0",
+    "3 both exit 0"
+   ],
+   "file": "out/status.txt"
+  },
+  {
+   "contains": [
+    "probe/l3-domain: workers"
+   ],
+   "file": "out/run-1-workers/probe.txt"
+  },
+  {
+   "contains": [
+    "probe/l3-domain: both"
+   ],
+   "file": "out/run-1-both/probe.txt"
+  },
+  {
+   "contains": [
+    "commit dad78920d8aed7b2d464c61d529542fa52f1e843; clean"
+   ],
+   "file": "out/run-1-none/bench-hashes.result.txt"
+  },
+  {
+   "contains": [
+    "ns/unit"
+   ],
+   "file": "out/compare-none-workers.txt"
+  }
+ ],
+ "forbid": [
+  "was not used in the crate graph",
+  "raw profile version mismatch"
+ ],
+ "host": "root@185.8.106.216",
+ "launched": "2026-11-01T10:25:02Z",
+ "lock": "/root/bench-native-afk.lock",
+ "name": "i196-probe-l3-icelake",
+ "repos": [
+  {
+   "commit": "dad78920d8aed7b2d464c61d529542fa52f1e843",
+   "path": "fork",
+   "url": "https://github.com/johnservil/BLAKE3"
+  },
+  {
+   "commit": "68400bc4699de618661635e88e73048ec4dbdf64",
+   "path": "bench",
+   "url": "https://github.com/johnservil/bench-hashes"
+  }
+ ],
+ "script": "job.sh",
+ "script_sha256": "944e7fed080f1b6741c419f03b448824147876a2a0fbe3b3e59227dd3432b4f9",
+ "tool_sha256": "c610e1c00faf84c6e625aac08333f0f7d9d14674d2cf6beddc64585f4d39488c"
+}

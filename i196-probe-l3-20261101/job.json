@@ -1,0 +1,52 @@
+{
+ "name": "i196-probe-l3-epyc9255",
+ "host": "root@88.216.222.150",
+ "lock": "/root/bench-native-afk.lock",
+ "repos": [
+  {
+   "url": "https://github.com/johnservil/BLAKE3",
+   "commit": "dad78920d8aed7b2d464c61d529542fa52f1e843",
+   "path": "fork"
+  },
+  {
+   "url": "https://github.com/johnservil/bench-hashes",
+   "commit": "68400bc4699de618661635e88e73048ec4dbdf64",
+   "path": "bench"
+  }
+ ],
+ "script": "job.sh",
+ "expect": [
+  {
+   "file": "out/status.txt",
+   "contains": [
+    "3 workers exit 0",
+    "3 none exit 0",
+    "3 both exit 0"
+   ]
+  },
+  {
+   "file": "out/run-1-workers/probe.txt",
+   "contains": [
+    "probe/l3-domain: workers"
+   ]
+  },
+  {
+   "file": "out/run-1-both/probe.txt",
+   "contains": [
+    "probe/l3-domain: both"
+   ]
+  },
+  {
+   "file": "out/run-1-none/bench-hashes.result.txt",
+   "contains": [
+    "commit dad78920d8aed7b2d464c61d529542fa52f1e843; clean"
+   ]
+  },
+  {
+   "file": "out/compare-none-workers.txt",
+   "contains": [
+    "ns/unit"
+   ]
+  }
+ ]
+}
