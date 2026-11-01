@@ -1,0 +1,34 @@
+{
+ "expect": [
+  {
+   "contains": [
+    "continuous1mib-3 exit 0",
+    "continuousbatch4096-3 exit 0"
+   ],
+   "file": "out/status.txt"
+  }
+ ],
+ "forbid": [
+  "was not used in the crate graph",
+  "raw profile version mismatch"
+ ],
+ "host": "root@88.216.222.150",
+ "launched": "2026-11-01T01:15:27Z",
+ "lock": "/root/bench-native-afk.lock",
+ "name": "i196-placement-over-time",
+ "repos": [
+  {
+   "commit": "99eefde3ebb6c9135a51336c46e823153a6a714d",
+   "path": "bench",
+   "url": "https://github.com/johnservil/bench-hashes"
+  },
+  {
+   "commit": "b5b988d8982bea9490c38c79ec4b8c5c2428270c",
+   "path": "fork",
+   "url": "https://github.com/johnservil/BLAKE3"
+  }
+ ],
+ "script": "job.sh",
+ "script_sha256": "52cf1805bafef9b8f5ab3b77d1181b805bb40d619c6f03451d8b57a4f6609b08",
+ "tool_sha256": "c610e1c00faf84c6e625aac08333f0f7d9d14674d2cf6beddc64585f4d39488c"
+}

@@ -1,0 +1,34 @@
+$ ['git', '-C', '/root/pinned-runs/cache/cb13eb3cfeb7ef4f.git', 'fetch', '-q', '--prune', 'origin']
+exit 0
+$ ['sh', '-c', 'git -C /root/pinned-runs/cache/cb13eb3cfeb7ef4f.git cat-file -e 99eefde3ebb6c9135a51336c46e823153a6a714d^{commit} || git -C /root/pinned-runs/cache/cb13eb3cfeb7ef4f.git fetch -q https://github.com/johnservil/bench-hashes 99eefde3ebb6c9135a51336c46e823153a6a714d']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/cache/cb13eb3cfeb7ef4f.git', 'update-ref', 'refs/pinned/99eefde3ebb6c9135a51336c46e823153a6a714d', '99eefde3ebb6c9135a51336c46e823153a6a714d']
+exit 0
+$ ['git', 'init', '-q', '/root/pinned-runs/i196-train-by-placement-20261101T011804-04fcec1b/bench']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/i196-train-by-placement-20261101T011804-04fcec1b/bench', 'remote', 'add', 'origin', 'https://github.com/johnservil/bench-hashes']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/i196-train-by-placement-20261101T011804-04fcec1b/bench', 'fetch', '-q', '/root/pinned-runs/cache/cb13eb3cfeb7ef4f.git', '+refs/*:refs/cache/*']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/i196-train-by-placement-20261101T011804-04fcec1b/bench', 'checkout', '-q', '--detach', '99eefde3ebb6c9135a51336c46e823153a6a714d']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/i196-train-by-placement-20261101T011804-04fcec1b/bench', 'rev-parse', 'HEAD']
+99eefde3ebb6c9135a51336c46e823153a6a714d
+exit 0
+$ ['git', '-C', '/root/pinned-runs/cache/c538c938b44ec0ad.git', 'fetch', '-q', '--prune', 'origin']
+exit 0
+$ ['sh', '-c', 'git -C /root/pinned-runs/cache/c538c938b44ec0ad.git cat-file -e b5b988d8982bea9490c38c79ec4b8c5c2428270c^{commit} || git -C /root/pinned-runs/cache/c538c938b44ec0ad.git fetch -q https://github.com/johnservil/BLAKE3 b5b988d8982bea9490c38c79ec4b8c5c2428270c']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/cache/c538c938b44ec0ad.git', 'update-ref', 'refs/pinned/b5b988d8982bea9490c38c79ec4b8c5c2428270c', 'b5b988d8982bea9490c38c79ec4b8c5c2428270c']
+exit 0
+$ ['git', 'init', '-q', '/root/pinned-runs/i196-train-by-placement-20261101T011804-04fcec1b/fork']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/i196-train-by-placement-20261101T011804-04fcec1b/fork', 'remote', 'add', 'origin', 'https://github.com/johnservil/BLAKE3']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/i196-train-by-placement-20261101T011804-04fcec1b/fork', 'fetch', '-q', '/root/pinned-runs/cache/c538c938b44ec0ad.git', '+refs/*:refs/cache/*']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/i196-train-by-placement-20261101T011804-04fcec1b/fork', 'checkout', '-q', '--detach', 'b5b988d8982bea9490c38c79ec4b8c5c2428270c']
+exit 0
+$ ['git', '-C', '/root/pinned-runs/i196-train-by-placement-20261101T011804-04fcec1b/fork', 'rev-parse', 'HEAD']
+b5b988d8982bea9490c38c79ec4b8c5c2428270c
+exit 0

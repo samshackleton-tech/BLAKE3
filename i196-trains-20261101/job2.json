@@ -1,0 +1,27 @@
+{
+ "name": "i196-train-by-placement",
+ "host": "root@88.216.222.150",
+ "lock": "/root/bench-native-afk.lock",
+ "repos": [
+  {
+   "url": "https://github.com/johnservil/bench-hashes",
+   "commit": "99eefde3ebb6c9135a51336c46e823153a6a714d",
+   "path": "bench"
+  },
+  {
+   "url": "https://github.com/johnservil/BLAKE3",
+   "commit": "b5b988d8982bea9490c38c79ec4b8c5c2428270c",
+   "path": "fork"
+  }
+ ],
+ "script": "job2.sh",
+ "expect": [
+  {
+   "file": "out/status.txt",
+   "contains": [
+    "l3-continuous1MiB-3 exit 0",
+    "all-continuousbatch4096-3 exit 0"
+   ]
+  }
+ ]
+}
