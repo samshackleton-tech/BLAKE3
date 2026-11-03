@@ -955,6 +955,30 @@ impl Pool {
         self.park_of(domain as usize).wake_one()
     }
 
+    /// Domain `d`'s primaries: its first workers, one a core (all of them
+    /// where the cores are unknown). PROBE #196, splitwake.
+    fn primaries(&self, d: usize) -> usize {
+        let c = self.core_cpus.get(d).map_or(0, |c| c.len());
+        if c == 0 { usize::MAX } else { c }
+    }
+
+    /// Wake one parked primary for a stream's task: of `domain`, or, where
+    /// it is busy, of another domain first (EVERY: of any). PROBE #196,
+    /// splitwake.
+    pub(crate) fn wake_stream(&self, domain: u32) -> bool {
+        if self.one {
+            return self.park.wake_one_below(self.primaries(0));
+        }
+        if domain == EVERY {
+            return self.parks().enumerate().any(|(d, p)| p.wake_one_below(self.primaries(d)));
+        }
+        if self.busy(domain) {
+            return self.parks().enumerate().any(|(d, p)| d != domain as usize && p.wake_one_below(self.primaries(d)))
+                || self.park_of(domain as usize).wake_one_below(self.primaries(domain as usize));
+        }
+        self.park_of(domain as usize).wake_one_below(self.primaries(domain as usize))
+    }
+
     /// Whether `domain` runs as many stream tasks as it has cores (PROBE
     /// #196, lend by cores).
     fn busy(&self, domain: u32) -> bool {
@@ -1170,7 +1194,7 @@ pub(crate) mod sources {
                 wake_sme2();
             }
             if p + 1 - self.claimed.load(Ordering::Relaxed) >= 2 {
-                pool.wake_one(domain);
+                pool.wake_stream(domain);
             }
         }
 
@@ -1239,7 +1263,7 @@ pub(crate) mod sources {
         pub(crate) fn wake_for_waiting(&self) {
             let pool = pool();
             if self.waiting() > 0 {
-                pool.wake_one(self.domain.load(Ordering::Relaxed));
+                pool.wake_stream(self.domain.load(Ordering::Relaxed));
             }
         }
 
@@ -1352,7 +1376,11 @@ pub(crate) mod sources {
         find::<MULTI>(mine, |source| {
             let Some(item) = source.take() else { return false };
             if source.waiting() >= 2 {
-                pool().wake_one(source.domain.load(Ordering::Relaxed));
+                if source.ring.is_empty() {
+                    pool().wake_one(source.domain.load(Ordering::Relaxed));
+                } else {
+                    pool().wake_stream(source.domain.load(Ordering::Relaxed));
+                }
             }
             match item {
                 Item::Task(task) if MULTI && mine != EVERY => {
