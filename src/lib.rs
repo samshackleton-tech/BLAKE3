@@ -800,6 +800,9 @@ fn rounded_lanes(platform: Platform, count: usize) -> Option<usize> {
         // Probe (not for merging): 9 to 15 on 16 lanes.
         #[cfg(blake3_avx512_ffi)]
         (Platform::AVX512, 9..=15) => Some(16),
+        // Probe (not for merging): 17 to 31 chunks on the 32-input kernel where it runs.
+        #[cfg(all(blake3_avx512_ffi, target_os = "linux"))]
+        (Platform::AVX512, 17..=31) if crate::platform::wide_avx512() => Some(32),
         _ => None,
     }
 }
