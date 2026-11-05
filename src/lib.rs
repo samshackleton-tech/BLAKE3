@@ -836,6 +836,12 @@ fn hash_many_rounded<const N: usize>(
         let mut scratch = [0u8; 32 * OUT_LEN];
         platform.hash_many(&padded, key, counter, increment_counter, flags, flags_start, flags_end, &mut scratch[..lanes * OUT_LEN]);
         out[..inputs.len() * OUT_LEN].copy_from_slice(&scratch[..inputs.len() * OUT_LEN]);
+    } else if cfg!(blake3_avx512_ffi) && matches!(platform, Platform::AVX512) && inputs.len() > 16 && rounded_lanes(platform, inputs.len() % 16).is_some() {
+        // Probe (not for merging): the whole groups of 16, then the rest rounded up.
+        let head = inputs.len() / 16 * 16;
+        platform.hash_many(&inputs[..head], key, counter, increment_counter, flags, flags_start, flags_end, &mut out[..head * OUT_LEN]);
+        let counter = if increment_counter.yes() { counter + head as u64 } else { counter };
+        hash_many_rounded(platform, &inputs[head..], key, counter, increment_counter, flags, flags_start, flags_end, &mut out[head * OUT_LEN..]);
     } else {
         platform.hash_many(inputs, key, counter, increment_counter, flags, flags_start, flags_end, out);
     }
