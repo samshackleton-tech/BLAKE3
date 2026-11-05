@@ -186,7 +186,10 @@ impl Kernels for PlatformKernels<'_> {
         {
             use crate::chunk_root::{Root, chunk_root};
             let kernel = match self.platform {
-                _ if crate::platform::gpr_chunk_root() => Root::Gpr,
+                _ if crate::platform::gpr_chunk_root() => {
+                    gpr_prefetch_if_cold();
+                    Root::Gpr
+                }
                 crate::platform::Platform::AVX512 => Root::Avx512,
                 crate::platform::Platform::SSE41 | crate::platform::Platform::AVX2 => Root::Sse41,
             };
@@ -259,5 +262,37 @@ mod test {
             root_children(&k, &input[..chunks * CHUNK_LEN], 0, 0);
             assert_eq!((k.chunks.into_inner(), k.parents.into_inner()), (rooms, parents), "{chunks} chunks");
         }
+    }
+}
+
+/// Probe (not for merging): before the GPR chunk root after a pause, its
+/// code (2,996 bytes, 47 lines) prefetched into L2 at once, so a cold
+/// call's code misses overlap rather than queue. A pause: this thread's last
+/// chunk root over 400,000 TSC ticks ago (80-400 us at 1-5 GHz).
+#[cfg(all(target_arch = "x86_64", feature = "std"))]
+#[inline(always)]
+fn gpr_prefetch_if_cold() {
+    std::thread_local! {
+        static LAST: core::cell::Cell<u64> = const { core::cell::Cell::new(0) };
+    }
+    // Sound: RDTSC exists on every x86-64 CPU.
+    let now = unsafe { core::arch::x86_64::_rdtsc() };
+    if now.wrapping_sub(LAST.with(|l| l.replace(now))) > 400_000 {
+        gpr_prefetch();
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", not(feature = "std")))]
+#[inline(always)]
+fn gpr_prefetch_if_cold() {}
+
+#[cfg(all(target_arch = "x86_64", feature = "std"))]
+#[cold]
+#[inline(never)]
+fn gpr_prefetch() {
+    let start = crate::chunk_root::ffi::blake3_servil_gpr_chunk_root as *const () as usize & !63;
+    for line in (start..start + 3072).step_by(64) {
+        // Sound: a prefetch never faults, whatever the address.
+        unsafe { core::arch::x86_64::_mm_prefetch::<{ core::arch::x86_64::_MM_HINT_T1 }>(line as *const i8) };
     }
 }
