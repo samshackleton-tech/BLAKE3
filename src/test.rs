@@ -1860,6 +1860,24 @@ mod prefetch_counts {
             assert_eq!(taken().0, [], "performance hash of {len} bytes after a pause: no prefetch");
             TEST_COUNTER.with(|c| c.set(None));
         }
+        // The public calls: convenience::hash and hash_with go through hash_cold, every call;
+        // performance::hash does not, after a pause too.
+        let len = 4 * CHUNK_LEN;
+        let mut batch = crate::performance::Batch::new(len, 1);
+        batch.set(0, &input[..len]);
+        let key = [3u8; 32];
+        at(1 << 40);
+        std::hint::black_box(crate::convenience::hash(&input[..len]));
+        taken();
+        at((1 << 40) + 1);
+        std::hint::black_box(crate::convenience::hash(&input[..len]));
+        assert_eq!(!taken().0.is_empty(), crate::neon_hybrid::sha3_detected(), "convenience::hash straight after a call prefetches");
+        std::hint::black_box(crate::convenience::hash_with(crate::Mode::Keyed(&key), &input[..len]));
+        assert_eq!(!taken().0.is_empty(), crate::neon_hybrid::sha3_detected(), "convenience::hash_with straight after a call prefetches");
+        at(1 << 41);
+        std::hint::black_box(crate::performance::hash(crate::Mode::Plain, batch.blocks(), len));
+        assert_eq!(taken().0, [], "performance::hash after a pause: no prefetch");
+        TEST_COUNTER.with(|c| c.set(None));
     }
 
     /// A fresh Hasher's first update and its finalize (the Hasher-per-message
