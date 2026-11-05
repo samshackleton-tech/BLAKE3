@@ -872,8 +872,10 @@ mod x86_features_test {
         let want = field("vendor_id") == "AuthenticAMD" && field("cpu family").parse::<u32>().expect("cpu family") >= 0x1A;
         assert_eq!(super::gpr_chunk_root(), want, "gpr_chunk_root");
         for len in [0usize, 64, 1000, crate::CHUNK_LEN] {
-            crate::RAN_ENTRIES.with(|r| r.borrow_mut().clear());
             let input = std::vec![9u8; len];
+            // A call just before: the code is warm (a cold call takes SIMD, tree.rs's gpr_warm).
+            let _ = crate::convenience::hash(&input);
+            crate::RAN_ENTRIES.with(|r| r.borrow_mut().clear());
             let hash = crate::convenience::hash(&input);
             let ran = crate::RAN_ENTRIES.with(|r| r.borrow().clone());
             let gpr = crate::chunk_root::ffi::blake3_servil_gpr_chunk_root as *const () as usize;
