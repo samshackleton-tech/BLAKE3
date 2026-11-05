@@ -797,6 +797,9 @@ fn rounded_lanes(platform: Platform, count: usize) -> Option<usize> {
         (Platform::AVX512, 3) => Some(4),
         #[cfg(blake3_avx512_ffi)]
         (Platform::AVX512, 5..=7) => Some(8),
+        // Probe (not for merging): 9 to 15 on 16 lanes.
+        #[cfg(blake3_avx512_ffi)]
+        (Platform::AVX512, 9..=15) => Some(16),
         _ => None,
     }
 }
@@ -818,7 +821,7 @@ fn hash_many_rounded<const N: usize>(
     if let Some(lanes) = rounded_lanes(platform, inputs.len()) {
         ran(Ran::RoundedUp);
         let last = *inputs.last().expect("a count that rounds up is 3 or more");
-        let mut padded = ArrayVec::<&[u8; N], 8>::new();
+        let mut padded = ArrayVec::<&[u8; N], 32>::new();
         padded.try_extend_from_slice(inputs).unwrap();
         while padded.len() < lanes {
             padded.push(last);
@@ -827,7 +830,7 @@ fn hash_many_rounded<const N: usize>(
         // padding that stopped short would hash the same digests slower).
         #[cfg(all(test, feature = "std"))]
         ROUNDED_WIDTH.with(|w| w.set(w.get() | padded.len()));
-        let mut scratch = [0u8; 8 * OUT_LEN];
+        let mut scratch = [0u8; 32 * OUT_LEN];
         platform.hash_many(&padded, key, counter, increment_counter, flags, flags_start, flags_end, &mut scratch[..lanes * OUT_LEN]);
         out[..inputs.len() * OUT_LEN].copy_from_slice(&scratch[..inputs.len() * OUT_LEN]);
     } else {
