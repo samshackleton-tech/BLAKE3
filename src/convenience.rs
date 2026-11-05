@@ -38,11 +38,11 @@ use crate::{Hash, IV, Mode, OutputReader};
 /// The first hash in a process first runs a self-test (see the crate's
 /// documentation), under 0.2 ms; [`initialize`](crate::initialize) moves it to start-up.
 // Inlined into its caller: its one call, out of line, sat apart from
-// hash_serial, one more code line to fetch from DRAM in a call after a pause
+// hash_cold (then hash_serial), one more code line to fetch from DRAM in a call after a pause
 // (i7-12700K, after idling, 64 B: -16.5%, 8 fresh layouts a side).
 #[inline]
 pub fn hash(input: &[u8]) -> Hash {
-    crate::hash_serial(input, IV, 0)
+    crate::hash_cold(input, IV, 0)
 }
 
 /// [`hash`] in any [`Mode`]: the plain hash, the keyed hash, or key
@@ -59,7 +59,7 @@ pub fn hash(input: &[u8]) -> Hash {
 pub fn hash_with(mode: Mode, input: &[u8]) -> Hash {
     let mut room = core::mem::MaybeUninit::uninit();
     let (key, flags) = mode.key(&mut room);
-    crate::hash_serial(input, key, flags)
+    crate::hash_cold(input, key, flags)
 }
 
 /// The extended output of `input` in `mode`: an [`OutputReader`] that

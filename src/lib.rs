@@ -1137,22 +1137,42 @@ fn hash_serial(input: &[u8], key: &CVWords, flags: u8) -> Hash {
 #[inline]
 fn hash_serial_from(platform: Platform, input: &[u8], key: &CVWords, flags: u8) -> Hash {
     let turn = platform::Sme2Turn::take(platform, input.len() >= SME2_SIZED_LEN);
+    hash_serial_on(input, key, flags, turn.platform())
+}
+
+/// The convenience calls' body: [`hash_serial`], but more than a chunk
+/// below PREFETCH_BELOW first prefetches its kernels' code, every call.
+/// The convenience calls are for a hash now and then, after other work
+/// (BLAKE3-Servil #253), whose code has left the caches; the performance
+/// calls, for call after call, never prefetch.
+#[inline]
+pub(crate) fn hash_cold(input: &[u8], key: &CVWords, flags: u8) -> Hash {
+    hash_cold_from(Platform::detect(), input, key, flags)
+}
+
+/// [`hash_cold`] from `platform` (as [`hash_serial_from`]).
+#[inline]
+fn hash_cold_from(platform: Platform, input: &[u8], key: &CVWords, flags: u8) -> Hash {
+    let turn = platform::Sme2Turn::take(platform, input.len() >= SME2_SIZED_LEN);
     // One comparison on the path of a chunk or less: everything else is
     // out of line, so that path's code stays as small as it was (a call
     // after other work fetches every line of it from DRAM).
     #[cfg(all(blake3_neon, feature = "std"))]
     if (CHUNK_LEN + 1..PREFETCH_BELOW).contains(&input.len()) {
-        prefetch_after_pause(input.len(), turn.platform(), false);
+        prefetch_before_call(input.len(), turn.platform());
     }
     hash_serial_on(input, key, flags, turn.platform())
 }
 
-/// Below this length a one-shot call that follows a pause prefetches its
-/// kernels' code: after other work the call then fetches it from DRAM in
-/// parallel, not one miss at a time (M4 Max, after other work: 4 KiB
-/// x0.61, 8 KiB x0.51, 16 KiB x0.66; 32 KiB and up level, the hashing's
-/// own time dwarfing it; jobs 971-975). The streaming paths (Hasher,
-/// batches, the streams' tasks) run back to back with their code near.
+/// Below this length a convenience call (every call: hash_cold) and a
+/// fresh Hasher's first update after a pause prefetch their kernels' code:
+/// after other work the call then fetches it from DRAM in parallel, not
+/// one miss at a time (M4 Max, after other work: 4 KiB x0.61, 8 KiB x0.51,
+/// 16 KiB x0.66; 32 KiB and up level, the hashing's own time dwarfing it;
+/// jobs 971-975). A warm call pays for it, 2-4% (jobs 972-975), which the
+/// convenience calls accept: they are for a hash now and then. The
+/// performance calls and the streaming paths run back to back with their
+/// code near.
 /// A cold call of 2-8 KiB spends about a third of its time on its code
 /// (10-24 KB of kernels and glue); from 3 KiB what remains is the kernels
 /// starting before their lines arrive. Tried and set aside: prefetching
@@ -1165,28 +1185,36 @@ fn hash_serial_from(platform: Platform, input: &[u8], key: &CVWords, flags: u8) 
 #[cfg(all(blake3_neon, feature = "std"))]
 const PREFETCH_BELOW: usize = 64 * 1024;
 
-/// After a pause (code_may_be_cold), prefetch the kernels hashing `len`
-/// bytes runs: a one-shot call's (prefetch_kernels), or with `fresh_hasher`
-/// a fresh Hasher's first update's (prefetch_update_kernels).
+/// Prefetch the kernels a convenience call hashing `len` bytes runs
+/// (prefetch_kernels), every call (hash_cold).
 #[cfg(all(blake3_neon, feature = "std"))]
 // Cold for layout: the path of a chunk or less falls through past its
 // call, on the lines it had before the call existed.
 #[cold]
 #[inline(never)]
-fn prefetch_after_pause(len: usize, platform: Platform, fresh_hasher: bool) {
+fn prefetch_before_call(len: usize, platform: Platform) {
+    prefetch_kernels(len, platform);
+}
+
+/// After a pause (code_may_be_cold), prefetch the kernels a fresh Hasher's
+/// first update of `len` bytes runs (prefetch_update_kernels). The Hasher
+/// is a performance call, but no convenience call takes a message in
+/// pieces, so it keeps its pause check until measured without (#253).
+#[cfg(all(blake3_neon, feature = "std"))]
+#[cold]
+#[inline(never)]
+fn prefetch_update_after_pause(len: usize, platform: Platform) {
     if code_may_be_cold() {
-        if fresh_hasher {
-            prefetch_update_kernels(len, platform);
-        } else {
-            prefetch_kernels(len, platform);
-        }
+        prefetch_update_kernels(len, platform);
     }
 }
 
-/// Whether this thread's last call in the prefetching range was over
-/// 100 us ago (or never). Calls back to back find their code near, where
-/// the prefetch would cost them 2-4% (jobs 972-975); one that follows a
-/// pause is the one other work may have taken the code from.
+/// Whether this thread's last Hasher's first update or small batch was
+/// over 100 us ago (or never): those performance calls have no convenience
+/// twin, so they keep a pause check (BLAKE3-Servil #253). Calls back to
+/// back find their code near, where the prefetch would cost them 2-4%
+/// (jobs 972-975); one that follows a pause is the one other work may have
+/// taken the code from.
 #[cfg(all(blake3_neon, feature = "std"))]
 #[inline]
 fn code_may_be_cold() -> bool {

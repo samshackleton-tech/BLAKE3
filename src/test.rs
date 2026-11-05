@@ -1796,32 +1796,68 @@ mod prefetch_counts {
         input
     }
 
-    /// A one-shot hash of more than a chunk, up to 16 chunks, every length
-    /// in steps of 31 bytes: the kernels it runs, exactly. From 17 chunks
-    /// to PREFETCH_BELOW the prefetch plans the input as 16 chunks
-    /// (prefetch_kernels), and the walk then splits it and runs others
-    /// (BLAKE3 #219): those lengths are checked only to prefetch something.
+    /// `call` straight after a call and after a pause: each time it
+    /// prefetches exactly the kernels it runs where `prefetches`, else
+    /// nothing (a convenience call's prefetch takes no pause, hash_cold).
+    fn check_every_call(what: &str, prefetches: bool, mut call: impl FnMut()) {
+        let prefetches = prefetches && crate::neon_hybrid::sha3_detected();
+        let pause = 10 * platform::ticks_in_100_us();
+        let t = 1_000 * pause;
+        at(t);
+        call();
+        taken();
+        for (when, ticks) in [("straight after a call", t + 1), ("after a pause", t + 1 + pause)] {
+            at(ticks);
+            call();
+            let (prefetched, ran) = taken();
+            if prefetches {
+                assert!(!ran.is_empty(), "{what}, {when}: the hybrids ran");
+                assert_covers(&std::format!("{what}, {when}"), &prefetched, &ran);
+            } else {
+                assert_eq!(prefetched, [], "{what}, {when}: no prefetch");
+            }
+        }
+        TEST_COUNTER.with(|c| c.set(None));
+    }
+
+    /// A convenience hash of more than a chunk, up to 16 chunks, every
+    /// length in steps of 31 bytes: the kernels it runs, exactly, every
+    /// call. From 17 chunks to PREFETCH_BELOW the prefetch plans the input
+    /// as 16 chunks (prefetch_kernels), and the walk then splits it and
+    /// runs others (BLAKE3 #219): those lengths are checked only to
+    /// prefetch something. The performance calls' body (hash_serial_from,
+    /// performance::hash's past a chunk) never prefetches, after a pause
+    /// too (BLAKE3-Servil #253).
     #[test]
-    fn test_a_one_shot_hash_after_a_pause_prefetches_what_it_runs() {
+    fn test_a_convenience_hash_prefetches_what_it_runs_every_call() {
         let input = painted(crate::PREFETCH_BELOW + CHUNK_LEN);
         for len in (CHUNK_LEN + 1..=16 * CHUNK_LEN).step_by(31).chain([16 * CHUNK_LEN]) {
-            check(&std::format!("hash of {len} bytes"), true, || {
+            check_every_call(&std::format!("convenience hash of {len} bytes"), true, || {
+                std::hint::black_box(crate::hash_cold_from(Platform::NEON, &input[..len], IV, 0));
+            });
+            check_every_call(&std::format!("performance hash of {len} bytes"), false, || {
                 std::hint::black_box(crate::hash_serial_from(Platform::NEON, &input[..len], IV, 0));
             });
         }
         for len in [0, 1, CHUNK_LEN, crate::PREFETCH_BELOW, crate::PREFETCH_BELOW + 1, crate::PREFETCH_BELOW + CHUNK_LEN] {
-            check(&std::format!("hash of {len} bytes"), false, || {
-                std::hint::black_box(crate::hash_serial_from(Platform::NEON, &input[..len], IV, 0));
+            check_every_call(&std::format!("convenience hash of {len} bytes"), false, || {
+                std::hint::black_box(crate::hash_cold_from(Platform::NEON, &input[..len], IV, 0));
             });
         }
         for len in [16 * CHUNK_LEN + 1, 33 * CHUNK_LEN + 9, crate::PREFETCH_BELOW - 1] {
-            let pause = 10 * platform::ticks_in_100_us();
-            at(1_000 * pause);
-            std::hint::black_box(crate::hash_serial_from(Platform::NEON, &input[..len], IV, 0));
+            at(1 << 40);
+            std::hint::black_box(crate::hash_cold_from(Platform::NEON, &input[..len], IV, 0));
             taken();
-            at(1_001 * pause);
+            at((1 << 40) + 1);
+            std::hint::black_box(crate::hash_cold_from(Platform::NEON, &input[..len], IV, 0));
+            assert_eq!(
+                !taken().0.is_empty(),
+                crate::neon_hybrid::sha3_detected(),
+                "convenience hash of {len} bytes, straight after a call, prefetches (where the hybrids run)"
+            );
+            at(1 << 41);
             std::hint::black_box(crate::hash_serial_from(Platform::NEON, &input[..len], IV, 0));
-            assert_eq!(!taken().0.is_empty(), crate::neon_hybrid::sha3_detected(), "hash of {len} bytes after a pause prefetches (where the hybrids run)");
+            assert_eq!(taken().0, [], "performance hash of {len} bytes after a pause: no prefetch");
             TEST_COUNTER.with(|c| c.set(None));
         }
     }
@@ -1924,7 +1960,8 @@ mod prefetch_counts {
         let ticks = (per_second / 10_000).max(1);
         assert_eq!(platform::ticks_in_100_us(), ticks);
         let input = painted(4 * CHUNK_LEN);
-        let call = || std::hint::black_box(crate::hash_serial_from(Platform::NEON, &input, IV, 0));
+        // A fresh Hasher's first update: the pause check's caller (the convenience calls prefetch every call).
+        let call = || std::hint::black_box(crate::Hasher::from_core(crate::incremental::HasherCore::new_from(IV, 0, Platform::NEON)).update(&input).finalize());
         let t = 1 << 30;
         at(t);
         call();
@@ -1942,7 +1979,7 @@ mod prefetch_counts {
     #[test]
     fn test_a_real_pause_prefetches() {
         let input = painted(4 * CHUNK_LEN);
-        let call = || std::hint::black_box(crate::hash_serial_from(Platform::NEON, &input, IV, 0));
+        let call = || std::hint::black_box(crate::Hasher::from_core(crate::incremental::HasherCore::new_from(IV, 0, Platform::NEON)).update(&input).finalize());
         call();
         taken();
         std::thread::sleep(std::time::Duration::from_millis(1));
