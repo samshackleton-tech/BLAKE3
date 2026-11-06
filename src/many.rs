@@ -59,6 +59,10 @@ pub(crate) fn assert_slots(input: &[u8], len: usize, count: usize) {
 pub(crate) fn hash_many_on(input: &[u8], len: usize, key: &CVWords, flags: u8, outputs: &mut [[u8; OUT_LEN]], platform: Platform) {
     #[cfg(all(target_arch = "x86_64", blake3_sse41_ffi, feature = "std"))]
     if len % BLOCK_LEN != 0 && outputs.len() >= 8 && len <= CHUNK_LEN {
+        let native = crate::ffi_last::lanes(platform);
+        // A supplied batch with eight to fifteen messages still fills an
+        // AVX2 group on AVX-512 machines. No padded or fabricated lanes.
+        let platform = if native == 16 && outputs.len() < native { Platform::AVX2 } else { platform };
         let width = crate::ffi_last::lanes(platform);
         if width >= 8 && outputs.len() >= width {
             assert_slots(input, len, outputs.len());
@@ -767,7 +771,7 @@ mod test {
             }
             let entry = crate::ffi_last::entries(platform)[0];
             for len in [1usize, 63, 65, 129, 1023] {
-                for n in [0, 1, width - 1, width, width + 1, 2 * width + 1] {
+                for n in [0, 1, 7, 8, 9, width - 1, width, width + 1, 2 * width + 1] {
                     let slot = slot_len(len);
                     let mut input = vec![0u8; slot * n];
                     for i in 0..n {
@@ -779,7 +783,7 @@ mod test {
                     crate::RAN_ENTRIES.with(|r| r.borrow_mut().clear());
                     hash_many_on(&input, len, crate::IV, 0, &mut out, platform);
                     let reached = crate::RAN_ENTRIES.with(|r| r.borrow().contains(&entry));
-                    assert_eq!(reached, n >= width, "{platform:?} len={len} n={n}");
+                    assert_eq!(reached, n >= 8, "{platform:?} len={len} n={n}");
                     for (i, digest) in out.iter().enumerate() {
                         assert_eq!(*digest, crate::test::official::hash(crate::Mode::Plain, &input[i * slot..][..len]));
                     }
