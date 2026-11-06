@@ -993,6 +993,33 @@ mod guard_pages {
         g
     }
 
+    /// Byte-masked finishing reads exactly each slice, with no padded
+    /// allocation after its final byte. A zero-length input points at the
+    /// inaccessible page itself: a nonzero mask there must fault.
+    #[test]
+    #[cfg(all(target_arch = "x86_64", blake3_sse41_ffi))]
+    fn test_byte_last_blocks_against_a_guard_page() {
+        if !std::arch::is_x86_feature_detected!("avx512f") || !std::arch::is_x86_feature_detected!("avx512bw") {
+            return;
+        }
+        for k in [0usize, 1, 7, 15] {
+            for tail in 0..=64usize {
+                let mut guarded: Vec<Guarded> = (0..16)
+                    .map(|j| {
+                        let last = (tail + j * 17) % 65;
+                        filled(k * 64 + if k == 0 { last } else { last.max(1) }, true)
+                    })
+                    .collect();
+                let items: Vec<&[u8]> = guarded.iter_mut().map(|g| &*g.bytes()).collect();
+                let mut out = [[0u8; 32]; 16];
+                crate::ffi_last::hash_group(platform::Platform::AVX512, &items, k, IV, 0, &mut out);
+                for (item, digest) in items.iter().zip(&out) {
+                    assert_eq!(*digest, crate::test::official::hash(crate::Mode::Plain, item));
+                }
+            }
+        }
+    }
+
     /// The one-chunk root kernels with the input flush against an
     /// inaccessible page, after it and before it: whole blocks are read in
     /// place, so a kernel that read a byte outside them would fault here.

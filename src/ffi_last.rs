@@ -47,8 +47,19 @@ struct Params16 {
     out: *mut [u8; OUT_LEN],
 }
 
+#[repr(C, align(64))]
+struct ParamsByteLast {
+    common: Params16,
+    masks: [u64; 16],
+}
+
+fn byte_mask(len: u32) -> u64 {
+    debug_assert!(len <= 64);
+    if len == 64 { u64::MAX } else { (1u64 << len) - 1 }
+}
+
 unsafe extern "C" {
-    fn blake3_servil_last_avx512(params: *const Params16);
+    fn blake3_servil_last_avx512(params: *const ParamsByteLast);
 }
 
 /// AVX-512F's sixteen-lane kernel: `items` have `k` full blocks before
@@ -57,26 +68,29 @@ unsafe fn hash_group16(items: &[&[u8]], k: usize, key: &CVWords, flags: u8, out:
     let n = items.len();
     assert!((1..=16).contains(&n) && out.len() == n && k < 16, "1 to 16 items of up to a chunk");
     assert!(items.iter().all(|i| i.len().saturating_sub(1) / BLOCK_LEN == k), "items of {k} whole blocks before their last");
-    let mut last = [[0u8; BLOCK_LEN]; 16];
-    let lens = core::array::from_fn(|j| {
-        let tail = &items[if j < n { j } else { 0 }][k * BLOCK_LEN..];
-        last[j][..tail.len()].copy_from_slice(tail);
-        tail.len() as u32
-    });
+    if !std::arch::is_x86_feature_detected!("avx512bw") {
+        // The F-only mixed kernel also handles equal block counts.
+        unsafe { hash_mixed16(items, key, flags, out) };
+        return;
+    }
+    let lens: [u32; 16] = core::array::from_fn(|j| (items[if j < n { j } else { 0 }].len() - k * BLOCK_LEN) as u32);
     let mut digests = [[0u8; OUT_LEN]; 16];
-    let p = Params16 {
-        msg: core::array::from_fn(|j| items[if j < n { j } else { 0 }].as_ptr()),
-        lastmsg: core::array::from_fn(|j| last[j].as_ptr()),
-        lens,
-        key: *key,
-        k: k as u32,
-        flags: flags as u32,
-        out: digests.as_mut_ptr(),
+    let p = ParamsByteLast {
+        common: Params16 {
+            msg: core::array::from_fn(|j| items[if j < n { j } else { 0 }].as_ptr()),
+            lastmsg: core::array::from_fn(|j| items[if j < n { j } else { 0 }].as_ptr().wrapping_add(k * BLOCK_LEN)),
+            lens,
+            key: *key,
+            k: k as u32,
+            flags: flags as u32,
+            out: digests.as_mut_ptr(),
+        },
+        masks: core::array::from_fn(|j| byte_mask(lens[j])),
     };
-    // Sound: every input reaches its k whole blocks and every LASTMSG a
-    // padded 64-byte block. The kernel stores 16 digests, including the
-    // unread duplicate lanes, into distinct caller-owned scratch (no
-    // sharing with workers). The caller checked AVX-512F.
+    // Sound: AVX-512BW byte masks read exactly the last length and zero
+    // every remaining byte without accessing it, even for a zero-length
+    // slice at an unreadable boundary. BW was detected above; the caller
+    // guarantees F. All output writes reach sixteen caller-owned digests.
     crate::ran_kernel(blake3_servil_last_avx512 as *const ());
     unsafe { blake3_servil_last_avx512(&p) };
     out.copy_from_slice(&digests[..n]);
@@ -330,7 +344,12 @@ pub(crate) fn self_test(platform: crate::platform::Platform) -> usize {
 #[cfg(test)]
 pub(crate) fn entries(platform: crate::platform::Platform) -> [usize; 2] {
     if lanes(platform) == 16 {
-        [blake3_servil_last_avx512 as *const () as usize, blake3_servil_mixed_avx512 as *const () as usize]
+        let equal = if std::arch::is_x86_feature_detected!("avx512bw") {
+            blake3_servil_last_avx512 as *const () as usize
+        } else {
+            blake3_servil_mixed_avx512 as *const () as usize
+        };
+        [equal, blake3_servil_mixed_avx512 as *const () as usize]
     } else {
         [blake3_servil_last_avx2 as *const () as usize, blake3_servil_mixed_avx2 as *const () as usize]
     }
@@ -366,6 +385,15 @@ mod test {
                     "a corrupt {width}-lane answer was accepted"
                 );
             }
+        }
+    }
+
+    #[test]
+    fn test_byte_mask_covers_exactly_the_low_length_bytes() {
+        for len in 0..=64 {
+            let m = byte_mask(len);
+            assert_eq!(m.count_ones(), len);
+            assert_eq!(m & m.wrapping_add(1), 0);
         }
     }
 
@@ -406,6 +434,8 @@ mod test {
         assert_eq!(core::mem::offset_of!(Params16, k), 352);
         assert_eq!(core::mem::offset_of!(Params16, flags), 356);
         assert_eq!(core::mem::offset_of!(Params16, out), 360);
+        assert_eq!(core::mem::offset_of!(ParamsByteLast, common), 0);
+        assert_eq!(core::mem::offset_of!(ParamsByteLast, masks), 384);
         assert_eq!(core::mem::offset_of!(ParamsMixed, common), 0);
         assert_eq!(core::mem::offset_of!(ParamsMixed, ends), 384);
         assert_eq!(core::mem::offset_of!(ParamsMixed8, common), 0);

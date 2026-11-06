@@ -300,9 +300,12 @@ def last16(mixed=False):
     ABI: one Params16 pointer (ffi_last.rs). Offsets: MSG=0 (16 pointers),
     LASTMSG=128 (16 pointers), LENS=256 (16 u32s), KEY=320 (8 u32s),
     K=352 (whole blocks before last), FLAGS=356, OUT=360 (16 digests).
-    The caller zero-pads last blocks. Every message has k full blocks
+    Equal endings add MASKS=384 (16 u64 byte masks), use AVX-512BW and
+    read unpadded last slices directly. Mixed endings remain the F-only
+    padded-slice kernel with ending offsets at 384. The wrapper dispatches
+    to that kernel when BW is unavailable. Every message has k full blocks
     followed by its own last block, length 0..64 (zero only when k=0).
-    AVX-512F, System V x86-64. No calls or shared writable state.
+    System V x86-64. No calls or shared writable state.
     """
     import contextlib
     import io
@@ -339,16 +342,21 @@ def last16(mixed=False):
                 e('cmovae rax, rdx')
                 e(f'vmovdqu32 zmm{16+i}, ZMMWORD PTR [rax]')
         else:
-            e('mov r8, r12')
-            e('mov r9, r14')
+            # BW masks load only the actual last bytes and zero the rest:
+            # no caller-side padded payload copy. Prefix blocks stay F-only
+            # full loads, with no per-lane mask setup on those steps.
             e('cmp r14, r13')
-            e('jne .Llast16_load')
-            e('lea r8, [r12 + 128]')
-            e('xor r9d, r9d')
-            print('.Llast16_load:')
+            e('jne .Llast16_full')
             for i in range(16):
-                e(f'mov rax, QWORD PTR [r8 + {8*i}]')
-                e(f'vmovdqu32 zmm{16+i}, ZMMWORD PTR [rax + r9]')
+                e(f'mov rax, QWORD PTR [r12 + {128+8*i}]')
+                e(f'kmovq k2, QWORD PTR [r12 + {384+8*i}]')
+                e(f'vmovdqu8 zmm{16+i}{{k2}}{{z}}, ZMMWORD PTR [rax]')
+            e('jmp .Llast16_transpose')
+            print('.Llast16_full:')
+            for i in range(16):
+                e(f'mov rax, QWORD PTR [r12 + {8*i}]')
+                e(f'vmovdqu32 zmm{16+i}, ZMMWORD PTR [rax + r14]')
+            print('.Llast16_transpose:')
         rows = wide.transpose(list(range(16, 32)), 8)
         messages = [rows[wide.WORD[w]] for w in range(16)]
         upper = [r for r in range(8, 32) if r not in messages]
