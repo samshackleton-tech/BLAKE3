@@ -28,7 +28,10 @@ use crate::{CHUNK_END, CHUNK_LEN, CHUNK_START, CVBytes, CVWords, ChunkState, Has
 /// assert_eq!(a, b);
 /// ```
 #[cfg(feature = "std")]
-pub fn hash_each_multithreaded(mode: Mode, items: &[(&[Block], usize)], out: &mut [[u8; OUT_LEN]]) {
+// Diagnostic API generalization only: measure existing byte-slice support
+// without deciding the production public trait/signature design.
+#[allow(private_bounds)]
+pub fn hash_each_multithreaded<I: Item>(mode: Mode, items: &[I], out: &mut [[u8; OUT_LEN]]) {
     crate::lanes::require();
     assert_eq!(items.len(), out.len(), "one digest per item");
     let mut room = core::mem::MaybeUninit::uninit();
@@ -237,7 +240,9 @@ const ALONE_CHUNKS: usize = 16;
 /// performance::hash_each(Mode::Plain, &items, &mut out);
 /// assert_eq!(&out[42], convenience::hash(&[42u8; 4200]).as_bytes());
 /// ```
-pub fn hash_each(mode: Mode, items: &[(&[Block], usize)], out: &mut [[u8; OUT_LEN]]) {
+// Diagnostic API generalization only; the engine already takes Item.
+#[allow(private_bounds)]
+pub fn hash_each<I: Item>(mode: Mode, items: &[I], out: &mut [[u8; OUT_LEN]]) {
     assert_eq!(items.len(), out.len(), "one digest per item");
     let mut room = core::mem::MaybeUninit::uninit();
     let (key, flags) = mode.key(&mut room);
