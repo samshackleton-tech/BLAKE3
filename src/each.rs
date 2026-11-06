@@ -258,8 +258,8 @@ pub(crate) fn by_blocks_takes(platform: Platform) -> bool {
     }
 }
 
-/// The most items [`hash_by_blocks`] sorts at once: a stream task's members.
-const BY_BLOCKS_AT_ONCE: usize = crate::lanes::MEMBERS;
+/// A bounded packing window; stream tasks may supply fewer members.
+const BY_BLOCKS_AT_ONCE: usize = 2 * crate::lanes::MEMBERS;
 
 /// The digest of each of `items`, every one of up to a chunk, of any
 /// lengths, by their blocks: those with as many whole blocks before their
@@ -286,7 +286,7 @@ fn by_blocks_at_once(items: &[&[u8]], key: &CVWords, flags: u8, out: &mut [[u8; 
     let mut order: arrayvec::ArrayVec<usize, BY_BLOCKS_AT_ONCE> = (0..items.len()).collect();
     // Sixteen possible prefix lengths need only a counting pass, not a
     // general comparison sort. A uniform window needs no histogram at all.
-    // Counts/positions fit a byte: this window has at most 64 items.
+    // Counts/positions fit a byte: this window has at most 128 items.
     let first = whole(items[0]);
     if items[1..].iter().any(|item| whole(item) != first) {
         let mut positions = [0u8; 16];
