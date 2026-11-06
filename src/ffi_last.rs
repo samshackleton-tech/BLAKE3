@@ -219,9 +219,7 @@ pub(crate) fn hash_group(platform: crate::platform::Platform, items: &[&[u8]], k
 const SELF_TEST_EXPECTED: [[u64; 2]; 2] = [[0x9c9bccc8becc1867, 0xece70b823c776e95], [0xfb48780a8346cae2, 0x153fbf85d61a34f8]];
 const SELF_TEST_KEY: [u8; 32] = *b"whats the Elvish word for friend";
 
-fn self_test_shape(width: usize, mixed: bool, mut hash: impl FnMut(&[&[u8]], &CVWords, u8, &mut [[u8; OUT_LEN]])) -> u64 {
-    let mut bytes = [0u8; 2048];
-    crate::self_test::fill(&mut bytes);
+fn self_test_shape(bytes: &[u8; 2048], width: usize, mixed: bool, mut hash: impl FnMut(&[&[u8]], &CVWords, u8, &mut [[u8; OUT_LEN]])) -> u64 {
     let refs: [&[u8]; 16] = core::array::from_fn(|j| {
         let len = if mixed { [0, 1024, 1, 63, 64, 129, 511, 700, 128, 192, 256, 512, 768, 1023, 600, 255][j] } else { 193 + j * 3 };
         &bytes[j * 13..][..len]
@@ -242,8 +240,12 @@ pub(crate) fn self_test(platform: crate::platform::Platform) -> usize {
     if width < 8 {
         return 0;
     }
+    // Both independent shapes read the same deterministic bytes. Prepare
+    // them once; retain every kernel call, key, length and expected answer.
+    let mut bytes = [0u8; 2048];
+    crate::self_test::fill(&mut bytes);
     for mixed in [false, true] {
-        let folded = self_test_shape(width, mixed, |items, key, flags, out| {
+        let folded = self_test_shape(&bytes, width, mixed, |items, key, flags, out| {
             if !mixed {
                 hash_group(platform, items, 3, key, flags, out);
             } else if width == 16 {
@@ -385,10 +387,12 @@ mod test {
 
     #[test]
     fn test_startup_answers_against_official() {
+        let mut bytes = [0u8; 2048];
+        crate::self_test::fill(&mut bytes);
         let mut answers = [[0u64; 2]; 2];
         for (row, width) in [8, 16].into_iter().enumerate() {
             for (column, mixed) in [false, true].into_iter().enumerate() {
-                answers[row][column] = self_test_shape(width, mixed, |items, key, flags, out| {
+                answers[row][column] = self_test_shape(&bytes, width, mixed, |items, key, flags, out| {
                     assert_eq!(*key, crate::platform::words_from_le_bytes_32(&SELF_TEST_KEY));
                     assert_eq!(flags, crate::KEYED_HASH);
                     for (item, digest) in items.iter().zip(out) {
