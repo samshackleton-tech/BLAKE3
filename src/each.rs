@@ -399,18 +399,17 @@ fn finishing_kernel_takes(width: usize, count: usize, whole: usize, fast512: boo
 fn by_blocks_then_last(items: &[&[u8]], order: &[usize], key: &CVWords, flags: u8, out: &mut [[u8; OUT_LEN]], platform: Platform) {
     const GROUP: usize = 16;
     let whole = |item: &[u8]| item.len().saturating_sub(1) / crate::BLOCK_LEN;
-    let mut cvs = [*key; BY_BLOCKS_AT_ONCE];
     let mut at = 0;
     while at < order.len() {
         let k = whole(items[order[at]]);
         let end = at + order[at..].iter().take_while(|&&i| whole(items[i]) == k).count();
-        if k > 0 {
-            for group in order[at..end].chunks(GROUP) {
+        for group in order[at..end].chunks(GROUP) {
+            let mut lanes = [0u8; GROUP * OUT_LEN];
+            if k > 0 {
                 let inputs: arrayvec::ArrayVec<*const u8, GROUP> = group.iter().map(|&i| items[i].as_ptr()).collect();
-                let mut lanes = [0u8; GROUP * OUT_LEN];
                 crate::counted(crate::Counted::ByBlocksCall);
-                // Sound: each item holds more than k whole blocks; the
-                // platform takes the assembly (by_blocks_takes).
+                // Each input reaches its k whole prefix blocks. The output
+                // is a caller-owned group, not a full-window CV table.
                 #[cfg(target_arch = "x86_64")]
                 unsafe {
                     crate::pair::hash_many_blocks(platform, &inputs, k, key, 0, false, flags, CHUNK_START, 0, &mut lanes[..group.len() * OUT_LEN])
@@ -430,23 +429,21 @@ fn by_blocks_then_last(items: &[&[u8]], order: &[usize], key: &CVWords, flags: u
                         &mut lanes[..group.len() * OUT_LEN],
                     )
                 };
-                for (n, &i) in group.iter().enumerate() {
-                    cvs[i] = crate::platform::words_from_le_bytes_32(lanes[n * OUT_LEN..][..OUT_LEN].try_into().unwrap());
-                }
+            }
+            // Finish while this group's chaining values are already here.
+            // No need to initialize/store64 CVs and fetch them in a later pass.
+            for (n, &i) in group.iter().enumerate() {
+                let item = items[i];
+                let mut cv = if k == 0 { *key } else { crate::platform::words_from_le_bytes_32(lanes[n * OUT_LEN..][..OUT_LEN].try_into().unwrap()) };
+                let mut block = [0u8; crate::BLOCK_LEN];
+                let last = item.len() - k * crate::BLOCK_LEN;
+                block[..last].copy_from_slice(&item[k * crate::BLOCK_LEN..]);
+                let start = if k == 0 { CHUNK_START } else { 0 };
+                platform.compress_in_place(&mut cv, &block, last as u8, 0, flags | start | CHUNK_END | crate::ROOT);
+                out[i] = crate::hasher::le_bytes(&cv);
             }
         }
         at = end;
-    }
-    for &i in order {
-        let item = items[i];
-        let k = whole(item);
-        let mut cv = cvs[i];
-        let mut block = [0u8; crate::BLOCK_LEN];
-        let last = item.len() - k * crate::BLOCK_LEN;
-        block[..last].copy_from_slice(&item[k * crate::BLOCK_LEN..]);
-        let start = if k == 0 { CHUNK_START } else { 0 };
-        platform.compress_in_place(&mut cv, &block, last as u8, 0, flags | start | CHUNK_END | crate::ROOT);
-        out[i] = crate::hasher::le_bytes(&cv);
     }
 }
 
