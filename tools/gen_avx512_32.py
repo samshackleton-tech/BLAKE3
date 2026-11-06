@@ -24,10 +24,10 @@ The second input's register becomes the next scratch. Register identities
 rotate at generation time; there are no register-copy instructions in the
 transpose. Each butterfly still costs just two instructions. This leaves
 15 CVs live during transposition, with only ZMM15 saved and restored per
-block. The seven rounds and feed-forward keep all state in registers. One round
-is emitted and repeated seven times, with message offsets read from a
-constant table. This experiment tests the cost of extra offset loads
-against the smaller instruction footprint on calls after other work.
+block. The seven rounds and feed-forward keep all state in registers.
+All seven rounds use immediate message offsets. This throughput experiment
+removes the scalar schedule loads and round-loop control, while retaining
+the same input/output transposes, counters, flags and scratch frame.
 
 One flat block loop; no transposition batch size to select. The stack holds
 2 KiB of transposed messages, 256 bytes of counter vectors and one 64-byte
@@ -57,7 +57,6 @@ PERM = [2, 6, 3, 10, 7, 0, 4, 13, 1, 11, 12, 5, 9, 14, 15, 8]
 COLS = [(0,4,8,12), (1,5,9,13), (2,6,10,14), (3,7,11,15)]
 DIAGS = [(0,5,10,15), (1,6,11,12), (2,7,8,13), (3,4,9,14)]
 WORD = [0,2,1,3,4,6,5,7,8,10,9,11,12,14,13,15]
-INDEX = [('rax','eax'), ('rcx','ecx'), ('rdx','edx'), ('r8','r8d')]
 COUNTERS = 2048
 SPILL = COUNTERS + 256
 FRAME = SPILL + 64
@@ -121,10 +120,11 @@ def g(a, b, c, d, x, y):
             f'vpaddd {c}, {c}, {d}', f'vpxord {b}, {b}, {c}', f'vprord {b}, {b}, 7']
 
 
-def g_chain(k, positions, index):
+def g_chain(k, positions, x_word, y_word):
     registers = [f'zmm{state(k,w)}' for w in positions]
-    message = f'ZMMWORD PTR [rsi + {INDEX[index][0]} + {1024*k}]'
-    return g(*registers, message, message)
+    x = f'ZMMWORD PTR [rsi + {1024*k + 64*x_word}]'
+    y = f'ZMMWORD PTR [rsi + {1024*k + 64*y_word}]'
+    return g(*registers, x, y)
 
 
 def parent16():
@@ -328,21 +328,16 @@ for k in range(2):
         emit(f'vmovdqa32 zmm{state(k,12+w)}, ZMMWORD PTR [rsp + {COUNTERS+64*(2*k+w)}]')
     emit(f'vpbroadcastd zmm{state(k,14)}, edx')
     emit(f'vpbroadcastd zmm{state(k,15)}, eax')
-emit('lea rdi, [rip + .Lschedule32]')
-emit('mov r11d, 7')
-print('.p2align 5\n.Lround32:')
-for half,positions in enumerate((COLS,DIAGS)):
-    chains = [g_chain(k,pos,i) for k in range(2) for i,pos in enumerate(positions)]
-    for step,instructions in enumerate(zip(*chains)):
-        if step in (0,7):
-            for i,(_,reg32) in enumerate(INDEX):
-                offset = 4*(8*half+2*i+(step == 7))
-                emit(f'mov {reg32}, DWORD PTR [rdi + {offset}]')
-        for instruction in instructions:
-            emit(instruction)
-emit('add rdi, 64')
-emit('dec r11d')
-emit('jne .Lround32')
+print('.p2align 5')
+schedule = list(range(16))
+for _ in range(7):
+    for half,positions in enumerate((COLS,DIAGS)):
+        chains = [g_chain(k, pos, schedule[8*half+2*i], schedule[8*half+2*i+1])
+                  for k in range(2) for i,pos in enumerate(positions)]
+        for instructions in zip(*chains):
+            for instruction in instructions:
+                emit(instruction)
+    schedule = [schedule[p] for p in PERM]
 for k in range(2):
     for w in range(8):
         emit(f'vpxord zmm{state(k,w)}, zmm{state(k,w)}, zmm{state(k,8+w)}')
@@ -365,9 +360,4 @@ for name in ('blake3_servil_avx512_k32','blake3_servil_avx512_p32'):
 parent16()
 print('.section .rodata\n.p2align 6\n.Liv32:\n.long ' + ', '.join(hex(w) for w in IV))
 print('.p2align 6\n.Lindices32:\n.long ' + ', '.join(str(i) for i in range(32)))
-print('.p2align 6\n.Lschedule32:')
-schedule = list(range(16))
-for _ in range(7):
-    print('.long ' + ', '.join(str(64*w) for w in schedule))
-    schedule = [schedule[p] for p in PERM]
 print('.section .note.GNU-stack,"",@progbits')

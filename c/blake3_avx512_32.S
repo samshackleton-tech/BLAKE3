@@ -372,22 +372,15 @@ blake3_servil_avx512_p32:
     vmovdqa32 zmm29, ZMMWORD PTR [rsp + 2240]
     vpbroadcastd zmm30, edx
     vpbroadcastd zmm31, eax
-    lea rdi, [rip + .Lschedule32]
-    mov r11d, 7
 .p2align 5
-.Lround32:
-    mov eax, DWORD PTR [rdi + 0]
-    mov ecx, DWORD PTR [rdi + 8]
-    mov edx, DWORD PTR [rdi + 16]
-    mov r8d, DWORD PTR [rdi + 24]
-    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + rax + 0]
-    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + rcx + 0]
-    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + rdx + 0]
-    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + r8 + 0]
-    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + rax + 1024]
-    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + rcx + 1024]
-    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + rdx + 1024]
-    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + r8 + 1024]
+    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + 0]
+    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + 128]
+    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + 256]
+    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + 384]
+    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + 1024]
+    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + 1152]
+    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + 1280]
+    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + 1408]
     vpaddd zmm0, zmm0, zmm4
     vpaddd zmm1, zmm1, zmm5
     vpaddd zmm2, zmm2, zmm6
@@ -436,18 +429,14 @@ blake3_servil_avx512_p32:
     vprord zmm13, zmm13, 12
     vprord zmm14, zmm14, 12
     vprord zmm15, zmm15, 12
-    mov eax, DWORD PTR [rdi + 4]
-    mov ecx, DWORD PTR [rdi + 12]
-    mov edx, DWORD PTR [rdi + 20]
-    mov r8d, DWORD PTR [rdi + 28]
-    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + rax + 0]
-    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + rcx + 0]
-    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + rdx + 0]
-    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + r8 + 0]
-    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + rax + 1024]
-    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + rcx + 1024]
-    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + rdx + 1024]
-    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + r8 + 1024]
+    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + 64]
+    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + 192]
+    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + 320]
+    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + 448]
+    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + 1088]
+    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + 1216]
+    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + 1344]
+    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + 1472]
     vpaddd zmm0, zmm0, zmm4
     vpaddd zmm1, zmm1, zmm5
     vpaddd zmm2, zmm2, zmm6
@@ -496,18 +485,14 @@ blake3_servil_avx512_p32:
     vprord zmm13, zmm13, 7
     vprord zmm14, zmm14, 7
     vprord zmm15, zmm15, 7
-    mov eax, DWORD PTR [rdi + 32]
-    mov ecx, DWORD PTR [rdi + 40]
-    mov edx, DWORD PTR [rdi + 48]
-    mov r8d, DWORD PTR [rdi + 56]
-    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + rax + 0]
-    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + rcx + 0]
-    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + rdx + 0]
-    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + r8 + 0]
-    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + rax + 1024]
-    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + rcx + 1024]
-    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + rdx + 1024]
-    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + r8 + 1024]
+    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + 512]
+    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + 640]
+    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + 768]
+    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + 896]
+    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + 1536]
+    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + 1664]
+    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + 1792]
+    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + 1920]
     vpaddd zmm0, zmm0, zmm5
     vpaddd zmm1, zmm1, zmm6
     vpaddd zmm2, zmm2, zmm7
@@ -556,18 +541,14 @@ blake3_servil_avx512_p32:
     vprord zmm14, zmm14, 12
     vprord zmm15, zmm15, 12
     vprord zmm12, zmm12, 12
-    mov eax, DWORD PTR [rdi + 36]
-    mov ecx, DWORD PTR [rdi + 44]
-    mov edx, DWORD PTR [rdi + 52]
-    mov r8d, DWORD PTR [rdi + 60]
-    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + rax + 0]
-    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + rcx + 0]
-    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + rdx + 0]
-    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + r8 + 0]
-    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + rax + 1024]
-    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + rcx + 1024]
-    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + rdx + 1024]
-    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + r8 + 1024]
+    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + 576]
+    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + 704]
+    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + 832]
+    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + 960]
+    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + 1600]
+    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + 1728]
+    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + 1856]
+    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + 1984]
     vpaddd zmm0, zmm0, zmm5
     vpaddd zmm1, zmm1, zmm6
     vpaddd zmm2, zmm2, zmm7
@@ -616,9 +597,1350 @@ blake3_servil_avx512_p32:
     vprord zmm14, zmm14, 7
     vprord zmm15, zmm15, 7
     vprord zmm12, zmm12, 7
-    add rdi, 64
-    dec r11d
-    jne .Lround32
+    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + 128]
+    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + 192]
+    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + 448]
+    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + 256]
+    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + 1152]
+    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + 1216]
+    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + 1472]
+    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + 1280]
+    vpaddd zmm0, zmm0, zmm4
+    vpaddd zmm1, zmm1, zmm5
+    vpaddd zmm2, zmm2, zmm6
+    vpaddd zmm3, zmm3, zmm7
+    vpaddd zmm8, zmm8, zmm12
+    vpaddd zmm9, zmm9, zmm13
+    vpaddd zmm10, zmm10, zmm14
+    vpaddd zmm11, zmm11, zmm15
+    vpxord zmm20, zmm20, zmm0
+    vpxord zmm21, zmm21, zmm1
+    vpxord zmm22, zmm22, zmm2
+    vpxord zmm23, zmm23, zmm3
+    vpxord zmm28, zmm28, zmm8
+    vpxord zmm29, zmm29, zmm9
+    vpxord zmm30, zmm30, zmm10
+    vpxord zmm31, zmm31, zmm11
+    vprord zmm20, zmm20, 16
+    vprord zmm21, zmm21, 16
+    vprord zmm22, zmm22, 16
+    vprord zmm23, zmm23, 16
+    vprord zmm28, zmm28, 16
+    vprord zmm29, zmm29, 16
+    vprord zmm30, zmm30, 16
+    vprord zmm31, zmm31, 16
+    vpaddd zmm16, zmm16, zmm20
+    vpaddd zmm17, zmm17, zmm21
+    vpaddd zmm18, zmm18, zmm22
+    vpaddd zmm19, zmm19, zmm23
+    vpaddd zmm24, zmm24, zmm28
+    vpaddd zmm25, zmm25, zmm29
+    vpaddd zmm26, zmm26, zmm30
+    vpaddd zmm27, zmm27, zmm31
+    vpxord zmm4, zmm4, zmm16
+    vpxord zmm5, zmm5, zmm17
+    vpxord zmm6, zmm6, zmm18
+    vpxord zmm7, zmm7, zmm19
+    vpxord zmm12, zmm12, zmm24
+    vpxord zmm13, zmm13, zmm25
+    vpxord zmm14, zmm14, zmm26
+    vpxord zmm15, zmm15, zmm27
+    vprord zmm4, zmm4, 12
+    vprord zmm5, zmm5, 12
+    vprord zmm6, zmm6, 12
+    vprord zmm7, zmm7, 12
+    vprord zmm12, zmm12, 12
+    vprord zmm13, zmm13, 12
+    vprord zmm14, zmm14, 12
+    vprord zmm15, zmm15, 12
+    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + 384]
+    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + 640]
+    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + 0]
+    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + 832]
+    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + 1408]
+    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + 1664]
+    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + 1024]
+    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + 1856]
+    vpaddd zmm0, zmm0, zmm4
+    vpaddd zmm1, zmm1, zmm5
+    vpaddd zmm2, zmm2, zmm6
+    vpaddd zmm3, zmm3, zmm7
+    vpaddd zmm8, zmm8, zmm12
+    vpaddd zmm9, zmm9, zmm13
+    vpaddd zmm10, zmm10, zmm14
+    vpaddd zmm11, zmm11, zmm15
+    vpxord zmm20, zmm20, zmm0
+    vpxord zmm21, zmm21, zmm1
+    vpxord zmm22, zmm22, zmm2
+    vpxord zmm23, zmm23, zmm3
+    vpxord zmm28, zmm28, zmm8
+    vpxord zmm29, zmm29, zmm9
+    vpxord zmm30, zmm30, zmm10
+    vpxord zmm31, zmm31, zmm11
+    vprord zmm20, zmm20, 8
+    vprord zmm21, zmm21, 8
+    vprord zmm22, zmm22, 8
+    vprord zmm23, zmm23, 8
+    vprord zmm28, zmm28, 8
+    vprord zmm29, zmm29, 8
+    vprord zmm30, zmm30, 8
+    vprord zmm31, zmm31, 8
+    vpaddd zmm16, zmm16, zmm20
+    vpaddd zmm17, zmm17, zmm21
+    vpaddd zmm18, zmm18, zmm22
+    vpaddd zmm19, zmm19, zmm23
+    vpaddd zmm24, zmm24, zmm28
+    vpaddd zmm25, zmm25, zmm29
+    vpaddd zmm26, zmm26, zmm30
+    vpaddd zmm27, zmm27, zmm31
+    vpxord zmm4, zmm4, zmm16
+    vpxord zmm5, zmm5, zmm17
+    vpxord zmm6, zmm6, zmm18
+    vpxord zmm7, zmm7, zmm19
+    vpxord zmm12, zmm12, zmm24
+    vpxord zmm13, zmm13, zmm25
+    vpxord zmm14, zmm14, zmm26
+    vpxord zmm15, zmm15, zmm27
+    vprord zmm4, zmm4, 7
+    vprord zmm5, zmm5, 7
+    vprord zmm6, zmm6, 7
+    vprord zmm7, zmm7, 7
+    vprord zmm12, zmm12, 7
+    vprord zmm13, zmm13, 7
+    vprord zmm14, zmm14, 7
+    vprord zmm15, zmm15, 7
+    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + 64]
+    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + 768]
+    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + 576]
+    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + 960]
+    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + 1088]
+    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + 1792]
+    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + 1600]
+    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + 1984]
+    vpaddd zmm0, zmm0, zmm5
+    vpaddd zmm1, zmm1, zmm6
+    vpaddd zmm2, zmm2, zmm7
+    vpaddd zmm3, zmm3, zmm4
+    vpaddd zmm8, zmm8, zmm13
+    vpaddd zmm9, zmm9, zmm14
+    vpaddd zmm10, zmm10, zmm15
+    vpaddd zmm11, zmm11, zmm12
+    vpxord zmm23, zmm23, zmm0
+    vpxord zmm20, zmm20, zmm1
+    vpxord zmm21, zmm21, zmm2
+    vpxord zmm22, zmm22, zmm3
+    vpxord zmm31, zmm31, zmm8
+    vpxord zmm28, zmm28, zmm9
+    vpxord zmm29, zmm29, zmm10
+    vpxord zmm30, zmm30, zmm11
+    vprord zmm23, zmm23, 16
+    vprord zmm20, zmm20, 16
+    vprord zmm21, zmm21, 16
+    vprord zmm22, zmm22, 16
+    vprord zmm31, zmm31, 16
+    vprord zmm28, zmm28, 16
+    vprord zmm29, zmm29, 16
+    vprord zmm30, zmm30, 16
+    vpaddd zmm18, zmm18, zmm23
+    vpaddd zmm19, zmm19, zmm20
+    vpaddd zmm16, zmm16, zmm21
+    vpaddd zmm17, zmm17, zmm22
+    vpaddd zmm26, zmm26, zmm31
+    vpaddd zmm27, zmm27, zmm28
+    vpaddd zmm24, zmm24, zmm29
+    vpaddd zmm25, zmm25, zmm30
+    vpxord zmm5, zmm5, zmm18
+    vpxord zmm6, zmm6, zmm19
+    vpxord zmm7, zmm7, zmm16
+    vpxord zmm4, zmm4, zmm17
+    vpxord zmm13, zmm13, zmm26
+    vpxord zmm14, zmm14, zmm27
+    vpxord zmm15, zmm15, zmm24
+    vpxord zmm12, zmm12, zmm25
+    vprord zmm5, zmm5, 12
+    vprord zmm6, zmm6, 12
+    vprord zmm7, zmm7, 12
+    vprord zmm4, zmm4, 12
+    vprord zmm13, zmm13, 12
+    vprord zmm14, zmm14, 12
+    vprord zmm15, zmm15, 12
+    vprord zmm12, zmm12, 12
+    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + 704]
+    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + 320]
+    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + 896]
+    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + 512]
+    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + 1728]
+    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + 1344]
+    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + 1920]
+    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + 1536]
+    vpaddd zmm0, zmm0, zmm5
+    vpaddd zmm1, zmm1, zmm6
+    vpaddd zmm2, zmm2, zmm7
+    vpaddd zmm3, zmm3, zmm4
+    vpaddd zmm8, zmm8, zmm13
+    vpaddd zmm9, zmm9, zmm14
+    vpaddd zmm10, zmm10, zmm15
+    vpaddd zmm11, zmm11, zmm12
+    vpxord zmm23, zmm23, zmm0
+    vpxord zmm20, zmm20, zmm1
+    vpxord zmm21, zmm21, zmm2
+    vpxord zmm22, zmm22, zmm3
+    vpxord zmm31, zmm31, zmm8
+    vpxord zmm28, zmm28, zmm9
+    vpxord zmm29, zmm29, zmm10
+    vpxord zmm30, zmm30, zmm11
+    vprord zmm23, zmm23, 8
+    vprord zmm20, zmm20, 8
+    vprord zmm21, zmm21, 8
+    vprord zmm22, zmm22, 8
+    vprord zmm31, zmm31, 8
+    vprord zmm28, zmm28, 8
+    vprord zmm29, zmm29, 8
+    vprord zmm30, zmm30, 8
+    vpaddd zmm18, zmm18, zmm23
+    vpaddd zmm19, zmm19, zmm20
+    vpaddd zmm16, zmm16, zmm21
+    vpaddd zmm17, zmm17, zmm22
+    vpaddd zmm26, zmm26, zmm31
+    vpaddd zmm27, zmm27, zmm28
+    vpaddd zmm24, zmm24, zmm29
+    vpaddd zmm25, zmm25, zmm30
+    vpxord zmm5, zmm5, zmm18
+    vpxord zmm6, zmm6, zmm19
+    vpxord zmm7, zmm7, zmm16
+    vpxord zmm4, zmm4, zmm17
+    vpxord zmm13, zmm13, zmm26
+    vpxord zmm14, zmm14, zmm27
+    vpxord zmm15, zmm15, zmm24
+    vpxord zmm12, zmm12, zmm25
+    vprord zmm5, zmm5, 7
+    vprord zmm6, zmm6, 7
+    vprord zmm7, zmm7, 7
+    vprord zmm4, zmm4, 7
+    vprord zmm13, zmm13, 7
+    vprord zmm14, zmm14, 7
+    vprord zmm15, zmm15, 7
+    vprord zmm12, zmm12, 7
+    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + 192]
+    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + 640]
+    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + 832]
+    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + 448]
+    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + 1216]
+    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + 1664]
+    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + 1856]
+    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + 1472]
+    vpaddd zmm0, zmm0, zmm4
+    vpaddd zmm1, zmm1, zmm5
+    vpaddd zmm2, zmm2, zmm6
+    vpaddd zmm3, zmm3, zmm7
+    vpaddd zmm8, zmm8, zmm12
+    vpaddd zmm9, zmm9, zmm13
+    vpaddd zmm10, zmm10, zmm14
+    vpaddd zmm11, zmm11, zmm15
+    vpxord zmm20, zmm20, zmm0
+    vpxord zmm21, zmm21, zmm1
+    vpxord zmm22, zmm22, zmm2
+    vpxord zmm23, zmm23, zmm3
+    vpxord zmm28, zmm28, zmm8
+    vpxord zmm29, zmm29, zmm9
+    vpxord zmm30, zmm30, zmm10
+    vpxord zmm31, zmm31, zmm11
+    vprord zmm20, zmm20, 16
+    vprord zmm21, zmm21, 16
+    vprord zmm22, zmm22, 16
+    vprord zmm23, zmm23, 16
+    vprord zmm28, zmm28, 16
+    vprord zmm29, zmm29, 16
+    vprord zmm30, zmm30, 16
+    vprord zmm31, zmm31, 16
+    vpaddd zmm16, zmm16, zmm20
+    vpaddd zmm17, zmm17, zmm21
+    vpaddd zmm18, zmm18, zmm22
+    vpaddd zmm19, zmm19, zmm23
+    vpaddd zmm24, zmm24, zmm28
+    vpaddd zmm25, zmm25, zmm29
+    vpaddd zmm26, zmm26, zmm30
+    vpaddd zmm27, zmm27, zmm31
+    vpxord zmm4, zmm4, zmm16
+    vpxord zmm5, zmm5, zmm17
+    vpxord zmm6, zmm6, zmm18
+    vpxord zmm7, zmm7, zmm19
+    vpxord zmm12, zmm12, zmm24
+    vpxord zmm13, zmm13, zmm25
+    vpxord zmm14, zmm14, zmm26
+    vpxord zmm15, zmm15, zmm27
+    vprord zmm4, zmm4, 12
+    vprord zmm5, zmm5, 12
+    vprord zmm6, zmm6, 12
+    vprord zmm7, zmm7, 12
+    vprord zmm12, zmm12, 12
+    vprord zmm13, zmm13, 12
+    vprord zmm14, zmm14, 12
+    vprord zmm15, zmm15, 12
+    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + 256]
+    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + 768]
+    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + 128]
+    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + 896]
+    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + 1280]
+    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + 1792]
+    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + 1152]
+    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + 1920]
+    vpaddd zmm0, zmm0, zmm4
+    vpaddd zmm1, zmm1, zmm5
+    vpaddd zmm2, zmm2, zmm6
+    vpaddd zmm3, zmm3, zmm7
+    vpaddd zmm8, zmm8, zmm12
+    vpaddd zmm9, zmm9, zmm13
+    vpaddd zmm10, zmm10, zmm14
+    vpaddd zmm11, zmm11, zmm15
+    vpxord zmm20, zmm20, zmm0
+    vpxord zmm21, zmm21, zmm1
+    vpxord zmm22, zmm22, zmm2
+    vpxord zmm23, zmm23, zmm3
+    vpxord zmm28, zmm28, zmm8
+    vpxord zmm29, zmm29, zmm9
+    vpxord zmm30, zmm30, zmm10
+    vpxord zmm31, zmm31, zmm11
+    vprord zmm20, zmm20, 8
+    vprord zmm21, zmm21, 8
+    vprord zmm22, zmm22, 8
+    vprord zmm23, zmm23, 8
+    vprord zmm28, zmm28, 8
+    vprord zmm29, zmm29, 8
+    vprord zmm30, zmm30, 8
+    vprord zmm31, zmm31, 8
+    vpaddd zmm16, zmm16, zmm20
+    vpaddd zmm17, zmm17, zmm21
+    vpaddd zmm18, zmm18, zmm22
+    vpaddd zmm19, zmm19, zmm23
+    vpaddd zmm24, zmm24, zmm28
+    vpaddd zmm25, zmm25, zmm29
+    vpaddd zmm26, zmm26, zmm30
+    vpaddd zmm27, zmm27, zmm31
+    vpxord zmm4, zmm4, zmm16
+    vpxord zmm5, zmm5, zmm17
+    vpxord zmm6, zmm6, zmm18
+    vpxord zmm7, zmm7, zmm19
+    vpxord zmm12, zmm12, zmm24
+    vpxord zmm13, zmm13, zmm25
+    vpxord zmm14, zmm14, zmm26
+    vpxord zmm15, zmm15, zmm27
+    vprord zmm4, zmm4, 7
+    vprord zmm5, zmm5, 7
+    vprord zmm6, zmm6, 7
+    vprord zmm7, zmm7, 7
+    vprord zmm12, zmm12, 7
+    vprord zmm13, zmm13, 7
+    vprord zmm14, zmm14, 7
+    vprord zmm15, zmm15, 7
+    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + 384]
+    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + 576]
+    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + 704]
+    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + 512]
+    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + 1408]
+    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + 1600]
+    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + 1728]
+    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + 1536]
+    vpaddd zmm0, zmm0, zmm5
+    vpaddd zmm1, zmm1, zmm6
+    vpaddd zmm2, zmm2, zmm7
+    vpaddd zmm3, zmm3, zmm4
+    vpaddd zmm8, zmm8, zmm13
+    vpaddd zmm9, zmm9, zmm14
+    vpaddd zmm10, zmm10, zmm15
+    vpaddd zmm11, zmm11, zmm12
+    vpxord zmm23, zmm23, zmm0
+    vpxord zmm20, zmm20, zmm1
+    vpxord zmm21, zmm21, zmm2
+    vpxord zmm22, zmm22, zmm3
+    vpxord zmm31, zmm31, zmm8
+    vpxord zmm28, zmm28, zmm9
+    vpxord zmm29, zmm29, zmm10
+    vpxord zmm30, zmm30, zmm11
+    vprord zmm23, zmm23, 16
+    vprord zmm20, zmm20, 16
+    vprord zmm21, zmm21, 16
+    vprord zmm22, zmm22, 16
+    vprord zmm31, zmm31, 16
+    vprord zmm28, zmm28, 16
+    vprord zmm29, zmm29, 16
+    vprord zmm30, zmm30, 16
+    vpaddd zmm18, zmm18, zmm23
+    vpaddd zmm19, zmm19, zmm20
+    vpaddd zmm16, zmm16, zmm21
+    vpaddd zmm17, zmm17, zmm22
+    vpaddd zmm26, zmm26, zmm31
+    vpaddd zmm27, zmm27, zmm28
+    vpaddd zmm24, zmm24, zmm29
+    vpaddd zmm25, zmm25, zmm30
+    vpxord zmm5, zmm5, zmm18
+    vpxord zmm6, zmm6, zmm19
+    vpxord zmm7, zmm7, zmm16
+    vpxord zmm4, zmm4, zmm17
+    vpxord zmm13, zmm13, zmm26
+    vpxord zmm14, zmm14, zmm27
+    vpxord zmm15, zmm15, zmm24
+    vpxord zmm12, zmm12, zmm25
+    vprord zmm5, zmm5, 12
+    vprord zmm6, zmm6, 12
+    vprord zmm7, zmm7, 12
+    vprord zmm4, zmm4, 12
+    vprord zmm13, zmm13, 12
+    vprord zmm14, zmm14, 12
+    vprord zmm15, zmm15, 12
+    vprord zmm12, zmm12, 12
+    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + 320]
+    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + 0]
+    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + 960]
+    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + 64]
+    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + 1344]
+    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + 1024]
+    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + 1984]
+    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + 1088]
+    vpaddd zmm0, zmm0, zmm5
+    vpaddd zmm1, zmm1, zmm6
+    vpaddd zmm2, zmm2, zmm7
+    vpaddd zmm3, zmm3, zmm4
+    vpaddd zmm8, zmm8, zmm13
+    vpaddd zmm9, zmm9, zmm14
+    vpaddd zmm10, zmm10, zmm15
+    vpaddd zmm11, zmm11, zmm12
+    vpxord zmm23, zmm23, zmm0
+    vpxord zmm20, zmm20, zmm1
+    vpxord zmm21, zmm21, zmm2
+    vpxord zmm22, zmm22, zmm3
+    vpxord zmm31, zmm31, zmm8
+    vpxord zmm28, zmm28, zmm9
+    vpxord zmm29, zmm29, zmm10
+    vpxord zmm30, zmm30, zmm11
+    vprord zmm23, zmm23, 8
+    vprord zmm20, zmm20, 8
+    vprord zmm21, zmm21, 8
+    vprord zmm22, zmm22, 8
+    vprord zmm31, zmm31, 8
+    vprord zmm28, zmm28, 8
+    vprord zmm29, zmm29, 8
+    vprord zmm30, zmm30, 8
+    vpaddd zmm18, zmm18, zmm23
+    vpaddd zmm19, zmm19, zmm20
+    vpaddd zmm16, zmm16, zmm21
+    vpaddd zmm17, zmm17, zmm22
+    vpaddd zmm26, zmm26, zmm31
+    vpaddd zmm27, zmm27, zmm28
+    vpaddd zmm24, zmm24, zmm29
+    vpaddd zmm25, zmm25, zmm30
+    vpxord zmm5, zmm5, zmm18
+    vpxord zmm6, zmm6, zmm19
+    vpxord zmm7, zmm7, zmm16
+    vpxord zmm4, zmm4, zmm17
+    vpxord zmm13, zmm13, zmm26
+    vpxord zmm14, zmm14, zmm27
+    vpxord zmm15, zmm15, zmm24
+    vpxord zmm12, zmm12, zmm25
+    vprord zmm5, zmm5, 7
+    vprord zmm6, zmm6, 7
+    vprord zmm7, zmm7, 7
+    vprord zmm4, zmm4, 7
+    vprord zmm13, zmm13, 7
+    vprord zmm14, zmm14, 7
+    vprord zmm15, zmm15, 7
+    vprord zmm12, zmm12, 7
+    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + 640]
+    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + 768]
+    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + 896]
+    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + 832]
+    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + 1664]
+    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + 1792]
+    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + 1920]
+    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + 1856]
+    vpaddd zmm0, zmm0, zmm4
+    vpaddd zmm1, zmm1, zmm5
+    vpaddd zmm2, zmm2, zmm6
+    vpaddd zmm3, zmm3, zmm7
+    vpaddd zmm8, zmm8, zmm12
+    vpaddd zmm9, zmm9, zmm13
+    vpaddd zmm10, zmm10, zmm14
+    vpaddd zmm11, zmm11, zmm15
+    vpxord zmm20, zmm20, zmm0
+    vpxord zmm21, zmm21, zmm1
+    vpxord zmm22, zmm22, zmm2
+    vpxord zmm23, zmm23, zmm3
+    vpxord zmm28, zmm28, zmm8
+    vpxord zmm29, zmm29, zmm9
+    vpxord zmm30, zmm30, zmm10
+    vpxord zmm31, zmm31, zmm11
+    vprord zmm20, zmm20, 16
+    vprord zmm21, zmm21, 16
+    vprord zmm22, zmm22, 16
+    vprord zmm23, zmm23, 16
+    vprord zmm28, zmm28, 16
+    vprord zmm29, zmm29, 16
+    vprord zmm30, zmm30, 16
+    vprord zmm31, zmm31, 16
+    vpaddd zmm16, zmm16, zmm20
+    vpaddd zmm17, zmm17, zmm21
+    vpaddd zmm18, zmm18, zmm22
+    vpaddd zmm19, zmm19, zmm23
+    vpaddd zmm24, zmm24, zmm28
+    vpaddd zmm25, zmm25, zmm29
+    vpaddd zmm26, zmm26, zmm30
+    vpaddd zmm27, zmm27, zmm31
+    vpxord zmm4, zmm4, zmm16
+    vpxord zmm5, zmm5, zmm17
+    vpxord zmm6, zmm6, zmm18
+    vpxord zmm7, zmm7, zmm19
+    vpxord zmm12, zmm12, zmm24
+    vpxord zmm13, zmm13, zmm25
+    vpxord zmm14, zmm14, zmm26
+    vpxord zmm15, zmm15, zmm27
+    vprord zmm4, zmm4, 12
+    vprord zmm5, zmm5, 12
+    vprord zmm6, zmm6, 12
+    vprord zmm7, zmm7, 12
+    vprord zmm12, zmm12, 12
+    vprord zmm13, zmm13, 12
+    vprord zmm14, zmm14, 12
+    vprord zmm15, zmm15, 12
+    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + 448]
+    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + 576]
+    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + 192]
+    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + 960]
+    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + 1472]
+    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + 1600]
+    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + 1216]
+    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + 1984]
+    vpaddd zmm0, zmm0, zmm4
+    vpaddd zmm1, zmm1, zmm5
+    vpaddd zmm2, zmm2, zmm6
+    vpaddd zmm3, zmm3, zmm7
+    vpaddd zmm8, zmm8, zmm12
+    vpaddd zmm9, zmm9, zmm13
+    vpaddd zmm10, zmm10, zmm14
+    vpaddd zmm11, zmm11, zmm15
+    vpxord zmm20, zmm20, zmm0
+    vpxord zmm21, zmm21, zmm1
+    vpxord zmm22, zmm22, zmm2
+    vpxord zmm23, zmm23, zmm3
+    vpxord zmm28, zmm28, zmm8
+    vpxord zmm29, zmm29, zmm9
+    vpxord zmm30, zmm30, zmm10
+    vpxord zmm31, zmm31, zmm11
+    vprord zmm20, zmm20, 8
+    vprord zmm21, zmm21, 8
+    vprord zmm22, zmm22, 8
+    vprord zmm23, zmm23, 8
+    vprord zmm28, zmm28, 8
+    vprord zmm29, zmm29, 8
+    vprord zmm30, zmm30, 8
+    vprord zmm31, zmm31, 8
+    vpaddd zmm16, zmm16, zmm20
+    vpaddd zmm17, zmm17, zmm21
+    vpaddd zmm18, zmm18, zmm22
+    vpaddd zmm19, zmm19, zmm23
+    vpaddd zmm24, zmm24, zmm28
+    vpaddd zmm25, zmm25, zmm29
+    vpaddd zmm26, zmm26, zmm30
+    vpaddd zmm27, zmm27, zmm31
+    vpxord zmm4, zmm4, zmm16
+    vpxord zmm5, zmm5, zmm17
+    vpxord zmm6, zmm6, zmm18
+    vpxord zmm7, zmm7, zmm19
+    vpxord zmm12, zmm12, zmm24
+    vpxord zmm13, zmm13, zmm25
+    vpxord zmm14, zmm14, zmm26
+    vpxord zmm15, zmm15, zmm27
+    vprord zmm4, zmm4, 7
+    vprord zmm5, zmm5, 7
+    vprord zmm6, zmm6, 7
+    vprord zmm7, zmm7, 7
+    vprord zmm12, zmm12, 7
+    vprord zmm13, zmm13, 7
+    vprord zmm14, zmm14, 7
+    vprord zmm15, zmm15, 7
+    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + 256]
+    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + 704]
+    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + 320]
+    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + 64]
+    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + 1280]
+    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + 1728]
+    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + 1344]
+    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + 1088]
+    vpaddd zmm0, zmm0, zmm5
+    vpaddd zmm1, zmm1, zmm6
+    vpaddd zmm2, zmm2, zmm7
+    vpaddd zmm3, zmm3, zmm4
+    vpaddd zmm8, zmm8, zmm13
+    vpaddd zmm9, zmm9, zmm14
+    vpaddd zmm10, zmm10, zmm15
+    vpaddd zmm11, zmm11, zmm12
+    vpxord zmm23, zmm23, zmm0
+    vpxord zmm20, zmm20, zmm1
+    vpxord zmm21, zmm21, zmm2
+    vpxord zmm22, zmm22, zmm3
+    vpxord zmm31, zmm31, zmm8
+    vpxord zmm28, zmm28, zmm9
+    vpxord zmm29, zmm29, zmm10
+    vpxord zmm30, zmm30, zmm11
+    vprord zmm23, zmm23, 16
+    vprord zmm20, zmm20, 16
+    vprord zmm21, zmm21, 16
+    vprord zmm22, zmm22, 16
+    vprord zmm31, zmm31, 16
+    vprord zmm28, zmm28, 16
+    vprord zmm29, zmm29, 16
+    vprord zmm30, zmm30, 16
+    vpaddd zmm18, zmm18, zmm23
+    vpaddd zmm19, zmm19, zmm20
+    vpaddd zmm16, zmm16, zmm21
+    vpaddd zmm17, zmm17, zmm22
+    vpaddd zmm26, zmm26, zmm31
+    vpaddd zmm27, zmm27, zmm28
+    vpaddd zmm24, zmm24, zmm29
+    vpaddd zmm25, zmm25, zmm30
+    vpxord zmm5, zmm5, zmm18
+    vpxord zmm6, zmm6, zmm19
+    vpxord zmm7, zmm7, zmm16
+    vpxord zmm4, zmm4, zmm17
+    vpxord zmm13, zmm13, zmm26
+    vpxord zmm14, zmm14, zmm27
+    vpxord zmm15, zmm15, zmm24
+    vpxord zmm12, zmm12, zmm25
+    vprord zmm5, zmm5, 12
+    vprord zmm6, zmm6, 12
+    vprord zmm7, zmm7, 12
+    vprord zmm4, zmm4, 12
+    vprord zmm13, zmm13, 12
+    vprord zmm14, zmm14, 12
+    vprord zmm15, zmm15, 12
+    vprord zmm12, zmm12, 12
+    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + 0]
+    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + 128]
+    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + 512]
+    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + 384]
+    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + 1024]
+    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + 1152]
+    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + 1536]
+    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + 1408]
+    vpaddd zmm0, zmm0, zmm5
+    vpaddd zmm1, zmm1, zmm6
+    vpaddd zmm2, zmm2, zmm7
+    vpaddd zmm3, zmm3, zmm4
+    vpaddd zmm8, zmm8, zmm13
+    vpaddd zmm9, zmm9, zmm14
+    vpaddd zmm10, zmm10, zmm15
+    vpaddd zmm11, zmm11, zmm12
+    vpxord zmm23, zmm23, zmm0
+    vpxord zmm20, zmm20, zmm1
+    vpxord zmm21, zmm21, zmm2
+    vpxord zmm22, zmm22, zmm3
+    vpxord zmm31, zmm31, zmm8
+    vpxord zmm28, zmm28, zmm9
+    vpxord zmm29, zmm29, zmm10
+    vpxord zmm30, zmm30, zmm11
+    vprord zmm23, zmm23, 8
+    vprord zmm20, zmm20, 8
+    vprord zmm21, zmm21, 8
+    vprord zmm22, zmm22, 8
+    vprord zmm31, zmm31, 8
+    vprord zmm28, zmm28, 8
+    vprord zmm29, zmm29, 8
+    vprord zmm30, zmm30, 8
+    vpaddd zmm18, zmm18, zmm23
+    vpaddd zmm19, zmm19, zmm20
+    vpaddd zmm16, zmm16, zmm21
+    vpaddd zmm17, zmm17, zmm22
+    vpaddd zmm26, zmm26, zmm31
+    vpaddd zmm27, zmm27, zmm28
+    vpaddd zmm24, zmm24, zmm29
+    vpaddd zmm25, zmm25, zmm30
+    vpxord zmm5, zmm5, zmm18
+    vpxord zmm6, zmm6, zmm19
+    vpxord zmm7, zmm7, zmm16
+    vpxord zmm4, zmm4, zmm17
+    vpxord zmm13, zmm13, zmm26
+    vpxord zmm14, zmm14, zmm27
+    vpxord zmm15, zmm15, zmm24
+    vpxord zmm12, zmm12, zmm25
+    vprord zmm5, zmm5, 7
+    vprord zmm6, zmm6, 7
+    vprord zmm7, zmm7, 7
+    vprord zmm4, zmm4, 7
+    vprord zmm13, zmm13, 7
+    vprord zmm14, zmm14, 7
+    vprord zmm15, zmm15, 7
+    vprord zmm12, zmm12, 7
+    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + 768]
+    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + 576]
+    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + 960]
+    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + 896]
+    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + 1792]
+    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + 1600]
+    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + 1984]
+    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + 1920]
+    vpaddd zmm0, zmm0, zmm4
+    vpaddd zmm1, zmm1, zmm5
+    vpaddd zmm2, zmm2, zmm6
+    vpaddd zmm3, zmm3, zmm7
+    vpaddd zmm8, zmm8, zmm12
+    vpaddd zmm9, zmm9, zmm13
+    vpaddd zmm10, zmm10, zmm14
+    vpaddd zmm11, zmm11, zmm15
+    vpxord zmm20, zmm20, zmm0
+    vpxord zmm21, zmm21, zmm1
+    vpxord zmm22, zmm22, zmm2
+    vpxord zmm23, zmm23, zmm3
+    vpxord zmm28, zmm28, zmm8
+    vpxord zmm29, zmm29, zmm9
+    vpxord zmm30, zmm30, zmm10
+    vpxord zmm31, zmm31, zmm11
+    vprord zmm20, zmm20, 16
+    vprord zmm21, zmm21, 16
+    vprord zmm22, zmm22, 16
+    vprord zmm23, zmm23, 16
+    vprord zmm28, zmm28, 16
+    vprord zmm29, zmm29, 16
+    vprord zmm30, zmm30, 16
+    vprord zmm31, zmm31, 16
+    vpaddd zmm16, zmm16, zmm20
+    vpaddd zmm17, zmm17, zmm21
+    vpaddd zmm18, zmm18, zmm22
+    vpaddd zmm19, zmm19, zmm23
+    vpaddd zmm24, zmm24, zmm28
+    vpaddd zmm25, zmm25, zmm29
+    vpaddd zmm26, zmm26, zmm30
+    vpaddd zmm27, zmm27, zmm31
+    vpxord zmm4, zmm4, zmm16
+    vpxord zmm5, zmm5, zmm17
+    vpxord zmm6, zmm6, zmm18
+    vpxord zmm7, zmm7, zmm19
+    vpxord zmm12, zmm12, zmm24
+    vpxord zmm13, zmm13, zmm25
+    vpxord zmm14, zmm14, zmm26
+    vpxord zmm15, zmm15, zmm27
+    vprord zmm4, zmm4, 12
+    vprord zmm5, zmm5, 12
+    vprord zmm6, zmm6, 12
+    vprord zmm7, zmm7, 12
+    vprord zmm12, zmm12, 12
+    vprord zmm13, zmm13, 12
+    vprord zmm14, zmm14, 12
+    vprord zmm15, zmm15, 12
+    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + 832]
+    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + 704]
+    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + 640]
+    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + 512]
+    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + 1856]
+    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + 1728]
+    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + 1664]
+    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + 1536]
+    vpaddd zmm0, zmm0, zmm4
+    vpaddd zmm1, zmm1, zmm5
+    vpaddd zmm2, zmm2, zmm6
+    vpaddd zmm3, zmm3, zmm7
+    vpaddd zmm8, zmm8, zmm12
+    vpaddd zmm9, zmm9, zmm13
+    vpaddd zmm10, zmm10, zmm14
+    vpaddd zmm11, zmm11, zmm15
+    vpxord zmm20, zmm20, zmm0
+    vpxord zmm21, zmm21, zmm1
+    vpxord zmm22, zmm22, zmm2
+    vpxord zmm23, zmm23, zmm3
+    vpxord zmm28, zmm28, zmm8
+    vpxord zmm29, zmm29, zmm9
+    vpxord zmm30, zmm30, zmm10
+    vpxord zmm31, zmm31, zmm11
+    vprord zmm20, zmm20, 8
+    vprord zmm21, zmm21, 8
+    vprord zmm22, zmm22, 8
+    vprord zmm23, zmm23, 8
+    vprord zmm28, zmm28, 8
+    vprord zmm29, zmm29, 8
+    vprord zmm30, zmm30, 8
+    vprord zmm31, zmm31, 8
+    vpaddd zmm16, zmm16, zmm20
+    vpaddd zmm17, zmm17, zmm21
+    vpaddd zmm18, zmm18, zmm22
+    vpaddd zmm19, zmm19, zmm23
+    vpaddd zmm24, zmm24, zmm28
+    vpaddd zmm25, zmm25, zmm29
+    vpaddd zmm26, zmm26, zmm30
+    vpaddd zmm27, zmm27, zmm31
+    vpxord zmm4, zmm4, zmm16
+    vpxord zmm5, zmm5, zmm17
+    vpxord zmm6, zmm6, zmm18
+    vpxord zmm7, zmm7, zmm19
+    vpxord zmm12, zmm12, zmm24
+    vpxord zmm13, zmm13, zmm25
+    vpxord zmm14, zmm14, zmm26
+    vpxord zmm15, zmm15, zmm27
+    vprord zmm4, zmm4, 7
+    vprord zmm5, zmm5, 7
+    vprord zmm6, zmm6, 7
+    vprord zmm7, zmm7, 7
+    vprord zmm12, zmm12, 7
+    vprord zmm13, zmm13, 7
+    vprord zmm14, zmm14, 7
+    vprord zmm15, zmm15, 7
+    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + 448]
+    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + 320]
+    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + 0]
+    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + 384]
+    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + 1472]
+    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + 1344]
+    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + 1024]
+    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + 1408]
+    vpaddd zmm0, zmm0, zmm5
+    vpaddd zmm1, zmm1, zmm6
+    vpaddd zmm2, zmm2, zmm7
+    vpaddd zmm3, zmm3, zmm4
+    vpaddd zmm8, zmm8, zmm13
+    vpaddd zmm9, zmm9, zmm14
+    vpaddd zmm10, zmm10, zmm15
+    vpaddd zmm11, zmm11, zmm12
+    vpxord zmm23, zmm23, zmm0
+    vpxord zmm20, zmm20, zmm1
+    vpxord zmm21, zmm21, zmm2
+    vpxord zmm22, zmm22, zmm3
+    vpxord zmm31, zmm31, zmm8
+    vpxord zmm28, zmm28, zmm9
+    vpxord zmm29, zmm29, zmm10
+    vpxord zmm30, zmm30, zmm11
+    vprord zmm23, zmm23, 16
+    vprord zmm20, zmm20, 16
+    vprord zmm21, zmm21, 16
+    vprord zmm22, zmm22, 16
+    vprord zmm31, zmm31, 16
+    vprord zmm28, zmm28, 16
+    vprord zmm29, zmm29, 16
+    vprord zmm30, zmm30, 16
+    vpaddd zmm18, zmm18, zmm23
+    vpaddd zmm19, zmm19, zmm20
+    vpaddd zmm16, zmm16, zmm21
+    vpaddd zmm17, zmm17, zmm22
+    vpaddd zmm26, zmm26, zmm31
+    vpaddd zmm27, zmm27, zmm28
+    vpaddd zmm24, zmm24, zmm29
+    vpaddd zmm25, zmm25, zmm30
+    vpxord zmm5, zmm5, zmm18
+    vpxord zmm6, zmm6, zmm19
+    vpxord zmm7, zmm7, zmm16
+    vpxord zmm4, zmm4, zmm17
+    vpxord zmm13, zmm13, zmm26
+    vpxord zmm14, zmm14, zmm27
+    vpxord zmm15, zmm15, zmm24
+    vpxord zmm12, zmm12, zmm25
+    vprord zmm5, zmm5, 12
+    vprord zmm6, zmm6, 12
+    vprord zmm7, zmm7, 12
+    vprord zmm4, zmm4, 12
+    vprord zmm13, zmm13, 12
+    vprord zmm14, zmm14, 12
+    vprord zmm15, zmm15, 12
+    vprord zmm12, zmm12, 12
+    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + 128]
+    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + 192]
+    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + 64]
+    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + 256]
+    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + 1152]
+    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + 1216]
+    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + 1088]
+    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + 1280]
+    vpaddd zmm0, zmm0, zmm5
+    vpaddd zmm1, zmm1, zmm6
+    vpaddd zmm2, zmm2, zmm7
+    vpaddd zmm3, zmm3, zmm4
+    vpaddd zmm8, zmm8, zmm13
+    vpaddd zmm9, zmm9, zmm14
+    vpaddd zmm10, zmm10, zmm15
+    vpaddd zmm11, zmm11, zmm12
+    vpxord zmm23, zmm23, zmm0
+    vpxord zmm20, zmm20, zmm1
+    vpxord zmm21, zmm21, zmm2
+    vpxord zmm22, zmm22, zmm3
+    vpxord zmm31, zmm31, zmm8
+    vpxord zmm28, zmm28, zmm9
+    vpxord zmm29, zmm29, zmm10
+    vpxord zmm30, zmm30, zmm11
+    vprord zmm23, zmm23, 8
+    vprord zmm20, zmm20, 8
+    vprord zmm21, zmm21, 8
+    vprord zmm22, zmm22, 8
+    vprord zmm31, zmm31, 8
+    vprord zmm28, zmm28, 8
+    vprord zmm29, zmm29, 8
+    vprord zmm30, zmm30, 8
+    vpaddd zmm18, zmm18, zmm23
+    vpaddd zmm19, zmm19, zmm20
+    vpaddd zmm16, zmm16, zmm21
+    vpaddd zmm17, zmm17, zmm22
+    vpaddd zmm26, zmm26, zmm31
+    vpaddd zmm27, zmm27, zmm28
+    vpaddd zmm24, zmm24, zmm29
+    vpaddd zmm25, zmm25, zmm30
+    vpxord zmm5, zmm5, zmm18
+    vpxord zmm6, zmm6, zmm19
+    vpxord zmm7, zmm7, zmm16
+    vpxord zmm4, zmm4, zmm17
+    vpxord zmm13, zmm13, zmm26
+    vpxord zmm14, zmm14, zmm27
+    vpxord zmm15, zmm15, zmm24
+    vpxord zmm12, zmm12, zmm25
+    vprord zmm5, zmm5, 7
+    vprord zmm6, zmm6, 7
+    vprord zmm7, zmm7, 7
+    vprord zmm4, zmm4, 7
+    vprord zmm13, zmm13, 7
+    vprord zmm14, zmm14, 7
+    vprord zmm15, zmm15, 7
+    vprord zmm12, zmm12, 7
+    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + 576]
+    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + 704]
+    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + 512]
+    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + 960]
+    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + 1600]
+    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + 1728]
+    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + 1536]
+    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + 1984]
+    vpaddd zmm0, zmm0, zmm4
+    vpaddd zmm1, zmm1, zmm5
+    vpaddd zmm2, zmm2, zmm6
+    vpaddd zmm3, zmm3, zmm7
+    vpaddd zmm8, zmm8, zmm12
+    vpaddd zmm9, zmm9, zmm13
+    vpaddd zmm10, zmm10, zmm14
+    vpaddd zmm11, zmm11, zmm15
+    vpxord zmm20, zmm20, zmm0
+    vpxord zmm21, zmm21, zmm1
+    vpxord zmm22, zmm22, zmm2
+    vpxord zmm23, zmm23, zmm3
+    vpxord zmm28, zmm28, zmm8
+    vpxord zmm29, zmm29, zmm9
+    vpxord zmm30, zmm30, zmm10
+    vpxord zmm31, zmm31, zmm11
+    vprord zmm20, zmm20, 16
+    vprord zmm21, zmm21, 16
+    vprord zmm22, zmm22, 16
+    vprord zmm23, zmm23, 16
+    vprord zmm28, zmm28, 16
+    vprord zmm29, zmm29, 16
+    vprord zmm30, zmm30, 16
+    vprord zmm31, zmm31, 16
+    vpaddd zmm16, zmm16, zmm20
+    vpaddd zmm17, zmm17, zmm21
+    vpaddd zmm18, zmm18, zmm22
+    vpaddd zmm19, zmm19, zmm23
+    vpaddd zmm24, zmm24, zmm28
+    vpaddd zmm25, zmm25, zmm29
+    vpaddd zmm26, zmm26, zmm30
+    vpaddd zmm27, zmm27, zmm31
+    vpxord zmm4, zmm4, zmm16
+    vpxord zmm5, zmm5, zmm17
+    vpxord zmm6, zmm6, zmm18
+    vpxord zmm7, zmm7, zmm19
+    vpxord zmm12, zmm12, zmm24
+    vpxord zmm13, zmm13, zmm25
+    vpxord zmm14, zmm14, zmm26
+    vpxord zmm15, zmm15, zmm27
+    vprord zmm4, zmm4, 12
+    vprord zmm5, zmm5, 12
+    vprord zmm6, zmm6, 12
+    vprord zmm7, zmm7, 12
+    vprord zmm12, zmm12, 12
+    vprord zmm13, zmm13, 12
+    vprord zmm14, zmm14, 12
+    vprord zmm15, zmm15, 12
+    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + 896]
+    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + 320]
+    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + 768]
+    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + 64]
+    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + 1920]
+    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + 1344]
+    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + 1792]
+    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + 1088]
+    vpaddd zmm0, zmm0, zmm4
+    vpaddd zmm1, zmm1, zmm5
+    vpaddd zmm2, zmm2, zmm6
+    vpaddd zmm3, zmm3, zmm7
+    vpaddd zmm8, zmm8, zmm12
+    vpaddd zmm9, zmm9, zmm13
+    vpaddd zmm10, zmm10, zmm14
+    vpaddd zmm11, zmm11, zmm15
+    vpxord zmm20, zmm20, zmm0
+    vpxord zmm21, zmm21, zmm1
+    vpxord zmm22, zmm22, zmm2
+    vpxord zmm23, zmm23, zmm3
+    vpxord zmm28, zmm28, zmm8
+    vpxord zmm29, zmm29, zmm9
+    vpxord zmm30, zmm30, zmm10
+    vpxord zmm31, zmm31, zmm11
+    vprord zmm20, zmm20, 8
+    vprord zmm21, zmm21, 8
+    vprord zmm22, zmm22, 8
+    vprord zmm23, zmm23, 8
+    vprord zmm28, zmm28, 8
+    vprord zmm29, zmm29, 8
+    vprord zmm30, zmm30, 8
+    vprord zmm31, zmm31, 8
+    vpaddd zmm16, zmm16, zmm20
+    vpaddd zmm17, zmm17, zmm21
+    vpaddd zmm18, zmm18, zmm22
+    vpaddd zmm19, zmm19, zmm23
+    vpaddd zmm24, zmm24, zmm28
+    vpaddd zmm25, zmm25, zmm29
+    vpaddd zmm26, zmm26, zmm30
+    vpaddd zmm27, zmm27, zmm31
+    vpxord zmm4, zmm4, zmm16
+    vpxord zmm5, zmm5, zmm17
+    vpxord zmm6, zmm6, zmm18
+    vpxord zmm7, zmm7, zmm19
+    vpxord zmm12, zmm12, zmm24
+    vpxord zmm13, zmm13, zmm25
+    vpxord zmm14, zmm14, zmm26
+    vpxord zmm15, zmm15, zmm27
+    vprord zmm4, zmm4, 7
+    vprord zmm5, zmm5, 7
+    vprord zmm6, zmm6, 7
+    vprord zmm7, zmm7, 7
+    vprord zmm12, zmm12, 7
+    vprord zmm13, zmm13, 7
+    vprord zmm14, zmm14, 7
+    vprord zmm15, zmm15, 7
+    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + 832]
+    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + 0]
+    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + 128]
+    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + 256]
+    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + 1856]
+    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + 1024]
+    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + 1152]
+    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + 1280]
+    vpaddd zmm0, zmm0, zmm5
+    vpaddd zmm1, zmm1, zmm6
+    vpaddd zmm2, zmm2, zmm7
+    vpaddd zmm3, zmm3, zmm4
+    vpaddd zmm8, zmm8, zmm13
+    vpaddd zmm9, zmm9, zmm14
+    vpaddd zmm10, zmm10, zmm15
+    vpaddd zmm11, zmm11, zmm12
+    vpxord zmm23, zmm23, zmm0
+    vpxord zmm20, zmm20, zmm1
+    vpxord zmm21, zmm21, zmm2
+    vpxord zmm22, zmm22, zmm3
+    vpxord zmm31, zmm31, zmm8
+    vpxord zmm28, zmm28, zmm9
+    vpxord zmm29, zmm29, zmm10
+    vpxord zmm30, zmm30, zmm11
+    vprord zmm23, zmm23, 16
+    vprord zmm20, zmm20, 16
+    vprord zmm21, zmm21, 16
+    vprord zmm22, zmm22, 16
+    vprord zmm31, zmm31, 16
+    vprord zmm28, zmm28, 16
+    vprord zmm29, zmm29, 16
+    vprord zmm30, zmm30, 16
+    vpaddd zmm18, zmm18, zmm23
+    vpaddd zmm19, zmm19, zmm20
+    vpaddd zmm16, zmm16, zmm21
+    vpaddd zmm17, zmm17, zmm22
+    vpaddd zmm26, zmm26, zmm31
+    vpaddd zmm27, zmm27, zmm28
+    vpaddd zmm24, zmm24, zmm29
+    vpaddd zmm25, zmm25, zmm30
+    vpxord zmm5, zmm5, zmm18
+    vpxord zmm6, zmm6, zmm19
+    vpxord zmm7, zmm7, zmm16
+    vpxord zmm4, zmm4, zmm17
+    vpxord zmm13, zmm13, zmm26
+    vpxord zmm14, zmm14, zmm27
+    vpxord zmm15, zmm15, zmm24
+    vpxord zmm12, zmm12, zmm25
+    vprord zmm5, zmm5, 12
+    vprord zmm6, zmm6, 12
+    vprord zmm7, zmm7, 12
+    vprord zmm4, zmm4, 12
+    vprord zmm13, zmm13, 12
+    vprord zmm14, zmm14, 12
+    vprord zmm15, zmm15, 12
+    vprord zmm12, zmm12, 12
+    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + 192]
+    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + 640]
+    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + 384]
+    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + 448]
+    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + 1216]
+    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + 1664]
+    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + 1408]
+    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + 1472]
+    vpaddd zmm0, zmm0, zmm5
+    vpaddd zmm1, zmm1, zmm6
+    vpaddd zmm2, zmm2, zmm7
+    vpaddd zmm3, zmm3, zmm4
+    vpaddd zmm8, zmm8, zmm13
+    vpaddd zmm9, zmm9, zmm14
+    vpaddd zmm10, zmm10, zmm15
+    vpaddd zmm11, zmm11, zmm12
+    vpxord zmm23, zmm23, zmm0
+    vpxord zmm20, zmm20, zmm1
+    vpxord zmm21, zmm21, zmm2
+    vpxord zmm22, zmm22, zmm3
+    vpxord zmm31, zmm31, zmm8
+    vpxord zmm28, zmm28, zmm9
+    vpxord zmm29, zmm29, zmm10
+    vpxord zmm30, zmm30, zmm11
+    vprord zmm23, zmm23, 8
+    vprord zmm20, zmm20, 8
+    vprord zmm21, zmm21, 8
+    vprord zmm22, zmm22, 8
+    vprord zmm31, zmm31, 8
+    vprord zmm28, zmm28, 8
+    vprord zmm29, zmm29, 8
+    vprord zmm30, zmm30, 8
+    vpaddd zmm18, zmm18, zmm23
+    vpaddd zmm19, zmm19, zmm20
+    vpaddd zmm16, zmm16, zmm21
+    vpaddd zmm17, zmm17, zmm22
+    vpaddd zmm26, zmm26, zmm31
+    vpaddd zmm27, zmm27, zmm28
+    vpaddd zmm24, zmm24, zmm29
+    vpaddd zmm25, zmm25, zmm30
+    vpxord zmm5, zmm5, zmm18
+    vpxord zmm6, zmm6, zmm19
+    vpxord zmm7, zmm7, zmm16
+    vpxord zmm4, zmm4, zmm17
+    vpxord zmm13, zmm13, zmm26
+    vpxord zmm14, zmm14, zmm27
+    vpxord zmm15, zmm15, zmm24
+    vpxord zmm12, zmm12, zmm25
+    vprord zmm5, zmm5, 7
+    vprord zmm6, zmm6, 7
+    vprord zmm7, zmm7, 7
+    vprord zmm4, zmm4, 7
+    vprord zmm13, zmm13, 7
+    vprord zmm14, zmm14, 7
+    vprord zmm15, zmm15, 7
+    vprord zmm12, zmm12, 7
+    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + 704]
+    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + 320]
+    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + 64]
+    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + 512]
+    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + 1728]
+    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + 1344]
+    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + 1088]
+    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + 1536]
+    vpaddd zmm0, zmm0, zmm4
+    vpaddd zmm1, zmm1, zmm5
+    vpaddd zmm2, zmm2, zmm6
+    vpaddd zmm3, zmm3, zmm7
+    vpaddd zmm8, zmm8, zmm12
+    vpaddd zmm9, zmm9, zmm13
+    vpaddd zmm10, zmm10, zmm14
+    vpaddd zmm11, zmm11, zmm15
+    vpxord zmm20, zmm20, zmm0
+    vpxord zmm21, zmm21, zmm1
+    vpxord zmm22, zmm22, zmm2
+    vpxord zmm23, zmm23, zmm3
+    vpxord zmm28, zmm28, zmm8
+    vpxord zmm29, zmm29, zmm9
+    vpxord zmm30, zmm30, zmm10
+    vpxord zmm31, zmm31, zmm11
+    vprord zmm20, zmm20, 16
+    vprord zmm21, zmm21, 16
+    vprord zmm22, zmm22, 16
+    vprord zmm23, zmm23, 16
+    vprord zmm28, zmm28, 16
+    vprord zmm29, zmm29, 16
+    vprord zmm30, zmm30, 16
+    vprord zmm31, zmm31, 16
+    vpaddd zmm16, zmm16, zmm20
+    vpaddd zmm17, zmm17, zmm21
+    vpaddd zmm18, zmm18, zmm22
+    vpaddd zmm19, zmm19, zmm23
+    vpaddd zmm24, zmm24, zmm28
+    vpaddd zmm25, zmm25, zmm29
+    vpaddd zmm26, zmm26, zmm30
+    vpaddd zmm27, zmm27, zmm31
+    vpxord zmm4, zmm4, zmm16
+    vpxord zmm5, zmm5, zmm17
+    vpxord zmm6, zmm6, zmm18
+    vpxord zmm7, zmm7, zmm19
+    vpxord zmm12, zmm12, zmm24
+    vpxord zmm13, zmm13, zmm25
+    vpxord zmm14, zmm14, zmm26
+    vpxord zmm15, zmm15, zmm27
+    vprord zmm4, zmm4, 12
+    vprord zmm5, zmm5, 12
+    vprord zmm6, zmm6, 12
+    vprord zmm7, zmm7, 12
+    vprord zmm12, zmm12, 12
+    vprord zmm13, zmm13, 12
+    vprord zmm14, zmm14, 12
+    vprord zmm15, zmm15, 12
+    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + 960]
+    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + 0]
+    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + 576]
+    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + 384]
+    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + 1984]
+    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + 1024]
+    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + 1600]
+    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + 1408]
+    vpaddd zmm0, zmm0, zmm4
+    vpaddd zmm1, zmm1, zmm5
+    vpaddd zmm2, zmm2, zmm6
+    vpaddd zmm3, zmm3, zmm7
+    vpaddd zmm8, zmm8, zmm12
+    vpaddd zmm9, zmm9, zmm13
+    vpaddd zmm10, zmm10, zmm14
+    vpaddd zmm11, zmm11, zmm15
+    vpxord zmm20, zmm20, zmm0
+    vpxord zmm21, zmm21, zmm1
+    vpxord zmm22, zmm22, zmm2
+    vpxord zmm23, zmm23, zmm3
+    vpxord zmm28, zmm28, zmm8
+    vpxord zmm29, zmm29, zmm9
+    vpxord zmm30, zmm30, zmm10
+    vpxord zmm31, zmm31, zmm11
+    vprord zmm20, zmm20, 8
+    vprord zmm21, zmm21, 8
+    vprord zmm22, zmm22, 8
+    vprord zmm23, zmm23, 8
+    vprord zmm28, zmm28, 8
+    vprord zmm29, zmm29, 8
+    vprord zmm30, zmm30, 8
+    vprord zmm31, zmm31, 8
+    vpaddd zmm16, zmm16, zmm20
+    vpaddd zmm17, zmm17, zmm21
+    vpaddd zmm18, zmm18, zmm22
+    vpaddd zmm19, zmm19, zmm23
+    vpaddd zmm24, zmm24, zmm28
+    vpaddd zmm25, zmm25, zmm29
+    vpaddd zmm26, zmm26, zmm30
+    vpaddd zmm27, zmm27, zmm31
+    vpxord zmm4, zmm4, zmm16
+    vpxord zmm5, zmm5, zmm17
+    vpxord zmm6, zmm6, zmm18
+    vpxord zmm7, zmm7, zmm19
+    vpxord zmm12, zmm12, zmm24
+    vpxord zmm13, zmm13, zmm25
+    vpxord zmm14, zmm14, zmm26
+    vpxord zmm15, zmm15, zmm27
+    vprord zmm4, zmm4, 7
+    vprord zmm5, zmm5, 7
+    vprord zmm6, zmm6, 7
+    vprord zmm7, zmm7, 7
+    vprord zmm12, zmm12, 7
+    vprord zmm13, zmm13, 7
+    vprord zmm14, zmm14, 7
+    vprord zmm15, zmm15, 7
+    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + 896]
+    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + 128]
+    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + 192]
+    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + 448]
+    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + 1920]
+    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + 1152]
+    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + 1216]
+    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + 1472]
+    vpaddd zmm0, zmm0, zmm5
+    vpaddd zmm1, zmm1, zmm6
+    vpaddd zmm2, zmm2, zmm7
+    vpaddd zmm3, zmm3, zmm4
+    vpaddd zmm8, zmm8, zmm13
+    vpaddd zmm9, zmm9, zmm14
+    vpaddd zmm10, zmm10, zmm15
+    vpaddd zmm11, zmm11, zmm12
+    vpxord zmm23, zmm23, zmm0
+    vpxord zmm20, zmm20, zmm1
+    vpxord zmm21, zmm21, zmm2
+    vpxord zmm22, zmm22, zmm3
+    vpxord zmm31, zmm31, zmm8
+    vpxord zmm28, zmm28, zmm9
+    vpxord zmm29, zmm29, zmm10
+    vpxord zmm30, zmm30, zmm11
+    vprord zmm23, zmm23, 16
+    vprord zmm20, zmm20, 16
+    vprord zmm21, zmm21, 16
+    vprord zmm22, zmm22, 16
+    vprord zmm31, zmm31, 16
+    vprord zmm28, zmm28, 16
+    vprord zmm29, zmm29, 16
+    vprord zmm30, zmm30, 16
+    vpaddd zmm18, zmm18, zmm23
+    vpaddd zmm19, zmm19, zmm20
+    vpaddd zmm16, zmm16, zmm21
+    vpaddd zmm17, zmm17, zmm22
+    vpaddd zmm26, zmm26, zmm31
+    vpaddd zmm27, zmm27, zmm28
+    vpaddd zmm24, zmm24, zmm29
+    vpaddd zmm25, zmm25, zmm30
+    vpxord zmm5, zmm5, zmm18
+    vpxord zmm6, zmm6, zmm19
+    vpxord zmm7, zmm7, zmm16
+    vpxord zmm4, zmm4, zmm17
+    vpxord zmm13, zmm13, zmm26
+    vpxord zmm14, zmm14, zmm27
+    vpxord zmm15, zmm15, zmm24
+    vpxord zmm12, zmm12, zmm25
+    vprord zmm5, zmm5, 12
+    vprord zmm6, zmm6, 12
+    vprord zmm7, zmm7, 12
+    vprord zmm4, zmm4, 12
+    vprord zmm13, zmm13, 12
+    vprord zmm14, zmm14, 12
+    vprord zmm15, zmm15, 12
+    vprord zmm12, zmm12, 12
+    vpaddd zmm0, zmm0, ZMMWORD PTR [rsi + 640]
+    vpaddd zmm1, zmm1, ZMMWORD PTR [rsi + 768]
+    vpaddd zmm2, zmm2, ZMMWORD PTR [rsi + 256]
+    vpaddd zmm3, zmm3, ZMMWORD PTR [rsi + 832]
+    vpaddd zmm8, zmm8, ZMMWORD PTR [rsi + 1664]
+    vpaddd zmm9, zmm9, ZMMWORD PTR [rsi + 1792]
+    vpaddd zmm10, zmm10, ZMMWORD PTR [rsi + 1280]
+    vpaddd zmm11, zmm11, ZMMWORD PTR [rsi + 1856]
+    vpaddd zmm0, zmm0, zmm5
+    vpaddd zmm1, zmm1, zmm6
+    vpaddd zmm2, zmm2, zmm7
+    vpaddd zmm3, zmm3, zmm4
+    vpaddd zmm8, zmm8, zmm13
+    vpaddd zmm9, zmm9, zmm14
+    vpaddd zmm10, zmm10, zmm15
+    vpaddd zmm11, zmm11, zmm12
+    vpxord zmm23, zmm23, zmm0
+    vpxord zmm20, zmm20, zmm1
+    vpxord zmm21, zmm21, zmm2
+    vpxord zmm22, zmm22, zmm3
+    vpxord zmm31, zmm31, zmm8
+    vpxord zmm28, zmm28, zmm9
+    vpxord zmm29, zmm29, zmm10
+    vpxord zmm30, zmm30, zmm11
+    vprord zmm23, zmm23, 8
+    vprord zmm20, zmm20, 8
+    vprord zmm21, zmm21, 8
+    vprord zmm22, zmm22, 8
+    vprord zmm31, zmm31, 8
+    vprord zmm28, zmm28, 8
+    vprord zmm29, zmm29, 8
+    vprord zmm30, zmm30, 8
+    vpaddd zmm18, zmm18, zmm23
+    vpaddd zmm19, zmm19, zmm20
+    vpaddd zmm16, zmm16, zmm21
+    vpaddd zmm17, zmm17, zmm22
+    vpaddd zmm26, zmm26, zmm31
+    vpaddd zmm27, zmm27, zmm28
+    vpaddd zmm24, zmm24, zmm29
+    vpaddd zmm25, zmm25, zmm30
+    vpxord zmm5, zmm5, zmm18
+    vpxord zmm6, zmm6, zmm19
+    vpxord zmm7, zmm7, zmm16
+    vpxord zmm4, zmm4, zmm17
+    vpxord zmm13, zmm13, zmm26
+    vpxord zmm14, zmm14, zmm27
+    vpxord zmm15, zmm15, zmm24
+    vpxord zmm12, zmm12, zmm25
+    vprord zmm5, zmm5, 7
+    vprord zmm6, zmm6, 7
+    vprord zmm7, zmm7, 7
+    vprord zmm4, zmm4, 7
+    vprord zmm13, zmm13, 7
+    vprord zmm14, zmm14, 7
+    vprord zmm15, zmm15, 7
+    vprord zmm12, zmm12, 7
     vpxord zmm0, zmm0, zmm16
     vpxord zmm1, zmm1, zmm17
     vpxord zmm2, zmm2, zmm18
@@ -1230,13 +2552,4 @@ blake3_servil_avx512_p16:
 .p2align 6
 .Lindices32:
 .long 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
-.p2align 6
-.Lschedule32:
-.long 0, 64, 128, 192, 256, 320, 384, 448, 512, 576, 640, 704, 768, 832, 896, 960
-.long 128, 384, 192, 640, 448, 0, 256, 832, 64, 704, 768, 320, 576, 896, 960, 512
-.long 192, 256, 640, 768, 832, 128, 448, 896, 384, 320, 576, 0, 704, 960, 512, 64
-.long 640, 448, 768, 576, 896, 192, 832, 960, 256, 0, 704, 128, 320, 512, 64, 384
-.long 768, 832, 576, 704, 960, 640, 896, 512, 448, 128, 320, 192, 0, 64, 384, 256
-.long 576, 896, 704, 320, 512, 768, 960, 64, 832, 192, 0, 640, 128, 384, 256, 448
-.long 704, 960, 320, 0, 64, 576, 512, 384, 896, 640, 128, 768, 192, 256, 448, 832
 .section .note.GNU-stack,"",@progbits
