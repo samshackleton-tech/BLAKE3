@@ -6,7 +6,7 @@
 //! waits: served in a fixed order, one caller completed everything while
 //! the other starved. Two shapes: one message of 16 MiB (a tree job a
 //! call), and a collection of 2048 items of 24 B to 768 KiB (the bench's
-//! git objects: many small jobs and some trees a call). Measured on an
+//! git objects), streamed (stream_multithreaded: many small tasks a call). Measured on an
 //! i7-12700K: 1.00-1.10 either way; starvation reads 2 and more. The
 //! bound leaves room for a loaded machine, and a loaded one still fails
 //! it (1.6-1.9 on a 4-vCPU guest under a mutation check, #240), so it
@@ -16,7 +16,7 @@
 #![cfg(feature = "std")]
 
 use blake3_servil::Mode;
-use blake3_servil::performance::{Block, hash_each_multithreaded, hash_multithreaded};
+use blake3_servil::performance::{Block, hash_multithreaded, stream_multithreaded};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Barrier};
 use std::time::{Duration, Instant};
@@ -101,9 +101,17 @@ fn two_callers_share_the_pool() {
     let collections = share(
         move |who| o.iter().enumerate().map(|(i, &l)| (blocks(l, (i + who) as u8), l)).collect::<Vec<_>>(),
         |items: &Vec<(Vec<Block>, usize)>| {
-            let refs: Vec<(&[Block], usize)> = items.iter().map(|(b, l)| (&b[..], *l)).collect();
-            let mut out = vec![[0u8; 32]; refs.len()];
-            hash_each_multithreaded(Mode::Plain, &refs, &mut out);
+            let mut out = vec![blake3_servil::Hash::from_bytes([0; 32]); items.len()];
+            stream_multithreaded(
+                Mode::Plain,
+                |_: &mut [blake3_servil::Hash]| {},
+                |s| {
+                    for ((b, l), place) in items.iter().zip(out.iter_mut()) {
+                        s.submit(b, *l, place);
+                    }
+                    s.finish();
+                },
+            );
             std::hint::black_box(&out);
         },
     );

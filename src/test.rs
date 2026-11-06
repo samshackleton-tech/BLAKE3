@@ -80,19 +80,6 @@ pub(crate) fn message(bytes: &[u8]) -> std::vec::Vec<crate::performance::Block> 
     blocks
 }
 
-/// Each of `items` copied into blocks (`message`).
-#[cfg(feature = "std")]
-pub(crate) fn messages(items: &[&[u8]]) -> std::vec::Vec<std::vec::Vec<crate::performance::Block>> {
-    items.iter().map(|i| message(i)).collect()
-}
-
-/// `owned`'s messages (from `message`) as hash_each's items, `items`'
-/// lengths.
-#[cfg(feature = "std")]
-pub(crate) fn items<'a>(owned: &'a [std::vec::Vec<crate::performance::Block>], items: &[&[u8]]) -> std::vec::Vec<(&'a [crate::performance::Block], usize)> {
-    owned.iter().zip(items).map(|(b, i)| (&b[..], i.len())).collect()
-}
-
 /// `bytes` (whole blocks) copied into blocks, as the batch calls take them.
 pub(crate) fn blocks(bytes: &[u8]) -> std::vec::Vec<crate::performance::Block> {
     assert_eq!(bytes.len() % crate::BLOCK_LEN, 0, "whole blocks");
@@ -1181,19 +1168,11 @@ mod guard_pages {
                     let guarded: Vec<Guarded> = lens.iter().map(|&l| filled(l.div_ceil(64).max(1) * 64, at_end)).collect();
                     let regions: Vec<&[u8]> = guarded.iter().map(|g| unsafe { core::slice::from_raw_parts(g.base.add(g.start), g.len) }).collect();
                     let items: Vec<&[u8]> = regions.iter().zip(&lens).map(|(r, &l)| &r[..l]).collect();
-                    let in_blocks: Vec<(&[crate::performance::Block], usize)> = regions
-                        .iter()
-                        .zip(&lens)
-                        .map(|(r, &l)| (crate::performance::Block::from_bytes(r).expect("a page-end region of whole blocks starts aligned"), l))
-                        .collect();
                     let want: Vec<[u8; 32]> = items.iter().map(|m| *crate::convenience::hash(m).as_bytes()).collect();
                     golden.add(want.as_flattened(), || items.iter().flat_map(|m| crate::test::official::hash(Mode::Plain, m)).collect());
                     let (_page, got) = digests(count, !at_end);
-                    crate::performance::hash_each(Mode::Plain, &in_blocks, got);
-                    assert_eq!(got, &want[..], "hash_each_with, {count} x {len} B, at end {at_end}");
-                    let (_page, got) = digests(count, at_end);
-                    crate::performance::hash_each_multithreaded(Mode::Plain, &in_blocks, got);
-                    assert_eq!(got, &want[..], "hash_each_multithreaded_with, {count} x {len} B, at end {at_end}");
+                    crate::each::hash_each_on(crate::IV, 0, &items, got, crate::platform::Platform::detect(), |m| crate::hash_serial(m, crate::IV, 0));
+                    assert_eq!(got, &want[..], "hash_each_on, {count} x {len} B, at end {at_end}");
                     let mut hashers: Vec<crate::Hasher> = (0..count).map(|_| crate::Hasher::new(crate::Mode::Plain)).collect();
                     let pieces: Vec<(usize, &[u8])> = items.iter().copied().enumerate().collect();
                     crate::performance::update_each(&mut hashers, &pieces);

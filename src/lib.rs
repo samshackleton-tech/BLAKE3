@@ -67,7 +67,7 @@
 //! | One message in memory | [`convenience::hash`], or for speed [`performance::hash_multithreaded`] |
 //! | One message arriving in pieces | [`performance::Hasher`] |
 //! | Many messages of one length, in one buffer | [`performance::hash_many_multithreaded`] |
-//! | Many messages of different lengths, in memory | [`performance::hash_each_multithreaded`] |
+//! | Many messages of different lengths, in memory | [`performance::stream_multithreaded`], or on the calling thread alone [`performance::stream`]: a `submit` each |
 //! | Many messages arriving at once (a server's uploads) | [`performance::update_each`] |
 //! | A stream of messages read, made, or arriving | [`performance::stream_multithreaded`], or on the calling thread alone [`performance::stream`] |
 //!
@@ -120,8 +120,7 @@
 //!   [`performance::hash`], [`performance::hash_many`], [`Hasher::update`]
 //!   and [`Hasher::finalize`], and [`OutputReader`].
 //!   [`Hasher::update_reader`] uses a 1 MiB buffer while it reads past
-//!   64 KiB, and [`performance::hash_each`] 32 bytes for each chunk of its messages
-//!   of 2 to 15 chunks, each freed when it returns.
+//!   64 KiB, freed when it returns.
 //! - **Multithreaded calls** allocate nothing below 512 KiB, where they
 //!   hash on the calling thread. Above it they keep a list of the pieces
 //!   they hand out, freed when they return: 48 bytes for each 128 KiB of

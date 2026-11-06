@@ -23,7 +23,7 @@
 
 pub use crate::block::{Batch, Block};
 #[cfg(feature = "std")]
-pub use crate::each::{finalize_each, hash_each, hash_each_multithreaded, update_each, update_each_multithreaded};
+pub use crate::each::{finalize_each, update_each, update_each_multithreaded};
 pub use crate::incremental::Hasher;
 #[cfg(feature = "std")]
 pub use crate::stream::{Stream, stream, stream_multithreaded};

@@ -312,42 +312,6 @@ fn hash_many_over_pool(input: &[u8], message_len: usize, key: &crate::CVWords, f
     pool.run_job(work, pieces.len(), 0, pool_platform());
 }
 
-/// [`crate::hash_each_multithreaded_with`]'s pool job: `items`, every one
-/// under MIN_SPLIT_LEN, cut into ranges of about [`next_piece_len`] of the
-/// bytes that remain.
-pub(crate) fn hash_each(key: &crate::CVWords, flags: u8, items: &[&[u8]], out: &mut [[u8; crate::OUT_LEN]]) {
-    assert!(items.iter().all(|i| i.len() < MIN_SPLIT_LEN), "items under MIN_SPLIT_LEN");
-    let Some((pool, _caller)) = spare_pool() else {
-        let platform = Platform::detect();
-        return crate::each::hash_each_on(key, flags, items, out, platform, |item| crate::hash_serial_on(item, key, flags, platform));
-    };
-    let pieces = cut_items(items, pool.threads);
-    let work = Work::Each { items, key: *key, flags, pieces: &pieces, outputs: out.as_mut_ptr() };
-    pool.run_job(work, pieces.len(), 0, pool_platform());
-}
-
-/// Cut `items` into consecutive ranges for `threads` threads, in order:
-/// each range takes items until it holds [`next_piece_len`] of the bytes
-/// that remain (one item at least, however long), so ranges shrink toward
-/// the end as subtree pieces do.
-fn cut_items(items: &[&[u8]], threads: usize) -> Vec<Piece> {
-    let mut remaining: usize = items.iter().map(|i| i.len()).sum();
-    let mut pieces = Vec::with_capacity(64);
-    let mut start = 0;
-    while start < items.len() {
-        let want = next_piece_len(remaining, threads);
-        let (mut end, mut bytes) = (start, 0);
-        while end < items.len() && (bytes < want || end == start) {
-            bytes += items[end].len();
-            end += 1;
-        }
-        remaining -= bytes;
-        pieces.push(Piece { offset: start, len: end - start });
-        start = end;
-    }
-    pieces
-}
-
 /// Cut `count` messages in slots of `message_len` bytes into ranges for `threads`
 /// threads, in order: each range holds about [`next_piece_len`] of the
 /// bytes that remain, at least one message, so ranges shrink toward the
@@ -412,9 +376,6 @@ enum Work<'a> {
     /// whole blocks in `input` (`offset` and `len` count messages); one
     /// digest each.
     Messages { input: &'a [u8], message_len: usize, key: crate::CVWords, flags: u8, pieces: &'a [Piece], outputs: *mut [u8; crate::OUT_LEN] },
-    /// Ranges of a collection's items (`offset` and `len` count items),
-    /// each under MIN_SPLIT_LEN; one digest each.
-    Each { items: &'a [&'a [u8]], key: crate::CVWords, flags: u8, pieces: &'a [Piece], outputs: *mut [u8; crate::OUT_LEN] },
 }
 
 /// Any value on a cache line of its own.
@@ -447,13 +408,6 @@ impl Job<'_> {
                 // Sound: this range of outputs belongs to piece `index` alone.
                 let digests = unsafe { core::slice::from_raw_parts_mut(outputs.add(piece.offset), piece.len) };
                 crate::many::hash_many_on(messages, *message_len, key, *flags, digests, platform);
-            }
-            Work::Each { items, key, flags, pieces, outputs } => {
-                let piece = pieces[index];
-                // Sound: this range of outputs belongs to piece `index` alone.
-                let digests = unsafe { core::slice::from_raw_parts_mut(outputs.add(piece.offset), piece.len) };
-                let range = &items[piece.offset..][..piece.len];
-                crate::each::hash_each_on(key, *flags, range, digests, platform, |item| crate::hash_serial_on(item, key, *flags, platform));
             }
         }
     }
@@ -1994,43 +1948,6 @@ mod test {
         assert_eq!(sme2_prefix(2 << 20, 16), 207_800);
         // 256 KiB over 2: 262144 / 160 = 1638, x100 = 163800, over 128 KiB.
         assert_eq!(sme2_prefix(256 * 1024, 2), 163_800);
-    }
-
-    /// The exact cut of a collection's items: each range takes items until
-    /// it holds a thread's share of the bytes left (next_piece_len), one
-    /// item at least.
-    #[test]
-    fn test_cut_items_exactly() {
-        let item = |n: usize| std::vec![0u8; n];
-        // Ten items of 5000 B over 2 threads: 50000 / 2 = 25000 rounds to
-        // 16384, four items (20000 B); 30000 left, 15000 rounds to 8192,
-        // two items; 20000 left, two; 10000 left, 5000 raised to 8192, two.
-        let tens: Vec<Vec<u8>> = (0..10).map(|_| item(5000)).collect();
-        let refs: Vec<&[u8]> = tens.iter().map(|v| v.as_slice()).collect();
-        assert_eq!(cut_items(&refs, 2), tiling(&[(1, 4), (3, 2)]));
-        // One long item then a short one, over 16 threads: 100010 / 16 =
-        // 6250 raised to 8192; the first item alone fills its range, the
-        // second is one of its own.
-        let (long, short) = (item(100_000), item(10));
-        assert_eq!(cut_items(&[&long, &short], 16), tiling(&[(2, 1)]));
-        // Items of 3000 B, 7 of them, over 3 threads: 21000 / 3 = 7000
-        // raised to 8192: three items (9000 B); 12000 left, 4000 raised to
-        // 8192: three items; 3000 left: one.
-        let sevens: Vec<Vec<u8>> = (0..7).map(|_| item(3000)).collect();
-        let refs: Vec<&[u8]> = sevens.iter().map(|v| v.as_slice()).collect();
-        assert_eq!(cut_items(&refs, 3), tiling(&[(2, 3), (1, 1)]));
-        // Six items of 4 KiB over 2 threads: 24 KiB / 2 = 12 KiB rounds to
-        // 8 KiB, which two items fill exactly, so each range is two (a
-        // range stops once it holds its share, never one item past it).
-        let sixes: Vec<Vec<u8>> = (0..6).map(|_| item(4096)).collect();
-        let refs: Vec<&[u8]> = sixes.iter().map(|v| v.as_slice()).collect();
-        assert_eq!(cut_items(&refs, 2), tiling(&[(3, 2)]));
-        // Sixteen items of 8 KiB over 2 threads: shares of 64, 32, 16 KiB,
-        // then 8 KiB twice: ranges of 8, 4, 2, 1 and 1 items.
-        let eights: Vec<Vec<u8>> = (0..16).map(|_| item(8192)).collect();
-        let refs: Vec<&[u8]> = eights.iter().map(|v| v.as_slice()).collect();
-        assert_eq!(cut_items(&refs, 2), tiling(&[(1, 8), (1, 4), (1, 2), (2, 1)]));
-        assert_eq!(cut_items(&[], 4), Vec::<Piece>::new());
     }
 
     /// Where the pool begins (BLAKE3 #219: a threshold between two correct

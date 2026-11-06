@@ -35,8 +35,8 @@ algorithm:
   messages on upstream's kernels (`src/many.rs`);
 - a pool of worker threads for multithreaded hashing (`src/lanes.rs`);
 - batches of many messages in one call (`hash_many`, `src/many.rs`),
-  collections of messages and many hashers at once (`performance::hash_each`,
-  `performance::update_each`, `src/each.rs`);
+  collections of messages (the stream's tasks) and many hashers at once
+  (`performance::update_each`, `src/each.rs`);
 - the stream, which hashes the program's messages behind it, each digest
   into the place the program names (`stream`, `src/stream.rs`).
 - the startup self-test (`src/self_test.rs`);
@@ -229,8 +229,8 @@ unrolled kernel code.
   at every length to 2 KiB + 70 and around chunk counts up to 1025,
   `hash_many` at 15 message lengths and 20 counts, every input of a batch
   against a guard page of its own on every kernel the build and CPU have
-  (1 to 17 inputs), the collection calls (`performance::hash_each`, its
-  multithreaded form, `performance::update_each`) with each
+  (1 to 17 inputs), the collection paths (`each::hash_each_on`,
+  `performance::update_each`) with each
   item in its own pages, and extended output at 10 lengths from three
   positions. `test_every_call_inside_guard_pages` takes every other
   public call that reads a caller's bytes or writes into a caller's
