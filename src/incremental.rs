@@ -49,7 +49,11 @@ impl Clone for Hasher {
     #[inline]
     fn clone_from(&mut self, source: &Self) {
         let prefix = &source.stage[..source.staged];
-        self.core.clone_from(&source.core);
+        let HasherCore { key, chunk_state, initial_chunk_counter, cv_stack } = &source.core;
+        self.core.key = *key;
+        self.core.chunk_state.clone_from(chunk_state);
+        self.core.initial_chunk_counter = *initial_chunk_counter;
+        self.core.cv_stack.clone_from(cv_stack);
         self.staged = source.staged;
         // The unused capacity is overwritten before it becomes input.
         self.stage[..prefix.len()].copy_from_slice(prefix);

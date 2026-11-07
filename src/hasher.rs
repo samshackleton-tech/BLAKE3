@@ -22,6 +22,20 @@ impl Clone for CvStack {
         crate::counted(crate::Counted::StackClone);
         CvStack { cvs: self.cvs, len: self.len }
     }
+
+    fn clone_from(&mut self, source: &Self) {
+        crate::counted(crate::Counted::StackClone);
+        if source.len != 0 {
+            let src = source.cvs.as_ref().expect("a stack with values has its array");
+            match &mut self.cvs {
+                Some(dst) => dst[..source.len].copy_from_slice(&src[..source.len]),
+                None => self.cvs = Some(*src),
+            }
+        }
+        // Reuse an initialized destination array even when the new stack
+        // is empty. Only entries below len belong to the logical state.
+        self.len = source.len;
+    }
 }
 
 impl CvStack {
@@ -478,6 +492,35 @@ mod test {
     use super::*;
     use crate::platform::Platform;
     use core::cell::Cell;
+
+    #[test]
+    fn clone_from_reuses_an_initialized_stack_and_copies_live_values() {
+        for len in [0, 1, 3, DEPTH] {
+            let mut source = CvStack::new();
+            for i in 0..len {
+                source.push([i as u8; 32]);
+            }
+            for initialized in [false, true] {
+                let mut copy = CvStack::new();
+                if initialized {
+                    for _ in 0..DEPTH {
+                        copy.push([0xaa; 32]);
+                    }
+                    copy.clear();
+                }
+                copy.clone_from(&source);
+                assert_eq!(copy.len(), len);
+                for i in 0..len {
+                    assert_eq!(copy.get(i), source.get(i));
+                }
+                if initialized {
+                    assert!(copy.cvs.as_ref().unwrap()[len..].iter().all(|cv| *cv == [0xaa; 32]), "unused initialized CV capacity copied at len={len}");
+                } else if len == 0 {
+                    assert!(copy.cvs.is_none());
+                }
+            }
+        }
+    }
 
     /// The platform's compressions, counted: blocks compressed from the
     /// buffer one at a time, and calls of the multi-block kernel.
