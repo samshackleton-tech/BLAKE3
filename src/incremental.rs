@@ -43,11 +43,12 @@ pub struct Hasher {
 impl Clone for Hasher {
     #[inline]
     fn clone(&self) -> Self {
-        let mut cloned = Self::from_core(self.core.clone());
-        cloned.staged = self.staged;
-        // Only this prefix belongs to the state. The unused capacity is
-        // overwritten by stage() before it can become message input.
-        cloned.stage[..self.staged].copy_from_slice(&self.stage[..self.staged]);
+        let staged = self.staged;
+        let prefix = &self.stage[..staged];
+        // Check the initialized prefix before constructing the return
+        // value, so no partial result has to survive a bounds panic.
+        let mut cloned = Self { core: self.core.clone(), staged, stage: [core::mem::MaybeUninit::uninit(); STAGE_LEN] };
+        cloned.stage[..staged].copy_from_slice(prefix);
         cloned
     }
 }
