@@ -31,21 +31,8 @@ for register, offset in [(12,0),(13,32)]:
     assert lines.count(old) == 1, old
     lines[lines.index(old)] = f'        vpxor ymm{register}, ymm{register}, ymm{register}'
 
-# Eight word-major CVs -> eight message-major CVs, with one rotating scratch.
-rows, scratch = list(range(8)), 8
-for distance, low, high, loimm, hiimm in [
-    (1,'vpunpckldq','vpunpckhdq','',''),
-    (2,'vpunpcklqdq','vpunpckhqdq','',''),
-    (4,'vperm2i128','vperm2i128',', 0x20',', 0x31')]:
-    for base in range(0,8,2*distance):
-        for i in range(base,base+distance):
-            j=i+distance;a,b=rows[i],rows[j]
-            lines += [f'        {low} ymm{scratch}, ymm{a}, ymm{b}{loimm}',
-                      f'        {high} ymm{a}, ymm{a}, ymm{b}{hiimm}']
-            rows[i],rows[j],scratch = scratch,a,b
-            assert len(set(rows+[scratch])) == 9
-for i, word in enumerate([0,2,1,3,4,6,5,7]):
-    lines.append(f'        vmovdqu ymmword ptr [rsi+{32*i}], ymm{rows[word]}')
+k.lines = lines
+k.output8('rsi')
 lines += ['        vzeroupper','        mov rsp, rbp']
 for g in ['r15','r14','r13','r12','rbx','rbp']:
     lines.append(f'        pop {g}')

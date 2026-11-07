@@ -32,9 +32,49 @@ const _: () = {
     assert!(core::mem::offset_of!(Params8, lens) == 320);
     assert!(core::mem::offset_of!(Params8, flags) == 352);
 };
+#[repr(C, align(64))]
+struct Uniform<const W: usize> {
+    first: [*const u8; W],
+    rest: [*const u8; W],
+    last: [*const u8; W],
+    cvs: [[u32; W]; 8],
+    lens: [u32; W],
+    flags: [u32; W],
+    blocks: u32,
+}
+const _: () = {
+    assert!(core::mem::size_of::<Uniform<8>>() == 576);
+    assert!(core::mem::offset_of!(Uniform<8>, cvs) == 192);
+    assert!(core::mem::offset_of!(Uniform<8>, lens) == 448);
+    assert!(core::mem::offset_of!(Uniform<8>, flags) == 480);
+    assert!(core::mem::offset_of!(Uniform<8>, blocks) == 512);
+    assert!(core::mem::size_of::<Uniform<16>>() == 1088);
+    assert!(core::mem::offset_of!(Uniform<16>, cvs) == 384);
+    assert!(core::mem::offset_of!(Uniform<16>, lens) == 896);
+    assert!(core::mem::offset_of!(Uniform<16>, flags) == 960);
+    assert!(core::mem::offset_of!(Uniform<16>, blocks) == 1024);
+};
 unsafe extern "C" {
     fn blake3_servil_output16(inputs: *const Input<'_>, out: *mut u8);
     fn blake3_servil_output8(params: *const Params8, out: *mut u8);
+    fn blake3_servil_uniform8(params: *const Uniform<8>, out: *mut u8);
+    fn blake3_servil_uniform16(params: *const Uniform<16>, out: *mut u8);
+}
+
+/// Same ending block in every lane, with independent final lengths/modes/CVs.
+/// Requires selected ISA, blocks1..16, FIRST64 when blocks>1, REST64*(blocks-2),
+/// LAST64, and final lengths0..64. Every region is read-only.
+unsafe fn hash_uniform<const W: usize>(p: &Uniform<W>, out: &mut [[u8; OUT_LEN]]) {
+    assert_eq!(out.len(), W);
+    assert!((1..=16).contains(&p.blocks));
+    if W == 16 {
+        crate::ran_kernel(blake3_servil_uniform16 as *const ());
+        unsafe { blake3_servil_uniform16((p as *const Uniform<W>).cast(), out.as_mut_ptr().cast()) };
+    } else {
+        assert_eq!(W, 8);
+        crate::ran_kernel(blake3_servil_uniform8 as *const ());
+        unsafe { blake3_servil_uniform8((p as *const Uniform<W>).cast(), out.as_mut_ptr().cast()) };
+    }
 }
 
 pub(crate) fn lanes(platform: Platform) -> usize {
@@ -131,6 +171,21 @@ pub(crate) unsafe fn staged_group<const W: usize>(hashers: &[Hasher], which: &[u
             tails[i][..lens[i] as usize].copy_from_slice(&states[i].staged_bytes()[start..]);
         }
     }
+    if ends.iter().all(|&end| end == ends[0]) {
+        let p = Uniform::<W> {
+            first: core::array::from_fn(|i| states[i].core.chunk_state.buf.as_ptr()),
+            rest: core::array::from_fn(|i| states[i].staged_bytes().as_ptr()),
+            last: core::array::from_fn(|i| tails[i].as_ptr()),
+            cvs: core::array::from_fn(|w| core::array::from_fn(|i| states[i].core.chunk_state.cv[w])),
+            lens: core::array::from_fn(|i| lens[i] as u32),
+            flags: core::array::from_fn(|i| states[i].core.chunk_state.flags as u32),
+            blocks: ends[0] as u32 + 1,
+        };
+        // Sound: public ending counts are equal; FIRST/REST/LAST borrow the
+        // first block, initialized whole prefix blocks, and padded tails.
+        unsafe { hash_uniform(&p, out) };
+        return true;
+    }
     let mut cvs: [[u32; 8]; W] = core::array::from_fn(|i| states[i].core.chunk_state.cv);
     let mut values = [[0u8; OUT_LEN]; W];
     for block in 0..=*ends.iter().max().unwrap() {
@@ -196,20 +251,56 @@ unsafe fn hash_on_platform(platform: Platform, inputs: &[Input<'_>; 16], out: &m
         }
     }
 }
+const UNIFORM_EXPECTED: u64 = 0x69a05ec2649bc819;
+
+unsafe fn uniform_fixture<const W: usize>(inputs: &[Input<'_>; W], out: &mut [[u8; OUT_LEN]]) {
+    let p = Uniform::<W> {
+        first: core::array::from_fn(|i| inputs[i].block.as_ptr()),
+        rest: core::array::from_fn(|i| inputs[i].block.as_ptr()),
+        last: core::array::from_fn(|i| inputs[i].block.as_ptr()),
+        cvs: core::array::from_fn(|w| core::array::from_fn(|i| inputs[i].cv[w])),
+        lens: core::array::from_fn(|i| inputs[i].len as u32),
+        flags: core::array::from_fn(|i| (inputs[i].flags & !(CHUNK_START | CHUNK_END | ROOT)) as u32),
+        blocks: 3,
+    };
+    unsafe { hash_uniform(&p, out) };
+}
+
+unsafe fn uniform_on_platform(platform: Platform, inputs: &[Input<'_>; 16], out: &mut [[u8; OUT_LEN]]) {
+    if lanes(platform) == 16 {
+        unsafe { uniform_fixture::<16>(inputs, out) };
+    } else {
+        assert_eq!(lanes(platform), 8);
+        for (inputs, out) in inputs.chunks_exact(8).zip(out.chunks_mut(8)) {
+            unsafe { uniform_fixture::<8>(inputs.try_into().unwrap(), out) };
+        }
+    }
+}
+
 pub(crate) fn self_test(platform: Platform) -> usize {
     if lanes(platform) == 0 {
         return 0;
     }
+    let mut uniform_answer = 0;
     let answer = self_test_shape(|inputs, out| {
         // Sound: initialize detected this platform before testing its kernels.
         unsafe { hash_on_platform(platform, inputs, out) };
+        let mut roots = [[0u8; OUT_LEN]; 16];
+        unsafe { uniform_on_platform(platform, inputs, &mut roots) };
+        uniform_answer = crate::self_test::fold(roots.as_flattened());
     });
     check_self_test(answer);
-    1
+    assert_eq!(uniform_answer, UNIFORM_EXPECTED, "startup self-test failed: equal-ending chains");
+    2
 }
 #[cfg(test)]
 pub(crate) fn entry(platform: Platform) -> *const () {
     if lanes(platform) == 8 { blake3_servil_output8 as *const () } else { blake3_servil_output16 as *const () }
+}
+
+#[cfg(test)]
+pub(crate) fn uniform_entry(platform: Platform) -> *const () {
+    if lanes(platform) == 8 { blake3_servil_uniform8 as *const () } else { blake3_servil_uniform16 as *const () }
 }
 
 #[cfg(test)]
@@ -263,6 +354,132 @@ mod tests {
                 out.copy_from_slice(guarded_out);
             });
             assert_eq!(answer, SELF_TEST_EXPECTED, "guard placement at_end={at_end}");
+        }
+    }
+
+    #[test]
+    fn uniform_first_rest_last_and_params_against_guard_pages() {
+        use crate::test::guard_pages::Guarded;
+        crate::initialize();
+        fn check<const W: usize>(blocks: usize, at_end: bool) {
+            let mut first: Vec<_> = (0..W).map(|_| Guarded::new(if blocks > 1 { 64 } else { 0 }, at_end)).collect();
+            let mut rest: Vec<_> = (0..W).map(|_| Guarded::new(64 * blocks.saturating_sub(2), at_end)).collect();
+            let mut last: Vec<_> = (0..W).map(|_| Guarded::new(64, at_end)).collect();
+            for i in 0..W {
+                for (j, b) in first[i].bytes().iter_mut().enumerate() {
+                    *b = (i * 31 + j * 7) as u8;
+                }
+                for (j, b) in rest[i].bytes().iter_mut().enumerate() {
+                    *b = (i * 53 + j * 11) as u8;
+                }
+                for (j, b) in last[i].bytes().iter_mut().enumerate() {
+                    *b = (i * 73 + j * 13) as u8;
+                }
+            }
+            let p = Uniform::<W> {
+                first: core::array::from_fn(|i| first[i].bytes().as_ptr()),
+                rest: core::array::from_fn(|i| rest[i].bytes().as_ptr()),
+                last: core::array::from_fn(|i| last[i].bytes().as_ptr()),
+                cvs: core::array::from_fn(|w| core::array::from_fn(|i| 0x12345678u32.wrapping_add((i * 997 + w * 17) as u32))),
+                lens: core::array::from_fn(|i| (i * 23 % 65) as u32),
+                flags: core::array::from_fn(|i| [0, 16, 32, 64][i % 4]),
+                blocks: blocks as u32,
+            };
+            let expected: Vec<[u8; OUT_LEN]> = (0..W)
+                .map(|i| {
+                    let mut cv = core::array::from_fn(|w| p.cvs[w][i]);
+                    for b in 0..blocks {
+                        let is_last = b + 1 == blocks;
+                        let bytes: &[u8; 64] = if is_last {
+                            (&*last[i].bytes()).try_into().unwrap()
+                        } else if b == 0 {
+                            (&*first[i].bytes()).try_into().unwrap()
+                        } else {
+                            (&rest[i].bytes()[(b - 1) * 64..b * 64]).try_into().unwrap()
+                        };
+                        let flags = p.flags[i] as u8 | if b == 0 { CHUNK_START } else { 0 } | if is_last { CHUNK_END | ROOT } else { 0 };
+                        unsafe { crate::sse41::compress_in_place(&mut cv, bytes, if is_last { p.lens[i] as u8 } else { 64 }, 0, flags) };
+                    }
+                    hasher::le_bytes(&cv)
+                })
+                .collect();
+            let mut params = Guarded::new(core::mem::size_of_val(&p), at_end);
+            let ptr = params.bytes().as_mut_ptr().cast::<Uniform<W>>();
+            unsafe { ptr.write(p) };
+            for page in first.iter_mut().chain(rest.iter_mut()).chain(last.iter_mut()) {
+                page.read_only();
+            }
+            params.read_only();
+            let mut output = Guarded::new(W * OUT_LEN, at_end);
+            let out = output.bytes().as_chunks_mut::<OUT_LEN>().0;
+            // Sound: this test chooses a width supported by the detected ISA;
+            // all regions have exactly the stated contract sizes/alignment.
+            unsafe { hash_uniform(&*ptr, out) };
+            assert_eq!(out, expected, "width={W} blocks={blocks} end={at_end}");
+        }
+        for blocks in [1, 2, 3, 16] {
+            for end in [false, true] {
+                match lanes(Platform::detect()) {
+                    16 => check::<16>(blocks, end),
+                    8 => check::<8>(blocks, end),
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn uniform_fixture_matches_independent_scalar_compressions() {
+        crate::initialize();
+        let answer = self_test_shape(|inputs, out| {
+            for (input, digest) in inputs.iter().zip(out) {
+                let mut cv = *input.cv;
+                for block in 0..3 {
+                    let flags = (input.flags & !(CHUNK_START | CHUNK_END | ROOT))
+                        | if block == 0 { CHUNK_START } else { 0 }
+                        | if block == 2 { CHUNK_END | ROOT } else { 0 };
+                    unsafe { crate::sse41::compress_in_place(&mut cv, input.block, if block == 2 { input.len } else { 64 }, 0, flags) };
+                }
+                *digest = hasher::le_bytes(&cv);
+            }
+        });
+        assert_eq!(answer, UNIFORM_EXPECTED);
+        if lanes(Platform::detect()) != 0 {
+            assert_eq!(self_test_shape(|inputs, out| unsafe { uniform_on_platform(Platform::detect(), inputs, out) }), answer);
+        }
+    }
+
+    #[test]
+    fn uniform_public_first_chunks_all_block_counts() {
+        crate::initialize();
+        let keys: [[u8; 32]; 16] = core::array::from_fn(|i| [i as u8; 32]);
+        for blocks in 1..=16 {
+            for phase in [0, 31, 63] {
+                let data: Vec<Vec<u8>> = (0..16).map(|i| (0..64 * (blocks - 1) + 1 + (i + phase) % 64).map(|j| (i * 37 + j * 17) as u8).collect()).collect();
+                let mode = |i: usize| match i % 3 {
+                    0 => crate::Mode::Plain,
+                    1 => crate::Mode::Keyed(&keys[i]),
+                    _ => crate::Mode::DeriveKey("BLAKE3-Servil equal-ending test"),
+                };
+                let mut hashers: Vec<_> = (0..16).map(|i| Hasher::new(mode(i))).collect();
+                for start in (0..1024).step_by(17) {
+                    let pieces: Vec<_> = data.iter().enumerate().map(|(i, b)| (i, &b[start.min(b.len())..(start + 17).min(b.len())])).collect();
+                    crate::each::update_each(&mut hashers, &pieces);
+                }
+                let which: Vec<_> = (0..16).rev().collect();
+                let mut out = [[0u8; OUT_LEN]; 16];
+                crate::RAN_ENTRIES.with(|r| r.borrow_mut().clear());
+                crate::each::finalize_each(&hashers, &which, &mut out);
+                for (slot, &i) in which.iter().enumerate() {
+                    assert_eq!(out[slot], crate::test::official::hash(mode(i), &data[i]));
+                }
+                let reached = crate::RAN_ENTRIES.with(|r| r.borrow().contains(&(uniform_entry(Platform::detect()) as usize)));
+                assert_eq!(reached, blocks > 1 && lanes(Platform::detect()) != 0);
+                crate::each::finalize_each(&hashers, &which, &mut out);
+                for (slot, &i) in which.iter().enumerate() {
+                    assert_eq!(out[slot], crate::test::official::hash(mode(i), &data[i]));
+                }
+            }
         }
     }
 

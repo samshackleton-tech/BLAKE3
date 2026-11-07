@@ -134,6 +134,25 @@ class Kernel:
     def store_aligned(self, dst, s):
         self.e(f"{'vmovdqa' if self.avx else 'movdqa'} {dst}, {s}")
 
+    def output8(self, base):
+        """Word-major CVs in ymm0..7 to eight canonical values at base."""
+        assert self.avx
+        rows, scratch = list(range(8)), 8
+        for distance, low, high, loimm, hiimm in [
+            (1, 'vpunpckldq', 'vpunpckhdq', '', ''),
+            (2, 'vpunpcklqdq', 'vpunpckhqdq', '', ''),
+            (4, 'vperm2i128', 'vperm2i128', ', 0x20', ', 0x31')]:
+            for start in range(0, 8, 2 * distance):
+                for i in range(start, start + distance):
+                    j = i + distance
+                    a, b = rows[i], rows[j]
+                    self.e(f'{low} ymm{scratch}, ymm{a}, ymm{b}{loimm}')
+                    self.e(f'{high} ymm{a}, ymm{a}, ymm{b}{hiimm}')
+                    rows[i], rows[j], scratch = scratch, a, b
+                    assert len(set(rows + [scratch])) == 9
+        for i, word in enumerate([0, 2, 1, 3, 4, 6, 5, 7]):
+            self.e(f'vmovdqu ymmword ptr [{base}+{32*i}], ymm{rows[word]}')
+
     def half(self, quads, words, rd, rb):
         """Half of four Gs side by side: a += m + b; d = (d ^ a) >>> rd;
         c += d; b = (b ^ c) >>> rb. Row c's register 8 is in the spill

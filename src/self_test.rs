@@ -672,9 +672,10 @@ mod test {
         };
         #[cfg(all(blake3_avx512_ffi, target_os = "linux"))]
         let expected = if crate::ffi_output::lanes(Platform::detect_unchecked()) != 0 {
-            let entry = crate::ffi_output::entry(Platform::detect_unchecked()) as usize;
-            assert!(crate::RAN_ENTRIES.with(|r| r.borrow().contains(&entry)), "startup left out batched output compression");
-            expected + 1
+            for entry in [crate::ffi_output::entry(Platform::detect_unchecked()), crate::ffi_output::uniform_entry(Platform::detect_unchecked())] {
+                assert!(crate::RAN_ENTRIES.with(|r| r.borrow().contains(&(entry as usize))), "startup left out grouped compression");
+            }
+            expected + 2
         } else {
             expected
         };
