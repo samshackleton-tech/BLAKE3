@@ -295,6 +295,12 @@ impl Hasher {
     /// You can also add more input and finalize again.
     pub fn finalize(&self) -> Hash {
         assert_eq!(self.core.initial_chunk_counter, 0, "set_input_offset must be used with finalize_non_root",);
+        if self.staged == 0 && self.core.cv_stack.len() == 0 {
+            let c = &self.core.chunk_state;
+            let mut cv = c.cv;
+            c.platform.compress_in_place(&mut cv, &c.buf, c.buf_len, 0, c.flags | c.start_flag() | CHUNK_END | ROOT);
+            return Hash::from(hasher::le_bytes(&cv));
+        }
         self.final_output().root_hash()
     }
 
