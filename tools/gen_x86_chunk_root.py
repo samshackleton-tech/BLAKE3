@@ -30,9 +30,14 @@ from immediates). Clobbers rax, rcx, rdx, rdi, r9-r11, xmm0-xmm15 and flags,
 all caller-saved. The sse41 entry needs SSE4.1; the avx512 entry needs
 AVX-512F and AVX-512VL (vprord on xmm).
 
-The compression body is upstream BLAKE3's blake3_servil_compress_in_place_sse41,
-instruction for instruction, with its rotations rendered per ISA. Proof
-tooling covers the upstream kernels; this one is not yet in it.
+The additional blake3_servil_{sse41,avx512}_root_block entry uses the same ABI,
+with input unused and packed=flags|last_len<<8. It takes an arbitrary CV at key,
+adds ROOT to the supplied structural/mode flags, and shares the final block's
+compression body. Counter is zero. Parent roots therefore keep CHUNK_END clear.
+
+The compression body follows BLAKE3's compress_in_place, with rotations rendered
+per ISA. The assembled entries are checked against the compression definition
+by tools/verify/prove_x86.py and prove_root_block.py.
 """
 import sys
 
@@ -142,8 +147,20 @@ def kernel(isa):
     out += ['add rdi, 64', 'xor ecx, ecx', 'dec r9', 'jnz 2b', '3:']
     out += qword_pair(isa, 'xmm2', IV)
     out += ['mov eax, r11d', 'or eax, ecx', f'or eax, {CHUNK_END | ROOT}', 'shl rax, 32', 'or rax, r10'] + row3(isa)
-    out += body(isa, 'rdx')
+    out += [f'.L{isa}_root_compress:'] + body(isa, 'rdx')
     out += [f'{x}movups xmmword ptr [r8], xmm0', f'{x}movups xmmword ptr [r8+0x10], xmm1', 'ret']
+    # One root compression from an arbitrary CV, with structural flags already
+    # supplied. Same ABI, input unused, packed=flags|length<<8. Share the final
+    # round body above, with ROOT alone added (parents have no CHUNK_END).
+    root = f'blake3_servil_{isa}_root_block'
+    out += ['.p2align 6', f'{root}:', f'_{root}:', '_CET_ENDBR']
+    out += ['movzx r11d, cl', 'mov r10, rcx', 'shr r10, 8', 'and r10d, 0xff']
+    out += [f'{x}movups xmm0, xmmword ptr [rsi]', f'{x}movups xmm1, xmmword ptr [rsi+0x10]']
+    if isa == 'sse41':
+        out += qword_pair(isa, 'xmm15', ROT16) + qword_pair(isa, 'xmm14', ROT8)
+    out += qword_pair(isa, 'xmm2', IV)
+    out += ['mov eax, r11d', f'or eax, {ROOT}', 'shl rax, 32', 'or rax, r10'] + row3(isa)
+    out += [f'jmp .L{isa}_root_compress']
     return out
 
 
@@ -155,6 +172,7 @@ def main():
     print('.intel_syntax noprefix')
     for isa in ('sse41', 'avx512'):
         print(f'.global blake3_servil_{isa}_chunk_root\n.global _blake3_servil_{isa}_chunk_root')
+        print(f'.global blake3_servil_{isa}_root_block\n.global _blake3_servil_{isa}_root_block')
     print('#ifdef __APPLE__\n.text\n#else\n.section .text\n#endif')
     for isa in ('sse41', 'avx512'):
         for line in kernel(isa):

@@ -690,6 +690,22 @@ type ChunkState = hasher::ChunkState<Platform>;
 
 impl hasher::Blocks for Platform {
     #[inline(always)]
+    fn root_bytes(&self, cv: &CVWords, block: &[u8; BLOCK_LEN], block_len: u8, flags: u8) -> [u8; OUT_LEN] {
+        match self {
+            #[cfg(blake3_sse41_ffi)]
+            Platform::SSE41 | Platform::AVX2 => unsafe { chunk_root::root_block(false, block, cv, block_len, flags) },
+            #[cfg(blake3_avx512_ffi)]
+            Platform::AVX512 => unsafe { chunk_root::root_block(true, block, cv, block_len, flags) },
+            #[allow(unreachable_patterns)]
+            _ => {
+                let mut cv = *cv;
+                self.compress_in_place(&mut cv, block, block_len, 0, flags | ROOT);
+                hasher::le_bytes(&cv)
+            }
+        }
+    }
+
+    #[inline(always)]
     fn compress_in_place(&self, cv: &mut CVWords, block: &[u8; BLOCK_LEN], block_len: u8, counter: u64, flags: u8) {
         Platform::compress_in_place(self, cv, block, block_len, counter, flags)
     }

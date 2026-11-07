@@ -683,6 +683,12 @@ mod test {
         } else {
             expected
         };
+        #[cfg(all(blake3_sse41_ffi, blake3_avx512_ffi))]
+        {
+            let platform = Platform::detect_unchecked();
+            let entry = crate::chunk_root::root_block_entry(matches!(platform, Platform::AVX512)) as usize;
+            assert!(crate::RAN_ENTRIES.with(|r| r.borrow().contains(&entry)), "startup left out direct root-block output");
+        }
         assert_eq!(checked, expected);
     }
 

@@ -13,8 +13,12 @@
 .intel_syntax noprefix
 .global blake3_servil_sse41_chunk_root
 .global _blake3_servil_sse41_chunk_root
+.global blake3_servil_sse41_root_block
+.global _blake3_servil_sse41_root_block
 .global blake3_servil_avx512_chunk_root
 .global _blake3_servil_avx512_chunk_root
+.global blake3_servil_avx512_root_block
+.global _blake3_servil_avx512_root_block
 #ifdef __APPLE__
 .text
 #else
@@ -156,6 +160,7 @@ _CET_ENDBR
         movq xmm9, rax
         pxor xmm3, xmm3
         punpcklqdq xmm3, xmm9
+.Lsse41_root_compress:
         movups xmm4, xmmword ptr [rdx]
         movups xmm5, xmmword ptr [rdx+0x10]
         movaps xmm8, xmm4
@@ -242,6 +247,36 @@ _CET_ENDBR
         movups xmmword ptr [r8], xmm0
         movups xmmword ptr [r8+0x10], xmm1
         ret
+.p2align 6
+blake3_servil_sse41_root_block:
+_blake3_servil_sse41_root_block:
+_CET_ENDBR
+        movzx r11d, cl
+        mov r10, rcx
+        shr r10, 8
+        and r10d, 0xff
+        movups xmm0, xmmword ptr [rsi]
+        movups xmm1, xmmword ptr [rsi+0x10]
+        mov rax, 0x0504070601000302
+        movq xmm15, rax
+        mov rax, 0x0d0c0f0e09080b0a
+        pinsrq xmm15, rax, 1
+        mov rax, 0x0407060500030201
+        movq xmm14, rax
+        mov rax, 0x0c0f0e0d080b0a09
+        pinsrq xmm14, rax, 1
+        mov rax, 0xbb67ae856a09e667
+        movq xmm2, rax
+        mov rax, 0xa54ff53a3c6ef372
+        pinsrq xmm2, rax, 1
+        mov eax, r11d
+        or eax, 8
+        shl rax, 32
+        or rax, r10
+        movq xmm9, rax
+        pxor xmm3, xmm3
+        punpcklqdq xmm3, xmm9
+        jmp .Lsse41_root_compress
 .p2align 6
 blake3_servil_avx512_chunk_root:
 _blake3_servil_avx512_chunk_root:
@@ -358,6 +393,7 @@ _CET_ENDBR
         vmovq xmm9, rax
         vpxor xmm3, xmm3, xmm3
         vpunpcklqdq xmm3, xmm3, xmm9
+.Lavx512_root_compress:
         vmovups xmm4, xmmword ptr [rdx]
         vmovups xmm5, xmmword ptr [rdx+0x10]
         vmovaps xmm8, xmm4
@@ -432,3 +468,25 @@ _CET_ENDBR
         vmovups xmmword ptr [r8], xmm0
         vmovups xmmword ptr [r8+0x10], xmm1
         ret
+.p2align 6
+blake3_servil_avx512_root_block:
+_blake3_servil_avx512_root_block:
+_CET_ENDBR
+        movzx r11d, cl
+        mov r10, rcx
+        shr r10, 8
+        and r10d, 0xff
+        vmovups xmm0, xmmword ptr [rsi]
+        vmovups xmm1, xmmword ptr [rsi+0x10]
+        mov rax, 0xbb67ae856a09e667
+        vmovq xmm2, rax
+        mov rax, 0xa54ff53a3c6ef372
+        vpinsrq xmm2, xmm2, rax, 1
+        mov eax, r11d
+        or eax, 8
+        shl rax, 32
+        or rax, r10
+        vmovq xmm9, rax
+        vpxor xmm3, xmm3, xmm3
+        vpunpcklqdq xmm3, xmm3, xmm9
+        jmp .Lavx512_root_compress

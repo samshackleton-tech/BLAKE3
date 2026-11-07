@@ -60,10 +60,39 @@ unsafe fn call(avx512: bool, input: &[u8], key: &CVWords, last: *const u8, packe
     }
 }
 
+/// A single root compression from an arbitrary CV. The caller supplies all
+/// structural/mode flags; ROOT is added by the kernel. Counter is zero.
+/// Requires SSE4.1, and AVX-512F+VL when `avx512` is true.
+#[inline(always)]
+pub(crate) unsafe fn root_block(avx512: bool, block: &[u8; BLOCK_LEN], cv: &CVWords, len: u8, flags: u8) -> [u8; OUT_LEN] {
+    assert!(len as usize <= BLOCK_LEN, "one padded final block");
+    let mut out = MaybeUninit::<[u8; OUT_LEN]>::uninit();
+    let packed = flags as u64 | ((len as u64) << 8);
+    // Sound: cv/block references provide32/64 readable bytes, out32writable;
+    // the first argument is unused by this entry and every counter is zero.
+    unsafe {
+        if avx512 {
+            crate::ran_kernel(ffi::blake3_servil_avx512_root_block as *const ());
+            ffi::blake3_servil_avx512_root_block(block.as_ptr(), cv.as_ptr(), block.as_ptr(), packed, out.as_mut_ptr().cast());
+        } else {
+            crate::ran_kernel(ffi::blake3_servil_sse41_root_block as *const ());
+            ffi::blake3_servil_sse41_root_block(block.as_ptr(), cv.as_ptr(), block.as_ptr(), packed, out.as_mut_ptr().cast());
+        }
+        out.assume_init()
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn root_block_entry(avx512: bool) -> *const () {
+    if avx512 { ffi::blake3_servil_avx512_root_block as *const () } else { ffi::blake3_servil_sse41_root_block as *const () }
+}
+
 pub(crate) mod ffi {
     unsafe extern "C" {
         pub fn blake3_servil_sse41_chunk_root(input: *const u8, key: *const u32, last: *const u8, packed: u64, out: *mut u8);
         pub fn blake3_servil_avx512_chunk_root(input: *const u8, key: *const u32, last: *const u8, packed: u64, out: *mut u8);
+        pub fn blake3_servil_sse41_root_block(unused: *const u8, cv: *const u32, block: *const u8, packed: u64, out: *mut u8);
+        pub fn blake3_servil_avx512_root_block(unused: *const u8, cv: *const u32, block: *const u8, packed: u64, out: *mut u8);
     }
 }
 
@@ -86,6 +115,63 @@ mod test {
             v.push(true);
         }
         v
+    }
+
+    #[test]
+    fn test_root_block_arbitrary_cvs_lengths_and_structural_flags() {
+        let variants = variants();
+        let block: [u8; 64] = core::array::from_fn(|i| (i * 37 + 19) as u8);
+        for avx512 in variants {
+            for flags in [0u8, 1, 2, 3, 4, 16 | 2, 32 | 4, 64 | 3, 255] {
+                let cv: [u32; 8] = core::array::from_fn(|i| 0x12345678u32.wrapping_add(i as u32 * 997).wrapping_add(flags as u32));
+                for len in 0..=64 {
+                    let mut expected = cv;
+                    crate::platform::Platform::SSE41.compress_in_place(&mut expected, &block, len, 0, flags | crate::ROOT);
+                    let got = unsafe { root_block(avx512, &block, &cv, len, flags) };
+                    assert_eq!(got, crate::hasher::le_bytes(&expected), "avx512={avx512} len={len} flags={flags}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    #[cfg(all(target_os = "linux", blake3_avx512_ffi))]
+    fn test_root_block_readonly_guarded_cv_block_and_output() {
+        use crate::test::guard_pages::Guarded;
+        for avx512 in variants() {
+            for at_end in [false, true] {
+                for len in [0u8, 1, 63, 64] {
+                    for flags in [3u8, 2, 4, 64 | 3] {
+                        let mut block = Guarded::new(64, at_end);
+                        let mut key = Guarded::new(32, at_end);
+                        let mut out = Guarded::new(32, at_end);
+                        let mut unused = Guarded::new(0, true);
+                        crate::test::paint_test_input(block.bytes());
+                        crate::test::paint_test_input(key.bytes());
+                        let bp = block.bytes().as_ptr();
+                        let kp = key.bytes().as_ptr().cast::<u32>();
+                        let mut expected = unsafe { *kp.cast::<[u32; 8]>() };
+                        crate::platform::Platform::SSE41.compress_in_place(&mut expected, unsafe { &*bp.cast::<[u8; 64]>() }, len, 0, flags | crate::ROOT);
+                        let zero = unused.bytes().as_ptr();
+                        block.read_only();
+                        key.read_only();
+                        unused.read_only();
+                        let packed = flags as u64 | ((len as u64) << 8);
+                        // Sound: guard placement gives aligned32-byte CVs and
+                        // readable64-byte blocks. The unused pointer has zero
+                        // readable bytes; only out32 is writable.
+                        unsafe {
+                            if avx512 {
+                                ffi::blake3_servil_avx512_root_block(zero, kp, bp, packed, out.bytes().as_mut_ptr());
+                            } else {
+                                ffi::blake3_servil_sse41_root_block(zero, kp, bp, packed, out.bytes().as_mut_ptr());
+                            }
+                        }
+                        assert_eq!(out.bytes(), crate::hasher::le_bytes(&expected));
+                    }
+                }
+            }
+        }
     }
 
     /// Every length of 0 to 1024 bytes, at four alignments, in the three

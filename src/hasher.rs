@@ -286,6 +286,14 @@ impl<P: Blocks + Copy, H> Nodes<ChunkState<P>, Output<P>> for Kernels<'_, P, H> 
 
 /// The compression kernels a chunk's state calls.
 pub trait Blocks {
+    /// The first root output bytes, from the supplied CV/block and flags.
+    /// The root output counter is zero; ROOT is added here.
+    fn root_bytes(&self, cv: &[u32; 8], block: &[u8; BLOCK_LEN], block_len: u8, flags: u8) -> [u8; 32] {
+        let mut cv = *cv;
+        self.compress_in_place(&mut cv, block, block_len, 0, flags | ROOT);
+        le_bytes(&cv)
+    }
+
     /// `cv` compressed with `block`, its first `block_len` bytes the
     /// message's and the rest zero.
     fn compress_in_place(&self, cv: &mut [u32; 8], block: &[u8; BLOCK_LEN], block_len: u8, counter: u64, flags: u8);
@@ -403,9 +411,7 @@ impl<P: Blocks> Output<P> {
     /// counter 0).
     #[inline]
     pub fn root_bytes(&self) -> [u8; 32] {
-        let mut cv = self.input_chaining_value;
-        self.platform.compress_in_place(&mut cv, &self.block, self.block_len, 0, self.flags | ROOT);
-        le_bytes(&cv)
+        self.platform.root_bytes(&self.input_chaining_value, &self.block, self.block_len, self.flags)
     }
 }
 
