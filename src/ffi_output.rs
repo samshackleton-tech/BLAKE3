@@ -165,19 +165,36 @@ pub(crate) unsafe fn staged_group<const W: usize>(hashers: &[Hasher], which: &[u
 }
 
 const SELF_TEST_EXPECTED: u64 = 0x153e0dfbeac2bb44;
-fn self_test_shape(mut hash: impl FnMut(&[Input<'_>; 16], &mut [[u8; OUT_LEN]])) -> u64 {
-    let mut lens: [u8; 16] = [0, 1, 31, 63, 64, 7, 32, 55, 3, 15, 48, 60, 2, 33, 62, 64];
-    let flags: [u8; 16] = core::array::from_fn(|i| {
+// The same fixed read-only bytes/CVs/lengths/modes, prepared at compile time.
+// Pointers, actual compression, folds and entry reachability remain runtime work.
+static SELF_TEST_INPUTS: ([u8; 16], [u8; 16], [[u32; 8]; 16], [[u8; 64]; 16]) = {
+    let mut lens = [0, 1, 31, 63, 64, 7, 32, 55, 3, 15, 48, 60, 2, 33, 62, 64];
+    let mut flags = [0u8; 16];
+    let mut cvs = [[0u32; 8]; 16];
+    let mut blocks = [[0u8; 64]; 16];
+    let mut i = 0;
+    while i < 16 {
         let shape = [3u8, 2, 4][i % 3];
         if shape == 4 {
             lens[i] = 64;
         }
-        shape | [0u8, 16, 32, 64][i % 4]
-    });
-    let cvs: [[u32; 8]; 16] = core::array::from_fn(|i| {
-        core::array::from_fn(|w| (0x1234abcdu32.wrapping_add(i as u32 * 0x9e37).wrapping_add(w as u32 * 0x1020304)).wrapping_mul(0x85ebca6b))
-    });
-    let blocks: [[u8; 64]; 16] = core::array::from_fn(|i| core::array::from_fn(|j| if j < lens[i] as usize { ((i * 37 + j * 17) ^ 0x5a) as u8 } else { 0 }));
+        flags[i] = shape | [0u8, 16, 32, 64][i % 4];
+        let mut w = 0;
+        while w < 8 {
+            cvs[i][w] = (0x1234abcdu32.wrapping_add(i as u32 * 0x9e37).wrapping_add(w as u32 * 0x1020304)).wrapping_mul(0x85ebca6b);
+            w += 1;
+        }
+        let mut j = 0;
+        while j < lens[i] as usize {
+            blocks[i][j] = ((i * 37 + j * 17) ^ 0x5a) as u8;
+            j += 1;
+        }
+        i += 1;
+    }
+    (lens, flags, cvs, blocks)
+};
+fn self_test_shape(mut hash: impl FnMut(&[Input<'_>; 16], &mut [[u8; OUT_LEN]])) -> u64 {
+    let (lens, flags, cvs, blocks) = &SELF_TEST_INPUTS;
     let inputs = core::array::from_fn(|i| Input { block: &blocks[i], cv: &cvs[i], len: lens[i], flags: flags[i] | if (i / 4) % 2 == 0 { ROOT } else { 0 } });
     let mut out = [[0u8; OUT_LEN]; 16];
     hash(&inputs, &mut out);
@@ -223,6 +240,23 @@ pub(crate) fn entry(width: usize) -> *const () {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn compile_time_fixture_matches_runtime_preparation() {
+        let mut lens: [u8; 16] = [0, 1, 31, 63, 64, 7, 32, 55, 3, 15, 48, 60, 2, 33, 62, 64];
+        let flags = core::array::from_fn(|i| {
+            let shape = [3u8, 2, 4][i % 3];
+            if shape == 4 {
+                lens[i] = 64;
+            }
+            shape | [0u8, 16, 32, 64][i % 4]
+        });
+        let cvs = core::array::from_fn(|i| {
+            core::array::from_fn(|w| (0x1234abcdu32.wrapping_add(i as u32 * 0x9e37).wrapping_add(w as u32 * 0x1020304)).wrapping_mul(0x85ebca6b))
+        });
+        let blocks = core::array::from_fn(|i| core::array::from_fn(|j| if j < lens[i] as usize { ((i * 37 + j * 17) ^ 0x5a) as u8 } else { 0 }));
+        assert_eq!(SELF_TEST_INPUTS, (lens, flags, cvs, blocks));
+    }
+
     #[test]
     fn startup_answers_match_independent_compression() {
         crate::initialize();
