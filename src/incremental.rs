@@ -41,6 +41,7 @@ pub struct Hasher {
 }
 
 impl Clone for Hasher {
+    #[inline]
     fn clone(&self) -> Self {
         let mut cloned = Self::from_core(self.core.clone());
         cloned.staged = self.staged;
