@@ -32,12 +32,15 @@ FILES = ("sse41", "avx2", "avx512", "wide", "output", "output8", "uniform")  # w
 
 
 def forms(code):
-    """Each vector form, registers renamed: vectors to
+    """Each vector or register-LEA form, registers renamed: vectors to
     xmm/ymm/zmm 0-3 by first use, masks to k1-k2, general registers to
     r8d-r11d / r8-r11. Memory addresses become [rdx]; widths remain."""
     seen = {}
     for mnem, ops, _ in code.values():
-        if not any(x86.is_vreg(x86.strip_mask(o)[0]) for o in ops):
+        arithmetic = mnem == "lea" and "rip" not in ", ".join(ops)
+        if not arithmetic and not any(x86.is_vreg(x86.strip_mask(o)[0]) for o in ops):
+            continue
+        if arithmetic and any(x86.SUB[r][1] != 64 for r in re.findall(r"\b(?:r[a-z0-9]+|e[a-z]{2})\b", ops[1]) if r in x86.SUB):
             continue
         vec, gpr, msk = {}, {}, {}
 
@@ -53,7 +56,7 @@ def forms(code):
             return {64: f"r{8 + n}", 32: f"r{8 + n}d"}[bits]
         text = re.sub(r"\b([xyz]mm\d+|k\d|r[a-z0-9]+|e[a-z]{2})\b",
                       lambda mt: rename(mt) if (re.match(r"[xyz]mm\d+$|k\d$", mt.group(0)) or mt.group(0) in x86.SUB) else mt.group(0),
-                      re.sub(r"\[[^]]*\]", "[MEMORY]", ", ".join(ops))).replace("[MEMORY]", "[rdx]")
+                      ", ".join(ops) if arithmetic else re.sub(r"\[[^]]*\]", "[MEMORY]", ", ".join(ops))).replace("[MEMORY]", "[rdx]")
         if max(list(vec.values()) + [0]) > 3 or len(gpr) > 4 or len(msk) > 2:
             continue
         if mnem in ("blendvps", "blendvpd", "pblendvb"):
@@ -204,7 +207,7 @@ def main():
                     bad += 1
                     break
             total += 1
-    print(f"{total} vector instruction forms ({memory_forms} memory forms), {rounds} random states each, {faults} alignment fault controls: {'all agree' if not bad else f'{bad} disagree'}"
+    print(f"{total} vector/LEA instruction forms ({memory_forms} memory forms), {rounds} random states each, {faults} alignment fault controls: {'all agree' if not bad else f'{bad} disagree'}"
           + (f"; {skipped} AVX-512 forms skipped (no AVX-512 here)" if skipped else ""))
     sys.exit(1 if bad else 0)
 

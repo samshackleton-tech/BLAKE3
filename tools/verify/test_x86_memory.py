@@ -79,6 +79,32 @@ class X86Memory(unittest.TestCase):
         m.lengths = {"len_offset"}
         x86.step(m, 0, "prefetcht0", ["[rdi+rax+128]"], 0)
 
+    def test_numeric_lea_is_arithmetic_without_memory_or_flag_effects(self):
+        from z3 import simplify, is_true
+        m = machine()
+        value = BitVec("secret_value", 64)
+        m.x["rbx"] = value
+        original_flags = ("logic", BitVecVal(17, 64))
+        m.flags = original_flags
+        x86.step(m, 0, "lea", ["rax", "[rbx + 0x40]"], 0)
+        self.assertTrue(is_true(simplify(m.x["rax"] == value + 64)))
+        self.assertEqual(m.flags, original_flags)
+        x86.step(m, 0, "lea", ["rdx", "[rbx - 0x40]"], 0)
+        self.assertTrue(is_true(simplify(m.x["rdx"] == value - 64)))
+        self.assertEqual(m.flags, original_flags)
+        with self.assertRaisesRegex(Unproved, "no pointer"):
+            x86.address(m, "[rax]")
+
+    def test_vpord_register_and_memory(self):
+        from z3 import simplify, is_true
+        m = machine()
+        a, b = BitVec("or_a", 32), BitVec("or_b", 32)
+        m.v[1], m.v[2] = [a] * 16, [b] * 16
+        x86.step(m, 0, "vpord", ["zmm0", "zmm1", "zmm2"], 0)
+        self.assertTrue(all(is_true(simplify(x == (a | b))) for x in m.v[0]))
+        x86.step(m, 0, "vpord", ["zmm0", "zmm1", "zmmword ptr [rdi]"], 0)
+        self.assertTrue(all(is_true(simplify(x == a)) for x in m.v[0]))
+
     def test_memory_masks_are_public(self):
         m = machine()
         m.k[1] = BitVec("secret_mask", 16)

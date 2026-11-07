@@ -331,8 +331,8 @@ def strip_mask(op):
     return op, None, False
 
 
-def address(m, op):
-    """A memory operand's size (bytes, or None) and address."""
+def address(m, op, *, arithmetic=False):
+    """A memory operand's size/address, or LEA's numeric effective value."""
     mt = re.match(r"^(?:(\w+) ptr )?\[(.*)\](\{1to\d+\})?$", op)
     if not mt:
         raise Unproved(f"unparsed memory operand {op}")
@@ -366,6 +366,8 @@ def address(m, op):
     if base is None:
         raise Unproved(f"an absolute address {op}")
     if not isinstance(base, Ptr):
+        if arithmetic:
+            return size, as_bv(base) + disp, mt.group(3)
         raise Unproved(f"an address that is no pointer: {op}")
     addr = base + disp
     if not isinstance(addr.offset, int) and not aarch64.lengths_only(m, as_bv(addr.offset)):
@@ -578,7 +580,7 @@ def step(m, pc, mnem, ops, nxt):
             m.gwrite(ops[0], val)
         return nxt
     if mnem == "lea":
-        _, addr, _ = address(m, ops[1])
+        _, addr, _ = address(m, ops[1], arithmetic=True)
         m.gwrite(ops[0], addr)
         return nxt
     if mnem in ("xor", "sub") and ops[0] == ops[1] and ops[0] in SUB:
@@ -794,10 +796,10 @@ def vector(m, mnem, base, vex, ops, nxt):
         # lanes above it; the VEX forms zero those too.
         m.vwrite(dst, new, vex)
         return nxt
-    elif base in ("paddd", "psubd", "pxor", "pxord", "por", "pand"):
+    elif base in ("paddd", "psubd", "pxor", "pxord", "por", "pord", "pand"):
         a, b = A(), B()
         op = {"paddd": lambda x, y: x + y, "psubd": lambda x, y: x - y, "pxor": lambda x, y: x ^ y,
-              "pxord": lambda x, y: x ^ y, "por": orr, "pand": lambda x, y: x & y}[base]
+              "pxord": lambda x, y: x ^ y, "por": orr, "pord": orr, "pand": lambda x, y: x & y}[base]
         new = [op(x, y) for x, y in zip(a, b)]
     elif base in ("pslld", "psrld", "prord"):
         a, k = A(), imm(rest[-1])
