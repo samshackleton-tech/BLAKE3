@@ -152,13 +152,9 @@ unsafe fn finalize_groups<const W: usize>(hashers: &[Hasher], which: &[usize], o
     }
 }
 
-/// A turn of pieces for many hashers: each piece gathered into its
-/// hasher's stage, and every stage that fills a whole group held, its
-/// hasher's later pieces waiting, until the turn's held groups hash
-/// together: their chunks back to back, a group per call with nothing in
-/// between (the SME unit stays in its fast state), then each level of
-/// their parents in one call. Then the waiting pieces, the same way, until
-/// none is left.
+/// Short first chunks gather for SIMD finishing; the other pieces run
+/// through their existing cores, whose whole stages already fill x86 lanes.
+#[cfg(target_arch = "x86_64")]
 fn update_turn(hashers: &mut [Hasher], pieces: &[(usize, &[u8])], pooled: bool) {
     #[cfg(all(blake3_avx512_ffi, target_os = "linux"))]
     let pieces = if hashers.len() >= 8 {
@@ -176,6 +172,16 @@ fn update_turn(hashers: &mut [Hasher], pieces: &[(usize, &[u8])], pooled: bool) 
     } else {
         pieces
     };
+    for &(i, bytes) in pieces {
+        hashers[i].gather_part(bytes, pooled, false);
+    }
+}
+
+/// Hold complete stages and hash their chunks and parent levels together,
+/// keeping the ARM engines in one sustained run. Pieces after a held stage
+/// wait in their original order until that stage has been absorbed.
+#[cfg(not(target_arch = "x86_64"))]
+fn update_turn(hashers: &mut [Hasher], pieces: &[(usize, &[u8])], pooled: bool) {
     if pieces.is_empty() {
         return;
     }
@@ -214,17 +220,6 @@ fn update_turn(hashers: &mut [Hasher], pieces: &[(usize, &[u8])], pooled: bool) 
         held.clear();
         core::mem::swap(&mut turn, &mut waiting);
         waiting.clear();
-    }
-}
-
-/// On x86, each complete stage already fills the chunk kernels' lanes.
-/// Absorb it with the core's existing tree walk, independent of every other
-/// message's key/counter, without constructing another grouped tree.
-#[cfg(all(feature = "std", target_arch = "x86_64"))]
-fn hash_held(hashers: &mut [Hasher], held: &[usize]) {
-    for &i in held {
-        debug_assert!(hashers[i].held_group().is_some());
-        hashers[i].absorb_stage(false);
     }
 }
 
