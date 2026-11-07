@@ -217,10 +217,20 @@ fn update_turn(hashers: &mut [Hasher], pieces: &[(usize, &[u8])], pooled: bool) 
     }
 }
 
-/// Hash the whole groups `held` names, one in each of those hashers'
-/// stages, together where they share a key and flags, and pass each
-/// group's subtree to its hasher's core.
-#[cfg(feature = "std")]
+/// On x86, each complete stage already fills the chunk kernels' lanes.
+/// Absorb it with the core's existing tree walk, independent of every other
+/// message's key/counter, without constructing another grouped tree.
+#[cfg(all(feature = "std", target_arch = "x86_64"))]
+fn hash_held(hashers: &mut [Hasher], held: &[usize]) {
+    for &i in held {
+        debug_assert!(hashers[i].held_group().is_some());
+        hashers[i].absorb_stage(false);
+    }
+}
+
+/// Hash held groups together where sharing a key/flags keeps the ARM
+/// kernels in one sustained run, then pass each subtree to its core.
+#[cfg(all(feature = "std", not(target_arch = "x86_64")))]
 fn hash_held(hashers: &mut [Hasher], held: &[usize]) {
     use crate::{BLOCK_LEN, PARENT};
     let Some(&first) = held.first() else { return };
