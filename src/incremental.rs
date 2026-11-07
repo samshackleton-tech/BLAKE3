@@ -159,6 +159,16 @@ impl Hasher {
         self
     }
 
+    /// Commit the initialized staged prefix to the core before reusing it.
+    #[inline(always)]
+    pub(crate) fn absorb_stage(&mut self, pooled: bool) {
+        let staged = core::mem::replace(&mut self.staged, 0);
+        // Sound: the first `staged` bytes were written; the core reads them
+        // before the caller writes into the stage again.
+        let bytes = unsafe { core::slice::from_raw_parts(self.stage.as_ptr() as *const u8, staged) };
+        self.core.update_pooled(bytes, pooled);
+    }
+
     /// [`gather`](Hasher::gather), but with `hold`, a stage that fills a
     /// whole group (from offset zero) is kept for the caller to hash with
     /// others' (`held_group`), and the rest of `input`
@@ -186,11 +196,7 @@ impl Hasher {
             if hold && self.held_group().is_some() {
                 return input;
             }
-            let staged = core::mem::replace(&mut self.staged, 0);
-            // Sound: the first `staged` bytes were written; the core reads
-            // them before the stage is written again.
-            let bytes = unsafe { core::slice::from_raw_parts(self.stage.as_ptr() as *const u8, staged) };
-            self.core.update_pooled(bytes, pooled);
+            self.absorb_stage(pooled);
         }
         &[]
     }
