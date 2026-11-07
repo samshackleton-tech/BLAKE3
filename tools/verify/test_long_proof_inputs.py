@@ -18,7 +18,8 @@ class LongProofInputs(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(prefix="long-proof-inputs-")
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        text = SCRIPT.read_text()
+        self.driver = SCRIPT.resolve()
+        text = self.driver.read_text()
         expressions = [line for line in text.splitlines() if line.startswith("inputs=$(")]
         self.assertEqual(len(expressions), 1, "one production cache-key expression")
         self.expression = expressions[0]
@@ -46,7 +47,7 @@ class LongProofInputs(unittest.TestCase):
 
     def key(self):
         command = 'root="$1"; commit="$2"\n' + self.expression + '\nprintf "%s" "$inputs"\n'
-        return subprocess.check_output(["sh", "-c", command, "cache-key-test", str(self.root),
+        return subprocess.check_output(["sh", "-c", command, str(self.driver), str(self.root),
                                         self.git("rev-parse", "HEAD")], text=True)
 
     def test_each_checked_generator_invalidates_the_cache_key(self):
@@ -66,6 +67,23 @@ class LongProofInputs(unittest.TestCase):
             self.commit()
             with self.subTest(path=name):
                 self.assertNotEqual(self.key(), before)
+
+    def test_caller_verification_changes_invalidate_but_relocation_keeps_the_key(self):
+        source = SCRIPT.read_text()
+        verification = "run helpers python3 -m unittest discover -s tools/verify -p 'test_*.py'"
+        self.assertEqual(source.count(verification), 1)
+        commit = self.git("rev-parse", "HEAD")
+        first = self.root / "caller with spaces.sh"
+        second = self.root / "relocated-caller.sh"
+        first.write_text(source)
+        second.write_text(source)
+        self.driver = first
+        before = self.key()
+        self.driver = second
+        self.assertEqual(self.key(), before, "relocation preserves identical verification inputs")
+        second.write_text(source.replace(verification, "run helpers sh -c 'exit 1'"))
+        self.assertEqual(self.git("rev-parse", "HEAD"), commit, "target commit stays unchanged")
+        self.assertNotEqual(self.key(), before, "changed caller verification must invalidate cached success")
 
     def test_identical_inputs_and_unrelated_documentation_keep_the_cache_key(self):
         before = self.key()
