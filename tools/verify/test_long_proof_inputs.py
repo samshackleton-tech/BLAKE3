@@ -85,6 +85,41 @@ class LongProofInputs(unittest.TestCase):
         self.assertEqual(self.git("rev-parse", "HEAD"), commit, "target commit stays unchanged")
         self.assertNotEqual(self.key(), before, "changed caller verification must invalidate cached success")
 
+    def test_log_destinations_and_cache_lookup_preserve_each_input(self):
+        source = SCRIPT.read_text()
+        assignments = [line for line in source.splitlines() if line.startswith("logs=")]
+        self.assertEqual(len(assignments), 1)
+        commit = self.git("rev-parse", "HEAD")
+        before = self.key()
+        caller = self.root / "changed-caller.sh"
+        caller.write_text(source + "\n# another caller\n")
+        self.driver = caller
+        after = self.key()
+        self.assertNotEqual(before, after)
+
+        def log_path(key):
+            command = 'root="$1"; commit="$2"; inputs="$3"\n' + assignments[0] + '\nprintf "%s" "$logs"\n'
+            return Path(subprocess.check_output(["sh", "-eu", "-c", command, str(caller),
+                                                 str(self.root), commit, key], text=True))
+
+        first, second = log_path(before), log_path(after)
+        self.assertNotEqual(first, second, "different caller inputs keep distinct evidence")
+        for path, contents in [(first, "prior evidence"), (second, "new evidence")]:
+            path.mkdir(parents=True)
+            (path / "proof.txt").write_text(contents)
+        self.assertEqual((first / "proof.txt").read_text(), "prior evidence")
+        start = source.index('if [ -f "$record" ]; then\n')
+        block = source[start:source.index('\nfi\n', start) + len('\nfi\n')]
+        b64 = [line for line in source.splitlines() if line.startswith("b64()")]
+        self.assertEqual(len(b64), 1)
+        record = self.root / "cached-record"
+        record.write_text(commit + "\n" + "a" * 64 + "\n" + "b" * 64 + "\n")
+        command = 'root="$1"; commit="$2"; inputs="$3"; record="$4"\n' + b64[0] + '\nstatus() { :; }\n' + block
+        for key, expected in [(before, first), (after, second)]:
+            output = subprocess.check_output(["sh", "-eu", "-c", command, str(caller),
+                                              str(self.root), commit, key, str(record)], text=True)
+            self.assertIn(str(expected), output, "cache hit names the retained input-specific logs")
+
     def test_identical_inputs_and_unrelated_documentation_keep_the_cache_key(self):
         before = self.key()
         self.assertEqual(self.key(), before)

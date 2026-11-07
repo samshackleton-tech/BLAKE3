@@ -30,8 +30,8 @@ class LongProofExit(unittest.TestCase):
 
 class LongProofCarryOver(unittest.TestCase):
     def test_same_proof_inputs_are_not_rerun(self):
-        import hashlib
         import os
+        import shutil
         import stat
         here = Path(__file__).parent
         with tempfile.TemporaryDirectory() as td:
@@ -42,6 +42,7 @@ class LongProofCarryOver(unittest.TestCase):
             (root / "tools" / "verify" / "long-proofs.sh").write_text(
                 (here / "long-proofs.sh").read_text())
             (root / "ghtokenclassic.txt").write_text("token\n")
+            (root / "fixture-id.txt").write_text(str(root))
             bin_dir = Path(td) / "bin"
             bin_dir.mkdir()
             curl_log = Path(td) / "curl.log"
@@ -53,10 +54,12 @@ class LongProofCarryOver(unittest.TestCase):
             subprocess.run(git + ["add", "-A"], check=True)
             subprocess.run(git + ["commit", "-q", "-m", "proof inputs"], check=True)
             prior = subprocess.check_output(git + ["rev-parse", "HEAD"], text=True).strip()
-            listing = subprocess.check_output(
-                git + ["ls-tree", "HEAD", "--", "c", "c2sp", "tools/verify",
-                       "tools/gen_neon_hybrid.py"])
-            fingerprint = hashlib.sha256(listing).hexdigest()
+            script = root / "tools" / "verify" / "long-proofs.sh"
+            expressions = [line for line in script.read_text().splitlines() if line.startswith("inputs=$(")]
+            self.assertEqual(len(expressions), 1)
+            command = 'root="$1"; commit="$2"\n' + expressions[0] + '\nprintf "%s" "$inputs"\n'
+            fingerprint = subprocess.check_output(
+                ["sh", "-eu", "-c", command, str(script), str(root), prior], text=True)
             record = root / "tmp" / "long-proofs" / "inputs" / (fingerprint + ".txt")
             record.parent.mkdir(parents=True)
             record.write_text(prior + "\n" + "a" * 64 + "\n" + "b" * 64 + "\n")
@@ -64,6 +67,9 @@ class LongProofCarryOver(unittest.TestCase):
             subprocess.run(git + ["add", "-A"], check=True)
             subprocess.run(git + ["commit", "-q", "-m", "docs only"], check=True)
             commit = subprocess.check_output(git + ["rev-parse", "HEAD"], text=True).strip()
+            tree = Path("/tmp/long-proofs-" + commit)
+            self.assertFalse(tree.exists(), "fixture owns its unique possible worktree")
+            self.addCleanup(shutil.rmtree, tree, ignore_errors=True)
             env = dict(os.environ, PATH=str(bin_dir) + ":" + os.environ["PATH"])
             result = subprocess.run(
                 ["sh", "tools/verify/long-proofs.sh", commit], cwd=root, env=env,
