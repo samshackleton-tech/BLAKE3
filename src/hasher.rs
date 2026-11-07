@@ -10,50 +10,34 @@ pub trait Parent {
     fn parent(&self, left: &Cv, right: &Cv) -> Cv;
 }
 
-/// Chaining values bottom first: an array made at the first push (a message
-/// of one chunk pushes none) and its length.
+/// Chaining values bottom first, with only the live prefix initialized.
+#[derive(Clone)]
 pub struct CvStack {
-    cvs: Option<[Cv; DEPTH]>,
-    len: usize,
-}
-
-impl Clone for CvStack {
-    fn clone(&self) -> CvStack {
-        CvStack { cvs: self.cvs, len: self.len }
-    }
+    cvs: arrayvec::ArrayVec<Cv, DEPTH>,
 }
 
 impl CvStack {
     pub fn new() -> CvStack {
-        CvStack { cvs: None, len: 0 }
+        CvStack { cvs: arrayvec::ArrayVec::new() }
     }
 
     pub fn len(&self) -> usize {
-        self.len
+        self.cvs.len()
     }
 
     /// Value `i`, below the length.
     pub fn get(&self, i: usize) -> Cv {
-        assert!(i < self.len, "a value below the stack's length");
-        match &self.cvs {
-            Some(cvs) => cvs[i],
-            None => panic!("a stack with values has its array"),
-        }
+        assert!(i < self.cvs.len(), "a value below the stack's length");
+        self.cvs[i]
     }
 
     /// `cv` on top; the stack holds fewer than DEPTH values.
     pub fn push(&mut self, cv: Cv) {
-        if self.cvs.is_none() {
-            self.cvs = Some([[0; 32]; DEPTH]);
-        }
-        if let Some(cvs) = &mut self.cvs {
-            cvs[self.len] = cv;
-        }
-        self.len += 1;
+        self.cvs.push(cv);
     }
 
     pub fn clear(&mut self) {
-        self.len = 0;
+        self.cvs.clear();
     }
 
     /// While the stack holds more than `target` values, its top two become
@@ -63,13 +47,11 @@ impl CvStack {
     /// keep true forever: a mutation test's endless loop, which only a clock
     /// stops, becomes a wrong value a test catches).
     pub fn merge<P: Parent>(&mut self, p: &P, target: usize) {
-        for _ in target..self.len {
-            assert!(self.len >= 2, "two values to merge");
-            if let Some(cvs) = &mut self.cvs {
-                let parent = p.parent(&cvs[self.len - 2], &cvs[self.len - 1]);
-                cvs[self.len - 2] = parent;
-            }
-            self.len -= 1;
+        for _ in target..self.cvs.len() {
+            assert!(self.cvs.len() >= 2, "two values to merge");
+            let right = self.cvs.pop().unwrap();
+            let left = self.cvs.last_mut().unwrap();
+            *left = p.parent(left, &right);
         }
     }
 }
@@ -456,19 +438,17 @@ impl<P: Blocks> Chunk for ChunkState<P> {
 
 #[cfg(all(test, feature = "zeroize"))]
 impl CvStack {
-    /// The array, for the zeroize test.
-    pub fn array(&self) -> Option<&[Cv; DEPTH]> {
-        self.cvs.as_ref()
+    /// The backing buffer for the zeroize test.
+    /// Requires a completed zeroize call, which initializes every slot to zero.
+    pub unsafe fn array_after_zeroize(&self) -> &[Cv; DEPTH] {
+        unsafe { &*self.cvs.as_ptr().cast::<[Cv; DEPTH]>() }
     }
 }
 
 #[cfg(feature = "zeroize")]
 impl zeroize::Zeroize for CvStack {
     fn zeroize(&mut self) {
-        if let Some(cvs) = &mut self.cvs {
-            cvs.zeroize();
-        }
-        self.len = 0;
+        self.cvs.zeroize();
     }
 }
 
@@ -477,6 +457,25 @@ mod test {
     use super::*;
     use crate::platform::Platform;
     use core::cell::Cell;
+
+    #[test]
+    fn stack_clear_reuse_and_clone_preserve_only_live_values() {
+        let mut stack = CvStack::new();
+        for i in 0..DEPTH {
+            stack.push([i as u8; 32]);
+        }
+        stack.clear();
+        stack.push([17; 32]);
+        stack.push([29; 32]);
+        let mut copied = stack.clone();
+        assert_eq!(copied.len(), 2);
+        assert_eq!(copied.get(0), [17; 32]);
+        assert_eq!(copied.get(1), [29; 32]);
+        copied.push([41; 32]);
+        assert_eq!(stack.len(), 2);
+        assert_eq!(copied.len(), 3);
+        assert_eq!(copied.get(2), [41; 32]);
+    }
 
     /// The platform's compressions, counted: blocks compressed from the
     /// buffer one at a time, and calls of the multi-block kernel.
