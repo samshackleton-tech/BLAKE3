@@ -9,7 +9,7 @@
 # (prove_x86_loop.py); the instruction models checked against the CPU;
 # and the proofs' mutants.
 # Run under a bounded process-group supervisor; nothing should measure
-# meanwhile. The logs stay in tmp/long-proofs/COMMIT/, and
+# meanwhile. The logs stay in tmp/long-proofs/COMMIT-INPUTS/, and
 # the status names their SHA-256 and BLAKE3 hashes.
 #
 #     sh tools/verify/long-proofs.sh [COMMIT]     (default HEAD)
@@ -17,7 +17,6 @@ set -eu
 root=$(cd "$(dirname "$0")/../.." && pwd)
 commit=$(git -C "$root" rev-parse "${1:-HEAD}")
 token=$(cat "$root/ghtokenclassic.txt")
-logs=$root/tmp/long-proofs/$commit
 tree=/tmp/long-proofs-$commit
 status() {
 	python3 -c 'import json, sys; print(json.dumps({"state": sys.argv[1], "context": "long proofs", "description": sys.argv[2]}))' "$1" "$2" |
@@ -34,6 +33,7 @@ b64() { printf %s "$1" | tr a-f A-F | basenc --base16 -d | basenc --base64url | 
 # driver, which can come from another commit. A green run with identical
 # inputs is reused; its status names the run that already passed.
 inputs=$(tree=$(git -C "$root" ls-tree "$commit" -- c c2sp tools/verify tools/gen_neon_hybrid.py tools/gen_sme2_hybrid.py tools/gen_x86.py) && driver=$(sha256sum < "$0") && printf '%s\n%s\n' "$tree" "$driver" | sha256sum | cut -d' ' -f1)
+logs=$root/tmp/long-proofs/$commit-$inputs
 record=$root/tmp/long-proofs/inputs/$inputs.txt
 if [ -f "$record" ]; then
 	prior=$(sed -n '1p' "$record")
@@ -42,7 +42,7 @@ if [ -f "$record" ]; then
 	description="passed; inputs as $(printf %s "$prior" | cut -c1-12); SHA-256 $(b64 $psha) BLAKE3 $(b64 $pb3)"
 	[ ${#description} -le 140 ] || { echo "long-proofs: the status description is ${#description} characters, over GitHub's 140: $description" >&2; exit 1; }
 	status success "$description"
-	echo "long proofs passed for $commit; same proof inputs as $prior, not rerun; logs in $root/tmp/long-proofs/$prior, SHA-256 $psha, BLAKE3 $pb3 (hex)"
+	echo "long proofs passed for $commit; same proof inputs as $prior, not rerun; logs in $root/tmp/long-proofs/$prior-$inputs, SHA-256 $psha, BLAKE3 $pb3 (hex)"
 	exit 0
 fi
 mkdir -p "$logs"

@@ -1,4 +1,4 @@
-"""The long-proof cache keys every checked generator, preserving unrelated reuse.
+"""The long-proof cache keys checked inputs and preserves their evidence.
 
 Exercise the script's actual key expression on real committed trees. No proof,
 GitHub status, credential, or compiler is needed for these cache-identity tests.
@@ -108,6 +108,9 @@ class LongProofInputs(unittest.TestCase):
             path.mkdir(parents=True)
             (path / "proof.txt").write_text(contents)
         self.assertEqual((first / "proof.txt").read_text(), "prior evidence")
+        (self.root / "README.md").write_text("new target, same proof inputs\n")
+        current = self.commit()
+        self.assertEqual(self.key(), after, "new target retains the same proof inputs")
         start = source.index('if [ -f "$record" ]; then\n')
         block = source[start:source.index('\nfi\n', start) + len('\nfi\n')]
         b64 = [line for line in source.splitlines() if line.startswith("b64()")]
@@ -117,7 +120,7 @@ class LongProofInputs(unittest.TestCase):
         command = 'root="$1"; commit="$2"; inputs="$3"; record="$4"\n' + b64[0] + '\nstatus() { :; }\n' + block
         for key, expected in [(before, first), (after, second)]:
             output = subprocess.check_output(["sh", "-eu", "-c", command, str(caller),
-                                              str(self.root), commit, key, str(record)], text=True)
+                                              str(self.root), current, key, str(record)], text=True)
             self.assertIn(str(expected), output, "cache hit names the retained input-specific logs")
 
     def test_identical_inputs_and_unrelated_documentation_keep_the_cache_key(self):
