@@ -11,9 +11,17 @@ pub trait Parent {
 }
 
 /// Chaining values bottom first, with only the live prefix initialized.
-#[derive(Clone)]
 pub struct CvStack {
     cvs: arrayvec::ArrayVec<Cv, DEPTH>,
+}
+
+impl Clone for CvStack {
+    #[inline]
+    fn clone(&self) -> Self {
+        let mut cvs = arrayvec::ArrayVec::new();
+        cvs.try_extend_from_slice(self.cvs.as_slice()).unwrap();
+        Self { cvs }
+    }
 }
 
 impl CvStack {
