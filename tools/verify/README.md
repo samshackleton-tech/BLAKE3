@@ -19,6 +19,7 @@ Commands:
     python3 tools/verify/prove_x86_loop.py              # hash_many at every input count, by induction (51 cases)
     python3 tools/verify/prove_output.py                # 16 independent root outputs, per-lane CV/block/length/flags; four fault controls
     python3 tools/verify/prove_output8.py               # 8 independent AVX2 CV/root outputs, read-only parameter block; four fault controls
+    python3 tools/verify/prove_root_block.py            # arbitrary-CV root-block entries sharing the stack-free chunk-root body
     python3 tools/verify/cross_check_x86.py             # the x86-64 model against the CPU (needs an x86-64 CPU; AVX-512 forms need one with AVX-512)
     sh tools/verify/long-proofs.sh [COMMIT]             # the proofs, the Arm CPU cross-check and the controls together (Isla and the x86 CPU check apart); posts the commit's "long proofs" status, from an earlier run when the proofs' inputs (c/, c2sp/, tools/verify/, the NEON generator) are the same
 
@@ -229,6 +230,15 @@ A case can take gigabytes; set
 the process's memory limit (`ulimit -v 6291456`) and choose `--workers`
 from the host's memory. `--help` describes the command; with no case list
 it runs the whole matrix, which `cases()` enumerates in one place.
+
+## Direct root-block output
+
+`prove_root_block.py` checks both scalar root-block entries sharing the chunk-root
+kernel's final seven-round compression body. CV, block, length and flags are
+arbitrary; counter is zero and ROOT is added. The unused first argument has zero
+readable bytes; CV/block regions are read-only and output is exactly 32 bytes.
+Fault controls drop ROOT, force CHUNK_END (wrong for parents), change the length
+or load another CV word. ABI, stack residues and data-independent trace are checked.
 
 ## Batched root outputs
 
