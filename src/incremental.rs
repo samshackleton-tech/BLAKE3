@@ -32,13 +32,23 @@ use super::*;
 /// # Ok(())
 /// # }
 /// ```
-#[derive(Clone)]
 pub struct Hasher {
     pub(crate) core: HasherCore,
     /// The message's bytes from its last 16 KiB boundary, gathered while
     /// they arrive in shorter updates: the first `staged`.
     pub(crate) staged: usize,
     pub(crate) stage: [core::mem::MaybeUninit<u8>; STAGE_LEN],
+}
+
+impl Clone for Hasher {
+    fn clone(&self) -> Self {
+        let mut cloned = Self::from_core(self.core.clone());
+        cloned.staged = self.staged;
+        // Only this prefix belongs to the state. The unused capacity is
+        // overwritten by stage() before it can become message input.
+        cloned.stage[..self.staged].copy_from_slice(&self.stage[..self.staged]);
+        cloned
+    }
 }
 
 /// The bytes a Hasher gathers before they hash side by side: 16 chunks,
