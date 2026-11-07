@@ -217,7 +217,7 @@ impl Hasher {
     /// The held group's subtree, as [`HasherCore::push_group`] takes it
     /// (its two halves' values at chunk zero, else its own), into the
     /// core; the stage empty again.
-    #[cfg(feature = "std")]
+    #[cfg(all(feature = "std", not(target_arch = "x86_64")))]
     pub(crate) fn take_held(&mut self, result: &[u8; BLOCK_LEN]) {
         let staged = core::mem::replace(&mut self.staged, 0);
         assert_eq!(staged, STAGE_LEN, "a held group fills the stage");
@@ -393,7 +393,7 @@ impl HasherCore {
     // doesn't assume that). The principle is the same: each CV that should
     // remain in the stack is represented by a 1-bit in the total number of
     // chunks (or bytes) so far.
-    #[cfg(feature = "std")]
+    #[cfg(all(feature = "std", not(target_arch = "x86_64")))]
     fn merge_cv_stack(&mut self, chunk_counter: u64) {
         // Its callers (the queue's hashers, and a Hasher's held group) start
         // at offset zero; a positioned subtree's offset takes the core's path.
@@ -442,7 +442,7 @@ impl HasherCore {
     // merging with each of them separately, so that the second CV will always
     // remain unmerged. (That also helps us support extendable output when
     // we're hashing an input all-at-once.)
-    #[cfg(feature = "std")]
+    #[cfg(all(feature = "std", not(target_arch = "x86_64")))]
     fn push_cv(&mut self, new_cv: &CVBytes, chunk_counter: u64) {
         self.merge_cv_stack(chunk_counter);
         self.cv_stack.push(*new_cv);
@@ -454,7 +454,7 @@ impl HasherCore {
     /// [`lanes::Task`] computes it: at chunk zero its two halves' values
     /// (the group may be the root's), elsewhere its own. The group is one
     /// whole subtree, so nothing of it reaches the chunk state.
-    #[cfg(feature = "std")]
+    #[cfg(all(feature = "std", not(target_arch = "x86_64")))]
     pub(crate) fn push_group(&mut self, result: &[u8; BLOCK_LEN]) {
         const CHUNKS: u64 = (STAGE_LEN / CHUNK_LEN) as u64;
         let counter = self.chunk_state.chunk_counter;
