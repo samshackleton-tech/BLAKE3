@@ -847,6 +847,7 @@ mod test {
                         let pieces: Vec<_> = (0..n).map(|i| (i, &data[i][offsets[i] + start..offsets[i] + start + 4096])).collect();
                         update_each(&mut hashers, &pieces);
                     }
+                    let parent_entries = crate::RAN_ENTRIES.with(|r| r.borrow().clone());
                     for i in 0..n {
                         let end = offsets[i] + crate::STAGE_LEN;
                         assert_eq!(hashers[i].staged, 0);
@@ -866,10 +867,15 @@ mod test {
                     }
                     let partitions = crate::COUNTED.with(|c| c[crate::Counted::HeldPartition as usize].get());
                     assert_eq!(partitions, 1, "one held partition: {platform:?} n={n} mixed={mixed}");
-                    assert!(
-                        crate::RAN_ENTRIES.with(|r| r.borrow().contains(&(crate::ffi_output::entry(width) as usize))),
-                        "independent parent entry: {platform:?} n={n}"
-                    );
+                    assert!(parent_entries.contains(&(crate::ffi_output::entry(width) as usize)), "independent parent entry: {platform:?} n={n}");
+                    if platform == crate::platform::Platform::AVX512 && crate::platform::avx2_detected() {
+                        let eight_needed = (1..=4).any(|shift| ((n * (crate::STAGE_LEN / crate::CHUNK_LEN)) >> shift) % 16 >= 8);
+                        assert_eq!(
+                            parent_entries.contains(&(crate::ffi_output::entry(8) as usize)),
+                            eight_needed,
+                            "eight-wide parent remainder: {platform:?} n={n} mixed={mixed}"
+                        );
+                    }
                 }
             }
         }
