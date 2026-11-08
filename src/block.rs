@@ -195,7 +195,8 @@ impl<const N: usize> Packed<N> {
     /// `count` messages of zeros, resident from the making.
     pub fn new(count: usize) -> Self {
         let () = Self::FITS;
-        let lines = (count * N).div_ceil(128);
+        // In lines of 128 / N messages: the byte count would overflow first.
+        let lines = count.div_ceil(128 / N);
         Packed { lines: std::vec![Line([0; 128]); lines], count }
     }
 
@@ -510,6 +511,20 @@ mod packed_test {
                 }
             }
         }
+    }
+
+    /// A count whose bytes overflow usize stops at the allocation, whose
+    /// capacity check sees the whole request, before any slice is made.
+    #[test]
+    #[should_panic(expected = "capacity overflow")]
+    fn packed_rejects_a_count_its_bytes_overflow_32() {
+        let _ = Packed::<32>::new(usize::MAX / 32 + 1);
+    }
+
+    #[test]
+    #[should_panic(expected = "capacity overflow")]
+    fn packed_rejects_a_count_its_bytes_overflow_16() {
+        let _ = Packed::<16>::new(usize::MAX / 16 + 1);
     }
 
     /// Packed storage starts on a 128-byte boundary, holds exactly its
