@@ -158,7 +158,7 @@ impl Hasher {
 
     /// The bytes gathered in the stage.
     #[cfg(feature = "std")]
-    fn staged_bytes(&self) -> &[u8] {
+    pub(crate) fn staged_bytes(&self) -> &[u8] {
         // Sound: the first `staged` bytes of the stage were written (gather).
         unsafe { core::slice::from_raw_parts(self.stage.as_ptr() as *const u8, self.staged) }
     }
@@ -312,7 +312,7 @@ impl Hasher {
         self.gather(input, true)
     }
 
-    /// The [`Hash`] of everything updated: the Hasher is finished, in place,
+    /// The [`struct@Hash`] of everything updated: the Hasher is finished, in place,
     /// and gone. For the next message, make a new one ([`new`](Hasher::new)
     /// costs what a reset would). A digest of a prefix, with hashing going
     /// on after it, is `hasher.clone().finalize()`, the copy where it is
