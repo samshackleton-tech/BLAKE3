@@ -195,8 +195,8 @@ pub(crate) fn gather_first(hasher: &mut Hasher, bytes: &[u8]) -> bool {
 /// their stages. Hashers remain immutable. Finished lanes keep their digest
 /// while longer lanes complete their prefix blocks.
 pub(crate) unsafe fn staged_group<const W: usize>(hashers: &[Hasher], which: &[usize; W], out: &mut [[u8; OUT_LEN]]) -> bool {
-    let states = which.map(|i| &hashers[i]);
-    if states.iter().any(|h| {
+    if which.iter().any(|&i| {
+        let h = &hashers[i];
         let c = &h.core.chunk_state;
         h.core.initial_chunk_counter != 0
             || c.chunk_counter != 0
@@ -207,6 +207,7 @@ pub(crate) unsafe fn staged_group<const W: usize>(hashers: &[Hasher], which: &[u
     }) {
         return false;
     }
+    let states = which.map(|i| &hashers[i]);
     let ends: [usize; W] = core::array::from_fn(|i| (states[i].core.chunk_state.buf_len as usize + states[i].staged).saturating_sub(1) / BLOCK_LEN);
     let lens: [u8; W] = core::array::from_fn(|i| (states[i].core.chunk_state.buf_len as usize + states[i].staged - ends[i] * BLOCK_LEN) as u8);
     let mut tails = [[0u8; BLOCK_LEN]; W];
