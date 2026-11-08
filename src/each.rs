@@ -886,7 +886,7 @@ mod test {
                         assert_eq!(
                             parent_entries.contains(&(crate::ffi_output::entry(8) as usize)),
                             eight_needed,
-                            "eight-wide parent remainder: {platform:?} n={n} mixed={mixed}"
+                            "eight-wide parent remainder: {platform:?} n={n} flavor={flavor}"
                         );
                     }
                 }
