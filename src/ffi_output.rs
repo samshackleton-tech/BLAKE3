@@ -98,7 +98,6 @@ pub(crate) fn held_groups(hashers: &mut [Hasher], held: &[usize], platform: Plat
     let n = held.len();
     let mut level = vec![[0u8; OUT_LEN]; n * PER];
     let mut next = vec![[0u8; OUT_LEN]; n * PER / 2];
-    let mut halves = vec![[0u8; BLOCK_LEN]; n];
     for (k, &i) in held.iter().enumerate() {
         let h = &hashers[i];
         let (counter, bytes) = h.held_group().expect("a held group");
@@ -115,9 +114,6 @@ pub(crate) fn held_groups(hashers: &mut [Hasher], held: &[usize], platform: Plat
         );
     }
     for depth in 0..4 {
-        if depth == 3 {
-            halves.as_flattened_mut().copy_from_slice(level[..2 * n].as_flattened());
-        }
         let per_message = PER >> (depth + 1);
         let count = n * per_message;
         let input = |j: usize| {
@@ -160,7 +156,8 @@ pub(crate) fn held_groups(hashers: &mut [Hasher], held: &[usize], platform: Plat
         let (counter, _) = hashers[i].held_group().unwrap();
         let mut result = [0u8; BLOCK_LEN];
         if counter == 0 {
-            result = halves[k];
+            // Four swaps leave each final parent's two children in next.
+            result.copy_from_slice(next[2 * k..2 * k + 2].as_flattened());
         } else {
             result[..OUT_LEN].copy_from_slice(&level[k]);
         }
