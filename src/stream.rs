@@ -204,12 +204,16 @@ pub fn stream<'env, D: FnMut(&'env mut [Hash]), T>(mode: Mode, done: D, body: im
 }
 
 impl<'env, D: FnMut(&'env mut [Hash])> Stream<'env, D> {
-    /// A stream outside [`stream`]'s scope, for the C API (`capi/`): the
-    /// same contract, with the program holding the stream and ending it
-    /// (`finish`, then drop). Dropping a stream waits for its tasks. Rust
-    /// programs call [`stream`], whose scope holds the contract for them.
-    #[doc(hidden)]
-    pub fn open(mode: Mode, done: D) -> Self {
+    /// The stream [`stream`] runs `body` on. Private: the borrowed messages
+    /// and places stay sound only while `stream`'s scope holds the stream
+    /// to its finish, and safe code may forget a stream it holds itself
+    /// (BLAKE3 #308).
+    ///
+    /// ```compile_fail,E0624
+    /// use blake3_servil::{Hash, Mode, throughput::Stream};
+    /// let _ = Stream::open(Mode::Plain, |_: &mut [Hash]| {});
+    /// ```
+    fn open(mode: Mode, done: D) -> Self {
         crate::lanes::require();
         let (key, flags) = mode.key_and_flags();
         let s = Storage::take();
@@ -1026,7 +1030,7 @@ impl<'env, D: FnMut(&'env mut [Hash])> Stream<'env, D> {
 impl<D> Drop for Stream<'_, D> {
     /// Keep the storage as the thread's spare. A stream drops finished,
     /// every place handed back: one that unwinds ends the process first
-    /// ([`stream`]'s guard), and the C API finishes it before it drops.
+    /// ([`stream`]'s guard).
     fn drop(&mut self) {
         assert!(self.open.is_none() && self.delivered == self.next, "a stream drops finished");
         if let Some(slot) = self.slot {
