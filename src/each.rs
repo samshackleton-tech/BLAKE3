@@ -95,20 +95,26 @@ pub fn finalize_each(hashers: &mut [Hasher], which: &[usize], out: &mut [[u8; OU
     if which.len() >= 16 && matches!(Platform::detect(), Platform::AVX512) {
         for (which, out) in which.chunks(16).zip(out.chunks_mut(16)) {
             if which.len() == 16 {
-                let inputs: Option<arrayvec::ArrayVec<_, 16>> = which
-                    .iter()
-                    .enumerate()
-                    .map(|(at, &i)| {
-                        // A repeated index observes the reset from its earlier
-                        // occurrence, so it keeps the sequential path.
-                        if which[..at].contains(&i) { None } else { crate::ffi_output::input(&hashers[i]) }
-                    })
-                    .collect();
-                if let Some(inputs) = inputs {
-                    // Sound: the detected platform supplies AVX-512F+VL;
-                    // borrowed descriptors keep every block/CV readable.
-                    unsafe { crate::ffi_output::hash_group(inputs.as_slice().try_into().unwrap(), out) };
-                    drop(inputs);
+                let finished = {
+                    let inputs: Option<arrayvec::ArrayVec<_, 16>> = which
+                        .iter()
+                        .enumerate()
+                        .map(|(at, &i)| {
+                            // A repeated index observes the reset from its earlier
+                            // occurrence, so it keeps the sequential path.
+                            if which[..at].contains(&i) { None } else { crate::ffi_output::input(&hashers[i]) }
+                        })
+                        .collect();
+                    if let Some(inputs) = inputs {
+                        // Sound: the detected platform supplies AVX-512F+VL;
+                        // borrowed descriptors keep every block/CV readable.
+                        unsafe { crate::ffi_output::hash_group(inputs.as_slice().try_into().unwrap(), out) };
+                        true
+                    } else {
+                        false
+                    }
+                };
+                if finished {
                     for &i in which {
                         hashers[i].reset(None);
                     }
