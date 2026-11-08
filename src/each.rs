@@ -234,23 +234,39 @@ fn update_turn(hashers: &mut [Hasher], pieces: &[(usize, &[u8])], pooled: bool) 
     }
 }
 
-/// Hash the whole groups `held` names, one in each of those hashers'
-/// stages, with independent-key parent lanes where available, otherwise
-/// together where keys/flags match. Pass each subtree to its own core.
+/// Hash held stages with an independent key per parent lane where
+/// available. Elsewhere, public mode chooses the cohorts; key values
+/// never determine grouping, allocation or dispatch.
 #[cfg(feature = "std")]
 fn hash_held(hashers: &mut [Hasher], held: &[usize]) {
-    use crate::{BLOCK_LEN, PARENT};
-    let Some(&first) = held.first() else { return };
-    crate::counted(crate::Counted::HeldPartition);
-    let (key, flags) = (hashers[first].core.key, hashers[first].core.chunk_state.flags);
-    let (alike, others): (Vec<usize>, Vec<usize>) = held.iter().partition(|&&i| hashers[i].core.key == key && hashers[i].core.chunk_state.flags == flags);
+    let Some(&_first) = held.first() else { return };
     #[cfg(all(blake3_avx512_ffi, target_os = "linux"))]
     {
-        let platform = hashers[first].core.chunk_state.platform;
-        if !others.is_empty() && crate::ffi_output::held_groups(hashers, held, platform) {
+        let platform = hashers[_first].core.chunk_state.platform;
+        if crate::ffi_output::held_groups(hashers, held, platform) {
+            crate::counted(crate::Counted::HeldPartition);
             return;
         }
     }
+    // Plain hashers all use the IV. Keyed and derive-key hashers take
+    // individual cohorts until this platform has independent parent lanes.
+    let plain: Vec<usize> = held.iter().copied().filter(|&i| hashers[i].core.chunk_state.flags == 0).collect();
+    if !plain.is_empty() {
+        hash_cohort(hashers, &plain);
+    }
+    for &i in held {
+        if hashers[i].core.chunk_state.flags != 0 {
+            hash_cohort(hashers, &[i]);
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+fn hash_cohort(hashers: &mut [Hasher], alike: &[usize]) {
+    use crate::{BLOCK_LEN, PARENT};
+    let first = alike[0];
+    crate::counted(crate::Counted::HeldPartition);
+    let (key, flags) = (hashers[first].core.key, hashers[first].core.chunk_state.flags);
     let turn = crate::platform::Sme2Turn::take(hashers[first].core.chunk_state.platform, true);
     let platform = turn.platform();
     let n = alike.len();
@@ -311,7 +327,6 @@ fn hash_held(hashers: &mut [Hasher], held: &[usize]) {
         }
         hashers[i].take_held(&result);
     }
-    hash_held(hashers, &others);
 }
 
 #[cfg(not(feature = "std"))]
