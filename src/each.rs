@@ -240,6 +240,12 @@ fn update_turn(hashers: &mut [Hasher], pieces: &[(usize, &[u8])], pooled: bool) 
 #[cfg(feature = "std")]
 fn hash_held(hashers: &mut [Hasher], held: &[usize]) {
     let Some(&_first) = held.first() else { return };
+    // Public plain mode fixes every key to the IV; use the existing
+    // shared-key kernel without gathering per-lane key descriptors.
+    if held.iter().all(|&i| hashers[i].core.chunk_state.flags == 0) {
+        hash_cohort(hashers, held);
+        return;
+    }
     #[cfg(all(blake3_avx512_ffi, target_os = "linux"))]
     {
         let platform = hashers[_first].core.chunk_state.platform;
@@ -818,8 +824,8 @@ mod test {
         }
     }
 
-    /// Plain, shared-key, distinct-key and mixed-mode turns all use the
-    /// independent parent lanes. Key values never select a different route.
+    /// Keyed and mixed-mode turns use independent parent lanes; plain
+    /// turns share the fixed IV. Key values never select a different route.
     #[cfg(all(blake3_avx512_ffi, target_os = "linux"))]
     #[test]
     fn test_held_key_groups_take_one_partition_pass() {
@@ -880,8 +886,12 @@ mod test {
                     }
                     let partitions = crate::COUNTED.with(|c| c[crate::Counted::HeldPartition as usize].get());
                     assert_eq!(partitions, 1, "one held partition: {platform:?} n={n} flavor={flavor}");
-                    assert!(parent_entries.contains(&(crate::ffi_output::entry(width) as usize)), "independent parent entry: {platform:?} n={n}");
-                    if platform == crate::platform::Platform::AVX512 && crate::platform::avx2_detected() {
+                    assert_eq!(
+                        parent_entries.contains(&(crate::ffi_output::entry(width) as usize)),
+                        flavor != 0,
+                        "independent parent entry: {platform:?} n={n}"
+                    );
+                    if flavor != 0 && platform == crate::platform::Platform::AVX512 && crate::platform::avx2_detected() {
                         let eight_needed = (1..=4).any(|shift| ((n * (crate::STAGE_LEN / crate::CHUNK_LEN)) >> shift) % 16 >= 8);
                         assert_eq!(
                             parent_entries.contains(&(crate::ffi_output::entry(8) as usize)),
