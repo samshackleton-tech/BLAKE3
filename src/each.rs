@@ -180,8 +180,7 @@ fn update_turn(hashers: &mut [Hasher], pieces: &[(usize, &[u8])], pooled: bool) 
     #[cfg(all(blake3_avx512_ffi, target_os = "linux"))]
     let pieces = if hashers.len() >= 8 {
         let maximum = crate::ffi_output::lanes(Platform::detect());
-        let width = if crate::platform::avx2_detected() { maximum.min(8) } else { maximum };
-        if width != 0 && hashers.len() >= width {
+        if maximum != 0 && (hashers.len() >= maximum || crate::platform::avx2_detected()) {
             let mut gathered = 0;
             while gathered < pieces.len() && crate::ffi_output::gather_first(&mut hashers[pieces[gathered].0], pieces[gathered].1) {
                 gathered += 1;
