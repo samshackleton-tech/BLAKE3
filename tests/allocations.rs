@@ -12,16 +12,22 @@ use blake3_servil::convenience::Hasher;
 use blake3_servil::throughput::{self, Batch, Block};
 use blake3_servil::{Mode, convenience};
 use std::alloc::{GlobalAlloc, Layout, System};
-use std::sync::atomic::{AtomicUsize, Ordering::Relaxed};
+use std::cell::Cell;
 
 struct Counting;
 
-static BYTES: AtomicUsize = AtomicUsize::new(0);
+// Each thread's own count: the test harness's other threads allocate while
+// a call runs (892 B in 7 of 400 runs of the admission test, counted for
+// all threads), and the calls measured here are single-threaded.
+thread_local! {
+    static BYTES: Cell<usize> = const { Cell::new(0) };
+}
 
 // Sound: every call goes on to the system allocator, unchanged.
 unsafe impl GlobalAlloc for Counting {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        BYTES.fetch_add(layout.size(), Relaxed);
+        // A thread whose locals are gone counts nothing.
+        let _ = BYTES.try_with(|b| b.set(b.get() + layout.size()));
         unsafe { System.alloc(layout) }
     }
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
@@ -32,11 +38,11 @@ unsafe impl GlobalAlloc for Counting {
 #[global_allocator]
 static COUNTING: Counting = Counting;
 
-/// The bytes `call` asks the allocator for.
+/// The bytes `call` asks the allocator for, on this thread.
 fn allocated(call: impl FnOnce()) -> usize {
-    let before = BYTES.load(Relaxed);
+    let before = BYTES.with(Cell::get);
     call();
-    BYTES.load(Relaxed) - before
+    BYTES.with(Cell::get) - before
 }
 
 fn blocks(len: usize, seed: u8) -> Vec<Block> {
