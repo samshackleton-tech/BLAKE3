@@ -81,7 +81,7 @@ src/lanes.rs	replace > with == in initialize	1	speed: whether the pool starts it
 src/lanes.rs	replace > with == in sme2_serve	1	speed: whether the SME2 thread runs a gathered task on NEON or in an SME2 session (equally correct)
 src/lanes.rs	replace > with == in sources::Source::take_run	1	same code: every test binary hashes as the unmutated build's here (tools/mutants/code_hash.py)
 src/lanes.rs	replace > with == in sources::open	1	OPEN: the pool's scheduling under interleavings the tests leave to chance; Loom would force them (#103)
-src/lanes.rs	replace > with >= in Task::run	1	equivalent: a subtree task at counter zero is more than one chunk (the pool splits at MIN_SPLIT_LEN and above), so len == CHUNK_LEN never reaches this branch
+src/lanes.rs	replace > with >= in Task::run_ref	1	equivalent: a subtree task at counter zero is more than one chunk (the pool splits at MIN_SPLIT_LEN and above), so len == CHUNK_LEN never reaches this branch
 src/lanes.rs	replace > with >= in initialize	1	equivalent: it differs only with one thread, where no SME2 thread starts and wake_sme2 finds none
 src/lanes.rs	replace > with >= in sme2_serve	1	speed: whether the SME2 thread runs a gathered task on NEON or in an SME2 session (equally correct)
 src/lanes.rs	replace > with >= in sources::Source::take_run	1	same code: every test binary hashes as the unmutated build's here (tools/mutants/code_hash.py)

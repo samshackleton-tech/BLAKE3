@@ -1344,14 +1344,27 @@ pub(crate) mod sources {
         }
     }
 
-    /// A task from any stream (the SME2 thread takes these alone).
-    pub(crate) fn take_stream_task() -> Option<Task> {
-        let mut found = None;
+    /// Copy a stream task into the caller's place before releasing its
+    /// slot. The reference borrows that copy; None clears the place.
+    pub(crate) fn take_stream_task(out: &mut Option<Task>) -> Option<&Task> {
+        *out = None;
         find(|source| {
-            found = if source.ring.is_empty() { None } else { source.take_task() };
-            found.is_some()
+            if source.ring.is_empty() {
+                return false;
+            }
+            source
+                .take_claimed(
+                    || {},
+                    |item| {
+                        *out = Some(match item {
+                            Item::Task(task) => task,
+                            Item::Pieces(..) => unreachable!("a stream's source carries tasks"),
+                        });
+                    },
+                )
+                .is_some()
         });
-        found
+        out.as_ref()
     }
 
     /// Whether any source has work waiting (`streams`: any stream).
@@ -1362,6 +1375,25 @@ pub(crate) mod sources {
     #[cfg(test)]
     mod test {
         use super::*;
+
+        #[test]
+        fn stream_task_copy_survives_slot_reuse() {
+            crate::initialize_multithreaded(Some(core::num::NonZeroUsize::new(1).unwrap()));
+            let source = Box::leak(Box::new(Source::new(1)));
+            let slot = source.register().unwrap();
+            let mut place = Some(Task::of(&[], 73));
+            assert!(take_stream_task(&mut place).is_none());
+            assert!(place.is_none(), "an empty source clears the place");
+            source.push(Task::of(&[], 7));
+            let copied = take_stream_task(&mut place).expect("a claim fills the caller's place");
+            assert!(!core::ptr::eq(copied, source.ring[0].task.get().cast::<Task>()), "the copy belongs to the caller");
+            source.push(Task::of(&[], 9));
+            assert_eq!(copied.counter, 7, "slot reuse preserves the caller's copy");
+            assert_eq!(take_stream_task(&mut place).unwrap().counter, 9);
+            assert!(take_stream_task(&mut place).is_none());
+            assert!(place.is_none());
+            Source::unregister(slot);
+        }
 
         /// A claimed task still occupies its ring slot until copied. Force
         /// the worker to pause in that interval while the producer wraps.
@@ -1649,7 +1681,14 @@ impl Task {
     /// chunk zero (it may be the whole message), its pair of child chaining
     /// values; for any other, its chaining value (first 32 bytes). Then
     /// count down.
+    #[inline(always)]
     pub(crate) fn run(self, platform: Platform) {
+        self.run_ref(platform);
+    }
+
+    // The SME2 worker owns a copied task in its local place. Borrow it for
+    // execution so its member array stays in that place. Each task runs once.
+    fn run_ref(&self, platform: Platform) {
         if let Some((run, context)) = self.action {
             // Sound: the producer holds the action's context through the
             // source's completion barrier, as it holds ordinary task data.
@@ -1767,17 +1806,18 @@ fn sme2_main() {
 fn sme2_serve() -> ! {
     assert!(SME2_THREAD.set(std::thread::current()).is_ok(), "one SME2 thread");
     loop {
-        if let Some(task) = sources::take_stream_task() {
+        let mut task = None;
+        if let Some(task) = sources::take_stream_task(&mut task) {
             if task.members > 0 {
                 // Short messages and small batches, gathered, run faster
                 // on NEON than through an SME2 session per task (Mac:
                 // 64-byte messages 14-15% faster, batches of 16 and 64
                 // 10-15%); below 16 KiB the other members run the NEON
                 // kernels on either platform.
-                task.run(pool_platform());
+                task.run_ref(pool_platform());
             } else {
                 let turn = crate::platform::Sme2Turn::take(Platform::detect(), true);
-                task.run(turn.platform());
+                task.run_ref(turn.platform());
                 drop(turn);
             }
             continue;
