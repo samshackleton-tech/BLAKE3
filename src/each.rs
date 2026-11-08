@@ -803,9 +803,8 @@ mod test {
         }
     }
 
-    /// A held turn with distinct keys and/or modes partitions only once
-    /// where independent parent lanes exist. Reverting to recursive key
-    /// groups preserves every digest but makes this work count fail.
+    /// Plain, shared-key, distinct-key and mixed-mode turns all use the
+    /// independent parent lanes. Key values never select a different route.
     #[cfg(all(blake3_avx512_ffi, target_os = "linux"))]
     #[test]
     fn test_held_key_groups_take_one_partition_pass() {
@@ -815,19 +814,18 @@ mod test {
                 continue;
             }
             for n in [2usize, 7, 8, 9, 15, 16, 17, 31, 32, 33] {
-                for mixed in [false, true] {
+                for flavor in 0..4 {
                     let keys: Vec<[u8; 32]> = (0..n).map(|i| core::array::from_fn(|j| (i * 37 + j * 11) as u8)).collect();
                     let modes: Vec<Mode<'_>> = (0..n)
-                        .map(|i| {
-                            if !mixed {
-                                Mode::Keyed(&keys[i])
-                            } else {
-                                match i % 3 {
-                                    0 => Mode::Plain,
-                                    1 => Mode::Keyed(&keys[i]),
-                                    _ => Mode::DeriveKey("held parent lanes"),
-                                }
-                            }
+                        .map(|i| match flavor {
+                            0 => Mode::Plain,
+                            1 => Mode::Keyed(&keys[0]),
+                            2 => Mode::Keyed(&keys[i]),
+                            _ => match i % 3 {
+                                0 => Mode::Plain,
+                                1 => Mode::Keyed(&keys[i]),
+                                _ => Mode::DeriveKey("held parent lanes"),
+                            },
                         })
                         .collect();
                     let offsets: Vec<_> = (0..n).map(|i| (i % 3) * crate::STAGE_LEN).collect();
@@ -855,7 +853,7 @@ mod test {
                         assert_eq!(
                             *hashers[i].clone().finalize().as_bytes(),
                             crate::test::official::hash(modes[i], &data[i][..end]),
-                            "{platform:?} n={n} lane={i} mixed={mixed}"
+                            "{platform:?} n={n} lane={i} flavor={flavor}"
                         );
                         hashers[i].update(&data[i][end..]);
                         assert_eq!(*hashers[i].clone().finalize().as_bytes(), crate::test::official::hash(modes[i], &data[i]));
@@ -866,7 +864,7 @@ mod test {
                         assert_eq!(out.as_slice(), crate::test::official::xof(modes[i], &data[i], 13, out.len()));
                     }
                     let partitions = crate::COUNTED.with(|c| c[crate::Counted::HeldPartition as usize].get());
-                    assert_eq!(partitions, 1, "one held partition: {platform:?} n={n} mixed={mixed}");
+                    assert_eq!(partitions, 1, "one held partition: {platform:?} n={n} flavor={flavor}");
                     assert!(parent_entries.contains(&(crate::ffi_output::entry(width) as usize)), "independent parent entry: {platform:?} n={n}");
                     if platform == crate::platform::Platform::AVX512 && crate::platform::avx2_detected() {
                         let eight_needed = (1..=4).any(|shift| ((n * (crate::STAGE_LEN / crate::CHUNK_LEN)) >> shift) % 16 >= 8);
@@ -875,6 +873,54 @@ mod test {
                             eight_needed,
                             "eight-wide parent remainder: {platform:?} n={n} mixed={mixed}"
                         );
+                    }
+                }
+            }
+        }
+    }
+
+    /// Large same-key and distinct-key turns take the same passes. A
+    /// platform without independent parent lanes uses public-mode cohorts.
+    #[cfg(feature = "std")]
+    #[test]
+    fn held_passes_do_not_depend_on_keys() {
+        crate::initialize();
+        let input = vec![42u8; crate::STAGE_LEN];
+        let keys: Vec<[u8; 32]> = (0..600u64)
+            .map(|i| {
+                let mut key = [7u8; 32];
+                key[..8].copy_from_slice(&i.to_le_bytes());
+                key
+            })
+            .collect();
+        for platform in crate::test::every_platform() {
+            #[cfg(all(blake3_avx512_ffi, target_os = "linux"))]
+            let independent = crate::ffi_output::lanes(platform) != 0;
+            #[cfg(not(all(blake3_avx512_ffi, target_os = "linux")))]
+            let independent = false;
+            for n in [3, 600] {
+                for flavor in 0..3 {
+                    let mode = |i| match flavor {
+                        0 => Mode::Plain,
+                        1 => Mode::Keyed(&keys[0]),
+                        _ => Mode::Keyed(&keys[i]),
+                    };
+                    let mut hashers: Vec<_> = (0..n)
+                        .map(|i| {
+                            let mut h = Hasher::new(mode(i), None);
+                            h.core.chunk_state.platform = platform;
+                            h
+                        })
+                        .collect();
+                    crate::COUNTED.with(|c| c[crate::Counted::HeldPartition as usize].set(0));
+                    for piece in input.chunks(4096) {
+                        let pieces: Vec<_> = (0..n).map(|i| (i, piece)).collect();
+                        update_each(&mut hashers, &pieces);
+                    }
+                    let passes = crate::COUNTED.with(|c| c[crate::Counted::HeldPartition as usize].get());
+                    assert_eq!(passes, if independent || flavor == 0 { 1 } else { n as u64 }, "key-independent passes: {platform:?} n={n} flavor={flavor}");
+                    for (i, h) in hashers.iter().enumerate() {
+                        assert_eq!(h.clone().finalize(), crate::test::official::hash(mode(i), &input));
                     }
                 }
             }
