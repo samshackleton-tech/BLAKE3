@@ -129,7 +129,7 @@ pub(crate) fn held_groups(hashers: &mut [Hasher], held: &[usize], platform: Plat
                 flags: h.core.chunk_state.flags | crate::PARENT,
             }
         };
-        let full = count / width * width;
+        let mut full = count / width * width;
         for base in (0..full).step_by(width) {
             // Sound: width matches the detected ISA. All blocks and keys
             // are readable; next supplies disjoint complete outputs.
@@ -140,6 +140,13 @@ pub(crate) fn held_groups(hashers: &mut [Hasher], held: &[usize], platform: Plat
                 let inputs = core::array::from_fn(|j| input(base + j));
                 unsafe { hash_group::<8>(&inputs, &mut next[base..base + 8]) };
             }
+        }
+        if width == 16 && count - full >= 8 && crate::platform::avx2_detected() {
+            let inputs = core::array::from_fn(|j| input(full + j));
+            // Sound: AVX2 is detected; eight real parent blocks and keys
+            // remain, and next has disjoint room for all eight outputs.
+            unsafe { hash_group::<8>(&inputs, &mut next[full..full + 8]) };
+            full += 8;
         }
         for (j, out) in next.iter_mut().enumerate().take(count).skip(full) {
             let input = input(j);
