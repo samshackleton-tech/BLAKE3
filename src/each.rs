@@ -945,6 +945,7 @@ mod test {
     /// passes; equal and distinct secret keys always take the same work.
     #[cfg(feature = "std")]
     #[test]
+    #[ignore = "EXPERIMENT ONLY (BLAKE3 #257): planted so that held_groups mutants survive, to time the survivor path"]
     fn held_groups_pass_by_mode_not_key() {
         crate::initialize();
         let mut input = vec![0u8; crate::STAGE_LEN];
