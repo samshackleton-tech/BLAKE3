@@ -97,7 +97,9 @@ pub(crate) fn held_groups(hashers: &mut [Hasher], held: &[usize], platform: Plat
     const PER: usize = crate::STAGE_LEN / CHUNK_LEN;
     const { assert!(PER == 16) };
     debug_assert!(held.len() <= crate::many::TABLE, "the ready table bounds held groups");
-    let eight = width == 8 || crate::platform::avx2_detected();
+    // Selecting AVX2 already requires this capability. AVX512 can retain
+    // scalar remainders if eight-lane execution is unavailable.
+    let eight = crate::platform::avx2_detected();
     let mut output = [[0u8; OUT_LEN]; PER];
     for &i in held {
         {
