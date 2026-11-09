@@ -121,7 +121,7 @@ pub fn finalize_each(hashers: &mut [Hasher], which: &[usize], out: &mut [[u8; OU
                         Some(inputs) => {
                             // Sound: the detected platform supplies AVX-512F+VL;
                             // borrowed descriptors keep every block/CV readable.
-                            unsafe { crate::ffi_output::hash_group(inputs.as_slice().try_into().unwrap(), out) };
+                            unsafe { crate::ffi_output::hash_group::<16>(inputs.as_slice().try_into().unwrap(), out) };
                             true
                         }
                         None => false,
@@ -198,18 +198,34 @@ fn update_turn(hashers: &mut [Hasher], pieces: &[(usize, &[u8])], pooled: bool) 
 
 #[cfg(all(test, feature = "std"))]
 std::thread_local! {
-    // Actual cohorts passed to the shared-key body.
+    // Actual cohorts passed to the shared-key or independent-parent body.
     static HELD_GROUPS: core::cell::RefCell<Vec<Vec<usize>>> = const { core::cell::RefCell::new(Vec::new()) };
 }
 
-/// Hash the whole groups `held` names, one in each of those hashers'
-/// stages, and pass each group's subtree to its hasher's core. The plain
-/// hashers' groups hash together; a keyed or key-derivation hasher's group
-/// hashes alone, since its key is secret and must not decide the work
-/// (BLAKE3 #312): the mode alone, public, groups them.
+/// Hash held stages with an independent key per parent lane where
+/// available. Elsewhere, public mode chooses the cohorts; key values
+/// never determine grouping, allocation or dispatch.
 #[cfg(feature = "std")]
 fn hash_held(hashers: &mut [Hasher], held: &[usize]) {
-    // Plain's key is the IV, the same for every plain hasher.
+    let Some(&_first) = held.first() else { return };
+    // Public plain mode fixes every key to the IV; use the existing
+    // shared-key kernel without gathering per-lane key descriptors.
+    if held.iter().all(|&i| hashers[i].core.chunk_state.flags == 0) {
+        hash_cohort(hashers, held);
+        return;
+    }
+    #[cfg(all(blake3_avx512_ffi, target_os = "linux"))]
+    {
+        let platform = hashers[_first].core.chunk_state.platform;
+        if crate::ffi_output::held_groups(hashers, held, platform) {
+            #[cfg(all(test, feature = "std"))]
+            HELD_GROUPS.with(|groups| groups.borrow_mut().push(held.to_vec()));
+            crate::counted(crate::Counted::HeldPass);
+            return;
+        }
+    }
+    // Plain hashers all use the IV. Keyed and derive-key hashers take
+    // individual cohorts until this platform has independent parent lanes.
     let plain: Vec<usize> = held.iter().copied().filter(|&i| hashers[i].core.chunk_state.flags == 0).collect();
     if !plain.is_empty() {
         hash_cohort(hashers, &plain);
@@ -894,9 +910,8 @@ mod test {
         }
     }
 
-    /// update_each's held groups hash together by their public mode alone
-    /// (BLAKE3 #312): plain hashers share passes, and keyed ones take the
-    /// same passes whether their keys are equal or not.
+    /// Public mode and independent-parent availability choose the held
+    /// passes; equal and distinct secret keys always take the same work.
     #[cfg(feature = "std")]
     #[test]
     fn held_groups_pass_by_mode_not_key() {
@@ -917,15 +932,96 @@ mod test {
             }
             passes
         };
+        #[cfg(all(blake3_avx512_ffi, target_os = "linux"))]
+        let independent = crate::ffi_output::lanes(Platform::detect()) != 0;
+        #[cfg(not(all(blake3_avx512_ffi, target_os = "linux")))]
+        let independent = false;
         assert_eq!(passes(&[Mode::Plain; 3]), 1, "plain hashers hash together");
-        assert_eq!(passes(&[Mode::Plain, Mode::Keyed(&a), Mode::Plain]), 2, "the keyed one alone");
+        assert_eq!(passes(&[Mode::Plain, Mode::Keyed(&a), Mode::Plain]), if independent { 1 } else { 2 }, "public mixed-mode route");
         let same = passes(&[Mode::Keyed(&a); 3]);
         assert_eq!(same, passes(&[Mode::Keyed(&a), Mode::Keyed(&b), Mode::Keyed(&c)]), "equal keys take the passes distinct keys take");
-        assert_eq!(same, 3);
-        // A large cohort: one pass for every keyed hasher, iterated, and
-        // one for all the plain ones.
-        assert_eq!(passes(&[Mode::Keyed(&a); 600]), 600, "600 keyed hashers, one pass each");
+        assert_eq!(same, if independent { 1 } else { 3 });
+        // Independent lanes take one large keyed pass; the public-mode
+        // fallback iterates one per hasher. Plain always shares the IV.
+        assert_eq!(passes(&[Mode::Keyed(&a); 600]), if independent { 1 } else { 600 }, "600 keyed hashers, public route");
         assert_eq!(passes(&[Mode::Plain; 600]), 1, "600 plain hashers, one pass");
+    }
+
+    /// Keyed and mixed-mode turns use independent parent lanes; plain
+    /// turns share the fixed IV. Key values never select a different route.
+    #[cfg(all(blake3_avx512_ffi, target_os = "linux"))]
+    #[test]
+    fn test_held_key_groups_take_one_partition_pass() {
+        let entry = |width| if width == 8 { crate::ffi_output::entry8() } else { crate::ffi_output::entry() };
+        for platform in crate::test::every_platform() {
+            let width = crate::ffi_output::lanes(platform);
+            if width == 0 {
+                continue;
+            }
+            for n in [2usize, 7, 8, 9, 15, 16, 17, 31, 32, 33] {
+                for flavor in 0..4 {
+                    let keys: Vec<[u8; 32]> = (0..n).map(|i| core::array::from_fn(|j| (i * 37 + j * 11) as u8)).collect();
+                    let modes: Vec<Mode<'_>> = (0..n)
+                        .map(|i| match flavor {
+                            0 => Mode::Plain,
+                            1 => Mode::Keyed(&keys[0]),
+                            2 => Mode::Keyed(&keys[i]),
+                            _ => match i % 3 {
+                                0 => Mode::Plain,
+                                1 => Mode::Keyed(&keys[i]),
+                                _ => Mode::DeriveKey("held parent lanes"),
+                            },
+                        })
+                        .collect();
+                    let offsets: Vec<_> = (0..n).map(|i| (i % 3) * crate::STAGE_LEN).collect();
+                    let data: Vec<Vec<u8>> =
+                        (0..n).map(|i| (0..offsets[i] + crate::STAGE_LEN + 97).map(|j| ((i * 37 + j * 17) % 251) as u8).collect()).collect();
+                    let mut hashers: Vec<_> = (0..n)
+                        .map(|i| {
+                            let mut h = Hasher::new(modes[i], None);
+                            h.core.chunk_state.platform = platform;
+                            h.update(&data[i][..offsets[i]]);
+                            h
+                        })
+                        .collect();
+                    crate::COUNTED.with(|c| c[crate::Counted::HeldPass as usize].set(0));
+                    crate::RAN_ENTRIES.with(|r| r.borrow_mut().clear());
+                    for start in (0..crate::STAGE_LEN).step_by(4096) {
+                        let pieces: Vec<_> = (0..n).map(|i| (i, &data[i][offsets[i] + start..offsets[i] + start + 4096])).collect();
+                        update_each(&mut hashers, &pieces);
+                    }
+                    let parent_entries = crate::RAN_ENTRIES.with(|r| r.borrow().clone());
+                    for i in 0..n {
+                        let end = offsets[i] + crate::STAGE_LEN;
+                        assert_eq!(hashers[i].staged, 0);
+                        assert_eq!(hashers[i].count(), end as u64);
+                        assert_eq!(
+                            *hashers[i].clone().finalize().as_bytes(),
+                            crate::test::official::hash(modes[i], &data[i][..end]),
+                            "{platform:?} n={n} lane={i} flavor={flavor}"
+                        );
+                        hashers[i].update(&data[i][end..]);
+                        assert_eq!(*hashers[i].clone().finalize().as_bytes(), crate::test::official::hash(modes[i], &data[i]));
+                        let mut reader = hashers[i].clone().finalize_xof();
+                        reader.set_position(13);
+                        let mut out = [0u8; 129];
+                        reader.fill(&mut out);
+                        assert_eq!(out.as_slice(), crate::test::official::xof(modes[i], &data[i], 13, out.len()));
+                    }
+                    let partitions = crate::COUNTED.with(|c| c[crate::Counted::HeldPass as usize].get());
+                    assert_eq!(partitions, 1, "one held partition: {platform:?} n={n} flavor={flavor}");
+                    assert_eq!(parent_entries.contains(&(entry(width) as usize)), flavor != 0, "independent parent entry: {platform:?} n={n}");
+                    if flavor != 0 && platform == crate::platform::Platform::AVX512 && crate::platform::avx2_detected() {
+                        let eight_needed = (1..=4).any(|shift| ((n * (crate::STAGE_LEN / crate::CHUNK_LEN)) >> shift) % 16 >= 8);
+                        assert_eq!(
+                            parent_entries.contains(&(entry(8) as usize)),
+                            eight_needed,
+                            "eight-wide parent remainder: {platform:?} n={n} flavor={flavor}"
+                        );
+                    }
+                }
+            }
+        }
     }
 
     /// Large same-key and distinct-key turns take the same passes. A
