@@ -85,20 +85,17 @@ pub(crate) unsafe fn hash_group<const W: usize>(inputs: &[Input<'_>; W], out: &m
 /// Hash complete held stages without grouping by their keys. Leaf calls
 /// already fill their chunk lanes; parents borrow each message's own key
 /// and flags in the existing independent-compression descriptors. The
-/// caller bounds held stages by TABLE; shared workspace keeps CVs contiguous.
-pub(crate) fn held_groups(hashers: &mut [Hasher], held: &[usize], platform: Platform) -> bool {
-    if held.is_empty() {
-        return true;
-    }
+/// caller supplies 1..=TABLE stages and a detected AVX2/AVX512 platform.
+/// Keep this workspace frame out of empty and unsupported callers.
+#[inline(never)]
+pub(crate) fn held_groups(hashers: &mut [Hasher], held: &[usize], platform: Platform) {
     let width = lanes(platform);
-    if width == 0 {
-        return false;
-    }
+    debug_assert!(!held.is_empty() && width != 0);
     const PER: usize = crate::STAGE_LEN / CHUNK_LEN;
     const { assert!(PER == 16) };
     let n = held.len();
-    let mut work = crate::each::HeldWorkspace::<{ crate::many::TABLE }>::new(n);
-    let (mut level, mut next) = work.buffers();
+    let mut work = crate::each::HeldWorkspace::<{ crate::many::TABLE }>::new();
+    let (mut level, mut next) = work.buffers(n);
     for (k, &i) in held.iter().enumerate() {
         let h = &hashers[i];
         let (counter, bytes) = h.held_group().expect("a held group");
@@ -164,7 +161,6 @@ pub(crate) fn held_groups(hashers: &mut [Hasher], held: &[usize], platform: Plat
         }
         hashers[i].take_held(&result);
     }
-    true
 }
 
 const SELF_TEST_EXPECTED: u64 = 0x153e0dfbeac2bb44;
