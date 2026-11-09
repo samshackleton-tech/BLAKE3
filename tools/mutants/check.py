@@ -340,23 +340,50 @@ WORKTREES = os.path.join(tempfile.gettempdir(), "blake3-servil-mutants")
 
 
 def remove_leftovers():
-    """The worktrees an earlier run left (a crash, a stop by hand: a run
-    removes none of its own, crash-only), removed before this run starts,
-    so a failure to remove them costs no run. One run at a time: none of
-    them is live. Each shard's build stays (TARGET_DIR/mutants/<label>-<k>):
-    the next run's shard rebuilds the crate from its fresh checkout, whose
-    files are newer than every artifact there, and keeps the dependencies'
-    builds, most of a build's time (a Mac's six shards spent 575 s building
-    for 19 mutants, November 6, BLAKE3 #257)."""
+    """The worktrees an earlier run left that no shard reuses (a crash, a
+    stop by hand: a run removes none of its own, crash-only), removed before
+    this run starts, so a failure to remove them costs no run. One run at a
+    time: none of them is live. A shard's own worktree (<label>-<k>) stays,
+    as its build does (TARGET_DIR/mutants/<label>-<k>): `shard_tree` brings
+    it to HEAD, so its unchanged files keep their times and the shard's
+    first build recompiles what changed alone."""
     listed = subprocess.run(["git", "-C", ROOT, "worktree", "list", "--porcelain"], capture_output=True, text=True, check=True).stdout
     home = os.path.realpath(WORKTREES) + os.sep
     for line in listed.splitlines():
         tree = line.removeprefix("worktree ")
-        if line.startswith("worktree ") and os.path.realpath(tree).startswith(home):
+        if line.startswith("worktree ") and os.path.realpath(tree).startswith(home) and not SHARD_TREE.fullmatch(os.path.basename(tree)):
             subprocess.run(["git", "-C", ROOT, "worktree", "remove", "--force", tree], check=True)
     subprocess.run(["git", "-C", ROOT, "worktree", "prune"], check=True)
-    shutil.rmtree(WORKTREES, ignore_errors=True)
-    os.makedirs(WORKTREES)
+    os.makedirs(WORKTREES, exist_ok=True)
+    for name in os.listdir(WORKTREES):
+        path = os.path.join(WORKTREES, name)
+        if not (SHARD_TREE.fullmatch(name) and os.path.exists(os.path.join(path, ".git"))):
+            shutil.rmtree(path, ignore_errors=True)
+
+
+# A shard's reused worktree: its label and number.
+SHARD_TREE = re.compile(r"[a-z]+-[0-9]+")
+
+
+def shard_tree(label, k):
+    """Shard k's worktree for `label`, at HEAD. Reused from the last run where
+    it is still a worktree: checked out over (a crash leaves a mutant in
+    place: cargo-mutants mutates in place) and cleaned, so only the files
+    HEAD changed get new times, and the shard's first build recompiles those
+    alone. A fresh checkout gave every file a new time: each shard rebuilt
+    the whole crate, 14-16 s with six shards building at once on the
+    i7-12700K where one alone took 3.8 s, and a reused one 0.1 s (November
+    9, BLAKE3 #257)."""
+    tree = os.path.join(WORKTREES, f"{label}-{k}")
+    if os.path.exists(os.path.join(tree, ".git")):
+        # The checkout's HEAD (a worktree's own HEAD is the last run's).
+        head = subprocess.run(["git", "-C", ROOT, "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
+        subprocess.run(["git", "-C", tree, "checkout", "-q", "--detach", "-f", head], check=True)
+        subprocess.run(["git", "-C", tree, "clean", "-q", "-f", "-d", "-x"], check=True)
+    else:
+        shutil.rmtree(tree, ignore_errors=True)
+        subprocess.run(["git", "-C", ROOT, "worktree", "add", "-q", "--detach", tree, "HEAD"], check=True)
+    return tree
 
 
 def run(files, extra=(), shards=SHARDS, label="run", loom=False, known=None):
@@ -375,8 +402,7 @@ def run(files, extra=(), shards=SHARDS, label="run", loom=False, known=None):
         # Its sources in WORKTREES; its build under TARGET_DIR, on disk
         # where cargo builds (six worktrees' release builds in a tmpfs
         # /tmp filled a 14 GiB machine: i7, three times, October 22-23).
-        tree = tempfile.mkdtemp(prefix="mutants-", dir=WORKTREES)
-        subprocess.run(["git", "-C", ROOT, "worktree", "add", "-q", "--detach", tree, "HEAD"], check=True)
+        tree = shard_tree(label, k)
         # The checkout's lock (git ignores it): the shard builds what the
         # checkout builds, from the crates already downloaded, without the
         # network (a slow crates.io failed a run's baseline, October 24).

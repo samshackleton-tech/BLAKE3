@@ -132,6 +132,50 @@ class Rows(unittest.TestCase):
 
 
 class Leftovers(unittest.TestCase):
+    def test_reused_shard_restores_a_mutant_and_preserves_unchanged_times(self):
+        with tempfile.TemporaryDirectory() as base:
+            repo = os.path.join(base, "repo")
+            os.mkdir(repo)
+            def git(*args):
+                return subprocess.run(["git", "-C", repo, *args], check=True, capture_output=True, text=True)
+            git("init", "-q")
+            # This private repository must not depend on the caller's Git
+            # identity or signing setup (fresh runner homes have neither).
+            git("config", "user.name", "Mutation fixture")
+            git("config", "user.email", "mutants@example.invalid")
+            git("config", "commit.gpgsign", "false")
+            for name in ["changed.rs", "stable.rs"]:
+                with open(os.path.join(repo, name), "w") as f:
+                    f.write("original\n")
+            git("add", ".")
+            git("-c", "core.hooksPath=/dev/null", "commit", "-qm", "original inputs")
+            with patch.object(check, "ROOT", repo), patch.object(check, "WORKTREES", os.path.join(base, "trees")):
+                tree = check.shard_tree("run", 0)
+                stable = os.path.join(tree, "stable.rs")
+                os.utime(stable, ns=(1000000000, 1000000000))
+                subprocess.run(["git", "-C", tree, "update-index", "--refresh"], check=True, capture_output=True)
+                changed = os.path.join(tree, "changed.rs")
+                with open(changed, "w") as f:
+                    f.write("planted mutant\n")
+                with open(changed) as f:
+                    self.assertEqual(f.read(), "planted mutant\n")
+                leftover = os.path.join(tree, "crashed-run.tmp")
+                with open(leftover, "w") as f:
+                    f.write("leftover\n")
+                self.assertEqual(check.shard_tree("run", 0), tree)
+                with open(changed) as f:
+                    self.assertEqual(f.read(), "original\n")
+                self.assertFalse(os.path.exists(leftover))
+                self.assertEqual(os.stat(stable).st_mtime_ns, 1000000000)
+                with open(os.path.join(repo, "changed.rs"), "w") as f:
+                    f.write("next HEAD\n")
+                git("add", "changed.rs")
+                git("-c", "core.hooksPath=/dev/null", "commit", "-qm", "changed input")
+                check.shard_tree("run", 0)
+                with open(changed) as f:
+                    self.assertEqual(f.read(), "next HEAD\n")
+                self.assertEqual(os.stat(stable).st_mtime_ns, 1000000000)
+
     def test_a_new_row_takes_every_other_machines_outcome(self):
         with tempfile.TemporaryDirectory() as d:
             known = os.path.join(d, "known-otherarch.txt")
@@ -157,6 +201,7 @@ class Leftovers(unittest.TestCase):
         listed = "\n".join([
             "worktree /repo", "HEAD a", "",
             "worktree /tmpdir/blake3-servil-mutants/mutants-abc123", "HEAD b", "",
+            "worktree /tmpdir/blake3-servil-mutants/run-0", "HEAD e", "",
             "worktree /elsewhere/mutants-xyz", "HEAD c", "",
             "worktree /repo/tmp/tests-map-worktree", "HEAD d", "",
         ])
@@ -167,10 +212,10 @@ class Leftovers(unittest.TestCase):
         with patch.object(check, "ROOT", "/repo"), patch.object(check, "WORKTREES", "/tmpdir/blake3-servil-mutants"), \
              patch.object(check, "TARGET_DIR", "/tmpdir/target"), patch.object(check.os.path, "realpath", lambda p: p), \
              patch.object(check.subprocess, "run", run), patch.object(check.shutil, "rmtree", lambda *a, **k: None), \
-             patch.object(check.os, "makedirs", lambda *a, **k: None):
+             patch.object(check.os, "makedirs", lambda *a, **k: None), patch.object(check.os, "listdir", lambda p: []):
             check.remove_leftovers()
         removed = [a[-1] for a in calls if "remove" in a]
-        self.assertEqual(removed, ["/tmpdir/blake3-servil-mutants/mutants-abc123"], "every other worktree stays")
+        self.assertEqual(removed, ["/tmpdir/blake3-servil-mutants/mutants-abc123"], "a shard's own worktree (run-0) and every other worktree stay")
 
 
 
