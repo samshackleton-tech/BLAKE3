@@ -208,14 +208,17 @@ pub(crate) fn self_test(platform: Platform) -> usize {
     let answer = self_test_shape(|inputs, out| {
         // Sound: initialize detected this platform before testing its kernels.
         unsafe { hash_on_platform(platform, inputs, out) };
-        if lanes(platform) == 16 && crate::platform::avx2_detected() {
-            let mut eight = [[0u8; OUT_LEN]; 16];
-            unsafe { hash_eight_groups(inputs, &mut eight) };
-            check_self_test(crate::self_test::fold(eight.as_flattened()));
-        }
     });
     check_self_test(answer);
-    if lanes(platform) == 16 && crate::platform::avx2_detected() { 2 } else { 1 }
+    if lanes(platform) == 8 {
+        return 1;
+    }
+    if !crate::platform::avx2_detected() {
+        return 1;
+    }
+    // The sixteen-lane platform also uses eight real lanes for remainders.
+    check_self_test(self_test_shape(|inputs, out| unsafe { hash_eight_groups(inputs, out) }));
+    2
 }
 #[cfg(test)]
 pub(crate) fn entry() -> *const () {
@@ -282,6 +285,22 @@ mod tests {
                 out.copy_from_slice(guarded_out);
             });
             assert_eq!(answer, SELF_TEST_EXPECTED, "guard placement at_end={at_end}");
+        }
+    }
+
+    #[test]
+    fn startup_covers_each_supported_platform() {
+        crate::initialize();
+        for platform in crate::test::every_platform() {
+            crate::RAN_ENTRIES.with(|r| r.borrow_mut().clear());
+            let checked = self_test(platform);
+            let width = lanes(platform);
+            let eight = width == 8 || (width == 16 && crate::platform::avx2_detected());
+            let sixteen = width == 16;
+            assert_eq!(checked, usize::from(eight) + usize::from(sixteen), "startup families on {platform:?}");
+            let entries = crate::RAN_ENTRIES.with(|r| r.borrow().clone());
+            assert_eq!(entries.contains(&(entry8() as usize)), eight, "eight-lane startup on {platform:?}");
+            assert_eq!(entries.contains(&(entry() as usize)), sixteen, "sixteen-lane startup on {platform:?}");
         }
     }
 
