@@ -205,20 +205,19 @@ pub(crate) fn self_test(platform: Platform) -> usize {
     if lanes(platform) == 0 {
         return 0;
     }
+    let mut checked = 1;
     let answer = self_test_shape(|inputs, out| {
         // Sound: initialize detected this platform before testing its kernels.
         unsafe { hash_on_platform(platform, inputs, out) };
+        if lanes(platform) == 16 && crate::platform::avx2_detected() {
+            // Check the wide output before the remainder kernel reuses it.
+            check_self_test(crate::self_test::fold(out.as_flattened()));
+            unsafe { hash_eight_groups(inputs, out) };
+            checked = 2;
+        }
     });
     check_self_test(answer);
-    if lanes(platform) == 8 {
-        return 1;
-    }
-    if !crate::platform::avx2_detected() {
-        return 1;
-    }
-    // The sixteen-lane platform also uses eight real lanes for remainders.
-    check_self_test(self_test_shape(|inputs, out| unsafe { hash_eight_groups(inputs, out) }));
-    2
+    checked
 }
 #[cfg(test)]
 pub(crate) fn entry() -> *const () {
