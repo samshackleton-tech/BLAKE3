@@ -524,7 +524,11 @@ def run(files, extra=(), shards=SHARDS, label="run", loom=False, known=None):
         # Consecutive slices (cargo-mutants' default): a shard's mutants in one
         # file one after another rebuild less (round-robin evened the shards
         # and made each build 10% slower, the run no faster, October 21).
-        shard = args + ["--shard", f"{k}/{shards}", "--output", os.path.join(tree, "mutants-result"), "--", *tests]
+        # Positional arguments after `--` reach only cargo-mutants' Test
+        # phase. Plain target selection must also constrain Build; keep
+        # the separate model and unoptimized plans' commands unchanged.
+        target_args = ["--", *tests] if loom or tests == ["--lib", "--tests"] else [f"--cargo-arg={arg}" for arg in tests]
+        shard = args + ["--shard", f"{k}/{shards}", "--output", os.path.join(tree, "mutants-result"), *target_args]
         runs.append((tree, subprocess.Popen(shard, cwd=tree, env=env, preexec_fn=capped(shards))))
         envs[tree] = env
     names = collections.Counter()
