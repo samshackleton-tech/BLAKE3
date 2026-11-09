@@ -12,7 +12,7 @@ words, `const` and `var` themselves.
 import json
 import os
 
-from z3 import BitVec, BitVecVal, Concat, Extract, RotateRight, substitute
+from z3 import BitVec, BitVecVal, BitVecSort, Concat, Extract, Function, RotateRight, substitute
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -52,7 +52,11 @@ def template():
         len_v, flags_v = BitVec("lean_len", 32), BitVec("lean_flags", 32)
         all_vars = list(h) + list(m) + [t, len_v, flags_v]
         from_arr = (C.Ast * len(all_vars))(*(v.ast for v in all_vars))
-        _template = (h, m, t, len_v, flags_v, outs, from_arr)
+        # One application shares the traversal across all sixteen roots.
+        # Its children, not the carrier application, are the returned terms.
+        word = BitVecSort(32)
+        packed = Function("lean_compress_outputs", *([word] * 17))(*outs)
+        _template = (h, m, t, len_v, flags_v, outs, from_arr, packed)
     return _template[:6]
 
 
@@ -64,14 +68,14 @@ def compress(cv, block, counter, block_len, flags):
     from z3.z3 import _to_expr_ref
     if _template is None:
         template()
-    _, _, _, _, _, outs, from_arr = _template
+    _, _, _, _, _, _, from_arr, packed = _template
     ctx = main_ctx()
     ref = ctx.ref()
     to_list = list(cv) + list(block) + [counter, block_len, flags]
     n = len(to_list)
     to_arr = (C.Ast * n)(*(v.ast for v in to_list))
     sub_fn = C.Z3_substitute.__defaults__[0].f
-    return [_to_expr_ref(sub_fn(ref, w.ast, n, from_arr, to_arr), ctx) for w in outs]
+    return _to_expr_ref(sub_fn(ref, packed.ast, n, from_arr, to_arr), ctx).children()
 
 
 def join(parts):
