@@ -911,6 +911,62 @@ mod test {
         assert_eq!(passes(&[Mode::Plain; 600]), 1, "600 plain hashers, one pass");
     }
 
+    /// Count work on ARM without reading a clock. Entry observations are
+    /// sets, not invocation counts; HeldPass names actual cohort calls.
+    #[cfg(all(feature = "std", blake3_neon))]
+    #[test]
+    fn characterize_arm_held_cohorts() {
+        crate::initialize();
+        let mut names: Vec<(String, usize)> = crate::neon_hybrid::entries().into_iter().map(|(n, e)| (n, e as usize)).collect();
+        #[cfg(blake3_sme2)]
+        names.extend(crate::sme2::entries().into_iter().map(|(n, e)| (n.to_string(), e as usize)));
+        let _ = &mut names;
+        let key = [0x42u8; 32];
+        for platform in crate::test::every_platform() {
+            for len in [crate::STAGE_LEN, 2 * crate::STAGE_LEN] {
+                let input = vec![42u8; len];
+                for n in [1usize, 2, 8, 16, 17, 128, 512] {
+                    for keyed in [false, true] {
+                        let mode = if keyed { Mode::Keyed(&key) } else { Mode::Plain };
+                        let mut hashers: Vec<_> = (0..n)
+                            .map(|_| {
+                                let mut h = Hasher::new(mode, None);
+                                h.core.chunk_state.platform = platform;
+                                h
+                            })
+                            .collect();
+                        let mut pieces = Vec::with_capacity(n);
+                        HELD_GROUPS.with(|g| g.borrow_mut().clear());
+                        crate::RAN_ENTRIES.with(|e| e.borrow_mut().clear());
+                        crate::RAN.with(|r| r.set(0));
+                        crate::COUNTED.with(|c| c[crate::Counted::HeldPass as usize].set(0));
+                        for part in input.chunks(4096) {
+                            pieces.clear();
+                            pieces.extend((0..n).map(|i| (i, part)));
+                            update_each(&mut hashers, &pieces);
+                        }
+                        let groups = HELD_GROUPS.with(|g| g.borrow().clone());
+                        let entries = crate::RAN_ENTRIES.with(|e| e.borrow().clone());
+                        let passes = crate::COUNTED.with(|c| c[crate::Counted::HeldPass as usize].get());
+                        let taken = crate::RAN.with(|r| r.get() & crate::Ran::TurnTaken as u32);
+                        let members = groups.iter().map(Vec::len).sum::<usize>();
+                        assert_eq!(passes as usize, groups.len());
+                        assert_eq!(members, n * len / crate::STAGE_LEN);
+                        let labels: std::collections::BTreeSet<_> = names.iter().filter(|(_, e)| entries.contains(e)).map(|(name, _)| name).collect();
+                        let unknown = entries.iter().filter(|e| !names.iter().any(|(_, known)| known == *e)).count();
+                        assert_eq!(unknown, 0, "every recorded ARM entry has existing metadata");
+                        eprintln!(
+                            "HELD_COHORT_WORK platform={platform:?} n={n} len={len} keyed={keyed} passes={passes} members={members} entry_set={labels:?} turn_taken={taken}"
+                        );
+                        for h in hashers {
+                            assert_eq!(h.finalize(), crate::test::official::hash(mode, &input));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     /// With public shape fixed, changing key equality or the number of
     /// matching leading words changes neither cohorts nor kernel entries.
     /// This checks dispatch, not instruction-level constant-time execution.

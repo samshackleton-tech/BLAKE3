@@ -53,6 +53,39 @@ fn allocation_counter_sees_a_callers_allocation() {
     assert_eq!(REQUESTS.with(Cell::get) - before, 1);
 }
 
+/// Work characterization only: no clock reads, and normal non-test
+/// library code. The driver compares this source with the old selector.
+#[test]
+fn characterize_held_allocation_work() {
+    blake3_servil::initialize();
+    let key = [0x42u8; 32];
+    for len in [16 * 1024usize, 32 * 1024] {
+        let input = vec![42u8; len];
+        for n in [1usize, 2, 8, 16, 17, 128, 512] {
+            for keyed in [false, true] {
+                let mode = if keyed { Mode::Keyed(&key) } else { Mode::Plain };
+                let mut hashers: Vec<_> = (0..n).map(|_| Hasher::new(mode, None)).collect();
+                let mut pieces = Vec::with_capacity(n);
+                let before = REQUESTS.with(Cell::get);
+                let bytes = allocated(|| {
+                    for part in input.chunks(4096) {
+                        pieces.clear();
+                        pieces.extend((0..n).map(|i| (i, part)));
+                        throughput::update_each(&mut hashers, &pieces);
+                    }
+                });
+                let requests = REQUESTS.with(Cell::get) - before;
+                assert!(bytes > 0 && requests > 0, "real held allocation work");
+                eprintln!("HELD_ALLOCATION_WORK n={n} len={len} keyed={keyed} bytes={bytes} requests={requests}");
+                let expected = if keyed { *blake3::keyed_hash(&key, &input).as_bytes() } else { *blake3::hash(&input).as_bytes() };
+                for h in hashers {
+                    assert_eq!(h.finalize().as_bytes(), &expected);
+                }
+            }
+        }
+    }
+}
+
 /// Only key bytes vary: caller preparation stays outside the allocator
 /// counters, and two held stages cover zero and nonzero chunk counters.
 #[test]
