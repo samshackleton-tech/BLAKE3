@@ -443,12 +443,17 @@ def tests_to_build(loom):
     # The whole-crate gates cannot change when library expressions mutate.
     command = ["cargo", "nextest", "list", "--cargo-profile", "mutants", "--features", "serde,zeroize",
                "--message-format", "json", *[arg for name in candidates for arg in ("--test", name)]]
-    result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, check=True)
-    listing = json.loads(result.stdout)
+    directory = os.path.join(TARGET_DIR, "mutants")
+    os.makedirs(directory, exist_ok=True)
+    output = os.path.join(directory, "model-only-targets.stdout.json")
+    with open(output, "w") as stdout, open(os.path.join(directory, "model-only-targets.stderr.log"), "w") as stderr:
+        result = subprocess.run(command, cwd=ROOT, stdout=stdout, stderr=stderr)
+    result.check_returncode()  # preserve failed compiler/listing output, never call it empty
+    with open(output) as f:
+        listing = json.load(f)
     empty = empty_model_targets(listing["rust-suites"], candidates)
-    os.makedirs(os.path.join(TARGET_DIR, "mutants"), exist_ok=True)
-    with open(os.path.join(TARGET_DIR, "mutants", "model-only-targets.json"), "w") as f:
-        json.dump({"command": command, "stderr": result.stderr, "empty": sorted(empty), "listing": listing}, f, indent=2)
+    with open(os.path.join(directory, "model-only-targets.json"), "w") as f:
+        json.dump({"command": command, "empty": sorted(empty), "listing": listing}, f, indent=2)
     if not empty:
         return ["--lib", "--tests"]
     features = set(next(n["features"] for n in metadata["resolve"]["nodes"] if n["id"] == package["id"]))

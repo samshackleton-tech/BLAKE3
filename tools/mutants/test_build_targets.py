@@ -69,13 +69,15 @@ class Targets(unittest.TestCase):
     def test_failed_probe_is_not_accepted_as_zero_tests(self):
         model = self.target("model", "#![cfg(shuttle)]\n")
         metadata = {"packages": [{"id": "fixture", "manifest_path": str(self.root / "Cargo.toml"), "targets": [model]}]}
-        failure = subprocess.CalledProcessError(1, ["cargo", "nextest", "list"])
+        failure = subprocess.CompletedProcess(["cargo", "nextest", "list"], 1)
         with patch.object(check, "ROOT", str(self.root)), patch.object(check, "TARGET_DIR", str(self.root)), \
              patch.dict(os.environ, RUSTC_WRAPPER="", RUSTC_WORKSPACE_WRAPPER=""), \
              patch.object(check.subprocess, "run", side_effect=[subprocess.CompletedProcess([], 0, json.dumps(metadata), ""), failure]):
             with self.assertRaises(subprocess.CalledProcessError):
                 check.tests_to_build(False)
         self.assertFalse((self.root / "mutants/model-only-targets.json").exists())
+        self.assertTrue((self.root / "mutants/model-only-targets.stdout.json").exists())
+        self.assertTrue((self.root / "mutants/model-only-targets.stderr.log").exists())
 
     def test_model_plan_is_unchanged(self):
         with patch.object(check.subprocess, "run") as run:
