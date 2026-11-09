@@ -394,6 +394,68 @@ def shard_tree(label, k):
     return tree
 
 
+def model_target_candidates(targets):
+    """Only a recognized whole-crate model gate; never guess from its name.
+    Feature-gated targets stay in the original plan rather than forcing a
+    normally disabled Cargo target to build for this probe."""
+    gates = {'#![cfg(shuttle)]', '#![cfg(all(shuttle, feature = "std"))]'}
+    found = []
+    for target in targets:
+        if "test" not in target["kind"] or target.get("required-features"):
+            continue
+        with open(target["src_path"]) as f:
+            first = next((line.strip() for line in f if line.strip() and not line.lstrip().startswith("//")), "")
+        if first in gates:
+            found.append(target["name"])
+    return found
+
+
+def empty_model_targets(suites, candidates):
+    empty = set()
+    for name in candidates:
+        listed = [s for s in suites.values() if s["binary-name"] == name]
+        if len(listed) != 1 or listed[0].get("status") != "listed":
+            raise RuntimeError(f"model target {name}: missing or skipped listing is not proof of zero tests")
+        if not listed[0]["testcases"]:
+            empty.add(name)
+    return empty
+
+
+def plain_test_targets(targets, features, empty):
+    return ["--lib", *[arg for t in targets if "test" in t["kind"] and t["name"] not in empty
+                     and set(t.get("required-features", ())) <= features for arg in ("--test", t["name"])]]
+
+
+def tests_to_build(loom):
+    if loom:
+        return ["--test", "shuttle_finish", "--test", "shuttle_park"]
+    if os.environ.get("RUSTC_WRAPPER") or os.environ.get("RUSTC_WORKSPACE_WRAPPER"):
+        return ["--lib", "--tests"]  # a wrapper can change cfg per target
+    metadata = json.loads(subprocess.run(["cargo", "metadata", "--format-version", "1", "--features", "serde,zeroize"],
+                                        cwd=ROOT, capture_output=True, text=True, check=True).stdout)
+    package = next(p for p in metadata["packages"] if os.path.realpath(p["manifest_path"]) == os.path.join(os.path.realpath(ROOT), "Cargo.toml"))
+    targets = package["targets"]
+    candidates = model_target_candidates(targets)
+    if not candidates:
+        return ["--lib", "--tests"]
+    # Compile and list these targets once in the unmutated tree. This keeps
+    # syntax/link/listing checks; a missing/failed listing never means empty.
+    # The whole-crate gates cannot change when library expressions mutate.
+    command = ["cargo", "nextest", "list", "--cargo-profile", "mutants", "--features", "serde,zeroize",
+               "--message-format", "json", *[arg for name in candidates for arg in ("--test", name)]]
+    result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, check=True)
+    listing = json.loads(result.stdout)
+    empty = empty_model_targets(listing["rust-suites"], candidates)
+    os.makedirs(os.path.join(TARGET_DIR, "mutants"), exist_ok=True)
+    with open(os.path.join(TARGET_DIR, "mutants", "model-only-targets.json"), "w") as f:
+        json.dump({"command": command, "stderr": result.stderr, "empty": sorted(empty), "listing": listing}, f, indent=2)
+    if not empty:
+        return ["--lib", "--tests"]
+    features = set(next(n["features"] for n in metadata["resolve"]["nodes"] if n["id"] == package["id"]))
+    print(f"mutants: compiled/listed once, zero tests under whole-crate model gates: {', '.join(sorted(empty))}", flush=True)
+    return plain_test_targets(targets, features, empty)
+
+
 def run(files, extra=(), shards=SHARDS, label="run", loom=False, known=None):
     """The mutants that survive the library's tests, by name, counted, and
     every mutant's outcome by function. Each shard's results are kept in
@@ -403,6 +465,7 @@ def run(files, extra=(), shards=SHARDS, label="run", loom=False, known=None):
             "--test-tool", "nextest", *extra]
     for f in files:
         args += ["--file", f]
+    tests = tests_to_build(loom)
     runs = []
     envs = {}  # each shard's environment, by worktree
     survivors = {}  # each shard's surviving places, by worktree: release_same's
@@ -456,7 +519,6 @@ def run(files, extra=(), shards=SHARDS, label="run", loom=False, known=None):
         # Consecutive slices (cargo-mutants' default): a shard's mutants in one
         # file one after another rebuild less (round-robin evened the shards
         # and made each build 10% slower, the run no faster, October 21).
-        tests = ["--test", "shuttle_finish", "--test", "shuttle_park"] if loom else ["--lib", "--tests"]
         shard = args + ["--shard", f"{k}/{shards}", "--output", os.path.join(tree, "mutants-result"), "--", *tests]
         runs.append((tree, subprocess.Popen(shard, cwd=tree, env=env, preexec_fn=capped(shards))))
         envs[tree] = env
