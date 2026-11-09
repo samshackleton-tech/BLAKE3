@@ -70,7 +70,9 @@ class LongProofCarryOver(unittest.TestCase):
             bin_dir.mkdir()
             curl_log = Path(td) / "curl.log"
             curl = bin_dir / "curl"
-            curl.write_text(f"#!/bin/sh\ncat >> {curl_log}\n")
+            # A GET does not consume stdin. Only the status POST supplies
+            # @-, otherwise this fixture can swallow its caller's script.
+            curl.write_text(f'#!/bin/sh\nfor arg in "$@"; do\n  if [ "$arg" = "@-" ]; then cat >> "{curl_log}"; fi\ndone\n')
             curl.chmod(curl.stat().st_mode | stat.S_IEXEC)
             git = ["git", "-C", str(root), "-c", "user.email=t@t", "-c", "user.name=t"]
             subprocess.run(git + ["init", "-q"], check=True)
@@ -94,12 +96,14 @@ class LongProofCarryOver(unittest.TestCase):
             self.assertFalse(tree.exists(), "fixture owns its unique possible worktree")
             self.addCleanup(shutil.rmtree, tree, ignore_errors=True)
             env = dict(os.environ, PATH=str(bin_dir) + ":" + os.environ["PATH"])
+            get_input = "GET must not consume this caller input\n"
             result = subprocess.run(
                 ["sh", "tools/verify/long-proofs.sh", commit], cwd=root, env=env,
-                capture_output=True, text=True, timeout=30)
+                input=get_input, capture_output=True, text=True, timeout=30)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("same proof inputs as " + prior + ", not rerun", result.stdout)
             self.assertIn('"state": "success"', curl_log.read_text())
+            self.assertNotIn(get_input, curl_log.read_text())
             self.assertFalse(tree.exists())
 
 
