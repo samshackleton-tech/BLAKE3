@@ -11,6 +11,32 @@ import canon
 import induction
 
 
+class SpecificationTests(unittest.TestCase):
+    def test_all_outputs_preserve_simultaneous_bindings(self):
+        import lean_spec
+        from z3 import substitute
+        h, m, counter, length, flags, outputs = lean_spec.template()
+        before = list(h) + list(m) + [counter, length, flags]
+        # Reuse template names in the replacements: substitution must be
+        # simultaneous, including exchanges between CV/message/parameter words.
+        after = list(reversed(m[:8])) + list(reversed(h + m[8:])) + [counter + 1, flags, length]
+        wanted = [substitute(word, *zip(before, after)) for word in outputs]
+        got = lean_spec.compress(after[:8], after[8:24], *after[24:])
+        self.assertEqual(len(got), 16)
+        self.assertTrue(all(a.eq(b) for a, b in zip(got, wanted)))
+
+    def test_one_substitution_traverses_all_output_roots(self):
+        import lean_spec
+        from unittest.mock import patch
+        from z3 import z3core
+        h, m, counter, length, flags, _ = lean_spec.template()
+        operation = z3core.Z3_substitute.__defaults__[0]
+        with patch.object(operation, 'f', wraps=operation.f) as substitute:
+            got = lean_spec.compress(h, m, counter + 3, length, flags)
+        self.assertEqual(len(got), 16)
+        self.assertEqual(substitute.call_count, 1, 'one traversal of the shared compression graph')
+
+
 class ContextTests(unittest.TestCase):
     def tearDown(self):
         canon.set_context([], set())
