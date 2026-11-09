@@ -911,6 +911,54 @@ mod test {
         assert_eq!(passes(&[Mode::Plain; 600]), 1, "600 plain hashers, one pass");
     }
 
+    /// Large same-key and distinct-key turns take the same passes. A
+    /// platform without independent parent lanes uses public-mode cohorts.
+    #[cfg(feature = "std")]
+    #[test]
+    fn held_passes_do_not_depend_on_keys() {
+        crate::initialize();
+        let input = vec![42u8; crate::STAGE_LEN];
+        let keys: Vec<[u8; 32]> = (0..600u64)
+            .map(|i| {
+                let mut key = [7u8; 32];
+                key[..8].copy_from_slice(&i.to_le_bytes());
+                key
+            })
+            .collect();
+        for platform in crate::test::every_platform() {
+            #[cfg(all(blake3_avx512_ffi, target_os = "linux"))]
+            let independent = matches!(platform, Platform::AVX2 | Platform::AVX512);
+            #[cfg(not(all(blake3_avx512_ffi, target_os = "linux")))]
+            let independent = false;
+            for n in [3, 600] {
+                for flavor in 0..3 {
+                    let mode = |i| match flavor {
+                        0 => Mode::Plain,
+                        1 => Mode::Keyed(&keys[0]),
+                        _ => Mode::Keyed(&keys[i]),
+                    };
+                    let mut hashers: Vec<_> = (0..n)
+                        .map(|i| {
+                            let mut h = Hasher::new(mode(i), None);
+                            h.core.chunk_state.platform = platform;
+                            h
+                        })
+                        .collect();
+                    crate::COUNTED.with(|c| c[crate::Counted::HeldPass as usize].set(0));
+                    for piece in input.chunks(4096) {
+                        let pieces: Vec<_> = (0..n).map(|i| (i, piece)).collect();
+                        update_each(&mut hashers, &pieces);
+                    }
+                    let passes = crate::COUNTED.with(|c| c[crate::Counted::HeldPass as usize].get());
+                    assert_eq!(passes, if independent || flavor == 0 { 1 } else { n as u64 }, "key-independent passes: {platform:?} n={n} flavor={flavor}");
+                    for (i, h) in hashers.iter().enumerate() {
+                        assert_eq!(h.clone().finalize(), crate::test::official::hash(mode(i), &input));
+                    }
+                }
+            }
+        }
+    }
+
     /// With public shape fixed, changing key equality or the number of
     /// matching leading words changes neither cohorts nor kernel entries.
     /// This checks dispatch, not instruction-level constant-time execution.
