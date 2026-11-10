@@ -93,11 +93,12 @@ import tempfile
 import time
 from pathlib import Path
 
+from exchange import Exchange, utc
+
 FORK_URL = "https://github.com/servil-software-factory/BLAKE3.git"
 BENCH_URL = "https://github.com/servil-software-factory/bench-hashes.git"
 HOME = Path.home()
 CHECKOUTS = HOME / "checkouts"
-DONE_FILE = HOME / ".benchrunner_done"
 CARGO_BIN = HOME / ".cargo" / "bin"
 
 BENCHMARK_FLAGS = {"--all", "--quick", "--thorough"}
@@ -152,7 +153,7 @@ def hex_commit(job, key):
 
 def environment():
     env = {"PATH": f"{CARGO_BIN}:/usr/bin:/bin:/usr/sbin:/sbin", "HOME": str(HOME),
-           "LANG": "en_US.UTF-8", "TMPDIR": str(HOME / "tmp") + "/"}
+           "LANG": "en_US.UTF-8", "TMPDIR": str(HOME / "tmp") + "/", "TZ": "UTC"}
     return env
 
 
@@ -194,11 +195,15 @@ class Job:
         return stdout
 
     def sync(self, url, dest, commit):
-        """`dest`, a clone of `url` kept between jobs, at `commit`."""
+        """`dest`, a clone of `url` kept between jobs, at `commit`: a commit
+        on a branch or at a pull request's head (fetched as
+        refs/remotes/origin/pr/N), so a job names a pull request's head as
+        it is, from a fork too."""
         if not (dest / ".git").exists():
             self.run(["git", "clone", "--quiet", url, str(dest)], cwd=dest.parent)
         else:
             self.run(["git", "fetch", "--quiet", "--prune", "origin"], cwd=dest)
+        self.run(["git", "fetch", "--quiet", "origin", "+refs/pull/*/head:refs/remotes/origin/pr/*"], cwd=dest)
         self.run(["git", "checkout", "--quiet", "--force", "--detach", commit], cwd=dest)
         full = self.run(["git", "rev-parse", "HEAD"], cwd=dest, capture=True).strip()
         assert full.startswith(commit), f"{url}: asked for {commit}, got {full}"
@@ -288,7 +293,9 @@ def check(job, run, work, out):
     and measures the job's scope (the module docstring). Its exit is the
     outcome: 0 completed (a probe gives no speed verdict), 1 a regression,
     2 no verdict (other programs kept the machine busy, or no scope given
-    to a bench that needs one)."""
+    to a bench that needs one), 3 a side's run stopped (a panic, a crash:
+    bench-hashes 0.21 names the side and quotes its last words; the job's
+    log has them, and no speed verdict follows)."""
     old, new = hex_commit(job, "old_commit"), hex_commit(job, "new_commit")
     fork, bench = run.checkouts(new, hex_commit(job, "bench_commit"))
     # --when-quiet: a Mac busy for a few seconds (a scan after a build, a
@@ -308,8 +315,8 @@ def check(job, run, work, out):
         run.run(cmd, cwd=bench)
         return "ok" if "probe" in job else "no regression"
     except subprocess.CalledProcessError as e:
-        if e.returncode in (1, 2):
-            return {1: "regression", 2: "no verdict"}[e.returncode]
+        if e.returncode in (1, 2, 3):
+            return {1: "regression", 2: "no verdict", 3: "a side stopped"}[e.returncode]
         raise
 
 
@@ -412,11 +419,9 @@ TOP = ["/usr/bin/top", "-l", "7200", "-s", "1", "-o", "cpu", "-n", "12", "-stats
 assert 7200 * 1 >= MAX_LIMIT
 
 
-def process(path, results):
-    out = results / f"{path.stem}.{time.strftime('%Y%m%d-%H%M%S')}"
-    out.mkdir()
-    print(f"runner: {path.name}: started, log in {out / 'runner.log'}", file=sys.stderr, flush=True)
-    verdict = {"job": path.name, "started": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "power at start": power()}
+def process(path, out):
+    print(f"runner: {path.name}: started, log in {out / 'runner.log'} until it ends", file=sys.stderr, flush=True)
+    verdict = {"job": path.name, "started": utc("%Y-%m-%dT%H:%M:%SZ"), "power at start": power()}
     with open(out / "runner.log", "w") as log:
         try:
             job = json.loads(path.read_text())
@@ -457,34 +462,51 @@ def process(path, results):
             verdict["status"] = "error"
             verdict["error"] = f"{type(e).__name__}: {e}"
             print(f"runner: {verdict['error']}", file=log, flush=True)
-    verdict["finished"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+    verdict["finished"] = utc("%Y-%m-%dT%H:%M:%SZ")
     verdict["power at end"] = power()
     if verdict.get("type") in TIMED and verdict.get("status") not in (None, "error") and not verdict["power at end"].startswith("AC Power"):
         verdict["status"] = f"power left mains during the job ({verdict['status']}): its results are no evidence of speed"
     (out / "verdict.json").write_text(json.dumps(verdict, indent=2) + "\n")
     print(f"runner: {path.name}: {verdict['status']} -> {out}", file=sys.stderr, flush=True)
+    return verdict["status"]
 
 
 def main():
-    assert len(sys.argv) == 2, "usage: runner.py EXCHANGE (the folder holding jobs/ and results/)"
-    exchange = Path(sys.argv[1])
-    jobs, results = exchange / "jobs", exchange / "results"
-    assert jobs.is_dir() and results.is_dir(), f"{exchange} must hold jobs/ and results/"
+    assert len(sys.argv) in (2, 3), "usage: runner.py EXCHANGE [LABEL] (the folder, or Git clone, holding jobs/ and results/; a label for this machine, chosen by its operator)"
+    # The label is the operator's choice, never read from the machine: a
+    # host's own name can name its owner, and results are published.
+    machine = sys.argv[2] if len(sys.argv) == 3 else "local"
+    exchange = Exchange(sys.argv[1], machine)
+    assert not exchange.shared or len(sys.argv) == 3, "a shared exchange needs a label for this machine: runner.py EXCHANGE LABEL"
     assert (CARGO_BIN / "cargo").exists(), f"no cargo at {CARGO_BIN}: install rustup for this account"
     (HOME / "tmp").mkdir(exist_ok=True)
+    # Every time a job or its meters print is UTC: results are published,
+    # and a machine's local time and zone say where it is.
+    os.environ["TZ"] = "UTC"
+    time.tzset()
     signal.signal(signal.SIGINT, on_signal)
     signal.signal(signal.SIGTERM, on_signal)
     end_leftover_session()
-    done = set(DONE_FILE.read_text().split()) if DONE_FILE.exists() else set()
-    print(f"runner: watching {jobs}; Ctrl-C stops after the current job", file=sys.stderr, flush=True)
+    print(f"runner: {machine} watching {exchange.jobs}{' (shared through Git)' if exchange.shared else ''}; Ctrl-C stops after the current job", file=sys.stderr, flush=True)
     while not stopping:
-        pending = sorted(p for p in jobs.glob("*.json") if p.name not in done)
+        exchange.refresh()
+        pending = exchange.pending()
         if not pending:
-            time.sleep(2)
+            time.sleep(30 if exchange.shared else 2)
             continue
-        process(pending[0], results)
-        done.add(pending[0].name)
-        DONE_FILE.write_text("".join(f"{name}\n" for name in sorted(done)))
+        out = exchange.claim(pending[0])
+        if out is None:
+            continue
+        # The job's files are written on this machine's own disk and copied
+        # into the exchange once the job is over: an exchange on a shared
+        # folder is served by another process, and every line written while
+        # a job times is that process's work beside the measurement.
+        stage = HOME / "tmp" / out.name
+        stage.mkdir()
+        status = process(pending[0], stage)
+        shutil.copytree(stage, out, dirs_exist_ok=True)
+        shutil.rmtree(stage)
+        exchange.publish(out, f"{pending[0].stem}: {status} ({machine})")
 
 
 if __name__ == "__main__":

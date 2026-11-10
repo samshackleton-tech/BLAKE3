@@ -1,6 +1,6 @@
 """Mutation testing against a list of the mutants known to survive.
 
-    python3 tools/mutants/check.py [--since REV | --whole] [--write] [--map] [--whole-suite] [--all-hangs]
+    python3 tools/mutants/check.py [--since REV | --whole] [--write] [--map] [--whole-suite] [--all-hangs] [--every-mutant]
 
 By default the check covers the change since the branch left origin/next
 (git merge-base; a minute for a day's change). --since REV names another
@@ -60,7 +60,7 @@ reason is missing, or a row is stale); 2 only the time-outs differ (no
 verdict on those).
 
 The tests run under cargo-nextest (.config/nextest.toml), each in its own
-process, a test killed at 30 s as a hang; a mutant's tests stop at the
+process, a test killed at 15 s as a hang; a mutant's tests stop at the
 first that fails, the others ended at once (SIGTERM, no outcome of theirs). Every run records each test's outcome and time on every
 mutant, by its place (one change at several places is a mutant at each),
 and on the unmutated tree (tmp/mutants-last/<run>/tests.tsv). With
@@ -76,9 +76,15 @@ only those, and fails on a new survivor among them; it fails too while the
 list names a missing test ("OPEN: a missing test"): that is work to do, not
 a survivor to keep. Its budget is about a minute (Zooko, November 6, 2026,
 BLAKE3 #257): it says what it will run before it starts, spreads the
-mutants over as many shards as they fill, takes the release build's second
-look (release_same) for new survivors alone, and ends with its time against
-the budget and where the time went. It leaves to the whole run, once per
+mutants over as many shards as they fill (more where the machine has the
+CPUs and memory: wide_shards), names each survivor beyond its row as soon
+as the shards end (SURVIVES SO FAR), takes the release build's second look
+(release_same) for new survivors alone and once for each place (the run
+that confirms them reuses the first run's builds), and ends with its time against the budget and where the time went. It also leaves two sets of the
+change's mutants to the whole run (left_to_the_whole_run; --every-mutant
+runs them): a name whose row already explains every place of it the change
+plants, which can add no survivor; and the kinds of mutant a sibling at the
+same place stands for (SIBLING_KINDS), about three in ten. It leaves to the whole run, once per
 stable release, what it gives up: a changed test's or helper's effect on
 other code's mutants, a listed survivor now caught, and the lists' exact
 counts. Rows naming code the change removed it drops from every list.
@@ -214,7 +220,7 @@ HOST = next(l.split(": ", 1)[1] for l in subprocess.run(["rustc", "-vV"], captur
 TARGET_DIR = json.loads(subprocess.run(["cargo", "metadata", "--format-version", "1", "--no-deps"], cwd=ROOT,
                                        capture_output=True, text=True, check=True).stdout)["target_directory"]
 # cargo-mutants needs a limit on a mutant's tests (with --in-place it would
-# otherwise take 300 s). The run's one clock is nextest's, a test's 30 s
+# otherwise take 300 s). The run's one clock is nextest's, a test's 15 s
 # (.config/nextest.toml, profile mutants), which ends a hanging test first;
 # this is a backstop far beyond it, and its firing stops the check as an
 # error, never a verdict (it overlapped the 5 s clock, so a mutant's
@@ -245,6 +251,26 @@ def physical_memory():
 
 def memory_cap(shards):
     return min(8 << 30, (physical_memory() - (4 << 30)) // shards)
+
+
+def wide_shards(cpus, memory):
+    """The most shards a change's check runs here: SHARDS, as ever, and on
+    a machine with more of both, a shard for every four CPUs that the
+    memory holds at the cap six have (memory_cap's 8 GiB a process, 4 GiB
+    left over). On an EPYC 9255 (48 CPUs, 396 GB) the same 163 mutants,
+    their outcomes the same at every count, on kept worktrees: 58 s on 6
+    shards, 53 on 8, 47 on 12, 48 on 16 (November 9, BLAKE3 #257); the
+    CPU time grew from 1,480 s to 1,800 s at 12, since every shard builds
+    and tests the unmutated tree first."""
+    return max(SHARDS, min(cpus // 4, (memory - (4 << 30)) // (8 << 30)))
+
+
+def shard_count(mutants, wide):
+    """A change's shards for its `mutants`, `wide` at most (wide_shards):
+    three mutants a shard up to SHARDS, as it was; past SHARDS, eight a
+    shard, since each shard spends 4-6 s on the unmutated tree before its
+    first mutant, about what three mutants take."""
+    return max(min(SHARDS, max(1, mutants // 3)), min(wide, mutants // 8))
 
 
 def test_limits(shards, cpus, total):
@@ -340,30 +366,87 @@ WORKTREES = os.path.join(tempfile.gettempdir(), "blake3-servil-mutants")
 
 
 def remove_leftovers():
-    """The worktrees an earlier run left (a crash, a stop by hand: a run
-    removes none of its own, crash-only), removed before this run starts,
-    so a failure to remove them costs no run. One run at a time: none of
-    them is live. Each shard's build stays (TARGET_DIR/mutants/<label>-<k>):
-    the next run's shard rebuilds the crate from its fresh checkout, whose
-    files are newer than every artifact there, and keeps the dependencies'
-    builds, most of a build's time (a Mac's six shards spent 575 s building
-    for 19 mutants, November 6, BLAKE3 #257)."""
+    """The worktrees an earlier run left that no shard reuses (a crash, a
+    stop by hand: a run removes none of its own, crash-only), removed before
+    this run starts, so a failure to remove them costs no run. One run at a
+    time: none of them is live. A shard's own worktree (<label>-<k>) stays,
+    as its build does (TARGET_DIR/mutants/<label>-<k>): `shard_tree` brings
+    it to HEAD, so its unchanged files keep their times and the shard's
+    first build recompiles what changed alone."""
     listed = subprocess.run(["git", "-C", ROOT, "worktree", "list", "--porcelain"], capture_output=True, text=True, check=True).stdout
     home = os.path.realpath(WORKTREES) + os.sep
     for line in listed.splitlines():
         tree = line.removeprefix("worktree ")
-        if line.startswith("worktree ") and os.path.realpath(tree).startswith(home):
+        if line.startswith("worktree ") and os.path.realpath(tree).startswith(home) and not SHARD_TREE.fullmatch(os.path.basename(tree)):
             subprocess.run(["git", "-C", ROOT, "worktree", "remove", "--force", tree], check=True)
     subprocess.run(["git", "-C", ROOT, "worktree", "prune"], check=True)
-    shutil.rmtree(WORKTREES, ignore_errors=True)
-    os.makedirs(WORKTREES)
+    os.makedirs(WORKTREES, exist_ok=True)
+    for name in os.listdir(WORKTREES):
+        path = os.path.join(WORKTREES, name)
+        if not (SHARD_TREE.fullmatch(name) and os.path.exists(os.path.join(path, ".git"))):
+            shutil.rmtree(path, ignore_errors=True)
 
 
-def run(files, extra=(), shards=SHARDS, label="run", loom=False, known=None):
+# A shard's reused worktree: its label and number.
+SHARD_TREE = re.compile(r"[a-z]+-[0-9]+")
+
+
+def shard_tree(label, k):
+    """Shard k's worktree for `label`, at HEAD. Reused from the last run where
+    it is still a worktree: checked out over (a crash leaves a mutant in
+    place: cargo-mutants mutates in place) and cleaned, so only the files
+    HEAD changed get new times, and the shard's first build recompiles those
+    alone. A fresh checkout gave every file a new time: each shard rebuilt
+    the whole crate, 14-16 s with six shards building at once on the
+    i7-12700K where one alone took 3.8 s, and a reused one 0.1 s (November
+    9, BLAKE3 #257)."""
+    tree = os.path.join(WORKTREES, f"{label}-{k}")
+
+    def owner(path):
+        """The Git repository `path` is a checkout of (its common directory).
+        Git's failure to say stops the run: a tree whose owner is unknown
+        may be somebody's live work, and nothing of it is removed."""
+        r = subprocess.run(["git", "-C", path, "rev-parse", "--path-format=absolute", "--git-common-dir"], capture_output=True, text=True)
+        if r.returncode != 0:
+            raise RuntimeError(f"Git cannot say which repository {path} belongs to ({r.stderr.strip()}); "
+                               "nothing was removed: use a private TMPDIR or clean it through its owning checkout")
+        return r.stdout.strip()
+
+    def orphaned(path):
+        """Whether `path` is a worktree whose repository is gone: its .git
+        file names that repository's record of it, and a clone deleted
+        after its run (a runner's) leaves the name pointing at nothing.
+        Read from the file, not asked of Git, which fails the same way
+        for a repository it merely will not answer for (another user's)."""
+        pointer = os.path.join(path, ".git")
+        if not os.path.isfile(pointer):
+            return False
+        with open(pointer) as f:
+            text = f.read().strip()
+        return text.startswith("gitdir: ") and not os.path.exists(os.path.join(path, text[len("gitdir: "):]))
+
+    if os.path.exists(os.path.join(tree, ".git")) and not orphaned(tree):
+        # A shared TMPDIR can hold another clone's identically named shard.
+        # Even if it has this HEAD, do not reset or clean somebody else's tree.
+        theirs = owner(tree)
+        if not os.path.samefile(owner(ROOT), theirs):
+            raise RuntimeError(f"retained shard {tree} belongs to a different Git repository; "
+                               "use a private TMPDIR or clean it through its owning checkout")
+        # The checkout's HEAD (a worktree's own HEAD is the last run's).
+        head = subprocess.run(["git", "-C", ROOT, "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
+        subprocess.run(["git", "-C", tree, "checkout", "-q", "--detach", "-f", head], check=True)
+        subprocess.run(["git", "-C", tree, "clean", "-q", "-f", "-d", "-x"], check=True)
+    else:
+        shutil.rmtree(tree, ignore_errors=True)
+        subprocess.run(["git", "-C", ROOT, "worktree", "add", "-q", "--detach", tree, "HEAD"], check=True)
+    return tree
+
+
+def run(files, extra=(), shards=SHARDS, label="run", loom=False, known=None, tknown=None):
     """The mutants that survive the library's tests, by name, counted, and
     every mutant's outcome by function. Each shard's results are kept in
     tmp/mutants-last/<label>/ for a look afterwards."""
-    # A hang is nextest's to end (a test's 30 s); BACKSTOP only guards the run.
+    # A hang is nextest's to end (a test's 15 s); BACKSTOP only guards the run.
     args = ["cargo", "mutants", "--in-place", *BUILD, "--timeout", str(BACKSTOP),
             "--test-tool", "nextest", *extra]
     for f in files:
@@ -375,8 +458,7 @@ def run(files, extra=(), shards=SHARDS, label="run", loom=False, known=None):
         # Its sources in WORKTREES; its build under TARGET_DIR, on disk
         # where cargo builds (six worktrees' release builds in a tmpfs
         # /tmp filled a 14 GiB machine: i7, three times, October 22-23).
-        tree = tempfile.mkdtemp(prefix="mutants-", dir=WORKTREES)
-        subprocess.run(["git", "-C", ROOT, "worktree", "add", "-q", "--detach", tree, "HEAD"], check=True)
+        tree = shard_tree(label, k)
         # The checkout's lock (git ignores it): the shard builds what the
         # checkout builds, from the crates already downloaded, without the
         # network (a slow crates.io failed a run's baseline, October 24).
@@ -490,26 +572,35 @@ def run(files, extra=(), shards=SHARDS, label="run", loom=False, known=None):
                                                        mutant["span"]["start"]["line"]))
         if os.path.exists(out):
             shutil.copytree(out, os.path.join(kept, f"shard{k}"))
-    if survivors and known is not None:
-        # A change's check: the second look for new survivors alone (a name
-        # with more surviving places than its row); a listed one keeps its
-        # row's reason, and the look is a release build a shard.
-        count = collections.Counter(key[0] for v in survivors.values() for key, *_ in v)
-        survivors = {t: [x for x in v if count[x[0][0]] > known.get(x[0][0], (0, ""))[0]] for t, v in survivors.items()}
-        survivors = {t: v for t, v in survivors.items() if v}
+    if known is not None and tknown is not None:
+        # A change's first run: what it found beyond the lists, before the
+        # release builds and the confirming run that follow.
+        for line in so_far(names, known, timed, tknown):
+            print(line, flush=True)
+    survivors = second_looks(survivors, known)
+    survivors, remembered = looks_to_make(survivors, LOOKED)
+    same = [key for key in remembered if LOOKED[key]]
     if survivors:
         # Each shard's survivors in its own worktree and release target, the
         # shards at once (their cargo-mutants runs are over).
         def look(tree):
             target = envs[tree]["CARGO_TARGET_DIR"] + "-release"
             return release_same.confirm(tree, target, survivors[tree], BUILD, envs[tree])
+        looking = time.monotonic()
         with ThreadPoolExecutor(len(survivors)) as pool:
-            same = [key for keys in pool.map(look, sorted(survivors)) for key in keys]
+            built_same = {key for keys in pool.map(look, sorted(survivors)) for key in keys}
+        LOOKS_S[label] += time.monotonic() - looking
+        for places in survivors.values():
+            for key, *_ in places:
+                LOOKED[key] = key in built_same
+        same += sorted(built_same)
+    if survivors or remembered:
         for name, _ in same:
             SAME[label][name] += 1
             RELEASE_SAME[label][name] += 1
-        print(f"mutants: {len(same)} of {sum(map(len, survivors.values()))} surviving places build to the same code in a release build, "
-              "their line count kept (release_same.py)", flush=True)
+        print(f"mutants: {len(same)} of {sum(map(len, survivors.values())) + len(remembered)} surviving places build to the same code in a release build, "
+              "their line count kept (release_same.py)"
+              + (f"; {len(remembered)} of them as this check's first run built them" if remembered else ""), flush=True)
     if rows:
         os.makedirs(kept, exist_ok=True)
         with open(os.path.join(kept, "tests.tsv"), "w") as f:
@@ -531,6 +622,52 @@ SAME = collections.defaultdict(collections.Counter)
 # as same code (release_same.py): a row all of whose places are same code,
 # some of them so, has the reason SAME_RELEASE_REASON.
 RELEASE_SAME = collections.defaultdict(collections.Counter)
+# The wall time of the survivors' release builds, by run label (budget).
+LOOKS_S = collections.Counter()
+
+
+# Each surviving place a release build has answered for in this process:
+# (name, place) -> whether it built to the same code.
+LOOKED = {}
+
+
+def second_looks(survivors, known):
+    """The surviving places that get the release build's second look
+    (release_same.py): every one in a whole run and in a confirming run
+    (`known` None); in a change's first run the new survivors alone (a name
+    with more surviving places than its row), since a listed one keeps its
+    row's reason."""
+    if known is None:
+        return survivors
+    count = collections.Counter(key[0] for places in survivors.values() for key, *_ in places)
+    new = {tree: [x for x in places if count[x[0][0]] > known.get(x[0][0], (0, ""))[0]] for tree, places in survivors.items()}
+    return {tree: places for tree, places in new.items() if places}
+
+
+def looks_to_make(survivors, looked):
+    """(the places still to build, by tree; the places `looked` already
+    answers for). A place's release build is the same build whichever run
+    asks: the mutant, the source and the toolchain are the same, and no
+    clock or load enters it. A change's first run builds its new survivors
+    on every shard's tree at once; the confirming run then asks about the
+    same places from one tree, one after another (45 s for five places
+    where the first run took 17 s for four: a 112-CPU Ice Lake host,
+    November 10, BLAKE3 #257), and has its answers here."""
+    to_make = {tree: [x for x in places if x[0] not in looked] for tree, places in survivors.items()}
+    remembered = [x[0] for places in survivors.values() for x in places if x[0] in looked]
+    return {tree: places for tree, places in to_make.items() if places}, remembered
+
+
+def so_far(found, known, timed, tknown):
+    """What a change's first run found beyond the lists, to print as soon
+    as its shards end: the names to look at now, before the release builds
+    and the run that confirms each alone (a minute and a half later for
+    four names on the Ice Lake host; minutes on a smaller machine)."""
+    lines = [f"SURVIVES SO FAR ({n - known.get(k, (0, ''))[0]}): {k}" for k, n in sorted(found.items()) if n > known.get(k, (0, ""))[0]]
+    lines += [f"TIMED OUT SO FAR ({n - tknown.get(k, (0, ''))[0]}): {k}" for k, n in sorted(timed.items()) if n > tknown.get(k, (0, ""))[0]]
+    if lines:
+        lines.append(f"mutants: {len(lines)} names beyond their rows so far; each runs again alone before the verdict")
+    return lines
 SAME_RELEASE_REASON = ("same code: every test binary of a release build, the mutant's line count kept, "
                        "hashes as the unmutated build's here (tools/mutants/release_same.py)")
 SAME_REASONS = (SAME_REASON, SAME_RELEASE_REASON)
@@ -713,6 +850,30 @@ def check_rows_exist(remove=False):
     return listed
 
 
+def size_of(diff):
+    """(lines of code a diff adds, lines of code it removes): its `+` and
+    `-` lines that are neither blank nor a comment, the file headers apart."""
+    def code(sign):
+        return sum(1 for l in diff.splitlines()
+                   if l.startswith(sign) and not l.startswith(sign * 3) and l[1:].strip() and not l[1:].lstrip().startswith("//"))
+    return code("+"), code("-")
+
+
+def size_note(diff):
+    """What a change does to the size of the mutated code, said with its
+    plan: every line there is a line to test from here on (about four
+    mutants for every ten lines in a whole run, and a little of every
+    mutant's rebuild), so a change that removes more than it adds is said
+    as plainly as one that grows (BLAKE3 #257). Nothing for a change of
+    comments and blank lines alone."""
+    added, removed = size_of(diff)
+    if not added and not removed:
+        return ""
+    net = added - removed
+    return (f"mutants: the change adds {added} line{'' if added == 1 else 's'} of code to the mutated files and removes {removed} "
+            f"(net {'+' if net > 0 else ''}{net}{': less to test from here on' if net < 0 else ''})")
+
+
 # A change's check's budget (Zooko, November 6, 2026, BLAKE3 #257).
 BUDGET_S = 60
 
@@ -732,6 +893,8 @@ def budget(started):
             for ph in o.get("phase_results", []):
                 phases[ph.get("phase", "?")] += ph.get("duration", 0)
     spent = ", ".join(f"{k} {round(v)} s" for k, v in phases.most_common())
+    if spent and sum(LOOKS_S.values()):
+        spent += f"; survivors' release builds: {round(sum(LOOKS_S.values()))} s"
     print(f"mutants: took {took} s, OVER the {BUDGET_S} s budget (shard time: {spent or 'not recorded'})")
 
 
@@ -741,7 +904,7 @@ def known_hangs(tknown, listed):
     outside the model files (whose rows the suite and the model decide
     together, with_model), and with every place of the name a time-out,
     so skipping it skips no place whose outcome is unknown. Each costs a
-    hang to nextest's clock (30 s) and a build a run, and says what the
+    hang to nextest's clock (15 s) and a build a run, and says what the
     list already says. A --since run still runs them, as the lines a change
     touches deserve; --write and --all-hangs run them in a whole run too."""
     places = collections.Counter(f"{m.group(1)}\t{m.group(2)}" for m in (NAME.match(l) for l in listed) if m)
@@ -749,6 +912,63 @@ def known_hangs(tknown, listed):
                   if not reason.startswith(("OPEN", "UNCLASSIFIED"))
                   and k.split("\t", 1)[0] not in LOOM_FILES
                   and count == places[k])
+
+
+# The kinds of mutant a change's check does not plant (a whole run plants
+# every kind). cargo-mutants replaces an operator with two or three others
+# at one place, and the tests nearly always treat them alike. In a record of
+# every test on every mutant (2,266 of the library's 2,489 x86-64 mutants,
+# an EPYC 9255, November 10, 2026, BLAKE3 #257) siblings had the same
+# outcome at 91% to 100% of their places, and with the kinds below left
+# out, no place lost its only survivor but those of `| with ^`: all 40 of
+# those survive or build to the same code (the lists call them equivalent:
+# flag bits that never overlap), and none was ever caught. What stays is the
+# sibling that survived wherever any did: `* with +`, `+ with -`, `- with
+# +`, `/ with %`, `% with +`, `| with &`, `& with |`, and for `<` and `>`
+# the boundary (`<=`, `>=`), the one an off-by-one lives behind. Three
+# mutants in ten (829 of 2,851), and so three tenths of a check's rebuilds.
+# The loss: a survivor that only a kind below would show waits for the
+# whole run. To revise: the same record, `check.py --whole --map`.
+SIBLING_KINDS = (
+    "replace * with /", "replace + with *", "replace - with /", "replace / with *", "replace % with /",
+    "replace += with *=", "replace -= with /=", "replace | with ^", "replace & with ^",
+    "replace < with ==", "replace < with >", "replace > with ==", "replace > with <",
+)
+
+
+def kind_patterns():
+    """cargo-mutants' --exclude-re for each of SIBLING_KINDS: the kind as a
+    mutant's whole change (`replace * with /` is not `replace *= with /=`)."""
+    return [": " + re.escape(kind) + r"( in |$)" for kind in SIBLING_KINDS]
+
+
+def explained(planned, known):
+    """The names a change plants only at places their rows already explain:
+    as many planned places as the row counts, or fewer. Such a name cannot
+    come out with more survivors than its row, so running it can add no
+    new survivor to a change's check (a place of it that now hangs, or is
+    now caught, is the whole run's to see)."""
+    places = collections.Counter(f"{m.group(1)}\t{m.group(2)}" for m in map(NAME.match, planned) if m)
+    return sorted(name for name, n in places.items() if name in known and n <= known[name][0])
+
+
+def left_to_the_whole_run(planned, known, every=False):
+    """(the planned mutants a change's check runs, the names left out as
+    explained by their rows, how many more are left out by kind)."""
+    if every:
+        return planned, [], 0
+    by_row = explained(planned, known)
+    rows, patterns = set(by_row), [re.compile(p) for p in kind_patterns()]
+    kept, by_kind = [], 0
+    for line in planned:
+        m = NAME.match(line)
+        if m and f"{m.group(1)}\t{m.group(2)}" in rows:
+            continue
+        if any(p.search(line) for p in patterns):
+            by_kind += 1
+            continue
+        kept.append(line)
+    return kept, by_row, by_kind
 
 
 def exclude_args(names):
@@ -841,6 +1061,8 @@ def main():
             print(f"mutants: the change since {since} touches no mutated file")
             budget(started)
             return
+        if size_note(diff):
+            print(size_note(diff), flush=True)
         path = os.path.join(tempfile.mkdtemp(prefix="mutants-diff-", dir=scratch_dir()), "change.diff")
         with open(path, "w") as f:
             f.write(diff)
@@ -849,10 +1071,18 @@ def main():
         # mutants), so the budget's cost shows before anything runs.
         planned = subprocess.run(["cargo", "mutants", "--list", *BUILD, "--in-diff", path, *[a for f in files for a in ("--file", f)]],
                                  cwd=ROOT, capture_output=True, text=True, check=True).stdout.splitlines()
-        shards = min(SHARDS, max(1, len(planned) // 3))
+        every = "--every-mutant" in sys.argv
+        kept, by_row, by_kind = left_to_the_whole_run(planned, known, every)
+        left_out = exclude_args(by_row) + ([] if every else [arg for p in kind_patterns() for arg in ("--exclude-re", p)])
+        if len(kept) < len(planned):
+            print(f"mutants: {len(planned) - len(kept)} of the change's {len(planned)} mutants are left to the whole run: "
+                  f"{len(planned) - len(kept) - by_kind} at places their rows already explain, {by_kind} of kinds a sibling "
+                  "at the same place stands for (--every-mutant runs them)", flush=True)
+        planned = kept
+        shards = shard_count(len(planned), wide_shards(os.cpu_count(), physical_memory()))
         print(f"mutants: the change's {len(planned)} mutants on {shards} shard{'s' if shards > 1 else ''}"
               + (f" (about {len(planned) * 6 // shards + 20} s, over the {BUDGET_S} s budget)" if len(planned) * 6 // shards + 20 > BUDGET_S else ""), flush=True)
-        found, functions, timed = run(files, ["--in-diff", path], shards=shards, known=known) if planned else (collections.Counter(), {}, collections.Counter())
+        found, functions, timed = run(files, ["--in-diff", path, *left_out], shards=shards, known=known, tknown=tknown) if planned else (collections.Counter(), {}, collections.Counter())
         if any(f in diff for f in LOOM_FILES):
             found, timed, functions = with_loom(found, timed, functions, run(LOOM_FILES, ["--in-diff", path], shards=1, label="loom", loom=True, known=known)[1])
         # Only the names with more survivors than the list: the run holds
