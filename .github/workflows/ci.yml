@@ -85,7 +85,7 @@ jobs:
     - run: cargo nextest run --features= --release
     # The crate with the pool, the stream and the pipeline (threads/).
     - name: threads
-      run: cargo nextest run && cargo nextest run --release && cargo test --doc
+      run: cargo nextest run --no-fail-fast && cargo nextest run --release && cargo test --doc
       working-directory: ./threads
 
     # Test vectors.
@@ -152,7 +152,7 @@ jobs:
         tool: cargo-c@0.10.26
     - run: cargo nextest run --lib --tests --features=serde,zeroize
     - name: threads
-      run: cargo nextest run --lib --tests
+      run: cargo nextest run --lib --tests --no-fail-fast
       working-directory: ./threads
     # QEMU 11.1.2, Debian's static build, pinned by its SHA-256 and BLAKE3
     # hashes: the runner's own (Ubuntu's 8.2.2) crashed itself now and then
@@ -220,7 +220,7 @@ jobs:
           cd /work
           ~/.cargo/bin/cargo nextest run
           ~/.cargo/bin/cargo test --doc
-          cd threads && ~/.cargo/bin/cargo nextest run
+          cd threads && ~/.cargo/bin/cargo nextest run --no-fail-fast
 
   x86_model:
     name: "the x86-64 proofs' model against the CPU"

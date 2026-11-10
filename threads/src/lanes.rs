@@ -2241,6 +2241,7 @@ mod test {
     /// (tools/mutants/timeouts-x86_64.txt).
     #[test]
     fn equal_members_match_the_reference() {
+        crate::initialize();
         #[allow(unused_mut)]
         let mut platforms: Vec<Platform> = std::vec::Vec::new();
         #[cfg(target_arch = "x86_64")]
