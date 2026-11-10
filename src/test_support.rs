@@ -7,6 +7,7 @@
 /// a fault in the test fails it at once where it would strand the held
 /// thread, and the test with it, until the clock.
 #[cfg(feature = "std")]
+#[allow(dead_code)] // The thread crate's tests hold threads with it.
 pub(crate) struct Released(pub(crate) std::sync::mpsc::Sender<()>);
 #[cfg(feature = "std")]
 impl Drop for Released {

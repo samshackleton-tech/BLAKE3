@@ -407,7 +407,6 @@ impl Platform {
 
     /// The SSE41 platform where this build has its kernels and the CPU its
     /// instructions.
-    #[cfg(test)]
     #[cfg(all(feature = "std", target_arch = "x86_64"))]
     pub fn sse41() -> Option<Self> {
         #[cfg(blake3_sse41_ffi)]
@@ -419,7 +418,6 @@ impl Platform {
 
     /// The AVX2 platform where this build has its kernels and the CPU its
     /// instructions.
-    #[cfg(test)]
     #[cfg(all(feature = "std", target_arch = "x86_64"))]
     pub fn avx2() -> Option<Self> {
         #[cfg(blake3_avx2_ffi)]
@@ -431,21 +429,19 @@ impl Platform {
 
     #[cfg(blake3_avx512_ffi)]
     #[cfg(target_arch = "x86_64")]
-    #[cfg(test)]
     #[cfg(feature = "std")]
     pub fn avx512() -> Option<Self> {
         if avx512_detected() { Some(Self::AVX512) } else { None }
     }
 
     #[cfg(blake3_neon)]
-    #[cfg(test)]
     pub fn neon() -> Option<Self> {
         // Assumed to be safe if the "neon" feature is on.
         Some(Self::NEON)
     }
 
     #[cfg(blake3_sme2)]
-    #[cfg(all(test, feature = "std"))]
+    #[cfg(feature = "std")]
     pub fn sme2() -> Option<Self> {
         if sme2_detected() { Some(Self::SME2) } else { None }
     }

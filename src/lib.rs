@@ -1136,6 +1136,7 @@ pub fn initialize() {
 /// pieces, and the Hasher's inside. Not for programs: it changes with the
 /// two crates, which are released together.
 #[doc(hidden)]
+#[cfg(feature = "std")]
 pub mod hazmat {
     pub use crate::{
         CHUNK_END, CHUNK_START, CVBytes, CVWords, DERIVE_KEY_MATERIAL, IV, KEYED_HASH, MAX_DEPTH, Output, ROOT, compress_parents_parallel,
@@ -1156,7 +1157,6 @@ pub mod hazmat {
     pub mod incremental {
         pub use crate::incremental::{HasherCore, Pool, STAGE_LEN};
     }
-    #[cfg(feature = "std")]
     pub mod each {
         pub use crate::each::{Item, MEMBERS, hash_each_on, prepare_thread, update_turn};
     }

@@ -55,6 +55,7 @@ mod forms_test;
 /// same messages, fixed values and guard pages.
 #[cfg(test)]
 #[path = "../../src/test_support.rs"]
+#[allow(dead_code)] // Some serve the core's tests alone.
 pub(crate) mod test;
 
 /// A kind of path a call of this crate's ran, for its tests (the core
