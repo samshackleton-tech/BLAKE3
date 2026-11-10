@@ -42,10 +42,11 @@ mod park_sync {
     pub use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
     pub use std::thread;
 }
-#[cfg(blake3_gpu)]
+#[cfg(all(test, blake3_gpu))]
 mod gpu;
 mod lanes;
 mod park;
+#[cfg(test)]
 mod stream;
 
 #[cfg(test)]
@@ -183,7 +184,8 @@ pub fn __all_workers_parked() -> bool {
 /// The throughput API: the core's, and the calls that use other cores.
 pub mod throughput {
     use crate::platform::Platform;
-    pub use crate::stream::{Stream, stream};
+    #[cfg(test)]
+    pub(crate) use crate::stream::{Stream, stream};
     use crate::{Hash, Hasher, Mode, OUT_LEN};
     use blake3_servil_core::hazmat::each::{Item, hash_each_on};
     pub use blake3_servil_core::throughput::*;
