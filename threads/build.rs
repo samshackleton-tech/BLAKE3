@@ -18,10 +18,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     if arch == "aarch64" {
         println!("cargo::rustc-cfg=blake3_neon");
-        // TRIAL: the core tells its dependents whether it built SME2
-        // (a `links` key and DEP_ variable); here, what it does on our
-        // machines.
-        println!("cargo::rustc-cfg=blake3_sme2");
+        // The core's build script says whether it built the SME2 kernels.
+        if env::var_os("DEP_BLAKE3_SERVIL_CORE_SME2").is_some() {
+            println!("cargo::rustc-cfg=blake3_sme2");
+        }
     }
     // The GPU (src/gpu.rs) on Apple Silicon macOS: the Metal bridge, and
     // the shader's source embedded for the driver to compile at run time.
