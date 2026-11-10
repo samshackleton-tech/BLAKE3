@@ -270,6 +270,9 @@ jobs:
     # runner's dynamic loader (chosen for the real CPU) ran an AVX
     # instruction before any test did.
     - run: CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="$RUNNER_TEMP/sde/sde64 -${{ matrix.cpu.flag }} -chip_check_exe_only -- " cargo nextest run -P emulated --release --lib --tests
+    - name: threads, emulated
+      working-directory: ./threads
+      run: CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="$RUNNER_TEMP/sde/sde64 -${{ matrix.cpu.flag }} -chip_check_exe_only -- " cargo nextest run -P emulated --release --lib --tests
 
   x86_model:
     name: "the x86-64 proofs' model against the CPU"
