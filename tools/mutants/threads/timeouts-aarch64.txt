@@ -22,6 +22,7 @@ src/lanes.rs	replace sources::run_one_from -> bool with true	1	a loop variant br
 src/lanes.rs	replace sources::serve with ()	1	a loop variant broken: a claimed item is never run, so its job or stream waits for ever; the clock stops every multithreaded test
 src/lanes.rs	replace splits -> bool with true	1	a hang the test tests/stream_collect_no_workers.rs showed: a stream on one CPU takes a slot and waits for workers that do not exist
 src/lanes.rs	replace worker_main with ()	1	no worker serves: the tests that wait for a worker to run a stream's task or to park wait until the clock; callers' own work stays right (gate16's logs)
+src/lib.rs	replace __all_workers_parked -> bool with false	1	a test-only hook (__all_workers_parked): a no that never turns yes, so the stream tests wait for every worker parked, forever
 src/stream.rs	delete ! in Stream<'env, D>::help	1	a hang the test stream::test::a_publication_never_meets_a_claimed_uncopied_task showed: with the feed's `!` gone (a constant no where no GPU is built) a waiting caller never reaches run_waiting, and in that test no worker sees the tasks, so the caller waits for room it alone could make. run_waiting's `!` survives (known-aarch64.txt)
 src/stream.rs	delete ! in Stream<'env, D>::reserve	1	a loop variant broken: a reservation waits while the 2 MiB ring has room, and waits for ever; the clock stops the stream tests
 src/stream.rs	delete ! in Stream<'env, D>::reserve_long	1	a loop variant broken: a reservation waits while the long ring has room, and waits for ever; the clock stops the long-message tests

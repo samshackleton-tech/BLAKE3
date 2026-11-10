@@ -1,4 +1,3 @@
 # The mutants that time out on x86-64 (an EPYC 9255, AVX-512, October 22): no test fails,
 # nextest's clock stops one (tools/mutants/check.py, TIMEOUTS). Their own outcome: neither caught nor survived.
 # A line: file <TAB> mutant (function and change) <TAB> places <TAB> reason. Not yet run on the i7.
-src/lib.rs	replace __all_workers_parked -> bool with false	1	a test-only hook (__all_workers_parked): a no that never turns yes, so the stream tests wait for every worker parked, forever

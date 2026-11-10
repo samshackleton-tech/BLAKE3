@@ -36,18 +36,19 @@ src/lanes.rs	replace sources::Source::take_run -> bool with true	1	same code: ev
 src/lanes.rs	replace sources::take_stream_task -> Option<Task> with None	1	another machine's code: the SME2 thread runs only where pool.sme2 is set (an SME2 build on a CPU with it); on x86 it is never started
 src/lanes.rs	replace wake_sme2 with ()	1	another machine's code: the SME2 thread runs only where pool.sme2 is set (an SME2 build on a CPU with it); on x86 it is never started
 src/lanes.rs	replace | with ^ in Task::run_equal_members	4	equivalent: | and ^ agree on flag bits that never overlap
+src/lib.rs	replace __all_workers_parked -> bool with true	1	a test-only hook (__all_workers_parked, the stream tests' wait for every worker parked): a yes too soon only shortens their wait, and they check what they checked before
 src/park.rs	replace > with >= in Park::wake_for	1	equivalent: `later >= 0` adds `later` to the owed when it is 0, which is adding nothing; the `if` keeps an atomic add off the path of a job that owes none
-src/stream.rs	replace + with *	1	equivalent: the long message's stack keeps MAX_DEPTH values for MAX_DEPTH + 1, still more than a 2^64-byte message's 48 pieces need
-src/stream.rs	replace + with * in task_slots	2	same code: every test binary hashes as the unmutated build's here (tools/mutants/code_hash.py)
-src/stream.rs	replace + with -	1	equivalent: the long message's stack keeps MAX_DEPTH - 1 values, still more than a 2^64-byte message's 48 pieces need
 src/stream.rs	delete ! in Stream<'env, D>::finish	2	the two are run_waiting's and the GPU reclaim's: with no GPU built the reclaim is a constant no, and deleting either lets the pause fire after a pass that made progress, where it only spins and the loop proceeds; every outcome is the same
 src/stream.rs	delete ! in Stream<'env, D>::help	2	the two are the GPU feed's (a constant no where no GPU is built) and run_waiting's: deleting either lets the pause fire after a pass that made progress, where it only spins and the loop proceeds; every outcome is the same
-src/stream.rs	replace + with - in task_slots	2	same code: every test binary hashes as the unmutated build's here (tools/mutants/code_hash.py)
-src/stream.rs	replace Stream<'env, D>::pause with ()	1	the stop for a pause nothing can wake: it acts only when another fault strands the stream (the planted control on BLAKE3 #244 fails at once with it and hangs without); alone, a spin becomes a retry and every outcome is the same
 src/stream.rs	delete field flags from struct Task expression in Stream<'env, D>::reclaim	1	same code: every test binary hashes as the unmutated build's here (tools/mutants/code_hash.py)
 src/stream.rs	delete field key from struct Task expression in Stream<'env, D>::reclaim	1	same code: every test binary hashes as the unmutated build's here (tools/mutants/code_hash.py)
 src/stream.rs	delete field left from struct Task expression in Stream<'env, D>::reclaim	1	same code: every test binary hashes as the unmutated build's here (tools/mutants/code_hash.py)
 src/stream.rs	delete field out from struct Task expression in Stream<'env, D>::reclaim	1	same code: every test binary hashes as the unmutated build's here (tools/mutants/code_hash.py)
+src/stream.rs	replace + with *	1	equivalent: the long message's stack keeps MAX_DEPTH values for MAX_DEPTH + 1, still more than a 2^64-byte message's 48 pieces need
+src/stream.rs	replace + with * in task_slots	2	same code: every test binary hashes as the unmutated build's here (tools/mutants/code_hash.py)
+src/stream.rs	replace + with -	1	equivalent: the long message's stack keeps MAX_DEPTH - 1 values, still more than a 2^64-byte message's 48 pieces need
+src/stream.rs	replace + with - in task_slots	2	same code: every test binary hashes as the unmutated build's here (tools/mutants/code_hash.py)
+src/stream.rs	replace Stream<'env, D>::pause with ()	1	the stop for a pause nothing can wake: it acts only when another fault strands the stream (the planted control on BLAKE3 #244 fails at once with it and hangs without); alone, a spin becomes a retry and every outcome is the same
 src/stream.rs	replace Stream<'env, D>::reclaim -> bool with false	1	same code: every test binary of a release build, the mutant's line count kept, hashes as the unmutated build's here (tools/mutants/release_same.py)
 src/stream.rs	replace Stream<'env, D>::reclaim -> bool with true	1	same code: every test binary of a release build, the mutant's line count kept, hashes as the unmutated build's here (tools/mutants/release_same.py)
 src/stream/receiver.rs	replace && with || in Core::forget	1	equivalent: forget(id, false) comes only from a result's retire, after its result has transferred and `done` is set; there `cancel || !done` is false, as `cancel && !done` is
