@@ -14,45 +14,6 @@ use crate::platform::Platform;
 use crate::throughput::Block;
 use crate::{CHUNK_END, CHUNK_LEN, CHUNK_START, CVBytes, CVWords, ChunkState, Hash, Hasher, IncrementCounter, Mode, OUT_LEN};
 
-/// [`hash_each`], using other CPU cores where that is faster: the
-/// same hashes, never slower. Collections of 512 KiB and more in all use
-/// them, as [`hash_multithreaded`](crate::throughput::hash_multithreaded) does.
-/// Requires `out.len() == items.len()`.
-///
-/// ```
-/// # blake3_servil::initialize_multithreaded(None);
-/// use blake3_servil::{Mode, throughput::{self, Block}};
-/// let blocks: Vec<Vec<Block>> = (0..100).map(|i| vec![Block([i as u8; 64]); (1000 * i as usize).div_ceil(64)]).collect();
-/// let items: Vec<(&[Block], usize)> = blocks.iter().enumerate().map(|(i, b)| (&b[..], 1000 * i)).collect();
-/// let (mut a, mut b) = (vec![[0u8; 32]; 100], vec![[0u8; 32]; 100]);
-/// throughput::hash_each_multithreaded(Mode::Plain, &items, &mut a);
-/// throughput::hash_each(Mode::Plain, &items, &mut b);
-/// assert_eq!(a, b);
-/// ```
-#[cfg(feature = "std")]
-pub fn hash_each_multithreaded(mode: Mode, items: &[(&[Block], usize)], out: &mut [[u8; OUT_LEN]]) {
-    crate::lanes::require();
-    assert_eq!(items.len(), out.len(), "one digest per item");
-    let mut room = core::mem::MaybeUninit::uninit();
-    let (key, flags) = mode.key(&mut room);
-    let alone_len = |len: usize| len >= crate::lanes::MIN_SPLIT_LEN;
-    let alone = |item: &[u8]| alone_len(item.len());
-    // The items that hash alone are set aside in the pool's collection
-    // call (a zero stand-in) and hashed after, each over the whole pool.
-    if items.iter().map(|i| i.bytes().len()).filter(|&len| !alone_len(len)).sum::<usize>() < crate::lanes::MIN_SPLIT_LEN {
-        hash_each_on(key, flags, items, out, Platform::detect(), |item| {
-            if alone(item) { Hash::from_bytes([0; OUT_LEN]) } else { crate::hash_serial(item, key, flags) }
-        });
-    } else {
-        crate::lanes::hash_each(key, flags, items, out);
-    }
-    for (item, out) in items.iter().map(Item::bytes).zip(out.iter_mut()) {
-        if alone(item) {
-            *out = *crate::lanes::hash_with_key(item, key, flags).as_bytes();
-        }
-    }
-}
-
 // Many messages arriving at once, such as a server's uploads, each with
 // its own Hasher: one call takes the pieces that have arrived for all of
 // them, which hash faster together than one Hasher::update each.
@@ -84,22 +45,7 @@ pub fn hash_each_multithreaded(mode: Mode, items: &[(&[Block], usize)], out: &mu
 /// assert_eq!((&out[0], &out[1]), (hash(b"abc").as_bytes(), hash(b"xyz").as_bytes()));
 /// ```
 pub fn update_each(hashers: &mut [Hasher], pieces: &[(usize, &[u8])]) {
-    update_turn(hashers, pieces, false);
-}
-
-/// [`update_each`], using other CPU cores where
-/// that is faster (pieces of 512 KiB and more): the same result, never
-/// slower.
-/// Requires each `i < hashers.len()`.
-///
-/// # Key-dependent timing
-///
-/// The same [key-independence contract](crate#key-dependent-timing) as
-/// [`update_each`] applies when workers participate.
-#[cfg(feature = "std")]
-pub fn update_each_multithreaded(hashers: &mut [Hasher], pieces: &[(usize, &[u8])]) {
-    crate::lanes::require();
-    update_turn(hashers, pieces, true);
+    update_turn(hashers, pieces, None);
 }
 
 /// The hash of each message `which` names: `out[k]` is what
@@ -205,7 +151,7 @@ fn finish_each(hashers: &mut [Hasher], which: &[usize], out: &mut [[u8; OUT_LEN]
 /// drain un-holds, and a drain leaves nothing waiting), so a hasher that
 /// is not held has no earlier bytes waiting, and takes its piece now. Both
 /// lists live on the stack: a turn allocates nothing.
-fn update_turn(hashers: &mut [Hasher], pieces: &[(usize, &[u8])], pooled: bool) {
+pub fn update_turn(hashers: &mut [Hasher], pieces: &[(usize, &[u8])], pooled: Option<crate::incremental::Pool>) {
     let mut held = arrayvec::ArrayVec::<usize, TABLE>::new();
     let mut waiting = arrayvec::ArrayVec::<(usize, &[u8]), TABLE>::new();
     for &(i, bytes) in pieces {
@@ -227,7 +173,7 @@ fn gather<'a>(
     hashers: &mut [Hasher],
     i: usize,
     bytes: &'a [u8],
-    pooled: bool,
+    pooled: Option<crate::incremental::Pool>,
     held: &mut arrayvec::ArrayVec<usize, TABLE>,
     waiting: &mut arrayvec::ArrayVec<(usize, &'a [u8]), TABLE>,
 ) {
@@ -248,7 +194,12 @@ fn gather<'a>(
 /// in play; a hasher filled again in the pass sends its later pieces back
 /// to wait. A pass holds at most one group per hasher and keeps at most
 /// as many pieces waiting as it took, so neither list overflows.
-fn drain<'a>(hashers: &mut [Hasher], held: &mut arrayvec::ArrayVec<usize, TABLE>, waiting: &mut arrayvec::ArrayVec<(usize, &'a [u8]), TABLE>, pooled: bool) {
+fn drain<'a>(
+    hashers: &mut [Hasher],
+    held: &mut arrayvec::ArrayVec<usize, TABLE>,
+    waiting: &mut arrayvec::ArrayVec<(usize, &'a [u8]), TABLE>,
+    pooled: Option<crate::incremental::Pool>,
+) {
     loop {
         flush_held(hashers, held);
         if waiting.is_empty() {
@@ -485,7 +436,11 @@ pub fn hash_each(mode: Mode, items: &[(&[Block], usize)], out: &mut [[u8; OUT_LE
 #[cfg(blake3_sme2)]
 const BY_BLOCKS_AT_ONCE: usize = TABLE;
 #[cfg(not(blake3_sme2))]
-const BY_BLOCKS_AT_ONCE: usize = crate::lanes::MEMBERS;
+const BY_BLOCKS_AT_ONCE: usize = MEMBERS;
+
+/// The most messages a pool's task holds side by side (the thread crate's
+/// `Task`), and so the most `hash_by_blocks` takes in a call there.
+pub const MEMBERS: usize = 64;
 
 /// The digest of each of `items`, every one of up to a chunk, of any
 /// lengths, by their blocks: those with as many whole blocks before their
@@ -660,7 +615,7 @@ fn by_blocks_at_once(items: &[&[u8]], key: &CVWords, flags: u8, out: &mut [[u8; 
 
 /// An item of a collection, as hash_each_on reads it: its bytes. The
 /// public calls' items are messages in blocks; the pool's ranges, bytes.
-pub(crate) trait Item {
+pub trait Item {
     fn bytes(&self) -> &[u8];
 }
 
@@ -681,7 +636,7 @@ impl Item for (&[Block], usize) {
 /// [`hash_each`] in the mode of `key` and `flags`, the lanes on
 /// `platform`, each message that fills the lanes alone (or is a chunk or
 /// less) through `alone`.
-pub(crate) fn hash_each_on<I: Item>(key: &CVWords, flags: u8, items: &[I], out: &mut [[u8; OUT_LEN]], platform: Platform, alone: impl Fn(&[u8]) -> Hash) {
+pub fn hash_each_on<I: Item>(key: &CVWords, flags: u8, items: &[I], out: &mut [[u8; OUT_LEN]], platform: Platform, alone: impl Fn(&[u8]) -> Hash) {
     let key = *key;
     // Items of up to a chunk, two or more, by their blocks (hash_by_blocks).
     #[cfg(target_arch = "x86_64")]
@@ -799,7 +754,7 @@ const PREPARED_CVS: usize = 256;
 
 /// This thread's storage for the collections it hashes, made now: the
 /// pool's threads at their start, and the thread that initializes the pool.
-pub(crate) fn prepare_thread() {
+pub fn prepare_thread() {
     SHARED.with(|shared| {
         let mut shared = shared.borrow_mut();
         shared.messages.reserve(PREPARED_MESSAGES);

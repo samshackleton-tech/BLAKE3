@@ -51,7 +51,7 @@ pub enum Platform {
 /// accepted costs (Zooko, September 2026): two programs sharing the machine
 /// lose the cells where each held an SME unit, and their small batches
 /// 6-16%.
-pub(crate) struct Sme2Turn {
+pub struct Sme2Turn {
     platform: Platform,
     #[cfg(blake3_sme2)]
     held: bool,
@@ -68,7 +68,7 @@ static SME2_BUSY: Busy = Busy(core::sync::atomic::AtomicBool::new(false));
 
 impl Sme2Turn {
     #[inline]
-    pub(crate) fn take(platform: Platform, sme2_sized: bool) -> Self {
+    pub fn take(platform: Platform, sme2_sized: bool) -> Self {
         #[cfg(blake3_sme2)]
         if sme2_sized && matches!(platform, Platform::SME2) {
             use core::sync::atomic::Ordering;
@@ -97,7 +97,7 @@ impl Sme2Turn {
     }
 
     #[inline]
-    pub(crate) fn platform(&self) -> Platform {
+    pub fn platform(&self) -> Platform {
         self.platform
     }
 }
