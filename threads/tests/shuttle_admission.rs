@@ -10,7 +10,7 @@ mod finish_sync {
 }
 #[path = "../src/admission.rs"]
 mod admission;
-#[path = "../tools/require_nextest.rs"]
+#[path = "../../tools/require_nextest.rs"]
 mod require_nextest;
 
 use admission::Pool;

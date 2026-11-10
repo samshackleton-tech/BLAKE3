@@ -127,7 +127,7 @@ fn not_initialized() -> u8 {
         DETECTED.load(core::sync::atomic::Ordering::Relaxed)
     }
     #[cfg(not(test))]
-    panic!("blake3-servil: call blake3_servil::initialize() once, before any other call: it runs the startup self-test and detects the CPU")
+    panic!("blake3-servil: call blake3_servil_core::initialize() once, before any other call: it runs the startup self-test and detects the CPU")
 }
 
 /// x86-64's kernels for a CPU with the given features: the widest it

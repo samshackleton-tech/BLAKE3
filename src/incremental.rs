@@ -18,23 +18,23 @@ use super::*;
 ///
 /// ```
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-/// # blake3_servil::initialize();
+/// # blake3_servil_core::initialize();
 /// // Hash an input incrementally.
-/// let mut hasher = blake3_servil::convenience::Hasher::new(blake3_servil::Mode::Plain, None);
+/// let mut hasher = blake3_servil_core::convenience::Hasher::new(blake3_servil_core::Mode::Plain, None);
 /// hasher.update(b"foo");
 /// hasher.update(b"bar");
 /// hasher.update(b"baz");
 /// // finalize takes the Hasher: the next message gets a new one.
-/// assert_eq!(hasher.finalize(), blake3_servil::convenience::hash(b"foobarbaz"));
+/// assert_eq!(hasher.finalize(), blake3_servil_core::convenience::hash(b"foobarbaz"));
 ///
 /// // Extended output. OutputReader also implements Read and Seek.
 /// # #[cfg(feature = "std")] {
 /// let mut output = [0; 1000];
-/// let mut hasher = blake3_servil::convenience::Hasher::new(blake3_servil::Mode::Plain, None);
+/// let mut hasher = blake3_servil_core::convenience::Hasher::new(blake3_servil_core::Mode::Plain, None);
 /// hasher.update(b"foobarbaz");
 /// let mut output_reader = hasher.finalize_xof();
 /// output_reader.fill(&mut output);
-/// assert_eq!(&output[..32], blake3_servil::convenience::hash(b"foobarbaz").as_bytes());
+/// assert_eq!(&output[..32], blake3_servil_core::convenience::hash(b"foobarbaz").as_bytes());
 /// # }
 /// # Ok(())
 /// # }
@@ -365,9 +365,9 @@ impl Hasher {
     /// # use std::fs::File;
     /// # use std::io;
     /// # fn main() -> io::Result<()> {
-    /// # blake3_servil::initialize();
+    /// # blake3_servil_core::initialize();
     /// // Hash standard input.
-    /// let mut hasher = blake3_servil::convenience::Hasher::new(blake3_servil::Mode::Plain, None);
+    /// let mut hasher = blake3_servil_core::convenience::Hasher::new(blake3_servil_core::Mode::Plain, None);
     /// hasher.update_reader(std::io::stdin().lock())?;
     /// println!("{}", hasher.finalize());
     /// # Ok(())
@@ -698,7 +698,7 @@ mod test {
         let mut h = Hasher::new(Mode::Plain, None);
         h.update(&input[..STAGE_LEN]);
         h.update(&input[STAGE_LEN..STAGE_LEN + 100]);
-        let rest = h.gather_part(&input[STAGE_LEN + 100..2 * STAGE_LEN + 50], false, true);
+        let rest = h.gather_part(&input[STAGE_LEN + 100..2 * STAGE_LEN + 50], None, true);
         assert_eq!(rest.len(), 50, "the rest handed back");
         let (counter, bytes) = h.held_group().expect("a whole group held");
         assert_eq!((counter, &bytes[..]), ((STAGE_LEN / CHUNK_LEN) as u64, &input[STAGE_LEN..2 * STAGE_LEN]));

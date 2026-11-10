@@ -38,9 +38,9 @@ use crate::{ContextKey, DERIVE_KEY_CONTEXT, Hash, IV, Mode, OUT_LEN};
 /// [`convenience::hash`](crate::convenience::hash) is the faster call.
 ///
 /// ```
-/// # blake3_servil::initialize();
+/// # blake3_servil_core::initialize();
 /// # #[cfg(feature = "std")] {
-/// use blake3_servil::{Mode, convenience, throughput::{self, Batch}};
+/// use blake3_servil_core::{Mode, convenience, throughput::{self, Batch}};
 /// let mut message = Batch::new(100, 1);
 /// message.set(0, &[7u8; 100]);
 /// assert_eq!(throughput::hash(Mode::Plain, message.blocks(), 100), convenience::hash(&[7u8; 100]));
@@ -62,9 +62,9 @@ pub fn hash(mode: Mode, input: &[Block], len: usize) -> Hash {
 /// next layer's batch ([`Batch::digests_mut`]).
 ///
 /// ```
-/// # blake3_servil::initialize();
+/// # blake3_servil_core::initialize();
 /// # #[cfg(feature = "std")] {
-/// use blake3_servil::{Mode, convenience, throughput::{self, Batch}};
+/// use blake3_servil_core::{Mode, convenience, throughput::{self, Batch}};
 /// let mut leaves = Batch::new(256, 1000);
 /// for i in 0..1000 {
 ///     leaves.set(i, &[7u8; 256]);
@@ -85,9 +85,9 @@ pub fn hash(mode: Mode, input: &[Block], len: usize) -> Hash {
 /// holds them, with no copy into blocks:
 ///
 /// ```
-/// # blake3_servil::initialize();
+/// # blake3_servil_core::initialize();
 /// # #[cfg(feature = "std")] {
-/// use blake3_servil::{Mode, convenience, throughput::{self, Packed}};
+/// use blake3_servil_core::{Mode, convenience, throughput::{self, Packed}};
 /// let mut leaves = Packed::<32>::new(1000);
 /// for (i, leaf) in leaves.iter_mut().enumerate() {
 ///     leaf[0] = i as u8;
@@ -117,12 +117,12 @@ pub fn hash_many<P: Prepared>(mode: Mode, batch: &P, out: &mut [[u8; OUT_LEN]]) 
 /// # Example
 ///
 /// ```
-/// # blake3_servil::initialize();
-/// use blake3_servil::Mode;
+/// # blake3_servil_core::initialize();
+/// use blake3_servil_core::Mode;
 ///
-/// let context_key = blake3_servil::throughput::context_key("foo");
-/// let derived = blake3_servil::convenience::hash_with(Mode::DeriveKeyWith(&context_key), b"bar");
-/// assert_eq!(derived, blake3_servil::convenience::hash_with(Mode::DeriveKey("foo"), b"bar"));
+/// let context_key = blake3_servil_core::throughput::context_key("foo");
+/// let derived = blake3_servil_core::convenience::hash_with(Mode::DeriveKeyWith(&context_key), b"bar");
+/// assert_eq!(derived, blake3_servil_core::convenience::hash_with(Mode::DeriveKey("foo"), b"bar"));
 /// ```
 pub fn context_key(context: &str) -> ContextKey {
     crate::hash_serial(context.as_bytes(), IV, DERIVE_KEY_CONTEXT).0

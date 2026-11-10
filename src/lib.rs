@@ -7,13 +7,13 @@
 //! ```
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // Once per process, before any other call (see Startup self-test).
-//! blake3_servil::initialize();
+//! blake3_servil_core::initialize();
 //!
 //! // Hash an input all at once.
-//! let hash1 = blake3_servil::convenience::hash(b"foobarbaz");
+//! let hash1 = blake3_servil_core::convenience::hash(b"foobarbaz");
 //!
 //! // Hash an input incrementally.
-//! let mut hasher = blake3_servil::convenience::Hasher::new(blake3_servil::Mode::Plain, None);
+//! let mut hasher = blake3_servil_core::convenience::Hasher::new(blake3_servil_core::Mode::Plain, None);
 //! hasher.update(b"foo");
 //! hasher.update(b"bar");
 //! hasher.update(b"baz");
@@ -24,7 +24,7 @@
 //! // Extended output. OutputReader also implements Read and Seek.
 //! # #[cfg(feature = "std")] {
 //! let mut output = [0; 1000];
-//! let mut hasher = blake3_servil::convenience::Hasher::new(blake3_servil::Mode::Plain, None);
+//! let mut hasher = blake3_servil_core::convenience::Hasher::new(blake3_servil_core::Mode::Plain, None);
 //! hasher.update(b"foobarbaz");
 //! let mut output_reader = hasher.finalize_xof();
 //! output_reader.fill(&mut output);
@@ -36,14 +36,14 @@
 //!
 //! // Many short messages in one call: a Batch lays them out in Blocks.
 //! # #[cfg(feature = "std")] {
-//! use blake3_servil::{throughput::{self, Batch}, Mode};
+//! use blake3_servil_core::{throughput::{self, Batch}, Mode};
 //! let mut batch = Batch::new(64, 3);
 //! for i in 0..3 {
 //!     batch.set(i, &[i as u8; 64]);
 //! }
 //! let mut hashes = [[0u8; 32]; 3];
 //! throughput::hash_many(Mode::Plain, &batch, &mut hashes);
-//! assert_eq!(hashes[2], *blake3_servil::convenience::hash(&[2u8; 64]).as_bytes());
+//! assert_eq!(hashes[2], *blake3_servil_core::convenience::hash(&[2u8; 64]).as_bytes());
 //! # }
 //! # Ok(())
 //! # }
@@ -242,6 +242,8 @@ extern crate std;
 
 #[cfg(test)]
 mod test;
+#[cfg(test)]
+mod test_support;
 
 mod block;
 pub mod convenience;
@@ -1118,9 +1120,9 @@ pub fn hash_all_at_once(input: &[u8], key: &CVWords, chunk_counter: u64, flags: 
 /// (see the crate's documentation); later calls return at once.
 ///
 /// ```
-/// blake3_servil::initialize();
-/// let hash = blake3_servil::convenience::hash(b"foo");
-/// # let mut hasher = blake3_servil::convenience::Hasher::new(blake3_servil::Mode::Plain, None);
+/// blake3_servil_core::initialize();
+/// let hash = blake3_servil_core::convenience::hash(b"foo");
+/// # let mut hasher = blake3_servil_core::convenience::Hasher::new(blake3_servil_core::Mode::Plain, None);
 /// # hasher.update(b"foo");
 /// # assert_eq!(hash, hasher.finalize());
 /// ```

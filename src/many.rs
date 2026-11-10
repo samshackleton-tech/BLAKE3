@@ -915,7 +915,7 @@ mod test {
         }
     }
 
-    /// hash_many (and hash_many_multithreaded) of `count` messages of
+    /// hash_many of `count` messages of
     /// `len` bytes against hash() one message at a time.
     fn check(len: usize, count: usize) {
         let input = messages(len, count);
@@ -923,12 +923,6 @@ mod test {
         crate::throughput::hash_many(crate::Mode::Plain, &crate::throughput::Batch::in_place(&crate::test::blocks(&input), len), &mut out);
         for (i, digest) in out.iter().enumerate() {
             assert_eq!(*digest, *crate::convenience::hash(message(&input, len, i)).as_bytes(), "message {i} of {count}, {len} bytes");
-        }
-        #[cfg(feature = "std")]
-        {
-            let mut mt = vec![[0u8; OUT_LEN]; count];
-            crate::throughput::hash_many_multithreaded(crate::Mode::Plain, &crate::throughput::Batch::in_place(&crate::test::blocks(&input), len), &mut mt);
-            assert_eq!(mt, out, "multithreaded, {count} messages of {len} bytes");
         }
     }
 

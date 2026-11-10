@@ -12,7 +12,7 @@ mod finish_sync {
 #[path = "../src/admission.rs"]
 mod admission;
 mod require_nextest {
-    include!("../tools/require_nextest.rs");
+    include!("../../tools/require_nextest.rs");
 }
 
 use admission::{Lease, Pool};

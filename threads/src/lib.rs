@@ -49,6 +49,14 @@ mod lanes;
 mod park;
 mod stream;
 
+/// The tests' helpers, the core's own file: this crate's tests use the
+/// same messages, fixed values and guard pages.
+#[cfg(test)]
+#[path = "../../src/test_support.rs"]
+pub(crate) mod test;
+#[cfg(test)]
+mod forms_test;
+
 /// A kind of path a call of this crate's ran, for its tests (the core
 /// has its own record).
 #[derive(Clone, Copy)]

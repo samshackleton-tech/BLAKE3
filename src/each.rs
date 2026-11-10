@@ -35,13 +35,13 @@ use crate::{CHUNK_END, CHUNK_LEN, CHUNK_START, CVBytes, CVWords, ChunkState, Has
 /// See the [key-independence contract](crate#key-dependent-timing).
 ///
 /// ```
-/// # blake3_servil::initialize();
-/// use blake3_servil::{convenience::Hasher, throughput};
-/// let mut hashers = vec![Hasher::new(blake3_servil::Mode::Plain, None), Hasher::new(blake3_servil::Mode::Plain, None)];
+/// # blake3_servil_core::initialize();
+/// use blake3_servil_core::{convenience::Hasher, throughput};
+/// let mut hashers = vec![Hasher::new(blake3_servil_core::Mode::Plain, None), Hasher::new(blake3_servil_core::Mode::Plain, None)];
 /// throughput::update_each(&mut hashers, &[(0, b"ab"), (1, b"xyz"), (0, b"c")]);
 /// let mut out = [[0u8; 32]; 2];
 /// throughput::finalize_each(&mut hashers, &[0, 1], &mut out);
-/// let hash = blake3_servil::convenience::hash;
+/// let hash = blake3_servil_core::convenience::hash;
 /// assert_eq!((&out[0], &out[1]), (hash(b"abc").as_bytes(), hash(b"xyz").as_bytes()));
 /// ```
 pub fn update_each(hashers: &mut [Hasher], pieces: &[(usize, &[u8])]) {
@@ -416,8 +416,8 @@ const ALONE_CHUNKS: usize = 16;
 /// items.len()`.
 ///
 /// ```
-/// # blake3_servil::initialize();
-/// use blake3_servil::{Mode, convenience, throughput::{self, Block}};
+/// # blake3_servil_core::initialize();
+/// use blake3_servil_core::{Mode, convenience, throughput::{self, Block}};
 /// let blocks: Vec<Vec<Block>> = (0..100).map(|i| vec![Block([i as u8; 64]); (100 * i as usize).div_ceil(64)]).collect();
 /// let items: Vec<(&[Block], usize)> = blocks.iter().enumerate().map(|(i, b)| (&b[..], 100 * i)).collect();
 /// let mut out = vec![[0u8; 32]; items.len()];
@@ -848,29 +848,6 @@ mod test {
         }
     }
 
-    /// hash_each_multithreaded takes the pool from MIN_SPLIT_LEN bytes of
-    /// items on, exactly, and the calling thread below them. Both give the
-    /// same digests, so only where the call ran tells (BLAKE3 #219).
-    #[test]
-    fn test_hash_each_multithreaded_splits_at_min_split_len_exactly() {
-        let min = crate::lanes::MIN_SPLIT_LEN;
-        let input = vec![7u8; min];
-        for total in [min - 1, min] {
-            // Items under the split each, so none hashes alone.
-            let items: Vec<&[u8]> = input[..total].chunks(64 * 1024 - 3).collect();
-            let (mut a, mut b) = (vec![[0u8; OUT_LEN]; items.len()], vec![[0u8; OUT_LEN]; items.len()]);
-            crate::RAN.with(|r| r.set(0));
-            crate::throughput::hash_each_multithreaded(Mode::Plain, &crate::test::items(&crate::test::messages(&items), &items), &mut a);
-            if total < min {
-                assert_eq!(crate::RAN.with(|r| r.get()) & crate::Ran::Pool as u32, 0, "{total} bytes of items stay on the calling thread");
-            } else {
-                crate::lanes::assert_past_the_split("MIN_SPLIT_LEN bytes of items");
-            }
-            crate::throughput::hash_each(Mode::Plain, &crate::test::items(&crate::test::messages(&items), &items), &mut b);
-            assert_eq!(a, b);
-        }
-    }
-
     /// A collection of small items of mixed lengths (empty to a chunk, more
     /// than BY_BLOCKS_AT_ONCE of them, a long one among them): those of up
     /// to a chunk by their blocks where the platform takes them (a
@@ -995,54 +972,6 @@ mod test {
             for (item, out) in items.iter().zip(&out) {
                 assert_eq!(out, crate::convenience::hash(item).as_bytes(), "{} bytes (pass {pass})", item.len());
             }
-        }
-    }
-
-    /// The pool's ranges of items (lanes::Work::Each), just past where the
-    /// pool takes them, against the calling thread's.
-    #[test]
-    fn test_hash_each_multithreaded_past_the_split() {
-        let mut input = vec![0u8; crate::lanes::MIN_SPLIT_LEN + 8 * 1024];
-        crate::test::paint_test_input(&mut input);
-        let items: Vec<&[u8]> = input.chunks(crate::lanes::MIN_SPLIT_LEN / 40 + 7).collect();
-        let (mut a, mut b) = (vec![[0u8; OUT_LEN]; items.len()], vec![[0u8; OUT_LEN]; items.len()]);
-        crate::RAN.with(|r| r.set(0));
-        crate::throughput::hash_each_multithreaded(Mode::Plain, &crate::test::items(&crate::test::messages(&items), &items), &mut a);
-        crate::lanes::assert_past_the_split("the items");
-        crate::throughput::hash_each(Mode::Plain, &crate::test::items(&crate::test::messages(&items), &items), &mut b);
-        assert_eq!(a, b);
-    }
-
-    /// A collection past the split (items around chunk, lane, and the
-    /// split's own length, a few of 512 KiB and more), every mode: the
-    /// multithreaded form gives hash_each_with's digests.
-    /// Keep: it detects, by hanging, mutants the clock then stops
-    /// (tools/mutants/timeouts-x86_64.txt).
-    #[test]
-    fn test_hash_each_multithreaded() {
-        let mut input = vec![0u8; 3 << 20];
-        crate::test::paint_test_input(&mut input);
-        let lens = [0, 1, 1024, 1025, 3000, 15 * 1024, 16 * 1024, 100_000, 511 * 1024, 512 * 1024, 700_000];
-        let items: Vec<&[u8]> = (0..400)
-            .map(|k| {
-                let n = lens[k * 7 % lens.len()].min(input.len() - k);
-                &input[k..k + n]
-            })
-            .collect();
-        let key = [9u8; 32];
-        for mode in [Mode::Plain, Mode::Keyed(&key), Mode::DeriveKey("each mt")] {
-            let (mut a, mut b) = (vec![[0u8; OUT_LEN]; items.len()], vec![[0u8; OUT_LEN]; items.len()]);
-            crate::throughput::hash_each_multithreaded(mode, &crate::test::items(&crate::test::messages(&items), &items), &mut a);
-            crate::throughput::hash_each(mode, &crate::test::items(&crate::test::messages(&items), &items), &mut b);
-            assert_eq!(a, b);
-            // Below the split, on the calling thread: the items of 16 KiB
-            // or less, which sum to less than the split's length.
-            let small: Vec<usize> = (0..items.len()).filter(|&k| items[k].len() <= 16 * 1024).take(30).collect();
-            assert!(small.iter().map(|&k| items[k].len()).sum::<usize>() < crate::lanes::MIN_SPLIT_LEN);
-            let small_items: Vec<&[u8]> = small.iter().map(|&k| items[k]).collect();
-            let mut c = vec![[0u8; OUT_LEN]; small.len()];
-            crate::throughput::hash_each_multithreaded(mode, &crate::test::items(&crate::test::messages(&small_items), &small_items), &mut c);
-            assert!(small.iter().zip(&c).all(|(&k, d)| *d == b[k]));
         }
     }
 
@@ -1619,39 +1548,33 @@ mod test {
         crate::test::paint_test_input(&mut input);
         let lens = [0, 1, 63, 64, 1023, 1024, 1025, 2048, 4470, 8191, 16384, 16385, 65536, 100_000, 300_000];
         let piece_lens = [1, 1448, 4096, 1448, 16384, 31, 65536];
-        for multithreaded in [false, true] {
-            let key = [5u8; 32];
-            // Every third hasher keyed: a turn's held groups in two kinds.
-            let mut hashers: Vec<Hasher> =
-                (0..lens.len()).map(|i| if i % 3 == 1 { Hasher::new(crate::Mode::Keyed(&key), None) } else { Hasher::new(crate::Mode::Plain, None) }).collect();
-            let mut done = vec![0usize; lens.len()];
-            let mut k = 0;
-            while done.iter().zip(&lens).any(|(d, l)| d < l) {
-                let mut pieces: Vec<(usize, &[u8])> = Vec::new();
-                for _ in 0..23 {
-                    let i = k % lens.len();
-                    let n = piece_lens[k % piece_lens.len()].min(lens[i] - done[i]);
-                    pieces.push((i, &input[done[i]..done[i] + n]));
-                    done[i] += n;
-                    k += 1;
-                }
-                if multithreaded {
-                    crate::throughput::update_each_multithreaded(&mut hashers, &pieces);
-                } else {
-                    crate::throughput::update_each(&mut hashers, &pieces);
-                }
+        let key = [5u8; 32];
+        // Every third hasher keyed: a turn's held groups in two kinds.
+        let mut hashers: Vec<Hasher> =
+            (0..lens.len()).map(|i| if i % 3 == 1 { Hasher::new(crate::Mode::Keyed(&key), None) } else { Hasher::new(crate::Mode::Plain, None) }).collect();
+        let mut done = vec![0usize; lens.len()];
+        let mut k = 0;
+        while done.iter().zip(&lens).any(|(d, l)| d < l) {
+            let mut pieces: Vec<(usize, &[u8])> = Vec::new();
+            for _ in 0..23 {
+                let i = k % lens.len();
+                let n = piece_lens[k % piece_lens.len()].min(lens[i] - done[i]);
+                pieces.push((i, &input[done[i]..done[i] + n]));
+                done[i] += n;
+                k += 1;
             }
-            let which: Vec<usize> = (0..lens.len()).rev().collect();
-            let mut out = vec![[0u8; OUT_LEN]; lens.len()];
-            crate::throughput::finalize_each(&mut hashers, &which, &mut out);
-            for (k, &i) in which.iter().enumerate() {
-                let want = if i % 3 == 1 {
-                    crate::convenience::hash_with(crate::Mode::Keyed(&key), &input[..lens[i]])
-                } else {
-                    crate::convenience::hash(&input[..lens[i]])
-                };
-                assert_eq!(&out[k], want.as_bytes(), "len {} multithreaded {multithreaded}", lens[i]);
-            }
+            crate::throughput::update_each(&mut hashers, &pieces);
+        }
+        let which: Vec<usize> = (0..lens.len()).rev().collect();
+        let mut out = vec![[0u8; OUT_LEN]; lens.len()];
+        crate::throughput::finalize_each(&mut hashers, &which, &mut out);
+        for (k, &i) in which.iter().enumerate() {
+            let want = if i % 3 == 1 {
+                crate::convenience::hash_with(crate::Mode::Keyed(&key), &input[..lens[i]])
+            } else {
+                crate::convenience::hash(&input[..lens[i]])
+            };
+            assert_eq!(&out[k], want.as_bytes(), "len {}", lens[i]);
         }
     }
 
