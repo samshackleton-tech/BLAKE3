@@ -657,6 +657,8 @@ mod tests {
     /// with no drain between cycles.
     #[test]
     fn batches_and_places_come_back_to_be_refilled() {
+        // The core's own tests initialize on their first call; a test here says so.
+        crate::initialize();
         let returned: RefCell<Vec<(u8, Batch<'static>, Box<[[u8; OUT_LEN]]>)>> = RefCell::new(Vec::new());
         let stream = Stream::new(Mode::Plain, Limits { buffers: 2, messages: 2 }, |event| match event {
             Event::Batch { tag, batch, places } => returned.borrow_mut().push((tag, batch, places)),

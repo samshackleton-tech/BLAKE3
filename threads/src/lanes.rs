@@ -2176,6 +2176,8 @@ mod test {
     /// one left over to carry up.
     #[test]
     fn test_simd_merge_matches_recursive() {
+        // The core's own tests initialize on their first call; a test here says so.
+        crate::initialize();
         let key = [93u8; KEY_LEN];
         let context_key = crate::throughput::context_key("parallel merge test");
         for (threads, len) in [(3, MIN_SPLIT_LEN + 1025), (2, (64 << 20) + 1)] {
@@ -2757,6 +2759,8 @@ mod test {
     /// side-by-side kernels are for two or more.
     #[test]
     fn test_one_member_runs_alone() {
+        // The core's own tests initialize on their first call; a test here says so.
+        crate::initialize();
         for len in [64, 128, 1024, 100] {
             let input: Vec<u8> = (0..len).map(|i| i as u8).collect();
             let done = AtomicUsize::new(1);
@@ -2828,6 +2832,8 @@ mod test {
     /// hash to the serial result.
     #[test]
     fn test_cut_with_prefix_shapes_and_hashes() {
+        // The core's own tests initialize on their first call; a test here says so.
+        crate::initialize();
         let mut input = vec![0u8; 3 * (1 << 20) + 12345];
         crate::test::paint_test_input(&mut input);
         for len in [MIN_PIECE_LEN + 1, 64 * CHUNK_LEN, 100 * CHUNK_LEN + 7, 1 << 20, 3 << 20, input.len()] {
@@ -2858,6 +2864,8 @@ mod test {
 
     #[test]
     fn test_hash_matches_serial() {
+        // The core's own tests initialize on their first call; a test here says so.
+        crate::initialize();
         let mut input = vec![0u8; (3 << 20) + 12345];
         crate::test::paint_test_input(&mut input);
         for len in [
@@ -2901,6 +2909,8 @@ mod test {
     /// (so `update` shrinks the subtrees it hands the pool), keyed too.
     #[test]
     fn test_update_multithreaded_matches_hash() {
+        // The core's own tests initialize on their first call; a test here says so.
+        crate::initialize();
         let mut input = vec![0u8; (5 * MIN_SPLIT_LEN + 1025).max(3 << 20) + 12345];
         crate::test::paint_test_input(&mut input);
         let key = [42u8; KEY_LEN];
@@ -2928,6 +2938,8 @@ mod test {
     /// each call waits for its workers and leaves every result complete.
     #[test]
     fn test_concurrent_callers_agree() {
+        // The core's own tests initialize on their first call; a test here says so.
+        crate::initialize();
         let mut input = vec![0u8; 8 * MIN_SPLIT_LEN + 1];
         crate::test::paint_test_input(&mut input);
         let want = crate::convenience::hash(&input);
@@ -2971,6 +2983,8 @@ mod test {
     /// (tools/mutants/timeouts-x86_64.txt).
     #[test]
     fn test_hash_many_pool_agrees() {
+        // The core's own tests initialize on their first call; a test here says so.
+        crate::initialize();
         let mut buffer = vec![0u8; 4 * MIN_SPLIT_LEN];
         crate::test::paint_test_input(&mut buffer);
         for message_len in [crate::BLOCK_LEN, 256, 100, 3 * CHUNK_LEN + 5] {
@@ -2995,6 +3009,8 @@ mod test {
     /// Concurrent batch callers beside tree callers: every digest right.
     #[test]
     fn test_concurrent_batch_callers_agree() {
+        // The core's own tests initialize on their first call; a test here says so.
+        crate::initialize();
         let mut buffer = vec![0u8; 8 * MIN_SPLIT_LEN];
         crate::test::paint_test_input(&mut buffer);
         let count = buffer.len() / crate::BLOCK_LEN;
