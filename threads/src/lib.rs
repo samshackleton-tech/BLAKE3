@@ -17,6 +17,7 @@ pub(crate) use blake3_servil_core::hazmat::{
     CHUNK_END, CHUNK_START, CVBytes, CVWords, DERIVE_KEY_MATERIAL, IV, KEYED_HASH, MAX_DEPTH, Output, ROOT, compress_parents_parallel,
     compress_subtree_to_parent_node, hash_all_at_once, hash_many_serial, hash_serial, hash_serial_on, hasher, incremental, many, platform, tree,
 };
+#[allow(unused_imports)]
 pub(crate) mod block {
     pub use blake3_servil_core::throughput::{Batch, Block};
 }
