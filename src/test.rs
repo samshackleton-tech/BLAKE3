@@ -832,6 +832,37 @@ fn test_reset() {
     assert_eq!(hasher.finalize(), crate::convenience::hash(&[42; CHUNK_LEN + 3]));
 }
 
+/// `to_hex` against the specification's sixteen characters, written out here:
+/// every value of a byte in every one of the 32 places, and hashes of mixed
+/// bytes. (On x86-64 `to_hex` is an assembly kernel: this is its test.)
+#[test]
+fn test_to_hex_every_byte_in_every_place() {
+    fn expected(bytes: &[u8; 32]) -> [u8; 64] {
+        let mut out = [0u8; 64];
+        for (i, b) in bytes.iter().enumerate() {
+            out[2 * i] = b"0123456789abcdef"[(b >> 4) as usize];
+            out[2 * i + 1] = b"0123456789abcdef"[(b & 15) as usize];
+        }
+        out
+    }
+    for place in 0..32 {
+        for value in 0..=255u8 {
+            let mut bytes = [0x5Au8; 32];
+            bytes[place] = value;
+            assert_eq!(crate::Hash::from_bytes(bytes).to_hex().as_bytes(), &expected(&bytes)[..], "byte {value:#04x} at place {place}");
+        }
+    }
+    let mut bytes = [0u8; 32];
+    for round in 0..1000u32 {
+        for (i, b) in bytes.iter_mut().enumerate() {
+            *b = (round.wrapping_mul(2654435761).wrapping_add(i as u32 * 40503) >> 7) as u8;
+        }
+        let hex = crate::Hash::from_bytes(bytes).to_hex();
+        assert_eq!(hex.len(), 64);
+        assert_eq!(hex.as_bytes(), &expected(&bytes)[..]);
+    }
+}
+
 #[test]
 fn test_hex_encoding_decoding() {
     let digest_str = "04e0bb39f30b1a3feb89f536c93be15055482df748674b00d26e5a75777702e9";

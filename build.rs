@@ -74,6 +74,8 @@ fn build_sse41_avx2_assembly() {
     // in one call).
     build.file("c/blake3_partial_x86-64_unix.S");
     build.file("c/blake3_chunk_root_x86-64_unix.S");
+    // The hash's hexadecimal, without a table (constant-time; proved as assembled).
+    build.file("c/blake3_hex_x86-64_unix.S");
     build.compile("blake3_sse41_avx2_assembly");
 }
 

@@ -542,13 +542,36 @@ impl Hash {
     /// equality checking, so if you need to compare hashes, prefer the `Hash`
     /// type.
     ///
+    ///
+    /// On x86-64 this takes the same time and touches the same memory
+    /// whatever the hash is (no table is read at the hash's digits), which
+    /// matters where a hash is a secret: a keyed hash's tag before it is
+    /// compared, a derived key. On other targets a table of sixteen
+    /// characters is read at each digit.
+    ///
     /// [`ArrayString`]: https://docs.rs/arrayvec/0.5.1/arrayvec/struct.ArrayString.html
     pub fn to_hex(&self) -> ArrayString<{ 2 * OUT_LEN }> {
         let mut s = ArrayString::new();
-        let table = b"0123456789abcdef";
-        for &b in self.0.iter() {
-            s.push(table[(b >> 4) as usize] as char);
-            s.push(table[(b & 0xf) as usize] as char);
+        #[cfg(blake3_sse41_ffi)]
+        {
+            unsafe extern "C" {
+                fn blake3_servil_hex(out: *mut u8, hash: *const u8);
+            }
+            // Sound: the kernel reads 32 bytes at `hash` and writes 64 at
+            // `out`, the string's capacity, each an ASCII character (its
+            // proof: tools/verify/machine/lang); x86-64 has SSE2.
+            unsafe {
+                blake3_servil_hex(s.as_mut_ptr(), self.0.as_ptr());
+                s.set_len(2 * OUT_LEN);
+            }
+        }
+        #[cfg(not(blake3_sse41_ffi))]
+        {
+            let table = b"0123456789abcdef";
+            for &b in self.0.iter() {
+                s.push(table[(b >> 4) as usize] as char);
+                s.push(table[(b & 0xf) as usize] as char);
+            }
         }
         s
     }
