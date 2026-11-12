@@ -49,6 +49,25 @@ theorem Lean refuses.
   between bytes and vectors); the AArch64 observer's theorems need none.
 - That `Hash::to_hex` passes the kernel the right addresses is Rust's, and the tests'.
 
+## What a call takes, measured (single runs; no judged timing yet)
+
+`Hash::to_hex` through the library, beside the arithmetic of 0.9 it replaces:
+
+| machine | this draft | 0.9 | the kernel alone |
+|---|---|---|---|
+| EPYC 9255 | 3.47 ns | 6.54 ns | 2.31 ns |
+| Ryzen 9700X | 3.25 ns | 5.20 ns | 1.86 ns |
+| Apple M6 | **3.50 ns** | **1.85 ns** | 1.72 ns |
+| a Neoverse virtual server | **10.2 ns** | **8.2 ns** | 6.3 to 6.7 ns |
+
+**On AArch64 the draft is slower than what it replaces.** The compiler makes vector code of 0.9's arithmetic
+that is as fast as the NEON kernel alone, and the kernel adds a call and a copy. This is a measured
+regression and is not settled: to try, a NEON kernel that looks the characters up in a register (`tbl`);
+failing that, the cost is to be weighed against the proof, or AArch64 keeps the arithmetic.
+
+The string is made from a buffer the kernel fills: written in place by the kernel, the string was copied out
+of the function across the kernel's sixteen-byte stores, and the call took as long as 0.9's on x86-64.
+
 ## Where it comes from
 
 The experiment under BLAKE3 #361 (branch `experiment/sam-machine-code-lean` of the fork,
