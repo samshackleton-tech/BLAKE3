@@ -14,6 +14,10 @@ crate and official BLAKE3 keeps each one's kernels apart.
   chunk root in one call (`blake3_chunk_root_x86-64_unix.S`, generated
   by `tools/gen_x86_chunk_root.py`).
 
+- Both: the hash's hexadecimal (`blake3_hex_x86-64_unix.S`, SSE2;
+  `blake3_hex_aarch64.S`, NEON), printed from `tools/verify/hex/hex.ode`,
+  and proved as assembled (that folder's README).
+
 `tools/check-builds.sh` fails when a generated file and its generator
 differ. The proofs of every kernel are in `tools/verify/` (its README);
 BLAKE3-Servil's C API is `capi/b3.h`.

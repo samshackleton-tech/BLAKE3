@@ -783,7 +783,7 @@ fn test_hex_matches_the_table_for_every_byte() {
         _ => None,
     };
     for b in 0..=255u8 {
-        for position in [0, 1, 17, 31] {
+        for position in 0..32 {
             let mut bytes = [0x5au8; 32];
             bytes[position] = b;
             let hex = crate::Hash::from_bytes(bytes).to_hex();
