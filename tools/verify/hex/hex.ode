@@ -1,0 +1,111 @@
+// The hash's hexadecimal, as two kernels: the source the shipped assembly is printed from
+// (c/blake3_hex_x86-64_unix.S, c/blake3_hex_aarch64.S) and the proofs are about. See README.md.
+//
+// `data NAME = ...` is a constant in read-only memory (`#NAME` in a kernel). `kernel NAME { ... }` is
+// x86-64 assembly (Intel syntax), `kernel NAME on aarch64 { ... }` AArch64's; `def` is a macro, `$x` its
+// argument. `contract` says, for the proof generator, where the kernel reads and what it writes.
+
+data nib   = 0x0F0F0F0F, 0x0F0F0F0F, 0x0F0F0F0F, 0x0F0F0F0F
+data nine  = 0x09090909, 0x09090909, 0x09090909, 0x09090909
+data alpha = 0x27272727, 0x27272727, 0x27272727, 0x27272727      // 'a' - '0' - 10
+data zero  = 0x30303030, 0x30303030, 0x30303030, 0x30303030      // '0'
+
+// The 64 hexadecimal characters of the 32 bytes at RSI, written at RDI. Sixteen bytes at a time:
+// the high and low four bits of each byte, interleaved, then each made its character by adding '0',
+// and 39 more where it is above 9. No table, no branch: nothing an observer sees depends on the bytes.
+contract hex {
+  spec   HexSpec
+  reads  rsi: h0, h1
+  writes rdi: Hex.hex8 h0 0, Hex.hex8 h0 8, Hex.hex8 h1 0, Hex.hex8 h1 8
+}
+kernel hex {
+  // The numbers in $x become their characters. XMM4 is scratch.
+  def chars(x) {
+    movdqa  xmm4, $x
+    pcmpgtb xmm4, xmm6
+    pand    xmm4, xmm7
+    paddb   $x, xmm4
+    paddb   $x, xmm8
+  }
+  // The sixteen bytes in $x become 32 characters at RDI + $at. XMM2 and XMM3 are scratch.
+  def half(x, at) {
+    movdqa  xmm2, $x
+    psrlw   xmm2, 4
+    pand    xmm2, xmm5
+    pand    $x, xmm5
+    movdqa  xmm3, xmm2
+    punpcklbw xmm3, $x
+    punpckhbw xmm2, $x
+    chars(xmm3)
+    chars(xmm2)
+    movdqu  xmmword ptr [rdi + $at], xmm3
+    movdqu  xmmword ptr [rdi + $at + 16], xmm2
+  }
+  movdqu  xmm0, xmmword ptr [rsi]
+  movdqu  xmm1, xmmword ptr [rsi + 16]
+  movdqa  xmm5, xmmword ptr [rip + #nib]
+  movdqa  xmm6, xmmword ptr [rip + #nine]
+  movdqa  xmm7, xmmword ptr [rip + #alpha]
+  movdqa  xmm8, xmmword ptr [rip + #zero]
+  half(xmm0, 0)
+  half(xmm1, 32)
+  ret
+}
+
+// The same on AArch64 (NEON): the 32 bytes at X1, their 64 hexadecimal characters at X0. No table, no
+// branch, no constant from memory. V0-V7 and V16-V19 only (all caller-saved); no stack.
+contract hex_neon {
+  spec   HexVec
+  reads  x1: h0, h1
+  writes x0: Hex.hex16 h0 0, Hex.hex16 h0 8, Hex.hex16 h1 0, Hex.hex16 h1 8
+}
+kernel hex_neon on aarch64 {
+  // The sixteen bytes in $x, each split in its high and low four bits: the high in $hi, the low in $x.
+  def split(x, hi) {
+    ushr    $hi.16b, $x.16b, #4
+    and     $x.16b, $x.16b, v4.16b
+  }
+  // The numbers in $x become their characters: '0' more, and 39 more where above 9. $t is scratch.
+  def above(x, t) {
+    cmhi    $t.16b, $x.16b, v5.16b
+  }
+  def letters(t) {
+    and     $t.16b, $t.16b, v6.16b
+  }
+  def digits(x) {
+    add     $x.16b, $x.16b, v7.16b
+  }
+  def chars(x, t) {
+    add     $x.16b, $x.16b, $t.16b
+  }
+  ldp     q0, q1, [x1]
+  movi    v4.16b, #0x0f
+  movi    v5.16b, #9
+  movi    v6.16b, #39
+  movi    v7.16b, #0x30
+  split(v0, v2)
+  split(v1, v3)
+  zip1    v16.16b, v2.16b, v0.16b
+  zip2    v17.16b, v2.16b, v0.16b
+  zip1    v18.16b, v3.16b, v1.16b
+  zip2    v19.16b, v3.16b, v1.16b
+  above(v16, v0)
+  above(v17, v1)
+  above(v18, v2)
+  above(v19, v3)
+  letters(v0)
+  letters(v1)
+  letters(v2)
+  letters(v3)
+  digits(v16)
+  digits(v17)
+  digits(v18)
+  digits(v19)
+  chars(v16, v0)
+  chars(v17, v1)
+  chars(v18, v2)
+  chars(v19, v3)
+  stp     q16, q17, [x0]
+  stp     q18, q19, [x0, #32]
+  ret
+}

@@ -1,0 +1,41 @@
+name = "hex_arm"
+defaultTargets = ["Quiet_hex_neon", "HexNeonRun", "Proof_hex_neon", "HexNeonBytes"]
+
+# Google DeepMind's AArch64 model and proof library (Apache-2.0), unchanged, at a named commit.
+[[require]]
+name = "prooflib"
+git = "https://github.com/google-deepmind/code-verification"
+rev = "b0f729accbc21a0413e7ca4e1da43fa45b5f2e1b"
+subDir = "arm64-semantics/ProofLib"
+
+# What names no machine: the contract and the hexadecimal itself.
+[[require]]
+name = "spec"
+path = "../spec"
+
+[[lean_lib]]
+name = "ArmAbi"
+
+[[lean_lib]]
+name = "HexNeonBytes"
+
+[[lean_lib]]
+name = "HexNeonRun"
+
+[[lean_lib]]
+name = "HexVec"
+
+[[lean_lib]]
+name = "KernelAttr"
+
+[[lean_lib]]
+name = "Observer"
+
+[[lean_lib]]
+name = "Proof_hex_neon"
+
+[[lean_lib]]
+name = "Quiet_hex_neon"
+
+[[lean_lib]]
+name = "WpKernel"

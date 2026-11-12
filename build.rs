@@ -74,6 +74,9 @@ fn build_sse41_avx2_assembly() {
     // in one call).
     build.file("c/blake3_partial_x86-64_unix.S");
     build.file("c/blake3_chunk_root_x86-64_unix.S");
+    // The hash's hexadecimal (SSE2; printed from tools/verify/hex/hex.ode and
+    // proved as assembled).
+    build.file("c/blake3_hex_x86-64_unix.S");
     build.compile("blake3_sse41_avx2_assembly");
 }
 
@@ -165,6 +168,9 @@ fn build_neon_hybrid_assembly() {
     assert!(is_aarch64());
     let mut build = new_build();
     build.file("c/blake3_neon_hybrid_aarch64.S");
+    // The hash's hexadecimal (NEON; printed from tools/verify/hex/hex.ode and
+    // proved as assembled).
+    build.file("c/blake3_hex_aarch64.S");
     build.compile("blake3_neon_hybrid_assembly");
 }
 

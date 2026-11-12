@@ -534,10 +534,13 @@ impl Hash {
 
     /// Encode a `Hash` in lowercase hexadecimal.
     ///
-    /// Each character is computed from its four bits by arithmetic: no
-    /// table is indexed by the hash and no branch is taken on it, so the
-    /// call's time and memory accesses are the same for every hash (a
-    /// hash may be a secret: a keyed hash's tag, a derived key).
+    /// Each character is computed from its four bits by arithmetic, sixteen
+    /// bytes at a time: no table is indexed by the hash and no branch is
+    /// taken on it, so the call's time and memory accesses are the same for
+    /// every hash (a hash may be a secret: a keyed hash's tag, a derived
+    /// key). The instructions that do it are proved, as assembled, to write
+    /// the hexadecimal and to show an observer the same whatever the hash
+    /// is (`tools/verify/hex`).
     ///
     /// The returned [`ArrayString`] is a fixed size and doesn't allocate memory
     /// on the heap. Note that [`ArrayString`] doesn't provide constant-time
@@ -546,13 +549,20 @@ impl Hash {
     ///
     /// [`ArrayString`]: https://docs.rs/arrayvec/0.5.1/arrayvec/struct.ArrayString.html
     pub fn to_hex(&self) -> ArrayString<{ 2 * OUT_LEN }> {
-        // 0..=9 are '0' + n; 10..=15 are 'a' + n - 10, which is '0' + n + 39:
-        // (n + 6) >> 4 is 1 exactly for those.
-        let character = |n: u8| (b'0' + n + ((n + 6) >> 4) * 39) as char;
+        unsafe extern "C" {
+            #[cfg_attr(target_arch = "x86_64", link_name = "blake3_servil_hex")]
+            #[cfg_attr(target_arch = "aarch64", link_name = "blake3_servil_hex_neon")]
+            fn hex(out: *mut u8, hash: *const u8);
+        }
         let mut s = ArrayString::new();
-        for &b in self.0.iter() {
-            s.push(character(b >> 4));
-            s.push(character(b & 0xf));
+        // SAFETY: the kernel reads the 32 bytes at `hash` and writes 64 at
+        // `out`, the string's capacity, each an ASCII character, and touches
+        // nothing else (its contract, proved of the assembled instructions:
+        // tools/verify/hex). It uses SSE2 on x86-64 and NEON on AArch64,
+        // which every supported CPU has.
+        unsafe {
+            hex(s.as_mut_ptr(), self.0.as_ptr());
+            s.set_len(2 * OUT_LEN);
         }
         s
     }
