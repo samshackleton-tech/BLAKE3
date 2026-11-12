@@ -1,8 +1,11 @@
 """The runner's completed jobs use statuses wait_for already understands."""
+import json
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
+import exchange
 import runner
 
 
@@ -34,6 +37,80 @@ class CheckOutcomes(unittest.TestCase):
     def test_gate_and_failure_outcomes_keep_their_meaning(self):
         for code, outcome in [(0, "no regression"), (1, "regression"), (2, "no verdict"), (3, "a side stopped")]:
             self.assertEqual(runner.check(self.job(), FakeRun(code), None, Path("/results")), outcome)
+
+
+class WholeRun(FakeRun):
+    """A checkout on disk where the tool's run would leave its lists and outcomes; `git diff` answers with a
+    line, the tool exits as told."""
+
+    def __init__(self, root, code=0):
+        super().__init__(code)
+        self.root, self.commands = Path(root), []
+        self.log = open(self.root / "runner.log", "w")
+
+    def checkouts(self, *_):
+        return self.root, None
+
+    def run(self, command, capture=False, **_):
+        self.commands.append(command)
+        if command[0] == "git":
+            return "+a row\n"
+        print("$ (cd checkout && tools/mutants/check.py)", file=self.log, flush=True)
+        if self.code:
+            raise subprocess.CalledProcessError(self.code, command)
+
+
+class WholeMutationRun(unittest.TestCase):
+    def checkout(self, root, crate):
+        lists = Path(root) / "tools" / "mutants" / ("" if crate == "." else crate)
+        lists.mkdir(parents=True)
+        for kind in ("known", "timeouts"):
+            (lists / f"{kind}-{runner.platform.machine()}.txt").write_text(f"{kind} of {crate}\n")
+            (lists / f"{kind}-another.txt").write_text("another machine's\n")
+        shard = Path(root) / "tmp" / "mutants-last" / ("" if crate == "." else crate) / "run" / "shard0"
+        shard.mkdir(parents=True)
+        (shard / "outcomes.json").write_text(json.dumps({"outcomes": [
+            {"scenario": "Baseline", "summary": "Success", "phase_results": [{"duration": 9.0}]},
+            {"scenario": {"Mutant": {"name": "src/x.rs:1:1: replace f -> u8 with 0"}}, "summary": "CaughtMutant",
+             "phase_results": [{"duration": 1.25}, {"duration": 0.5}]}]}))
+
+    def test_a_crate_s_lists_and_outcomes_come_back_and_nothing_else(self):
+        for crate in (".", "threads"):
+            with tempfile.TemporaryDirectory() as root, tempfile.TemporaryDirectory() as out:
+                self.checkout(root, crate)
+                run = WholeRun(root)
+                status = runner.mutants_whole({"fork_commit": "1" * 40, "crate": crate}, run, None, Path(out))
+                run.log.close()
+                self.assertEqual(status, "no new survivor")
+                self.assertEqual(run.commands[0][1:], ["tools/mutants/check.py", "--whole", "--write", "--crate", crate])
+                machine = runner.platform.machine()
+                self.assertEqual(sorted(p.name for p in (Path(out) / "lists").iterdir()), [f"known-{machine}.txt", f"timeouts-{machine}.txt"])
+                self.assertEqual((Path(out) / "lists" / f"known-{machine}.txt").read_text(), f"known of {crate}\n")
+                self.assertEqual((Path(out) / "lists-diff.txt").read_text(), "+a row\n")
+                # The exchange publishes a file by its kind: one of another kind stays on the machine, as the
+                # first run's lists.diff did.
+                for written in Path(out).rglob("*"):
+                    self.assertTrue(written.is_dir() or written.suffix in exchange.PUBLISHED_KINDS, written)
+                self.assertEqual((Path(out) / "outcomes.tsv").read_text(), "run\tsrc/x.rs:1:1: replace f -> u8 with 0\tCaughtMutant\t1.75\n")
+                self.assertFalse((Path(out) / "mutants-last").exists())
+
+    def test_its_exit_is_the_verdict_and_the_lists_come_back_either_way(self):
+        for code, outcome in [(1, "a survivor differs from its list"), (2, "only time-outs differ")]:
+            with tempfile.TemporaryDirectory() as root, tempfile.TemporaryDirectory() as out:
+                self.checkout(root, ".")
+                run = WholeRun(root, code)
+                self.assertEqual(runner.mutants_whole({"fork_commit": "1" * 40, "crate": "."}, run, None, Path(out)), outcome)
+                run.log.close()
+                self.assertTrue((Path(out) / "outcomes.tsv").exists())
+
+    def test_a_job_names_one_crate(self):
+        for crate in (None, "b3sum", "../x"):
+            with self.assertRaises(AssertionError):
+                runner.mutants_whole({"fork_commit": "1" * 40, "crate": crate}, FakeRun(), None, Path("/results"))
+
+    def test_a_whole_run_has_two_hours_unless_the_job_says(self):
+        self.assertEqual(runner.LIMITS["mutants-whole"], runner.MAX_LIMIT)
+        self.assertIs(runner.HANDLERS["mutants-whole"], runner.mutants_whole)
 
 
 if __name__ == "__main__":

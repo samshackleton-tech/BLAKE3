@@ -8,8 +8,8 @@ here, one folder per job). Code comes from GitHub alone, at the commits a
 job names. Done jobs are listed in ~/.benchrunner_done (the runner's home).
 Ctrl-C stops the runner after the current job.
 
-Jobs (commits as 7-40 hex digits; time_limit_seconds optional, default 1800,
-at most 7200):
+Jobs (commits as 7-40 hex digits; time_limit_seconds optional, default 1800
+(a whole mutation run: 7200), at most 7200):
 
     {"type": "benchmark", "fork_commit": "...", "bench_commit": "...",
      "flags": ["--all", "--quick"], "contenders": [...], "points": [...],
@@ -55,6 +55,16 @@ fork commit: the mutants in the lines the change since SINCE makes, judged
 against the list for this machine. Its exit is the verdict, and each run's
 outcomes land in the job's mutants-last/. No timing: other programs on the
 Mac can only make some mutants time out, an outcome of their own.)
+    {"type": "mutants-whole", "fork_commit": "...", "crate": "." | "threads"}
+
+(A whole mutation run of one crate, the core at "." or the crate in
+threads/: tools/mutants/check.py --whole --write --crate CRATE at the fork
+commit, which writes this machine's lists anew. The job's lists/ holds the
+lists as written, lists-diff.txt what that changes in the commit's, and
+outcomes.tsv every mutant's outcome and seconds. Its exit is the verdict, as
+a mutants job's. One crate a job: the core's run took 39 minutes on an M6
+and the other crate's 23 (November 12, 2026), so its time limit is two
+hours unless the job names another.)
     {"type": "example", "example": "scaling" | "host_lab" | "energy_probe" | "job_trace",
      "fork_commit": "...", "args": ["message", "1048576"]}
     {"type": "test", "fork_commit": "..."}
@@ -84,6 +94,7 @@ against BLAKE3-Servil as it is (`bench-hashes build-against`) benchmark jobs.
 """
 import json
 import os
+import platform
 import re
 import shutil
 import signal
@@ -356,14 +367,13 @@ def test(job, run, work, out):
     return "passed"
 
 
-def mutants(job, run, work, out):
-    """tools/mutants/check.py --since SINCE at fork_commit. Its exit is the
-    verdict: 0 no new survivor, 1 a survivor differs from its list, 2 only
-    the time-outs differ (no verdict on those)."""
-    fork, _ = run.checkouts(hex_commit(job, "fork_commit"), None)
+def mutation_check(run, fork, args):
+    """tools/mutants/check.py ARGS in the checkout. Its exit is the verdict:
+    0 no new survivor, 1 a survivor differs from its list, 2 only the
+    time-outs differ (no verdict on those)."""
     try:
-        run.run([sys.executable, "tools/mutants/check.py", "--since", hex_commit(job, "since")], cwd=fork)
-        verdict = "no new survivor"
+        run.run([sys.executable, "tools/mutants/check.py", *args], cwd=fork)
+        return "no new survivor"
     except subprocess.CalledProcessError as e:
         if e.returncode not in (1, 2):
             raise
@@ -373,10 +383,55 @@ def mutants(job, run, work, out):
         text = Path(run.log.name).read_text()
         if "Traceback (most recent call last):" in text[text.rfind("$ (cd"):]:
             raise RuntimeError("tools/mutants/check.py stopped with a traceback (its log)") from e
-        verdict = {1: "a survivor differs from its list", 2: "only time-outs differ"}[e.returncode]
+        return {1: "a survivor differs from its list", 2: "only time-outs differ"}[e.returncode]
+
+
+def mutants(job, run, work, out):
+    """tools/mutants/check.py --since SINCE at fork_commit: the change's
+    mutants."""
+    fork, _ = run.checkouts(hex_commit(job, "fork_commit"), None)
+    verdict = mutation_check(run, fork, ["--since", hex_commit(job, "since")])
     last = Path(fork) / "tmp" / "mutants-last"
     if last.is_dir():
         shutil.copytree(last, out / "mutants-last", dirs_exist_ok=True)
+    return verdict
+
+
+def outcomes_of(last):
+    """Every mutant of a run's shards (tmp/mutants-last/...), one a line:
+    the run, the mutant, its outcome, its seconds. The run's own folder is
+    logs by the hundred megabytes; this is what a reader of the lists
+    wants of it."""
+    lines = []
+    for label in ("run", "confirm", "loom"):
+        for path in sorted(Path(last).glob(f"{label}/shard*/outcomes.json")):
+            for x in json.loads(path.read_text())["outcomes"]:
+                scenario = x["scenario"]
+                if scenario != "Baseline":
+                    seconds = sum(phase.get("duration", 0) for phase in x.get("phase_results", []))
+                    lines.append(f"{label}\t{scenario['Mutant']['name']}\t{x['summary']}\t{seconds:.2f}\n")
+    return "".join(lines)
+
+
+def mutants_whole(job, run, work, out):
+    """One crate's whole mutation run with --write at fork_commit (BLAKE3
+    #374): the lists this machine writes, what that changes in the
+    commit's lists, and every mutant's outcome."""
+    crate = job.get("crate")
+    assert crate in (".", "threads"), 'crate must be "." (the core) or "threads" (the crate in threads/)'
+    fork, _ = run.checkouts(hex_commit(job, "fork_commit"), None)
+    verdict = mutation_check(run, fork, ["--whole", "--write", "--crate", crate])
+    fork = Path(fork)
+    lists = fork / "tools" / "mutants" / ("" if crate == "." else crate)
+    (out / "lists").mkdir(exist_ok=True)
+    for kind in ("known", "timeouts"):
+        written = lists / f"{kind}-{platform.machine()}.txt"
+        if written.exists():
+            shutil.copy(written, out / "lists" / written.name)
+    (out / "lists-diff.txt").write_text(run.run(["git", "diff", "--", str(lists.relative_to(fork))], cwd=fork, capture=True))
+    last = fork / "tmp" / "mutants-last" / ("" if crate == "." else crate)
+    if last.is_dir():
+        (out / "outcomes.tsv").write_text(outcomes_of(last))
     return verdict
 
 
@@ -394,7 +449,10 @@ def crowd(job, run, work, out):
 # one whose power leaves mains on the way says so in its status.
 TIMED = {"benchmark", "b3sum", "crowd", "example", "check"}
 
-HANDLERS = {"benchmark": benchmark, "b3sum": b3sum, "check": check, "crowd": crowd, "mutants": mutants, "example": example, "test": test}
+HANDLERS = {"benchmark": benchmark, "b3sum": b3sum, "check": check, "crowd": crowd, "mutants": mutants, "mutants-whole": mutants_whole,
+            "example": example, "test": test}
+# A job's time limit where it names none: a whole mutation run is longer than the others.
+LIMITS = {"mutants-whole": MAX_LIMIT}
 
 
 def power():
@@ -436,7 +494,7 @@ def process(path, out):
             on_mains = lambda state: state.startswith("AC Power")
             assert job["type"] not in TIMED or on_mains(verdict["power at start"]), \
                 f"a {job['type']} job times, so it runs on mains power alone; the Mac is on {verdict['power at start']}: plug it in and queue the job again"
-            limit = job.get("time_limit_seconds", DEFAULT_LIMIT)
+            limit = job.get("time_limit_seconds", LIMITS.get(job["type"], DEFAULT_LIMIT))
             assert isinstance(limit, int) and 0 < limit <= MAX_LIMIT, f"time_limit_seconds must be 1-{MAX_LIMIT}"
             meters = {}
             for name, command in [("powermetrics", POWERMETRICS), ("top", TOP)]:
