@@ -554,17 +554,20 @@ impl Hash {
             #[cfg_attr(target_arch = "aarch64", link_name = "blake3_servil_hex_neon")]
             fn hex(out: *mut u8, hash: *const u8);
         }
-        let mut s = ArrayString::new();
-        // SAFETY: the kernel reads the 32 bytes at `hash` and writes 64 at
-        // `out`, the string's capacity, each an ASCII character, and touches
-        // nothing else (its contract, proved of the assembled instructions:
-        // tools/verify/hex). It uses SSE2 on x86-64 and NEON on AArch64,
-        // which every supported CPU has.
-        unsafe {
-            hex(s.as_mut_ptr(), self.0.as_ptr());
-            s.set_len(2 * OUT_LEN);
-        }
-        s
+        // The kernel fills a buffer of its own and the string is made from
+        // that. (Filled in place, the string is copied out of this function
+        // by loads that straddle the kernel's sixteen-byte stores, which
+        // costs more than the kernel does.)
+        let mut text = [0u8; 2 * OUT_LEN];
+        // SAFETY: the kernel reads the 32 bytes at `hash`, writes the 64 at
+        // `out` and touches nothing else (its contract, proved of the
+        // assembled instructions: tools/verify/hex). It uses SSE2 on x86-64
+        // and NEON on AArch64, which every supported CPU has.
+        unsafe { hex(text.as_mut_ptr(), self.0.as_ptr()) };
+        // SAFETY: the 64 bytes are the hexadecimal's characters, `0` to `9`
+        // and `a` to `f` (the same contract).
+        let text = unsafe { core::str::from_utf8_unchecked(&text) };
+        ArrayString::from(text).expect("64 characters fill the string exactly")
     }
 
     /// Decode a `Hash` from hexadecimal. Both uppercase and lowercase ASCII
