@@ -28,8 +28,9 @@ to `f`). `spec/Contract.lean` says what a contract is.
   are what `odec.py` prints from `hex.ode`, byte for byte.
 - `prove.sh` (elan, a C compiler, llvm-objdump; minutes): for each architecture, print, assemble, read
   the instructions back, write the proof (`x86/prove.py`, `arm/gen_arm.py`; the proofs kept here must be
-  what they write) and have Lean check it. On AArch64 an audit follows: code that shows the hash, and
-  weaker statements, must be refused.
+  what they write) and have Lean check it. Then the audits (`x86/mutants.py`, `arm/mutants_quiet.py`;
+  `MUTANTS=0` skips them): an unchanged copy must be accepted; then changed instructions, code that shows
+  the hash, and false or weaker statements must each be refused.
 
 The compiler (`odec.py`) and the proof generators are not trusted: a wrong print or a wrong proof is a
 theorem Lean refuses.
@@ -44,7 +45,8 @@ theorem Lean refuses.
 - The proofs are about the instructions of ELF objects. The kernels use no relocation that differs on
   Mach-O (AArch64: none at all).
 - Axioms beyond Lean's three: `bv_decide`'s (each a claim that a SAT certificate was checked by compiled
-  code): a handful on each side; the AArch64 observer's theorems need none.
+  code): 5 for `hex_meets_bytes`; 72 for `hex_neon_meets` (8 in the kernel's own proof, 64 in the lemmas
+  between bytes and vectors); the AArch64 observer's theorems need none.
 - That `Hash::to_hex` passes the kernel the right addresses is Rust's, and the tests'.
 
 ## Where it comes from
