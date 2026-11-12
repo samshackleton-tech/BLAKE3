@@ -7,6 +7,7 @@
 #      source's contract; they must be the files kept here;
 #   4. Lean checks `hex_meets_bytes`: the instructions meet `Hex.byteContract` (../spec/HexContract.lean)
 #      whatever the hash is, and what an observer of time and cache sees does not depend on the hash.
+# Then the audit (MUTANTS=0 skips it): 10 changed instructions and 17 false statements must each be refused.
 # Needs python3, cc (clang, or gcc on x86-64 Linux), llvm-objdump (OBJDUMP), lake (elan).
 set -eu
 here=$(cd "$(dirname "$0")" && pwd); cd "$here"
@@ -31,4 +32,6 @@ else
   fail "Lean does not accept the proof"
 fi
 grep -q "'hex_meets_bytes' depends on axioms" build.log || fail "hex_meets_bytes was not checked"
+# The audit (MUTANTS=0 skips it): changed instructions and false statements must be refused, the control accepted.
+[ "${MUTANTS:-1}" = 0 ] || python3 mutants.py "${JOBS:-4}" || fail "the audit accepted a change"
 echo "hex on x86-64: checked"
