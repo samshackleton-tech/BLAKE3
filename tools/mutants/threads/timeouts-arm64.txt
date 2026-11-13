@@ -37,6 +37,7 @@ src/pipeline.rs	replace += with -= in Ring<X>::push_back	1	hang: `len -= 1` on a
 src/pipeline.rs	replace += with -= in Shared::run_group	1	hang: `0 -= 1` wraps or panics in run_group, leaving the worker dead and callers parked on completed_epoch
 src/pipeline.rs	replace - with + in <impl Drop for Room>::drop	1	hang: Room::drop releases ROOM_CREDITS + commits instead of ROOM_CREDITS - commits, wrapping refs past zero so the room never becomes free
 src/pipeline.rs	replace -= with += in Ring<X>::pop_front	1	hang: `len += 1` grows Ring::len instead of decrementing it, so events never frees capacity
+src/pipeline.rs	replace -= with /= in Pipeline<T, B>::drain_slot_pieces	2	hang: `stack_len /= 1` never decrements stack_len in drain_slot_pieces's merge loop
 src/pipeline.rs	replace -= with /= in Ring<X>::pop_front	1	hang: `len /= 1` never decrements Ring::len, so local_free_rooms / events never empties or frees capacity
 src/pipeline.rs	replace == with != in Pipeline<T, B>::drain_slot_pieces	1	hang: drain_slot_pieces returns immediately while head != NONE, never draining completed room pieces
 src/pipeline.rs	replace == with != in Pipeline<T, B>::front_uses_open_group	1	hang: front_uses_open_group reports false when the front slot sits in open_group, so poll_ready parks without publishing open_group
