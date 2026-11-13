@@ -51,19 +51,31 @@ theorem Lean refuses.
 
 ## What a call takes, measured (single runs; no judged timing yet)
 
-`Hash::to_hex` through the library, beside the arithmetic of 0.9 it replaces:
+`Hash::to_hex` through the library, a million hashes first agreeing with 0.9's, beside the arithmetic of
+0.9 it replaces (`next` 918921dc):
 
-| machine | this draft | 0.9 | the kernel alone |
+| machine | 0.9 | this candidate | the kernel alone, called |
 |---|---|---|---|
-| EPYC 9255 | 3.47 ns | 6.54 ns | 2.31 ns |
-| Ryzen 9700X | 3.25 ns | 5.20 ns | 1.86 ns |
-| Apple M6 | **3.50 ns** | **1.85 ns** | 1.72 ns |
-| a Neoverse virtual server | **10.2 ns** | **8.2 ns** | 6.3 to 6.7 ns |
+| EPYC 9255 | 6.52 ns | 2.78 ns | 2.32 ns |
+| Ryzen 9700X | 5.20 ns | 2.40 ns | 1.84 ns |
+| a Neoverse virtual server | 8.22 ns | 6.91 ns | 4.65 ns |
+| Apple M6 | 1.81 ns | **2.70 ns** | 1.70 ns |
 
-**On AArch64 the draft is slower than what it replaces.** The compiler makes vector code of 0.9's arithmetic
-that is as fast as the NEON kernel alone, and the kernel adds a call and a copy. This is a measured
-regression and is not settled: to try, a NEON kernel that looks the characters up in a register (`tbl`);
-failing that, the cost is to be weighed against the proof, or AArch64 keeps the arithmetic.
+**On an Apple M6 the candidate is slower than what it replaces, by 0.9 ns a call.** There the compiler makes
+vector code of 0.9's arithmetic, inline, that is as fast as the kernel alone; the kernel adds a call and a
+copy of the 64 characters. This is a measured regression, stated here to be weighed against the proof.
+
+What was tried, in the order it helped (the same harness; the Neoverse server / the M6):
+
+| form | Neoverse | M6 |
+|---|---|---|
+| first draft: the arithmetic kernel, a zeroed buffer | 10.26 ns | 3.35 ns |
+| the buffer not zeroed (the kernel writes all of it) | 9.79 | 2.96 |
+| and `#[inline]` on `to_hex` | 8.73 | 2.73 |
+| and the characters looked up in a register (`tbl`): this candidate | 6.91 | 2.70 |
+
+`#[inline]` is one line and can be left out: without it the candidate takes 3.24 ns (EPYC 9255), 3.09
+(9700X), 7.87 (Neoverse) and about 2.9 (M6).
 
 The string is made from a buffer the kernel fills: written in place by the kernel, the string was copied out
 of the function across the kernel's sixteen-byte stores, and the call took as long as 0.9's on x86-64.
