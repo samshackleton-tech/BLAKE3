@@ -6,7 +6,7 @@ publish = false
 
 # The library, checked out beside this folder's repository as `crate` (a pinned-run job does that).
 [dependencies]
-blake3-servil-core = { path = "../../../../../../crate" }
+blake3-servil-core = { path = "../../../../../../../crate" }
 
 [build-dependencies]
 cc = "1.1.12"
