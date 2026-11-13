@@ -12,6 +12,7 @@ import Spec_pad
 import Spec_fillp
 import Spec_tree32
 import Spec_p16
+import Spec_k32
 import Spec_wide
 import Spec_addn
 import Spec_finish
@@ -266,6 +267,24 @@ theorem spread_zero (j : Nat) : Ptrs.spread 0#64 1#64 64#64 j = 0#64 := by
       omega
     subst h0; simp
   · rw [if_neg h]
+
+theorem spread_zero' (s : BitVec 64) (j : Nat) : Ptrs.spread 0#64 1#64 s j = 0#64 := by
+  unfold Ptrs.spread
+  by_cases h : j < (1#64).toNat
+  · have h0 : j = 0 := by
+      have : (1#64).toNat = 1 := rfl
+      omega
+    subst h0; simp
+  · rw [if_neg h]
+
+theorem K32.usable : (K32.contract 0x100000#64 16#64 0x200000#64 0#64 0x40020100#64 0x300000#64 zeroCv 0#64 1#64 0#64 (List.replicate 1024 0#8)).Usable := by
+  refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, ?_, ?_⟩
+  · simp only [K32.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart]; decide
+  · simp only [K32.contract]; decide
+  · simp only [K32.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
+    refine ⟨zeroMem_region _ _, zeroMem_cv _, fun j _ => by rw [spread_zero']; exact zeroMem_quad _, by decide, by rw [List.length_replicate]; rfl, fun i h => ?_⟩
+    show some 0#8 = some (List.replicate 1024 0#8)[i]
+    rw [List.getElem_replicate]
 
 theorem P16.usable : (P16.contract 0x100000#64 1#64 0x200000#64 0#64 0x40000004#64 0x300000#64 zeroCv 0#64 1#64 0#64 [zeroCv, zeroCv]).Usable := by
   refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, ?_, ?_⟩

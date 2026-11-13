@@ -32,7 +32,7 @@ theorem Blake3.level_get (key : Blake3.CV) (mode : Blake3.Word) : ∀ (j : Nat) 
       have e2 : 2 * (j + 1) + 1 = 2 * j + 1 + 1 + 1 := by omega
       simp [e1, e2]
 
-theorem Blake3.level_length (key : Blake3.CV) (mode : Blake3.Word) : ∀ (n : Nat) (l : List Blake3.CV), l.length = 2 * n →
+theorem Blake3.level_pairs (key : Blake3.CV) (mode : Blake3.Word) : ∀ (n : Nat) (l : List Blake3.CV), l.length = 2 * n →
     (Blake3.level key mode l).length = n := by
   intro n
   induction n with
@@ -91,11 +91,11 @@ def value (k : Blake3.CV) (flags n : BitVec 64) (l : List Blake3.CV) (i : BitVec
 theorem values_length (h1 : 1 ≤ n.toNat) (h16 : n.toNat ≤ 16) (hl : l.length = 2 * n.toNat) :
     (P16.values k flags n l).length = 16 := by
   unfold P16.values
-  rw [List.length_append, List.length_replicate, Blake3.level_length k _ n.toNat l hl]; omega
+  rw [List.length_append, List.length_replicate, Blake3.level_pairs k _ n.toNat l hl]; omega
 
 theorem values_get (h1 : 1 ≤ n.toNat) (h16 : n.toNat ≤ 16) (hl : l.length = 2 * n.toNat) (hi : i.toNat < 16) :
     (P16.values k flags n l)[i.toNat]? = some (value k flags n l i) := by
-  have hlen := Blake3.level_length k ⟨flags.setWidth 32⟩ n.toNat l hl
+  have hlen := Blake3.level_pairs k ⟨flags.setWidth 32⟩ n.toNat l hl
   unfold P16.values value lane
   by_cases h : i.toNat < n.toNat
   · rw [if_pos h, List.getElem?_append_left (by rw [hlen]; exact h)]

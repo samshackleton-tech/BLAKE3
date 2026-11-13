@@ -89,6 +89,12 @@ def contracts_of(text):
         # have at hand before it: what its contract asks, said in the contract's words), `keep CLAUSE`
         # (what still holds after it, besides what its contract promises) and `open LEMMA as NAMES` (a fact
         # about memory taken apart before the code that leads to the call is run: what that code reads)
+        # a value read from memory whose value the proof names: `var x = u64[ADDRESS] is TERM` (a fact at hand,
+        # from an `open`, says the eight bytes there are TERM; a call may then be given x). The code is as without it.
+        m = re.match(r"^((?:var\s+)?(\w+)\s*=\s*u64\[.*\])\s+is\s+(.+)$", s)
+        if fn and m:
+            out[fn].setdefault("is", {})[m.group(2)] = m.group(3).strip()
+            line = line[:len(line) - len(line.lstrip())] + m.group(1); s = m.group(1)
         m = re.match(r"^(?:return\s+|(?:var\s+)?\w+\s*=\s*)?(\w+)\(.*\)$", s)
         if fn and where is None and m and m.group(1) in own:
             out[fn]["calls"].append({"callee": m.group(1), "with": [], "keep": [], "know": [], "open": []}); kept.append(line); continue

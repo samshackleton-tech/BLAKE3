@@ -88,6 +88,7 @@ def has_call(ss):
 
 
 own_calls = clauses[name].get("calls", [])            # calls of this file's functions, by their contracts
+READS_IS = clauses[name].get("is", {})                # a variable read from memory: what the source says the read gives
 OWN = {(P.externs[n][0] if n in P.externs else f"b3l_{n}"): (n, info) for n, info in odec.own.items()}
 # External functions called by a contract that is assumed (a wide kernel this model does not hold): the theorem
 # is then about this function's instructions over any program (`ext`) in which those addresses meet the contracts.
@@ -446,7 +447,10 @@ def paths(ss, env):
             k = s[0]
             if k == "set":
                 # a value read from memory is what the invariant says the variable is, if it says (`invariant x == E`)
-                e2 = dict(e); v = lean_low(s[2], e); e2[s[1]] = v if v is not None else frozen.get(s[1]); new.append((ev, e2))
+                # ... or what the source says the read gives (`var x = u64[A] is TERM`)
+                e2 = dict(e); v = lean_low(s[2], e)
+                if v is None and s[1] in READS_IS: v = Clause(READS_IS[s[1]]).expr(e, "?")
+                e2[s[1]] = v if v is not None else frozen.get(s[1]); new.append((ev, e2))
             elif k == "call": new.append((ev + [("call", s[1], [lean_low(a, e) for a in s[2]] if s[1] in OWN else None, e, CALL_IDX.get(id(s)))], e))
             elif k == "callr":
                 # the result is the callee's RAX at its return: the state there is named by the call's number

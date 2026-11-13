@@ -456,10 +456,9 @@ Lean theorem, in steps:
 - **An assumed contract must be shown able to be met, and is tried:** a function of ours stands in for the
   kernel when examples run (`standin NAME`: the same contract, slowly, through the one-block kernel; `p16s`).
   Proved, it is the witness that the contract can be met (a contract no code could meet would make every
-  theorem that assumes it say nothing). **`p16s` is proved** (`Proof_p16s.p16s_meets`, November 13): the
-  parent kernel's contract has its witness. `k32s`, for the chunk kernel, is tried on its examples and not
-  proved yet. (Not done either: the callers' theorems restated for the program with the stand-ins in it,
-  wholly inside the model.)
+  theorem that assumes it say nothing). **Both are proved** (`Proof_p16s.p16s_meets`,
+  `Proof_k32s.k32s_meets`, November 13), and with them at the kernels' addresses the fast hash's theorem
+  has no hypothesis (`hashf_with_standins`, `Meets_hashf_standins.lean`): a program wholly inside the model.
 - **What joins the kernel's own proof to the contract is not yet a Lean theorem.** Z3's statement about
   the kernel and `P16.contract` are two texts. To close: the kernels proved in a Lean model with their
   registers (the 512-bit state `wide/` has for three instructions), then one model.
@@ -515,6 +514,8 @@ What the generator learned on this stretch (`prove_fn.py`):
   is run (what that code reads: `groupf` copies the key after three calls).
 - A lemma named at a call may be given what it speaks of by name (`know L (c0 := cfirst)`): a lemma of
   pure arithmetic no longer carries hypotheses it does not use only to fix its variables.
+- `var x = u64[ADDRESS] is TERM`: a value read from memory in a loop gets the name a fact at hand gives it
+  (from an `open`), so a call can be given it: `k32s` reads each lane's address from the kernel's table.
 - `reproof.sh NAME`: the proof alone again, from the rows already lifted (a change to a lemma or to the
   generator is checked in the proof's own time, without the examples).
 

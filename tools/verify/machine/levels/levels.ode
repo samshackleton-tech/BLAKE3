@@ -390,21 +390,42 @@ extern chunks32/6 = "blake3_servil_avx512_k32"
 callee chunks32 at 0x10000 assumes K32.contract (11) budget 4096 standin k32s
 
 fn k32s(inputs, blocks, key, counter, packed, out)
+  reg i, f, inputs, key, out, counter
   meets K32.contract(k: Blake3.CV, base: BitVec 64, n: BitVec 64, flags: BitVec 64, bytes: List (BitVec 8))
+  uses Lemmas_k32s
+  leave by K32s.exit
 {
   buf nd[120]
   var f = packed & 255
   var i = 0
-  var src = 0
-  var dst = 0
-  var t = 0
-  while i < 32 {
-    src = u64[inputs + (i << 3)]
-    dst = out + (i << 5)
-    t = counter + i
+  while i < 32
+    invariant Cv.At(key, k)
+    invariant Ptrs.At(inputs, Ptrs.spread(base, n, 1024))
+    invariant K32s.In(base, n, bytes)                                from K32s.In.start
+    invariant K32s.Done(out, k, flags, counter, n, bytes, i)         by K32s.Done.step   from K32s.Done.start
+    invariant Region(out, 1024)
+    invariant f == packed & 255
+    decreases 32 - i
+    open K32s.turn as k0, k1
+  {
+    var src = u64[inputs + (i << 3)] is K32s.src(base, n, i)
+    var t = counter + i
     copy 32 nd <- key
     chunk_node(nd, src, 1024, t, f, AVX512)
+      with k; (K32.input n bytes i.toNat)
+      keep Cv.At(key, k)
+      keep Ptrs.At(inputs, Ptrs.spread(base, n, 1024))
+      keep K32s.In(base, n, bytes)
+      keep K32s.Done(out, k, flags, counter, n, bytes, i)
+      keep Region(out, 1024)
+    var dst = out + (i << 5)
     node_out(dst, nd, 0, AVX512)
+      with (Chunk.node k (packed &&& 255#64) (counter + i) (K32.input n bytes i.toNat))
+      keep Cv.At(key, k)
+      keep Ptrs.At(inputs, Ptrs.spread(base, n, 1024))
+      keep K32s.In(base, n, bytes)
+      keep K32s.Done(out, k, flags, counter, n, bytes, i)
+      keep Region(out, 1024)
     i = i + 1
   }
 }
