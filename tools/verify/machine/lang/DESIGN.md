@@ -471,10 +471,54 @@ own hash does 14); the 32 values made one by five calls of the 16-lane parent ke
 to 14.2; Ryzen 9700X 15.1 for 17.1). Below 64 KiB the library is ahead by a quarter to a third: it has
 kernels for short inputs that this path does not call yet.
 
-Proved so far: `fillp` (the table of addresses a wide kernel is given) and `tree32` (32 values to one, over
-any program where the parent kernel meets `P16.contract`). To come: the 32-lane chunk kernel's contract, the
-hash's wide loop on two sets of levels, `lroot` with the root flag as a parameter (the last group's value is
-not a root), the witnesses.
+**The fast hash, `hashf`, by small functions (`../levels/levels.ode`, `../levels/README.md`):**
+
+- `fillp`: the table of 32 addresses a wide kernel is given.
+- `tree32`: 32 chaining values to their tree's value, five calls of the 16-lane parent kernel.
+- `wide`: while a whole group of 32 chunks has more of the message after it: the chunk kernel, `tree32`, and
+  the group's value added (`ladd`) to levels over groups.
+- `group`: some bytes' chunks into a second set of levels, one block at a time (`chunk_node`,
+  `node_out`, `ladd`: `hashl`'s loop with the chunks numbered from where `wide` stopped).
+- `groupf`: what `group` does (the same contract, for 2 to 32 chunks) by one call of the chunk kernel for
+  all but the last chunk, their values added by `addn`. One contract, two functions that meet it: `hashw`
+  calls `groupf` for a last group of more than a chunk and `group` for one chunk, and its proof does not
+  know which is behind the contract's words.
+- `finish`: the root from the two sets of levels: the last group's value, not as a root (`lroot` now takes the
+  root flag as a parameter), is added to the groups' levels, whose root is the message's.
+- `hashw` = `wide`, `group`, `finish` (a message of one chunk goes to `hashl`); `hashf` = `hashw` where the
+  machine has AVX-512, `hashl` elsewhere.
+- `hashf_meets_bytes` (`Meets_hashf_bytes.lean`): over any program in which the two kernels meet
+  `K32.contract` and `P16.contract`, `hashf` meets `Hash.byteContract`: it computes BLAKE3.
+- Still one at a time: the parents inside the last group (`addn` adds its values by `ladd`, up to 31
+  compressions), the last chunk's blocks, and everything in a message of one chunk. The library has kernels
+  for each of these; behind contracts they are the same work again.
+
+What the generator learned on this stretch (`prove_fn.py`):
+- A condition on a callee's result is split, and said as a fact, where the result is at hand (it was split
+  at entry, before the result had a name): `hashw` branches on what `wide` returns.
+- A variable of straight-line code that lives in the frame holds across a call what it held at it.
+- `open LEMMA as NAMES` at a call: a fact about memory taken apart before the code that leads to the call
+  is run (what that code reads: `groupf` copies the key after three calls).
+- A lemma named at a call may be given what it speaks of by name (`know L (c0 := cfirst)`): a lemma of
+  pure arithmetic no longer carries hypotheses it does not use only to fix its variables.
+- `reproof.sh NAME`: the proof alone again, from the rows already lifted (a change to a lemma or to the
+  generator is checked in the proof's own time, without the examples).
+
+Warts met on this stretch, each to remove:
+- The generator's own names (`c0`, `n`, `i` in a generated proof or a generated test) collide with a
+  parameter of the same name: the proof fails far from the cause. It should refuse the name, or not have it.
+- A straight-line function cannot branch on a value it loads from memory (the generator has no value for
+  it): `finish` is told by an argument which case it is.
+- What a function writes itself before a call cannot be named in a `keep` at that call (a `keep` is shown
+  of the memory the last call left): the write goes after the call, or an `.intro` lemma makes the fact
+  where the next callee asks for it (`Levels.At.intro`).
+- `Abi.Meets` asks that pieces which are only read be apart from each other (Devon, #361): it refuses a
+  message that overlaps the key. To change in `Abi.lean`: only the stack and what is written need be apart.
+- A term given at a call (`with`) is raw Lean: a number must be written `16#64`, and a variable of the
+  source is `$x` where the code is straight-line. It should be read like a clause.
+- In this model a call of the chunk kernel's stand-in is four minutes (the model's memory is a function, and
+  the examples are interpreted): examples that reach it are few. Running the examples as compiled code is the
+  next accelerator: it would also shorten every audit.
 
 ## Two designs of one thing, side by side: the stack and the levels (Sam, November 12)
 

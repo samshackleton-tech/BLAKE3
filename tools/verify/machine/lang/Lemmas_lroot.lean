@@ -28,15 +28,16 @@ theorem out_spec (k0 k1 l0 l1 r0 r1 : V) (x : BitVec 32) (fl : UInt32) (hx : x =
   match i, hi with
   | 0, _ | 1, _ | 2, _ | 3, _ | 4, _ | 5, _ | 6, _ | 7, _ => simp [bv]
 
-/-- With the flags of a parent that is the root: the root's output's first eight words, of the parent node. -/
-theorem root_out (k0 k1 l0 l1 r0 r1 : V) (flags : BitVec 64) (hf : flags < 256#64) :
-    words8 (Kernels.out k0 k1 l0 l1 r0 r1 0#64 64#32 (BitVec.setWidth 32 (BitVec.setWidth 8 (flags ||| 4#64 ||| 8#64)))).1
-        (Kernels.out k0 k1 l0 l1 r0 r1 0#64 64#32 (BitVec.setWidth 32 (BitVec.setWidth 8 (flags ||| 4#64 ||| 8#64)))).2
+/-- With the flags of a parent, and the root's flag or none: the first eight words of the parent node's
+compression with that flag. -/
+theorem top_out (k0 k1 l0 l1 r0 r1 : V) (flags root : BitVec 64) (hf : flags < 256#64) (hr : root = 0#64 ∨ root = 8#64) :
+    words8 (Kernels.out k0 k1 l0 l1 r0 r1 0#64 64#32 (BitVec.setWidth 32 (BitVec.setWidth 8 (flags ||| 4#64 ||| root)))).1
+        (Kernels.out k0 k1 l0 l1 r0 r1 0#64 64#32 (BitVec.setWidth 32 (BitVec.setWidth 8 (flags ||| 4#64 ||| root)))).2
       = Blake3.first8 (Blake3.BLAKE3_COMPRESS (words8 k0 k1) (words8 l0 l1 ++ words8 r0 r1) 0 64
-          ((⟨flags.setWidth 32⟩ ||| Blake3.PARENT) ||| Blake3.ROOT)) := by
+          ((⟨flags.setWidth 32⟩ ||| Blake3.PARENT) ||| ⟨root.setWidth 32⟩)) := by
   apply out_spec
-  show _ = flags.setWidth 32 ||| 4#32 ||| 8#32
-  bv_decide
+  show _ = flags.setWidth 32 ||| 4#32 ||| root.setWidth 32
+  rcases hr with h | h <;> (subst h; bv_decide)
 
 /-! ## Arithmetic of addresses and counts, each with nothing else in sight -/
 
@@ -79,13 +80,13 @@ theorem even_of_and {r : Nat} (h : ¬ BitVec.ofNat 64 r &&& 1#64 = 1#64) : r % 2
 /-- **What holds at the head of `lroot`'s loop.** The loop is at level `a` (`base` is its address) and the
 levels from there up have received `r = e` values of `2^a` chunks; the chunks they do not cover, at most
 `2^a` and at least one, are a subtree whose value is in `acc`; when no level is left, `acc` holds the
-root's output. -/
-def Fold (m : Mem) (lv : BitVec 64) (k : Blake3.CV) (flags : BitVec 64) (chunks : Array Blake3.Node) (base e acc : BitVec 64) : Prop :=
+top node's compression with the flag `root` (the root's output, or the tree's value as a subtree). -/
+def Fold (m : Mem) (lv : BitVec 64) (k : Blake3.CV) (flags root : BitVec 64) (chunks : Array Blake3.Node) (base e acc : BitVec 64) : Prop :=
   ∃ a r : Nat, a ≤ 54 ∧ base = lv + BitVec.ofNat 64 (64 * a + 64) ∧ e = BitVec.ofNat 64 r ∧ r < 2 ^ (54 - a) ∧
     Lev k ⟨flags.setWidth 32⟩ chunks m (54 - a) base (2 ^ a) r ∧
     r * 2 ^ a < chunks.size ∧ chunks.size ≤ r * 2 ^ a + 2 ^ a ∧
     (0 < r → Cv.At m acc (Blake3.sub k ⟨flags.setWidth 32⟩ chunks (r * 2 ^ a) (chunks.size - r * 2 ^ a))) ∧
-    (r = 0 → Cv.At m acc (rootCv k ⟨flags.setWidth 32⟩ chunks))
+    (r = 0 → Cv.At m acc (top k ⟨flags.setWidth 32⟩ chunks ⟨root.setWidth 32⟩))
 
 /-- At entry: the count's cell. -/
 theorem At.cell {m : Mem} {lv : BitVec 64} {mode : Blake3.Word} (h : At k mode m lv chunks) : Quad m lv (count chunks) := h.2.2.1
@@ -101,12 +102,12 @@ theorem At.newest {m : Mem} {lv : BitVec 64} {mode : Blake3.Word} (h : At k mode
   exact ⟨n0, n1, h0, h1, hw⟩
 
 /-- **Before the loop:** the newest chunk's value copied to `acc`; the levels have received all the others. -/
-theorem Fold.start {m m' : Mem} {lv flags acc : BitVec 64} {n0 n1 : V}
+theorem Fold.start {m m' : Mem} {lv flags root acc : BitVec 64} {n0 n1 : V}
     (h : At k ⟨flags.setWidth 32⟩ m lv chunks) (h2 : 2 ≤ chunks.size)
     (hw : words8 n0 n1 = Blake3.sub k ⟨flags.setWidth 32⟩ chunks (chunks.size - 1) 1)
     (hp0 : Vec m' acc n0) (hp1 : Vec m' (acc + 16#64) n1)
     (same : ∀ y : BitVec 64, y - lv < 3520#64 → m' y = m y) :
-    Fold m' lv k flags chunks (lv + 64#64) (count chunks - 1#64) acc := by
+    Fold m' lv k flags root chunks (lv + 64#64) (count chunks - 1#64) acc := by
   obtain ⟨hn, _, _, hrest⟩ := h
   obtain ⟨hl, _⟩ := hrest (by omega)
   refine ⟨0, chunks.size - 1, by omega, by simp, count_pred (by omega) hn, by have := pow_le_54 0; simp at this ⊢; omega, ?_, by simp; omega, by simp; omega,
@@ -117,7 +118,7 @@ theorem Fold.start {m m' : Mem} {lv flags acc : BitVec 64} {n0 n1 : V}
     rw [show chunks.size - (chunks.size - 1) = 1 by omega]
 
 /-- The value in `acc`, as the two vectors the code reads. -/
-theorem Fold.acc {m : Mem} {lv flags base e acc : BitVec 64} (h : Fold m lv k flags chunks base e acc) :
+theorem Fold.acc {m : Mem} {lv flags root base e acc : BitVec 64} (h : Fold m lv k flags root chunks base e acc) :
     ∃ a0 a1 : V, Vec m acc a0 ∧ Vec m (acc + 16#64) a1 := by
   obtain ⟨a, r, _, _, _, _, _, _, _, hpos, hzero⟩ := h
   rcases Nat.eq_zero_or_pos r with h0 | hp
@@ -125,7 +126,7 @@ theorem Fold.acc {m : Mem} {lv flags base e acc : BitVec 64} (h : Fold m lv k fl
   · obtain ⟨a0, a1, g0, g1, _⟩ := hpos hp; exact ⟨a0, a1, g0, g1⟩
 
 /-- A level that holds a value (`e` odd): everything a turn there uses. -/
-theorem Fold.odd {m : Mem} {lv flags base e acc : BitVec 64} (h : Fold m lv k flags chunks base e acc) (ho : e &&& 1#64 = 1#64) :
+theorem Fold.odd {m : Mem} {lv flags root base e acc : BitVec 64} (h : Fold m lv k flags root chunks base e acc) (ho : e &&& 1#64 = 1#64) :
     ∃ a c : Nat, a ≤ 53 ∧ base = lv + BitVec.ofNat 64 (64 * a + 64) ∧ e = BitVec.ofNat 64 (2 * c + 1) ∧ 2 * c + 1 < 2 ^ (54 - a) ∧
       Cv.At m base (Blake3.sub k ⟨flags.setWidth 32⟩ chunks (2 * c * 2 ^ a) (2 ^ a)) ∧
       Lev k ⟨flags.setWidth 32⟩ chunks m (53 - a) (base + 64#64) (2 ^ (a + 1)) c ∧
@@ -152,7 +153,7 @@ theorem Fold.odd {m : Mem} {lv flags base e acc : BitVec 64} (h : Fold m lv k fl
     rwa [show (2 * c + 1) / 2 = c by omega, show 2 * 2 ^ a = 2 ^ (a + 1) by rw [Nat.pow_succ]; omega] at this
 
 /-- **Before a turn at a level that holds a value:** that value as the two vectors the code reads. -/
-theorem Fold.level {m : Mem} {lv flags base e acc : BitVec 64} (h : Fold m lv k flags chunks base e acc) (ho : e &&& 1#64 = 1#64) :
+theorem Fold.level {m : Mem} {lv flags root base e acc : BitVec 64} (h : Fold m lv k flags root chunks base e acc) (ho : e &&& 1#64 = 1#64) :
     ∃ l0 l1 : V, Vec m base l0 ∧ Vec m (base + 16#64) l1 ∧ 64#64 ≤ base - lv ∧ base - lv ≤ 3456#64 := by
   obtain ⟨a, c, ha, hbase, _, _, ⟨l0, l1, g0, g1, _⟩, _⟩ := Fold.odd h ho
   have hb := off_bounds lv a ha
@@ -169,14 +170,14 @@ theorem lev_up {m m' : Mem} {lv flags : BitVec 64} {a c : Nat} (ha : a ≤ 53)
 
 /-- **Across a turn that makes a parent below the root:** the level's value and `acc`'s replaced, in `acc`, by
 what the kernel leaves for them: the subtree over both. -/
-theorem Fold.parent {m m' : Mem} {lv flags base e acc : BitVec 64} {k0 k1 l0 l1 a0 a1 : V}
-    (h : Fold m lv k flags chunks base e acc) (ho : e &&& 1#64 = 1#64) (h1 : ¬ e = 1#64) (hk : words8 k0 k1 = k)
+theorem Fold.parent {m m' : Mem} {lv flags root base e acc : BitVec 64} {k0 k1 l0 l1 a0 a1 : V}
+    (h : Fold m lv k flags root chunks base e acc) (ho : e &&& 1#64 = 1#64) (h1 : ¬ e = 1#64) (hk : words8 k0 k1 = k)
     (hl0 : Vec m base l0) (hl1 : Vec m (base + 16#64) l1) (ha0 : Vec m acc a0) (ha1 : Vec m (acc + 16#64) a1)
     (hf : flags < 256#64)
     (hp0 : Vec m' acc (Kernels.out k0 k1 l0 l1 a0 a1 0#64 64#32 (BitVec.setWidth 32 (BitVec.setWidth 8 (flags ||| 4#64)))).1)
     (hp1 : Vec m' (acc + 16#64) (Kernels.out k0 k1 l0 l1 a0 a1 0#64 64#32 (BitVec.setWidth 32 (BitVec.setWidth 8 (flags ||| 4#64)))).2)
     (same : ∀ y : BitVec 64, y - lv < 3520#64 → m' y = m y) :
-    Fold m' lv k flags chunks (base + 64#64) (e >>> 1) acc := by
+    Fold m' lv k flags root chunks (base + 64#64) (e >>> 1) acc := by
   obtain ⟨a, c, ha, hbase, he, hr, hleft, hup, hlt, hle, hright⟩ := Fold.odd h ho
   have h54 := pow_le_54 a
   have hc : 0 < c := by
@@ -196,13 +197,13 @@ theorem Fold.parent {m m' : Mem} {lv flags base e acc : BitVec 64} {k0 k1 l0 l1 
     lev_up ha hup same, by rw [two_mul_pow]; omega, by rw [two_mul_pow, Nat.pow_succ]; omega, fun _ => ⟨_, _, hp0, hp1, hval⟩, fun h0 => by omega⟩
 
 /-- **Across the turn that makes the root:** the same with the root's flags; nothing is left to fold. -/
-theorem Fold.root {m m' : Mem} {lv flags base e acc : BitVec 64} {k0 k1 l0 l1 a0 a1 : V}
-    (h : Fold m lv k flags chunks base e acc) (ho : e &&& 1#64 = 1#64) (h1 : e = 1#64) (hk : words8 k0 k1 = k)
+theorem Fold.root {m m' : Mem} {lv flags root base e acc : BitVec 64} {k0 k1 l0 l1 a0 a1 : V}
+    (h : Fold m lv k flags root chunks base e acc) (ho : e &&& 1#64 = 1#64) (h1 : e = 1#64) (hk : words8 k0 k1 = k)
     (hl0 : Vec m base l0) (hl1 : Vec m (base + 16#64) l1) (ha0 : Vec m acc a0) (ha1 : Vec m (acc + 16#64) a1)
-    (hf : flags < 256#64)
-    (hp0 : Vec m' acc (Kernels.out k0 k1 l0 l1 a0 a1 0#64 64#32 (BitVec.setWidth 32 (BitVec.setWidth 8 (flags ||| 4#64 ||| 8#64)))).1)
-    (hp1 : Vec m' (acc + 16#64) (Kernels.out k0 k1 l0 l1 a0 a1 0#64 64#32 (BitVec.setWidth 32 (BitVec.setWidth 8 (flags ||| 4#64 ||| 8#64)))).2) :
-    Fold m' lv k flags chunks (base + 64#64) (e >>> 1) acc := by
+    (hf : flags < 256#64) (hroot : root = 0#64 ∨ root = 8#64)
+    (hp0 : Vec m' acc (Kernels.out k0 k1 l0 l1 a0 a1 0#64 64#32 (BitVec.setWidth 32 (BitVec.setWidth 8 (flags ||| 4#64 ||| root)))).1)
+    (hp1 : Vec m' (acc + 16#64) (Kernels.out k0 k1 l0 l1 a0 a1 0#64 64#32 (BitVec.setWidth 32 (BitVec.setWidth 8 (flags ||| 4#64 ||| root)))).2) :
+    Fold m' lv k flags root chunks (base + 64#64) (e >>> 1) acc := by
   obtain ⟨a, c, ha, hbase, he, hr, hleft, hup, hlt, hle, hright⟩ := Fold.odd h ho
   have h54 := pow_le_54 a
   have hc : c = 0 := by
@@ -212,22 +213,22 @@ theorem Fold.root {m m' : Mem} {lv flags base e acc : BitVec 64} {k0 k1 l0 l1 a0
     omega
   subst hc
   simp only [Nat.mul_zero, Nat.zero_mul, Nat.zero_add] at hleft hright hlt hle
-  have hval : words8 (Kernels.out k0 k1 l0 l1 a0 a1 0#64 64#32 (BitVec.setWidth 32 (BitVec.setWidth 8 (flags ||| 4#64 ||| 8#64)))).1
-      (Kernels.out k0 k1 l0 l1 a0 a1 0#64 64#32 (BitVec.setWidth 32 (BitVec.setWidth 8 (flags ||| 4#64 ||| 8#64)))).2
-      = rootCv k ⟨flags.setWidth 32⟩ chunks := by
-    rw [root_out k0 k1 l0 l1 a0 a1 flags hf, hk, cv_same hleft hl0 hl1, cv_same hright ha0 ha1]
+  have hval : words8 (Kernels.out k0 k1 l0 l1 a0 a1 0#64 64#32 (BitVec.setWidth 32 (BitVec.setWidth 8 (flags ||| 4#64 ||| root)))).1
+      (Kernels.out k0 k1 l0 l1 a0 a1 0#64 64#32 (BitVec.setWidth 32 (BitVec.setWidth 8 (flags ||| 4#64 ||| root)))).2
+      = top k ⟨flags.setWidth 32⟩ chunks ⟨root.setWidth 32⟩ := by
+    rw [top_out k0 k1 l0 l1 a0 a1 flags root hf hroot, hk, cv_same hleft hl0 hl1, cv_same hright ha0 ha1]
     have hs := Blake3.go_split k ⟨flags.setWidth 32⟩ chunks 0 a (chunks.size - 2 ^ a) (by omega) (by omega)
     rw [show 2 ^ a + (chunks.size - 2 ^ a) = chunks.size by omega, Nat.zero_add] at hs
-    simp only [rootCv, Blake3.tree, hs, Blake3.parentNode]
+    simp only [top, Blake3.tree, hs, Blake3.parentNode]
   subst hbase
   refine ⟨a + 1, 0, by omega, off_succ lv a, by rw [h1]; rfl, Nat.two_pow_pos _, Lev_none m' _ _ _, by simp; omega,
     by simp only [Nat.zero_mul, Nat.zero_add, Nat.pow_succ]; omega, fun h0 => by omega, fun _ => ⟨_, _, hp0, hp1, hval⟩⟩
 
 /-- **Across a turn at a level that holds nothing:** the same value covers the same chunks, one level up. -/
-theorem Fold.skip {m m' : Mem} {lv flags base e acc : BitVec 64}
-    (h : Fold m lv k flags chunks base e acc) (ho : ¬ e &&& 1#64 = 1#64) (hc : 0#64 < e)
+theorem Fold.skip {m m' : Mem} {lv flags root base e acc : BitVec 64}
+    (h : Fold m lv k flags root chunks base e acc) (ho : ¬ e &&& 1#64 = 1#64) (hc : 0#64 < e)
     (same : ∀ y : BitVec 64, y - lv < 3520#64 → m' y = m y) (sameAcc : ∀ y : BitVec 64, y - acc < 32#64 → m' y = m y) :
-    Fold m' lv k flags chunks (base + 64#64) (e >>> 1) acc := by
+    Fold m' lv k flags root chunks (base + 64#64) (e >>> 1) acc := by
   obtain ⟨a, r, ha, hbase, he, hr, hl, hlt, hle, hpos, _⟩ := h
   have h54 := pow_le_54 a
   have heven : r % 2 = 0 := even_of_and (by rw [← he]; exact ho)
@@ -252,8 +253,8 @@ theorem Fold.skip {m m' : Mem} {lv flags base e acc : BitVec 64}
     lev_up ha' hup same, by rw [two_mul_pow]; exact hlt, by rw [two_mul_pow, Nat.pow_succ]; omega, fun _ => by rw [two_mul_pow]; exact hacc, fun h0 => by omega⟩
 
 /-- **When the loop ends:** `acc` holds the root's output, as the two vectors the code copies out. -/
-theorem Fold.done {m : Mem} {lv flags base e acc : BitVec 64} (h : Fold m lv k flags chunks base e acc) (hc : ¬ 0#64 < e) :
-    ∃ r0 r1 : V, Vec m acc r0 ∧ Vec m (acc + 16#64) r1 ∧ words8 r0 r1 = rootCv k ⟨flags.setWidth 32⟩ chunks := by
+theorem Fold.done {m : Mem} {lv flags root base e acc : BitVec 64} (h : Fold m lv k flags root chunks base e acc) (hc : ¬ 0#64 < e) :
+    ∃ r0 r1 : V, Vec m acc r0 ∧ Vec m (acc + 16#64) r1 ∧ words8 r0 r1 = top k ⟨flags.setWidth 32⟩ chunks ⟨root.setWidth 32⟩ := by
   obtain ⟨a, r, _, _, he, hr, _, _, _, _, hzero⟩ := h
   have h54 := pow_le_54 a
   have hr0 : r = 0 := by
@@ -265,7 +266,11 @@ theorem Fold.done {m : Mem} {lv flags base e acc : BitVec 64} (h : Fold m lv k f
 end Levels
 
 /-- **At the return:** the root's output at `out`. -/
-theorem Lroot.exit {m' : Mem} {out flags : BitVec 64} {k : Blake3.CV} {chunks : Array Blake3.Node} {r0 r1 : V}
-    (hw : words8 r0 r1 = Levels.rootCv k ⟨flags.setWidth 32⟩ chunks)
+theorem Lroot.exit {m' : Mem} {out flags root : BitVec 64} {k : Blake3.CV} {chunks : Array Blake3.Node} {r0 r1 : V}
+    (hw : words8 r0 r1 = Levels.top k ⟨flags.setWidth 32⟩ chunks ⟨root.setWidth 32⟩)
     (hp0 : Vec m' out r0) (hp1 : Vec m' (out + 16#64) r1) :
-    True ∧ Cv.At m' out (Levels.rootCv k ⟨flags.setWidth 32⟩ chunks) := ⟨trivial, r0, r1, hp0, hp1, hw⟩
+    True ∧ Cv.At m' out (Levels.top k ⟨flags.setWidth 32⟩ chunks ⟨root.setWidth 32⟩) := ⟨trivial, r0, r1, hp0, hp1, hw⟩
+
+/-- With the root's flag, the top node's compression is the specification's output's first eight words. -/
+theorem Levels.top_root (k : Blake3.CV) (mode : Blake3.Word) (chunks : Array Blake3.Node) :
+    Levels.top k mode chunks ⟨BitVec.setWidth 32 8#64⟩ = Levels.rootCv k mode chunks := rfl

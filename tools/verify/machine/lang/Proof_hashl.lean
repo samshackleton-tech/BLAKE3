@@ -141,10 +141,10 @@ theorem turn (fb out input len key flags plat ra : BitVec 64) (sv : Abi.Saved) (
     simp only [ChunkNode.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
     try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
     repeat' (with_reducible apply And.intro)
-    all_goals bv_decide
+    all_goals bv_side
   · simp only [ChunkNode.contract]
     repeat' (with_reducible apply And.intro)
-    all_goals (first | assumption | bv_decide)
+    all_goals (first | assumption | bv_side)
   · dsimp only
     simp only [ChunkNode.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
     repeat' (with_reducible apply And.intro)
@@ -189,10 +189,10 @@ theorem turn (fb out input len key flags plat ra : BitVec 64) (sv : Abi.Saved) (
       simp only [NodeOut.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
       try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
       repeat' (with_reducible apply And.intro)
-      all_goals bv_decide
+      all_goals bv_side
     · simp only [NodeOut.contract]
       repeat' (with_reducible apply And.intro)
-      all_goals (first | assumption | bv_decide)
+      all_goals (first | assumption | bv_side)
     · dsimp only
       simp only [NodeOut.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
       repeat' (with_reducible apply And.intro)
@@ -240,10 +240,10 @@ theorem turn (fb out input len key flags plat ra : BitVec 64) (sv : Abi.Saved) (
         simp only [Ladd.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
         try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
         repeat' (with_reducible apply And.intro)
-        all_goals bv_decide
+        all_goals bv_side
       · simp only [Ladd.contract]
         repeat' (with_reducible apply And.intro)
-        all_goals (first | assumption | bv_decide)
+        all_goals (first | assumption | bv_side)
       · dsimp only
         simp only [Ladd.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
         repeat' (with_reducible apply And.intro)
@@ -350,10 +350,10 @@ theorem leave (fb out input len key flags plat ra : BitVec 64) (sv : Abi.Saved) 
       simp only [ChunkNode.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
       try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
       repeat' (with_reducible apply And.intro)
-      all_goals bv_decide
+      all_goals bv_side
     · simp only [ChunkNode.contract]
       repeat' (with_reducible apply And.intro)
-      all_goals (first | assumption | bv_decide)
+      all_goals (first | assumption | bv_side)
     · dsimp only
       simp only [ChunkNode.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
       repeat' (with_reducible apply And.intro)
@@ -401,10 +401,10 @@ theorem leave (fb out input len key flags plat ra : BitVec 64) (sv : Abi.Saved) 
         simp only [NodeOut.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
         try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
         repeat' (with_reducible apply And.intro)
-        all_goals bv_decide
+        all_goals bv_side
       · simp only [NodeOut.contract]
         repeat' (with_reducible apply And.intro)
-        all_goals (first | assumption | bv_decide)
+        all_goals (first | assumption | bv_side)
       · dsimp only
         simp only [NodeOut.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
         repeat' (with_reducible apply And.intro)
@@ -459,10 +459,10 @@ theorem leave (fb out input len key flags plat ra : BitVec 64) (sv : Abi.Saved) 
       simp only [ChunkNode.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
       try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
       repeat' (with_reducible apply And.intro)
-      all_goals bv_decide
+      all_goals bv_side
     · simp only [ChunkNode.contract]
       repeat' (with_reducible apply And.intro)
-      all_goals (first | assumption | bv_decide)
+      all_goals (first | assumption | bv_side)
     · dsimp only
       simp only [ChunkNode.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
       repeat' (with_reducible apply And.intro)
@@ -507,10 +507,10 @@ theorem leave (fb out input len key flags plat ra : BitVec 64) (sv : Abi.Saved) 
         simp only [NodeOut.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
         try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
         repeat' (with_reducible apply And.intro)
-        all_goals bv_decide
+        all_goals bv_side
       · simp only [NodeOut.contract]
         repeat' (with_reducible apply And.intro)
-        all_goals (first | assumption | bv_decide)
+        all_goals (first | assumption | bv_side)
       · dsimp only
         simp only [NodeOut.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
         repeat' (with_reducible apply And.intro)
@@ -561,10 +561,10 @@ theorem leave (fb out input len key flags plat ra : BitVec 64) (sv : Abi.Saved) 
           simp only [Ladd.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
           try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
           repeat' (with_reducible apply And.intro)
-          all_goals bv_decide
+          all_goals bv_side
         · simp only [Ladd.contract]
           repeat' (with_reducible apply And.intro)
-          all_goals (first | assumption | bv_decide)
+          all_goals (first | assumption | bv_side)
         · dsimp only
           simp only [Ladd.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
           repeat' (with_reducible apply And.intro)
@@ -598,23 +598,23 @@ theorem leave (fb out input len key flags plat ra : BitVec 64) (sv : Abi.Saved) 
             rw [hout3 x (by bv_decide) (by bv_decide)]
             refine Eq.trans ?_ (hOut x hx hmod); first | rfl | mem_away
           clear hout3 hown3
-          refine runs_then (a := 6) (s1 := ?_) ?_ ?_
+          refine runs_then (a := 7) (s1 := ?_) ?_ ?_
           case refine_2 => run_fn [c0, c1]; rfl
           have_by hN4_0 := Hash.many (m := mem3)
           try norm_addr at hN4_0
           split_ands hN4_0
-          refine Abi.call_meets (c := Lroot.contract out (fb + 264#64) key flags plat k ((Hash.nodes k flags bytes counter).push (Chunk.node k flags counter (Hash.chunk bytes counter)))) (ra := 262596#64)
-            (Abi.Meets.mono Code_hashl.has_lroot (Proof_lroot.lroot_meets out (fb + 264#64) key flags plat k ((Hash.nodes k flags bytes counter).push (Chunk.node k flags counter (Hash.chunk bytes counter))))) rfl rfl ?_ ?_ ?_ ?_ ?_ ?_
+          refine Abi.call_meets (c := Lroot.contract out (fb + 264#64) key flags plat 8#64 k ((Hash.nodes k flags bytes counter).push (Chunk.node k flags counter (Hash.chunk bytes counter)))) (ra := 262603#64)
+            (Abi.Meets.mono Code_hashl.has_lroot (Proof_lroot.lroot_meets out (fb + 264#64) key flags plat 8#64 k ((Hash.nodes k flags bytes counter).push (Chunk.node k flags counter (Hash.chunk bytes counter))))) rfl rfl ?_ ?_ ?_ ?_ ?_ ?_
           · dsimp only; mem_fact
           · dsimp only [Lroot.contract]; mem_subregion
           · dsimp only
             simp only [Lroot.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
             try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
             repeat' (with_reducible apply And.intro)
-            all_goals bv_decide
+            all_goals bv_side
           · simp only [Lroot.contract]
             repeat' (with_reducible apply And.intro)
-            all_goals (first | assumption | bv_decide)
+            all_goals (first | assumption | bv_side)
           · dsimp only
             simp only [Lroot.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
             repeat' (with_reducible apply And.intro)

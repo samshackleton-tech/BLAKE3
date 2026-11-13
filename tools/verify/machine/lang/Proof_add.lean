@@ -47,10 +47,10 @@ theorem whole (fb st key flags plat cv target ra : BitVec 64) (sv : Abi.Saved) (
     simp only [Push.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
     try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
     repeat' (with_reducible apply And.intro)
-    all_goals bv_decide
+    all_goals bv_side
   · simp only [Push.contract]
     repeat' (with_reducible apply And.intro)
-    all_goals (first | assumption | bv_decide)
+    all_goals (first | assumption | bv_side)
   · dsimp only
     simp only [Push.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
     repeat' (with_reducible apply And.intro)
@@ -89,10 +89,10 @@ theorem whole (fb st key flags plat cv target ra : BitVec 64) (sv : Abi.Saved) (
       simp only [Merge.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
       try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
       repeat' (with_reducible apply And.intro)
-      all_goals bv_decide
+      all_goals bv_side
     · simp only [Merge.contract]
       repeat' (with_reducible apply And.intro)
-      all_goals (first | assumption | bv_decide)
+      all_goals (first | assumption | bv_side)
     · dsimp only
       simp only [Merge.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
       repeat' (with_reducible apply And.intro)

@@ -227,6 +227,71 @@ x86-64 only; one block at a time (the many-input kernels are not behind Lean con
 not on a boundary (the generator does not follow an aligned frame yet); the limits of everything here
 (`bv_decide`'s axioms, the listing read by a disassembler and a script).
 
+## The fast hash, given its kernels: `hashf` (November 13)
+
+`hashl` is one block at a time. The library is fast because its wide kernels hash 32 chunks, or 16 parents,
+in a call, and this machine model does not hold them (512-bit registers). `hashf` calls the library's 32-lane
+chunk kernel and its 16-lane parent kernel **by contracts that its theorem assumes**, and is proved over any
+program in which those two addresses meet them (`../lang/DESIGN.md`, "The fast path"):
+
+    hashf_meets_bytes : ∀ ext,
+      (∀ ..., Abi.Meets (Code_hashf.prog ext) 0x10000 (K32.contract ...)) →
+      (∀ ..., Abi.Meets (Code_hashf.prog ext) 0x18000 (P16.contract ...)) →
+      ∀ out inp len key plat msg,
+        Abi.Meets (Code_hashf.prog ext) 0x1A0000 (Abi.ofBytes (Hash.byteContract out inp len key plat msg) 40960#64)
+
+`Code_hashf.prog ext` is `hashf`'s instructions and those of every function of ours it calls, over any other
+instructions `ext`. The two hypotheses are the part not proved here: the kernels are proved by the library's
+own system (Z3), and `K32.contract` and `P16.contract` (`../lang/Spec_k32.lean`, `Spec_p16.lean`) are those
+kernels' contracts as our callers use them, written by hand. What stands behind them today: a function of
+ours at each kernel's address when examples run (`k32s`, `p16s`: the same contract, slowly, tried on the
+contract's examples; not proved yet), and the assembled `hashf` linked with the library's own kernels, which
+gives the library's hash on 2,871 messages (to 5 MiB, around every multiple of 32 KiB, three modes).
+
+How it goes (`levels.ode`; each function called by its contract):
+
+| function | what it does | instructions | calls |
+|---|---|---|---|
+| `fillp` | the table of 32 addresses a wide kernel is given | 51 | none |
+| `tree32` | 32 values to their tree's value: five calls of the parent kernel | 80 | `fillp`, the parent kernel (assumed) |
+| `wide` | while a whole group of 32 chunks has more of the message after it: the group's top node into levels over groups | 70 | `fillp`, the chunk kernel (assumed), `tree32`, `ladd` |
+| `group` | some bytes' chunks into a second set of levels, one block at a time (used for a last group of one chunk) | 98 | `chunk_node`, `node_out`, `ladd` |
+| `groupf` | the same for 2 to 32 chunks (the same contract but for that): all but the last chunk through the chunk kernel in one call | 86 | `fillp`, the chunk kernel (assumed), `addn`, `chunk_node`, `node_out`, `ladd` |
+| `addn` | the first `n` of a wide kernel's 32 values added to levels | 41 | `ladd` |
+| `finish` | the root from the two sets of levels | 74 | `lroot` (the root flag is now its parameter), `ladd` |
+| `hashw` | `wide`, `groupf` or `group`, `finish`; a message of one chunk goes to `hashl` | 101 | those, `hashl` |
+| `hashf` | `hashw` where the machine has AVX-512, `hashl` elsewhere | | `hashw`, `hashl` |
+
+The tree's part has no machine in it (`../alg/Groups.lean`): with the chunks in groups of a power of two, the
+last group short or whole, the specification's tree over the chunks is its tree over the groups' own trees
+(`tree_groups`); five levels of parents over 32 chunks' values are the specification's subtree over them
+(`level5`). So a group's value is made first and added, by the `ladd` already proved, to levels whose
+"chunks" are the groups' top nodes; the last group's value joins them, not as a root; `lroot` of those levels
+is the message's root (`Hashw.root`, `../lang/Lemmas_hashw.lean`).
+
+Speed, the library's kernels linked (single runs, inventory; GB/s: the library's own hash, `hashf`, `hashl`):
+
+| bytes | EPYC 9255 | Ryzen 9700X |
+|---|---|---|
+| 1 KiB | 0.83, 0.80, 0.80 | 1.06, 1.00, 1.00 |
+| 16 KiB | 9.11, 3.80, 0.76 | 11.5, 4.76, 0.96 |
+| 64 KiB | 13.7, 8.10, 0.76 | 17.3, 10.2, 0.96 |
+| 1 MiB | 13.9, 11.5, 0.76 | 17.6, 14.5, 0.95 |
+| 16 MiB | 13.9, 11.8, 0.76 | 17.2, 14.7, 0.96 |
+
+Fifteen times `hashl` at 1 MiB and above, and 15 to 17% behind the library there; 41% behind at 64 KiB and
+58% at 16 KiB. What is still one at a time, and costs most where the message is a few groups or less: the
+parents inside the last group (up to 31 compressions), the last chunk's blocks, and the chunk kernel run
+with all 32 lanes for a last group of fewer chunks. The library has kernels for each (parents 16 at a time,
+a chunk's blocks, 16 and 8 lanes); behind contracts they are the same work again. Before `groupf` (the last
+group one block at a time) `hashf` was 41% behind at 1 MiB and 90% at 64 KiB.
+
+The examples in the model: a call of the chunk kernel's stand-in is four minutes and more (the model's
+memory is a function, and the examples are interpreted), so the examples that reach it are few (`wide` 1,
+`groupf` 2, `hashw` 2, `hashf` 1), and the way through `hashw` with two such calls was run once (it meets
+the contract) and is not among them. Not audited yet for that reason: `hashw` (each changed copy would be
+run on those examples).
+
 ## The contracts in bytes (`../spec/LevelsContract.lean`; no theorem about these yet)
 
     ladd:  the levels over `chunks` become the levels over `chunks` and the new chunk

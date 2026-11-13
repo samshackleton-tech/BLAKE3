@@ -11,6 +11,13 @@ import Spec_nodeout
 import Spec_pad
 import Spec_fillp
 import Spec_tree32
+import Spec_wide
+import Spec_addn
+import Spec_finish
+import Spec_group
+import Spec_groupf
+import Spec_hashw
+import Spec_hashf
 import Spec_chunknode
 import Spec_hashl
 import Spec_adler32
@@ -103,7 +110,7 @@ theorem Ladd.usable : (Ladd.contract 0x100000#64 0x200000#64 0#64 5#64 0x300000#
     · exact vec_put128 _ _ _
 
 /-- Two chunks (two nodes of zeroes') in the bottom level's two places, the count 2, a key of zeroes. -/
-theorem Lroot.usable : (Lroot.contract 0x300000#64 0x100000#64 0x200000#64 0#64 5#64 zeroCv #[default, default]).Usable := by
+theorem Lroot.usable : (Lroot.contract 0x300000#64 0x100000#64 0x200000#64 0#64 5#64 8#64 zeroCv #[default, default]).Usable := by
   obtain ⟨v0, v1, hv⟩ := cv_vectors (default : Blake3.Node).cv
   obtain ⟨k0, k1, hk0, hk1, hk⟩ := zeroMem_cv 0x200000#64
   have reg : ∀ b n : BitVec 64, Cells.Region
@@ -131,6 +138,68 @@ theorem Lroot.usable : (Lroot.contract 0x300000#64 0x100000#64 0x200000#64 0#64 
     · exact Cells.vec_put128_far _ _ _ _ _ (by decide) (vec_put128 _ _ _)
     · exact vec_put128 _ _ _
     · rw [hv]; exact sub1.symm
+
+/-- No whole group (levels of zeroes at another place), and the two chunks of `Lroot.usable` as the last group. -/
+theorem Finish.usable : (Finish.contract 0x300000#64 0x400000#64 0x100000#64 0x200000#64 0#64 0#64 zeroCv #[] #[default, default]).Usable := by
+  obtain ⟨v0, v1, hv⟩ := cv_vectors (default : Blake3.Node).cv
+  obtain ⟨k0, k1, hk0, hk1, hk⟩ := zeroMem_cv 0x200000#64
+  have reg : ∀ b n : BitVec 64, Cells.Region
+      (((((zeroMem.put64 0x100000#64 2#64).put128 0x100040#64 v0).put128 0x100050#64 v1).put128 0x100060#64 v0).put128 0x100070#64 v1) b n :=
+    fun b n => Cells.region_put128 _ _ (Cells.region_put128 _ _ (Cells.region_put128 _ _ (Cells.region_put128 _ _ (Cells.region_put64 _ _ (zeroMem_region b n)))))
+  refine ⟨0x7ff00000#64, ((((zeroMem.put64 0x100000#64 2#64).put128 0x100040#64 v0).put128 0x100050#64 v1).put128 0x100060#64 v0).put128 0x100070#64 v1,
+    reg _ _, ?_, ?_, ?_⟩
+  · simp only [Finish.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart]; decide
+  · simp only [Finish.contract, Finish.way]; decide
+  · simp only [Finish.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
+    have sub0 : Blake3.sub zeroCv ⟨BitVec.setWidth 32 0#64⟩ #[default, default] 0 1 = (default : Blake3.Node).cv := by
+      simp only [Blake3.sub, Blake3.go_one]; rfl
+    have sub1 : Blake3.sub zeroCv ⟨BitVec.setWidth 32 0#64⟩ #[default, default] 1 1 = (default : Blake3.Node).cv := by
+      simp only [Blake3.sub, Blake3.go_one]; rfl
+    refine ⟨⟨by decide, reg _ _, ?_, fun h => absurd h (by decide)⟩, reg _ _, ⟨k0, k1, ?_, ?_, hk⟩, by decide, reg _ _, ?_, fun _ => ⟨?_, ⟨v0, v1, ?_, ?_, ?_⟩⟩⟩
+    · show Quad _ _ 0#64
+      exact Cells.quad_put128_far _ _ _ _ _ (by decide) (Cells.quad_put128_far _ _ _ _ _ (by decide) (Cells.quad_put128_far _ _ _ _ _ (by decide) (Cells.quad_put128_far _ _ _ _ _ (by decide) (Cells.quad_put64_far _ _ _ _ _ (by decide) (zeroMem_quad _)))))
+    · exact Cells.vec_put128_far _ _ _ _ _ (by decide) (Cells.vec_put128_far _ _ _ _ _ (by decide) (Cells.vec_put128_far _ _ _ _ _ (by decide) (Cells.vec_put128_far _ _ _ _ _ (by decide) (Cells.vec_put64_far _ _ _ _ _ (by decide) hk0))))
+    · exact Cells.vec_put128_far _ _ _ _ _ (by decide) (Cells.vec_put128_far _ _ _ _ _ (by decide) (Cells.vec_put128_far _ _ _ _ _ (by decide) (Cells.vec_put128_far _ _ _ _ _ (by decide) (Cells.vec_put64_far _ _ _ _ _ (by decide) hk1))))
+    · show Quad _ _ 2#64
+      exact Cells.quad_put128_far _ _ _ _ _ (by decide) (Cells.quad_put128_far _ _ _ _ _ (by decide) (Cells.quad_put128_far _ _ _ _ _ (by decide) (Cells.quad_put128_far _ _ _ _ _ (by decide) (quad_put64 _ _ _))))
+    · show Levels.Lev _ _ _ _ (53 + 1) _ 1 1
+      rw [Levels.Lev_succ]
+      refine ⟨fun _ => ⟨v0, v1, ?_, ?_, by rw [hv]; exact sub0.symm⟩, Levels.Lev_none _ _ _ _⟩
+      · exact Cells.vec_put128_far _ _ _ _ _ (by decide) (Cells.vec_put128_far _ _ _ _ _ (by decide) (Cells.vec_put128_far _ _ _ _ _ (by decide) (vec_put128 _ _ _)))
+      · exact Cells.vec_put128_far _ _ _ _ _ (by decide) (Cells.vec_put128_far _ _ _ _ _ (by decide) (vec_put128 _ _ _))
+    · exact Cells.vec_put128_far _ _ _ _ _ (by decide) (vec_put128 _ _ _)
+    · exact vec_put128 _ _ _
+    · rw [hv]; exact sub1.symm
+
+theorem Group.usable : (Group.contract 0x300000#64 0x100000#64 0#64 0x200000#64 0#64 0#64 zeroCv []).Usable := by
+  refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, ?_, ?_⟩
+  · simp only [Group.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart]; decide
+  · simp only [Group.contract]; decide
+  · simp only [Group.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
+    exact ⟨zeroMem_region _ _, zeroMem_cv _, trivial, fun i h => absurd h (by simp)⟩
+
+theorem Groupf.usable : (Groupf.contract 0x300000#64 0x100000#64 1025#64 0x200000#64 0#64 0#64 zeroCv (List.replicate 1025 0#8)).Usable := by
+  refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, ?_, ?_⟩
+  · simp only [Groupf.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, List.length_replicate]; decide
+  · simp only [Groupf.contract, List.length_replicate]; decide
+  · simp only [Groupf.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
+    refine ⟨zeroMem_region _ _, zeroMem_cv _, trivial, fun i h => ?_⟩
+    show some 0#8 = some (List.replicate 1025 0#8)[i]
+    rw [List.getElem_replicate]
+
+theorem Hashw.usable : (Hashw.contract 0x300000#64 0x100000#64 0#64 0x200000#64 0#64 zeroCv []).Usable := by
+  refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, ?_, ?_⟩
+  · simp only [Hashw.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart]; decide
+  · simp only [Hashw.contract]; decide
+  · simp only [Hashw.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
+    exact ⟨zeroMem_region _ _, zeroMem_cv _, trivial, fun i h => absurd h (by simp)⟩
+
+theorem Hashf.usable : (Hashf.contract 0x300000#64 0x100000#64 0#64 0x200000#64 0#64 5#64 zeroCv []).Usable := by
+  refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, ?_, ?_⟩
+  · simp only [Hashf.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart]; decide
+  · simp only [Hashf.contract]; decide
+  · simp only [Hashf.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
+    exact ⟨zeroMem_region _ _, zeroMem_cv _, trivial, fun i h => absurd h (by simp)⟩
 
 theorem Adler32.usable : (Adler32.contract 0x100000#64 1#64 [0#8]).Usable := by
   refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, rfl, ?_⟩
@@ -187,6 +256,20 @@ theorem Tree32.usable : (Tree32.contract 0x100000#64 0x200000#64 0x300000#64 0#6
   · simp only [Tree32.contract]; decide
   · simp only [Tree32.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
     exact ⟨zeroMem_region _ _, zeroMem_cv _, List.length_replicate, zeroMem_cvl 32 _⟩
+
+theorem Wide.usable : (Wide.contract 0x100000#64 0x200000#64 0#64 0x300000#64 0#64 zeroCv []).Usable := by
+  refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, ?_, ?_⟩
+  · simp only [Wide.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart]; decide
+  · simp only [Wide.contract]; decide
+  · simp only [Wide.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
+    exact ⟨zeroMem_region _ _, zeroMem_cv _, trivial, fun i h => absurd h (by simp)⟩
+
+theorem Addn.usable : (Addn.contract 0x100000#64 0x200000#64 0#64 0x300000#64 0#64 zeroCv #[] [] (List.replicate 32 zeroCv)).Usable := by
+  refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, ?_, ?_⟩
+  · simp only [Addn.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart]; decide
+  · simp only [Addn.contract]; decide
+  · simp only [Addn.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
+    exact ⟨⟨by decide, zeroMem_region _ _, zeroMem_quad _, fun h => absurd h (by decide)⟩, zeroMem_cv _, List.length_replicate, zeroMem_cvl 32 _⟩
 
 theorem ChunkNode.usable : (ChunkNode.contract 0x100000#64 0x200000#64 0#64 0#64 0#64 5#64 zeroCv []).Usable := by
   refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, ?_, ?_⟩

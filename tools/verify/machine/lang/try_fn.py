@@ -32,6 +32,8 @@ ASSUMED = odec.assumed_of(clauses, name)
 STANDINS = [odec.own[c]["standin"] for c in ASSUMED if odec.own[c].get("standin")]
 OVER = "(fun pc => " + "".join(f"(Code_{s}.prog pc).or (" for s in STANDINS) + "none" + ")" * len(STANDINS) + ")"
 PROG = f"(Code_{name}.prog {OVER})" if ASSUMED else f"Code_{name}.prog"
+# seconds the examples may take in all (TRY_SECONDS: a function that runs a kernel's stand-in on 32 chunks needs more)
+LIMIT = int(os.environ.get("TRY_SECONDS", "240"))
 with open(f"{name}.pieces.lean", "w") as f:
     f.write(f"import Checks\nimport Spec_{CNAME.split('.')[0].lower()}\n#pieces {CNAME}\n")
 out = subprocess.run(["lake", "env", "lean", f"{name}.pieces.lean"], capture_output=True, text=True).stdout
@@ -92,9 +94,9 @@ def one (i_ : Nat) : {types} → String
     match Try.firstFailure pre with
     | some f => s!"example {{i_}}: NOT AN EXAMPLE: not so: {{f}}"
     | none =>
-      match Try.run {PROG} Try.returnAddress.toNat (Try.owned c) 100000 0 s0 with
+      match Try.run {PROG} Try.returnAddress.toNat (Try.owned c) 4000000 0 s0 with
       | .faulted pc ran_ => s!"example {{i_}}: REFUTED: after {{ran_}} instructions {{Try.why {PROG} pc}}. {{blame ({names}) s0.mem}}"
-      | .outOfFuel _ => s!"example {{i_}}: NO VERDICT: still running after 100000 instructions (a loop that does not end?)"
+      | .outOfFuel _ => s!"example {{i_}}: NO VERDICT: still running after 4000000 instructions (a loop that does not end?)"
       | .returned s' ran_ =>
         let {returns[0]} := s'.rax
         let post : List (String × Bool) := Try.returnChecks c s0 s' ++ [{', '.join(post)}]
@@ -117,11 +119,11 @@ end Try_{name}
 with open(f"Try_{name}.lean", "w") as f: f.write(L)
 pr = subprocess.Popen(["lake", "env", "lean", f"Try_{name}.lean"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=True)
 try:
-    so, se = pr.communicate(timeout=240)
+    so, se = pr.communicate(timeout=LIMIT)
 except subprocess.TimeoutExpired:
-    import os, signal
+    import signal
     os.killpg(pr.pid, signal.SIGKILL); pr.communicate()
-    print("tried: NO VERDICT: the examples ran for more than 240 s"); sys.exit(1)
+    print(f"tried: NO VERDICT: the examples ran for more than {LIMIT} s"); sys.exit(1)
 class r: stdout, stderr, returncode = so, se, pr.returncode
 lines = [l for l in r.stdout.splitlines() if l.startswith("example ")]
 for l in r.stdout.splitlines() + r.stderr.splitlines():

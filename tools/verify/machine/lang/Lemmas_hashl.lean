@@ -227,8 +227,9 @@ theorem many
     (h : Levels.At k ⟨flags.setWidth 32⟩ m lv ((nodes k flags bytes counter).push (Chunk.node k flags counter (chunk bytes counter))))
     (hin : In m input len bytes p rem counter) (hc : ¬ 1024#64 < rem) (hne : counter ≠ 0#64) :
     2 ≤ ((nodes k flags bytes counter).push (Chunk.node k flags counter (chunk bytes counter))).size ∧
-    Levels.rootCv k ⟨flags.setWidth 32⟩ ((nodes k flags bytes counter).push (Chunk.node k flags counter (chunk bytes counter)))
+    Levels.top k ⟨flags.setWidth 32⟩ ((nodes k flags bytes counter).push (Chunk.node k flags counter (chunk bytes counter))) ⟨BitVec.setWidth 32 8#64⟩
       = Hash.words k flags bytes := by
+  show 2 ≤ _ ∧ Levels.rootCv k ⟨flags.setWidth 32⟩ ((nodes k flags bytes counter).push (Chunk.node k flags counter (chunk bytes counter))) = _
   have hs := h.1
   rw [Array.size_push, nodes_size] at hs
   have hrem : rem.toNat ≤ 1024 := by simpa [BitVec.lt_def] using hc

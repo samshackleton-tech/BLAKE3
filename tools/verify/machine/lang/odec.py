@@ -86,13 +86,14 @@ def contracts_of(text):
             kept.append(""); continue
         # in a function's body: a call of such a function, then what the prover needs at it, one a line:
         # `with TERM; TERM` (what its contract is stated for besides the arguments), `know LEMMA` (facts to
-        # have at hand before it: what its contract asks, said in the contract's words) and `keep CLAUSE`
-        # (what still holds after it, besides what its contract promises)
+        # have at hand before it: what its contract asks, said in the contract's words), `keep CLAUSE`
+        # (what still holds after it, besides what its contract promises) and `open LEMMA as NAMES` (a fact
+        # about memory taken apart before the code that leads to the call is run: what that code reads)
         m = re.match(r"^(?:return\s+|(?:var\s+)?\w+\s*=\s*)?(\w+)\(.*\)$", s)
         if fn and where is None and m and m.group(1) in own:
-            out[fn]["calls"].append({"callee": m.group(1), "with": [], "keep": [], "know": []}); kept.append(line); continue
+            out[fn]["calls"].append({"callee": m.group(1), "with": [], "keep": [], "know": [], "open": []}); kept.append(line); continue
         word0 = s.split(None, 1)[0] if s else ""
-        if fn and where is None and word0 in ("with", "keep", "know") and out[fn]["calls"]:
+        if fn and where is None and word0 in ("with", "keep", "know", "open") and out[fn]["calls"]:
             rest = s[len(word0):].strip()
             if word0 == "with": out[fn]["calls"][-1]["with"] = [x.strip() for x in rest.split(";")]
             else: out[fn]["calls"][-1][word0].append(rest)

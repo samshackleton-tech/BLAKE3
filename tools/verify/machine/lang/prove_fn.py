@@ -115,7 +115,8 @@ def callee_meets(info, callee, a):
         hyps = " ".join(f"(fun {' '.join(f'x{i}' for i in range(odec.own[c]['arity']))} => Abi.Meets.mono (Code_{name}.over_{info['code']} ext) "
                         f"(hA_{c} {' '.join(f'x{i}' for i in range(odec.own[c]['arity']))}))" for c in theirs)
         return f"(Abi.Meets.mono (Code_{name}.has_{info['code']} ext) ({info['theorem']} {PROG} {hyps} {a}))"
-    return f"(Abi.Meets.mono (Code_{name}.has_{info['code']}{E_}) ({info['theorem']} {a}))"
+    has = f"(Code_{name}.has_{info['code']}{E_})" if EXT else f"Code_{name}.has_{info['code']}"
+    return f"(Abi.Meets.mono {has} ({info['theorem']} {a}))"
 # below the frame: where a callee's return address goes, and under it the most stack a callee's contract may use
 C0 = (8 + max([odec.own[c["callee"]]["budget"] for c in own_calls] or [0])) if has_call(body) else 0
 F = C0 + frame + 8 * len(saved)          # bytes the function owns below the stack pointer it is entered with
@@ -468,6 +469,7 @@ LISTS = "abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, Li
 
 
 def own_call(i, sym, target, args, ra, oc, ind, prev, has_out, env):
+    assert STRAIGHT or not oc.get("open"), "open ... at a call: in a function with a loop, not yet"
     """A call of one of this file's functions, by its contract: what the contract asks is shown of the state
     at the callee's first instruction; then the state at the return is known by what the contract promises,
     and what holds of its memory is said again: the frame's cells, what the source says is kept, and the
@@ -475,13 +477,22 @@ def own_call(i, sym, target, args, ra, oc, ind, prev, has_out, env):
     tactics and the indentation the run goes on at."""
     callee, info = OWN[sym]
     assert callee == oc["callee"] and target == info["at"], (callee, oc, hex(target))
-    # what the contract is stated for besides the arguments: Lean terms; a buffer's name alone is its address
-    a = " ".join(args + [env[w] if w in bufat and w in env else w for w in oc["with"]])
+    # what the contract is stated for besides the arguments: Lean terms; a buffer's name alone is its address,
+    # and `$x` is the variable x of the source as it stands at the call (a callee's result, a value computed
+    # on the way: in straight-line code a variable is not a name of the proof)
+    def at_call(w):
+        if w in bufat and w in env: return env[w]
+        return re.sub(r"\$(\w+)", lambda mm: f"({env[mm.group(1)]})", w)
+    a = " ".join(args + [at_call(w) for w in oc["with"]])
     CK, OPENK = f"{info['contract']} {a}", f"{info['contract']}, {LISTS}"
     st = "⟨" + ", ".join(f"{r}_{i}" for r in REGS) + f", zf_{i}, cf_{i}, " + ", ".join(f"y{i}_{j}" for j in range(16)) + f", mem{i}, pc_{i}⟩"
     hs = f"hpc{i} hsp{i} hbx{i} hbp{i} h12_{i} h13_{i} h14_{i} h15_{i} hens{i} hout{i} hown{i}"
     slots = [(F, "ra")] + [(F - 8 * (j + 1), f"sv.{r}") for j, r in enumerate(saved)] + [(o, p_) for p_, o in param_slot] + \
         [(slot_of(x), e) for x, e in frozen.items() if slot_of(x) is not None]
+    if STRAIGHT:
+        # a variable of straight-line code that lives in the frame holds across the call what it held at it
+        slots += [(slot_of(x), e) for x, e in env.items() if x in home and x not in params and x not in frozen
+                  and e is not None and slot_of(x) is not None]
     t = []
     for j, lemma in enumerate(oc.get("know", [])):
         # facts the call needs, from a lemma named at it: its hypotheses found, its conclusion's parts at hand
@@ -494,10 +505,10 @@ def own_call(i, sym, target, args, ra, oc, ind, prev, has_out, env):
          f"{ind}  simp only [{OPENK}, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]",
          f"{ind}  try simp only [{NORM}]",
          f"{ind}  repeat' (with_reducible apply And.intro)",
-         f"{ind}  all_goals bv_decide",
+         f"{ind}  all_goals bv_side",
          f"{ind}· simp only [{info['contract']}]",
          f"{ind}  repeat' (with_reducible apply And.intro)",
-         f"{ind}  all_goals (first | assumption | bv_decide)",
+         f"{ind}  all_goals (first | assumption | bv_side)",
          f"{ind}· dsimp only",
          f"{ind}  simp only [{OPENK}]",
          f"{ind}  repeat' (with_reducible apply And.intro)",
@@ -639,14 +650,73 @@ if STRAIGHT:
         t += [f"{ind}  apply {LEAVE} <;> mem_auto"] if LEAVE else [f"{ind}  repeat' (with_reducible apply And.intro)", f"{ind}  all_goals (first | trivial | assumption | (apply_frame <;> mem_auto))"]
         return t
 
-    def leaf(ev, ind):
-        lines, ind2 = run_piece(ev, ENTRY, "ret", [], ind, prev="m0", has_out=False)
-        return lines + finish(ind2, any(e[0] == "call" and e[1] in OWN for e in ev))
+    def after_calls(ev):
+        """For each condition of a way through: how many calls of our functions it comes after in the proof.
+        A condition on a callee's result (`rax_N`) can be stated only once that call has returned; one that
+        follows such a condition is taken after it too, so the ways stay in step."""
+        res, cur = {}, 0
+        for i, e in enumerate(ev):
+            if e[0] == "cond":
+                cur = max([cur] + [int(x) for x in re.findall(r"\brax_(\d+)\b", cond_prop(e[1], e[4]))]); res[i] = cur
+        return res
+
+    def leaf(ps, ind):
+        """The ways that agree on every condition known at entry, run together as far as they agree: each
+        piece, each call by its contract; a condition on a callee's result is split, and said as a fact,
+        where the result is at hand."""
+        def go(ps, ind, ci, k, prev, has_out, stated, done):
+            ev = ps[0][0]; late = after_calls(ev)
+            conds = [i for i, e in enumerate(ev) if e[0] == "cond"]
+            idx = next((i for i in conds if i not in done and late[i] and late[i] <= k and ev[i][3]), None)
+            if idx is not None:
+                e = ev[idx]
+                yes = [q for q in ps if q[0][idx][2]]; no = [q for q in ps if not q[0][idx][2]]
+                ty = go(yes, ind + "  ", ci, k, prev, has_out, stated, done | {idx})
+                tn = go(no, ind + "  ", ci, k, prev, has_out, stated, done | {idx})
+                return [f"{ind}by_cases hs{idx} : {cond_prop(e[1], e[4])}", f"{ind}·" + ty[0][len(ind) + 1:]] + ty[1:] + [f"{ind}·" + tn[0][len(ind) + 1:]] + tn[1:]
+            t = []
+            for n, i in enumerate(conds):
+                if n not in stated and late[i] <= k:
+                    t.append(f"{ind}have c{n} : {cond_fact(ev[i][1], ev[i][2], ev[i][4])} := by bv_decide")
+                    if readonly:
+                        t.append(f"{ind}try simp (disch := mem_auto) only [read8_cell, Option.getD_some, add_sub_lit, BitVec.add_assoc] at c{n}")
+                    stated = stated | {n}
+            pieces, calls = segments(ENTRY, ev, "ret")
+            facts = ", ".join(f"c{n}" for n in sorted(stated))
+            if ci < len(calls) and calls[ci][0] in OWN:
+                # what the code that leads to this call reads of memory, taken apart first (`open L as names` at the call)
+                for j, o in enumerate(own_calls[calls[ci][5]].get("open", [])):
+                    mo = re.match(r"^([\w.]+)\s+as\s+(.+)$", o); assert mo, f"open LEMMA as NAMES: {o}"
+                    t += open_with(mo.group(1), mo.group(2), prev, f"{k + 1}_{j}", ind)
+            t += [f"{ind}refine runs_then (a := {pieces[ci]}) (s1 := ?_) ?_ ?_", f"{ind}case refine_2 => run_fn [{facts}]; rfl"]
+            if ci == len(calls):
+                return t + finish(ind, any(e[0] == "call" and e[1] in OWN for e in ev))
+            sym, target, args, ra, cenv, which = calls[ci]
+            if sym in OWN:
+                k += 1
+                more, ind = own_call(k, sym, target, args, ra, own_calls[which], ind, prev, has_out, cenv)
+                t += more; prev, has_out = f"mem{k}", True
+            else:
+                callee = sym_extern[sym]; assert callee in callees, f"no contract for {callee} (callee ... meets ...)"
+                lemma, nh = callees[callee]
+                t += [f"{ind}refine {lemma} {'(' if EXT else ''}Code_{name}.has_kernels{E_}{')' if EXT else ''} {' '.join(['(by mem_auto)'] * nh)} ?_", f"{ind}{INTROS}"]
+            return t + go(ps, ind, ci + 1, k, prev, has_out, stated, done)
+        return go(ps, ind, 0, 0, "m0", False, frozenset(), frozenset())
+
+    def tree_s(ps, done, ind):
+        """Split on each condition known at entry that the hypotheses do not settle, then run each group."""
+        first = ps[0][0]; late = after_calls(first)
+        idx = next((i for i, e in enumerate(first) if e[0] == "cond" and e[3] and i not in done and not late[i]), None)
+        if idx is None: return leaf(ps, ind)
+        e = first[idx]
+        yes = [q for q in ps if q[0][idx][2]]; no = [q for q in ps if not q[0][idx][2]]
+        ty, tn = tree_s(yes, done | {idx}, ind + "  "), tree_s(no, done | {idx}, ind + "  ")
+        return [f"{ind}by_cases hs{idx} : {cond_prop(e[1], e[4])}", f"{ind}·" + ty[0][len(ind) + 1:]] + ty[1:] + [f"{ind}·" + tn[0][len(ind) + 1:]] + tn[1:]
 
     ALL = f"({' '.join(params)} : BitVec 64) " + " ".join(f"({g} : {t})" for g, t in fn_ghosts)
     L += [f"theorem whole {XDECL}{ARGDECL}",
           f"    (s : State) (hP : {PRE} s) : ∃ n_ s', steps {PROG} n_ s = some s' ∧ {POST} s' := by"] + ENTER + \
-         tree(wp, set(), leaf, "  ") + ["",
+         tree_s(wp, frozenset(), "  ") + ["",
           f"/-- **`{name}`, as assembled, meets its contract, whatever its arguments.** -/",
           f"theorem {name}_meets {XDECL}: ∀ {ALL},",
           f"    Abi.Meets {PROG} 0x{ENTRY:X} ({CNAME} {CARGS}) := by",

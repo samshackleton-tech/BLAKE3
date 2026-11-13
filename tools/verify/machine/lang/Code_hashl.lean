@@ -8,7 +8,7 @@ import Code_ladd
 import Code_lroot
 open X86
 
-/-! `hashl` as assembled: 108 instructions. Written from the lifter's rows. -/
+/-! `hashl` as assembled: 109 instructions. Written from the lifter's rows. -/
 
 set_option maxRecDepth 100000
 namespace Code_hashl
@@ -96,7 +96,7 @@ def table : List (Nat × Instr × Nat) := [
   (0x40160, .mov 64 (.reg .rdx) (.imm 0x8), 0x40167),
   (0x40167, .mov 64 (.reg .rcx) (.reg .r15), 0x4016A),
   (0x4016A, .call 0xD0000, 0x4016F),
-  (0x4016F, .jmp 0x401C4, 0x40171),
+  (0x4016F, .jmp 0x401CB, 0x40171),
   (0x40171, .lea .rdi .rsp 0xE40, 0x40179),
   (0x40179, .lea .rsi .rsp 0xDC0, 0x40181),
   (0x40181, .mov 64 (.reg .rdx) (.imm 0x0), 0x40188),
@@ -113,15 +113,16 @@ def table : List (Nat × Instr × Nat) := [
   (0x401B6, .mov 64 (.reg .rdx) (.reg .r13), 0x401B9),
   (0x401B9, .mov 64 (.reg .rcx) (.reg .r14), 0x401BC),
   (0x401BC, .mov 64 (.reg .r8) (.reg .r15), 0x401BF),
-  (0x401BF, .call 0xC0000, 0x401C4),
-  (0x401C4, .add 64 (.reg .rsp) (.imm 0xE78), 0x401CB),
-  (0x401CB, .pop .r15, 0x401CD),
-  (0x401CD, .pop .r14, 0x401CF),
-  (0x401CF, .pop .r13, 0x401D1),
-  (0x401D1, .pop .r12, 0x401D3),
-  (0x401D3, .pop .rbp, 0x401D4),
-  (0x401D4, .pop .rbx, 0x401D5),
-  (0x401D5, .ret, 0x401D6)
+  (0x401BF, .mov 64 (.reg .r9) (.imm 0x8), 0x401C6),
+  (0x401C6, .call 0xC0000, 0x401CB),
+  (0x401CB, .add 64 (.reg .rsp) (.imm 0xE78), 0x401D2),
+  (0x401D2, .pop .r15, 0x401D4),
+  (0x401D4, .pop .r14, 0x401D6),
+  (0x401D6, .pop .r13, 0x401D8),
+  (0x401D8, .pop .r12, 0x401DA),
+  (0x401DA, .pop .rbp, 0x401DB),
+  (0x401DB, .pop .rbx, 0x401DC),
+  (0x401DC, .ret, 0x401DD)
 ]
 
 def pre0 : List (Nat × Instr × Nat) := KCode.table
@@ -335,7 +336,7 @@ theorem has_lroot : ∀ pc x, Code_lroot.prog pc = some x → prog pc = some x :
 @[ode_at] theorem at_40160 : prog 0x40160 = some (.mov 64 (.reg .rdx) (.imm 0x8), 0x40167) := rfl
 @[ode_at] theorem at_40167 : prog 0x40167 = some (.mov 64 (.reg .rcx) (.reg .r15), 0x4016A) := rfl
 @[ode_at] theorem at_4016A : prog 0x4016A = some (.call 0xD0000, 0x4016F) := rfl
-@[ode_at] theorem at_4016F : prog 0x4016F = some (.jmp 0x401C4, 0x40171) := rfl
+@[ode_at] theorem at_4016F : prog 0x4016F = some (.jmp 0x401CB, 0x40171) := rfl
 @[ode_at] theorem at_40171 : prog 0x40171 = some (.lea .rdi .rsp 0xE40, 0x40179) := rfl
 @[ode_at] theorem at_40179 : prog 0x40179 = some (.lea .rsi .rsp 0xDC0, 0x40181) := rfl
 @[ode_at] theorem at_40181 : prog 0x40181 = some (.mov 64 (.reg .rdx) (.imm 0x0), 0x40188) := rfl
@@ -352,14 +353,15 @@ theorem has_lroot : ∀ pc x, Code_lroot.prog pc = some x → prog pc = some x :
 @[ode_at] theorem at_401B6 : prog 0x401B6 = some (.mov 64 (.reg .rdx) (.reg .r13), 0x401B9) := rfl
 @[ode_at] theorem at_401B9 : prog 0x401B9 = some (.mov 64 (.reg .rcx) (.reg .r14), 0x401BC) := rfl
 @[ode_at] theorem at_401BC : prog 0x401BC = some (.mov 64 (.reg .r8) (.reg .r15), 0x401BF) := rfl
-@[ode_at] theorem at_401BF : prog 0x401BF = some (.call 0xC0000, 0x401C4) := rfl
-@[ode_at] theorem at_401C4 : prog 0x401C4 = some (.add 64 (.reg .rsp) (.imm 0xE78), 0x401CB) := rfl
-@[ode_at] theorem at_401CB : prog 0x401CB = some (.pop .r15, 0x401CD) := rfl
-@[ode_at] theorem at_401CD : prog 0x401CD = some (.pop .r14, 0x401CF) := rfl
-@[ode_at] theorem at_401CF : prog 0x401CF = some (.pop .r13, 0x401D1) := rfl
-@[ode_at] theorem at_401D1 : prog 0x401D1 = some (.pop .r12, 0x401D3) := rfl
-@[ode_at] theorem at_401D3 : prog 0x401D3 = some (.pop .rbp, 0x401D4) := rfl
-@[ode_at] theorem at_401D4 : prog 0x401D4 = some (.pop .rbx, 0x401D5) := rfl
-@[ode_at] theorem at_401D5 : prog 0x401D5 = some (.ret, 0x401D6) := rfl
+@[ode_at] theorem at_401BF : prog 0x401BF = some (.mov 64 (.reg .r9) (.imm 0x8), 0x401C6) := rfl
+@[ode_at] theorem at_401C6 : prog 0x401C6 = some (.call 0xC0000, 0x401CB) := rfl
+@[ode_at] theorem at_401CB : prog 0x401CB = some (.add 64 (.reg .rsp) (.imm 0xE78), 0x401D2) := rfl
+@[ode_at] theorem at_401D2 : prog 0x401D2 = some (.pop .r15, 0x401D4) := rfl
+@[ode_at] theorem at_401D4 : prog 0x401D4 = some (.pop .r14, 0x401D6) := rfl
+@[ode_at] theorem at_401D6 : prog 0x401D6 = some (.pop .r13, 0x401D8) := rfl
+@[ode_at] theorem at_401D8 : prog 0x401D8 = some (.pop .r12, 0x401DA) := rfl
+@[ode_at] theorem at_401DA : prog 0x401DA = some (.pop .rbp, 0x401DB) := rfl
+@[ode_at] theorem at_401DB : prog 0x401DB = some (.pop .rbx, 0x401DC) := rfl
+@[ode_at] theorem at_401DC : prog 0x401DC = some (.ret, 0x401DD) := rfl
 
 end Code_hashl

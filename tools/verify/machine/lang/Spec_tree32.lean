@@ -9,8 +9,8 @@ program in which the 16-lane parent kernel's address meets `P16.contract`. -/
 
 /-- The value of the tree over 32 values: five levels of parents. -/
 def Tree32.value (k : Blake3.CV) (flags : BitVec 64) (l : List Blake3.CV) : Blake3.CV :=
-  ((Tree.level k ⟨flags.setWidth 32⟩ (Tree.level k ⟨flags.setWidth 32⟩ (Tree.level k ⟨flags.setWidth 32⟩
-    (Tree.level k ⟨flags.setWidth 32⟩ (Tree.level k ⟨flags.setWidth 32⟩ l))))).headD (Vector.replicate 8 0))
+  ((Blake3.level k ⟨flags.setWidth 32⟩ (Blake3.level k ⟨flags.setWidth 32⟩ (Blake3.level k ⟨flags.setWidth 32⟩
+    (Blake3.level k ⟨flags.setWidth 32⟩ (Blake3.level k ⟨flags.setWidth 32⟩ l))))).headD (Vector.replicate 8 0))
 
 /-- **`tree32(res, cvs, key, flags)`.** With 32 chaining values at `cvs` and the key at `key`: the sixteen
 values at `res` all become the value of the tree over the 32 (`Tree32.value`: 16 parents, 8, 4, 2, 1), each

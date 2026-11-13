@@ -14,13 +14,23 @@ def Levels.rootCv (k : Blake3.CV) (mode : Blake3.Word) (chunks : Array Blake3.No
   Blake3.first8 (Blake3.BLAKE3_COMPRESS (Blake3.tree k mode chunks).h (Blake3.tree k mode chunks).m 0
     (Blake3.tree k mode chunks).len ((Blake3.tree k mode chunks).flags ||| Blake3.ROOT))
 
-/-- **`lroot(out, lv, key, flags, plat)`.** For levels over two chunks or more at `lv`: the 32 bytes at `out`
-become the first eight words of the specification's output for the tree over them; the levels and the key
-are unchanged. The mode's flags are below 256. `plat` chooses the kernel and changes nothing else. -/
-def Lroot.contract (out lv key flags plat : BitVec 64) (k : Blake3.CV) (chunks : Array Blake3.Node) : Abi.Contract where
-  args := [out, lv, key, flags, plat]
+/-- The first eight words of the compression of the top node of the tree over `chunks`, with `extra` among
+its flags. With `ROOT`: the first 32 bytes of the specification's output for the tree (`Levels.rootCv`). With
+nothing: the tree's chaining value, as a subtree of a larger tree (for two chunks or more the top node is a
+parent, whose counter is 0). -/
+def Levels.top (k : Blake3.CV) (mode : Blake3.Word) (chunks : Array Blake3.Node) (extra : Blake3.Word) : Blake3.CV :=
+  Blake3.first8 (Blake3.BLAKE3_COMPRESS (Blake3.tree k mode chunks).h (Blake3.tree k mode chunks).m 0
+    (Blake3.tree k mode chunks).len ((Blake3.tree k mode chunks).flags ||| extra))
+
+/-- **`lroot(out, lv, key, flags, plat, root)`.** For levels over two chunks or more at `lv`: the 32 bytes at
+`out` become the first eight words of the top node's compression (`Levels.top`): with `root = 8` (the `ROOT`
+flag) the specification's output for the tree over them, with `root = 0` the tree's chaining value, for a
+caller that makes it a subtree of a larger tree. The levels and the key are unchanged. The mode's flags are
+below 256. `plat` chooses the kernel and changes nothing else. -/
+def Lroot.contract (out lv key flags plat root : BitVec 64) (k : Blake3.CV) (chunks : Array Blake3.Node) : Abi.Contract where
+  args := [out, lv, key, flags, plat, root]
   stack := 256#64
-  accepts := 2 ≤ chunks.size ∧ flags < 256#64
+  accepts := 2 ≤ chunks.size ∧ flags < 256#64 ∧ (root = 0#64 ∨ root = 8#64)
   reads := [Cv.layout.keeps key k, (Levels.layout k ⟨flags.setWidth 32⟩).keeps lv chunks]
-  updates := [Cv.layout.fills out (Levels.rootCv k ⟨flags.setWidth 32⟩ chunks)]
+  updates := [Cv.layout.fills out (Levels.top k ⟨flags.setWidth 32⟩ chunks ⟨root.setWidth 32⟩)]
   returns := fun _ => True

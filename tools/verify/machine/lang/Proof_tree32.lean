@@ -50,10 +50,10 @@ theorem whole (ext : Nat → Option (Instr × Nat)) (hA_parents16 : ∀ x0 x1 x2
     simp only [Fillp.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
     try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
     repeat' (with_reducible apply And.intro)
-    all_goals bv_decide
+    all_goals bv_side
   · simp only [Fillp.contract]
     repeat' (with_reducible apply And.intro)
-    all_goals (first | assumption | bv_decide)
+    all_goals (first | assumption | bv_side)
   · dsimp only
     simp only [Fillp.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
     repeat' (with_reducible apply And.intro)
@@ -96,10 +96,10 @@ theorem whole (ext : Nat → Option (Instr × Nat)) (hA_parents16 : ∀ x0 x1 x2
       simp only [P16.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
       try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
       repeat' (with_reducible apply And.intro)
-      all_goals bv_decide
+      all_goals bv_side
     · simp only [P16.contract]
       repeat' (with_reducible apply And.intro)
-      all_goals (first | assumption | bv_decide)
+      all_goals (first | assumption | bv_side)
     · dsimp only
       simp only [P16.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
       repeat' (with_reducible apply And.intro)
@@ -138,10 +138,10 @@ theorem whole (ext : Nat → Option (Instr × Nat)) (hA_parents16 : ∀ x0 x1 x2
         simp only [Fillp.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
         try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
         repeat' (with_reducible apply And.intro)
-        all_goals bv_decide
+        all_goals bv_side
       · simp only [Fillp.contract]
         repeat' (with_reducible apply And.intro)
-        all_goals (first | assumption | bv_decide)
+        all_goals (first | assumption | bv_side)
       · dsimp only
         simp only [Fillp.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
         repeat' (with_reducible apply And.intro)
@@ -184,10 +184,10 @@ theorem whole (ext : Nat → Option (Instr × Nat)) (hA_parents16 : ∀ x0 x1 x2
           simp only [P16.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
           try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
           repeat' (with_reducible apply And.intro)
-          all_goals bv_decide
+          all_goals bv_side
         · simp only [P16.contract]
           repeat' (with_reducible apply And.intro)
-          all_goals (first | assumption | bv_decide)
+          all_goals (first | assumption | bv_side)
         · dsimp only
           simp only [P16.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
           repeat' (with_reducible apply And.intro)
@@ -226,10 +226,10 @@ theorem whole (ext : Nat → Option (Instr × Nat)) (hA_parents16 : ∀ x0 x1 x2
             simp only [Fillp.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
             try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
             repeat' (with_reducible apply And.intro)
-            all_goals bv_decide
+            all_goals bv_side
           · simp only [Fillp.contract]
             repeat' (with_reducible apply And.intro)
-            all_goals (first | assumption | bv_decide)
+            all_goals (first | assumption | bv_side)
           · dsimp only
             simp only [Fillp.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
             repeat' (with_reducible apply And.intro)
@@ -272,10 +272,10 @@ theorem whole (ext : Nat → Option (Instr × Nat)) (hA_parents16 : ∀ x0 x1 x2
               simp only [P16.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
               try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
               repeat' (with_reducible apply And.intro)
-              all_goals bv_decide
+              all_goals bv_side
             · simp only [P16.contract]
               repeat' (with_reducible apply And.intro)
-              all_goals (first | assumption | bv_decide)
+              all_goals (first | assumption | bv_side)
             · dsimp only
               simp only [P16.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
               repeat' (with_reducible apply And.intro)
@@ -314,10 +314,10 @@ theorem whole (ext : Nat → Option (Instr × Nat)) (hA_parents16 : ∀ x0 x1 x2
                 simp only [Fillp.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
                 try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
                 repeat' (with_reducible apply And.intro)
-                all_goals bv_decide
+                all_goals bv_side
               · simp only [Fillp.contract]
                 repeat' (with_reducible apply And.intro)
-                all_goals (first | assumption | bv_decide)
+                all_goals (first | assumption | bv_side)
               · dsimp only
                 simp only [Fillp.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
                 repeat' (with_reducible apply And.intro)
@@ -360,10 +360,10 @@ theorem whole (ext : Nat → Option (Instr × Nat)) (hA_parents16 : ∀ x0 x1 x2
                   simp only [P16.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
                   try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
                   repeat' (with_reducible apply And.intro)
-                  all_goals bv_decide
+                  all_goals bv_side
                 · simp only [P16.contract]
                   repeat' (with_reducible apply And.intro)
-                  all_goals (first | assumption | bv_decide)
+                  all_goals (first | assumption | bv_side)
                 · dsimp only
                   simp only [P16.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
                   repeat' (with_reducible apply And.intro)
@@ -402,10 +402,10 @@ theorem whole (ext : Nat → Option (Instr × Nat)) (hA_parents16 : ∀ x0 x1 x2
                     simp only [Fillp.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
                     try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
                     repeat' (with_reducible apply And.intro)
-                    all_goals bv_decide
+                    all_goals bv_side
                   · simp only [Fillp.contract]
                     repeat' (with_reducible apply And.intro)
-                    all_goals (first | assumption | bv_decide)
+                    all_goals (first | assumption | bv_side)
                   · dsimp only
                     simp only [Fillp.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
                     repeat' (with_reducible apply And.intro)
@@ -448,10 +448,10 @@ theorem whole (ext : Nat → Option (Instr × Nat)) (hA_parents16 : ∀ x0 x1 x2
                       simp only [P16.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
                       try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
                       repeat' (with_reducible apply And.intro)
-                      all_goals bv_decide
+                      all_goals bv_side
                     · simp only [P16.contract]
                       repeat' (with_reducible apply And.intro)
-                      all_goals (first | assumption | bv_decide)
+                      all_goals (first | assumption | bv_side)
                     · dsimp only
                       simp only [P16.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
                       repeat' (with_reducible apply And.intro)

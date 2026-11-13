@@ -123,7 +123,7 @@ fn ladd(lv, key, flags, plat, cv)
 // The root. What lroot is claimed to do is Lroot.contract (../lang/Spec_lroot.lean); the lemmas named are in
 // ../lang/Lemmas_lroot.lean. `Levels.Fold` says what holds at the loop's head: the levels from `base` up are
 // still to be folded, and `acc` holds the subtree over all the chunks they do not cover.
-fn lroot(out, lv, key, flags, plat)
+fn lroot(out, lv, key, flags, plat, root)
   reg e, base, f, lv, key, plat
   meets Lroot.contract(k: Blake3.CV, chunks: Array Blake3.Node)
   uses Lemmas_lroot
@@ -139,7 +139,7 @@ fn lroot(out, lv, key, flags, plat)
   var base = lv + 64
   copy 32 acc <- base + ((e & 1) << 5)    // the newest chunk's value: in the bottom's next place
   while e > 0
-    invariant Levels.Fold(lv, k, flags, chunks, base, e, acc)   by Levels.Fold.root | Levels.Fold.parent | Levels.Fold.skip   from Levels.Fold.start
+    invariant Levels.Fold(lv, k, flags, root, chunks, base, e, acc)   by Levels.Fold.root | Levels.Fold.parent | Levels.Fold.skip   from Levels.Fold.start
     invariant Cv.At(key, k)
     invariant Region(out, 32)             // the bytes the root goes to are the program's, through the loop
     invariant pf == flags | PARENT
@@ -150,7 +150,7 @@ fn lroot(out, lv, key, flags, plat)
   {
     if e & 1 == 1 {
       var f = pf
-      if e == 1 { f = pf | ROOT }         // the highest level that holds a value: this parent is the root
+      if e == 1 { f = pf | root }         // the highest level that holds a value: this parent is the top (the root, if the caller says so)
       copy 32 blk <- base
       copy 32 blk + 32 <- acc
       copy 32 acc <- key
@@ -323,7 +323,7 @@ fn hashl(out, input, len, key, flags, plat)
       keep Hash.In(input, len, bytes, p, rem, counter)
       keep Cv.At(key, k)
       keep Region(out, 32)
-    lroot(out, lv, key, flags, plat)
+    lroot(out, lv, key, flags, plat, ROOT)
       with k; ((Hash.nodes k flags bytes counter).push (Chunk.node k flags counter (Hash.chunk bytes counter)))
       know Hash.many
   }
@@ -374,6 +374,31 @@ fn p16s(inputs, blocks, key, counter, packed, out)
     dst = out + (i << 5)
     copy 32 dst <- key
     compress_avx512(dst, src, 64, 0, f)
+    i = i + 1
+  }
+}
+
+// The library's 32-lane chunk kernel, in the same way: K32.contract (../lang/Spec_k32.lean), and k32s in its
+// place when examples run (every chunk's node by chunk_node, its value by node_out).
+extern chunks32/6 = "blake3_servil_avx512_k32"
+callee chunks32 at 0x10000 assumes K32.contract (11) budget 4096 standin k32s
+
+fn k32s(inputs, blocks, key, counter, packed, out)
+  meets K32.contract(k: Blake3.CV, base: BitVec 64, n: BitVec 64, flags: BitVec 64, bytes: List (BitVec 8))
+{
+  buf nd[120]
+  var f = packed & 255
+  var i = 0
+  var src = 0
+  var dst = 0
+  var t = 0
+  while i < 32 {
+    src = u64[inputs + (i << 3)]
+    dst = out + (i << 5)
+    t = counter + i
+    copy 32 nd <- key
+    chunk_node(nd, src, 1024, t, f, AVX512)
+    node_out(dst, nd, 0, AVX512)
     i = i + 1
   }
 }
@@ -437,6 +462,345 @@ fn tree32(res, cvs, key, flags)
 }
 
 callee tree32 at 0x120000 meets Tree32.contract by Proof_tree32.tree32_meets budget 8192
+
+// The wide turns of a hash: while a whole group of 32 chunks has more of the message after it, the group's
+// 32 values are made by the chunk kernel, their tree's value by tree32, and that value is added to levels
+// over groups (ladd: the tree over the chunks is the tree over the groups' own trees, ../alg/Groups.lean).
+// The result is how many chunks were taken. What wide is claimed to do is Wide.contract
+// (../lang/Spec_wide.lean). For a machine with AVX-512.
+fn wide(wl, input, len, key, flags)
+  reg p, rem, counter, wl, key, flags
+  meets Wide.contract(k: Blake3.CV, bytes: List (BitVec 8))
+  uses Lemmas_wide
+  leave by Wide.exit
+{
+  buf ptrs[256]
+  buf cvs[1024]
+  buf res[512]
+  var kp = flags | 0x40020100           // the chunk's start and end flags and a last block of 64 bytes, packed above the mode's
+  u64[wl] = 0
+  var p = input
+  var rem = len
+  var counter = 0
+  while rem > 32768
+    invariant Hash.In(input, len, bytes, p, rem, counter)     by Wide.In.step32   from Hash.In.start
+    invariant Wide.Lv(wl, k, flags, bytes, counter)           by Wide.Lv.step     from Wide.Lv.start
+    invariant Cv.At(key, k)
+    invariant kp == flags | 0x40020100
+    decreases rem
+  {
+    fillp(ptrs, p, 32, 1024)
+      keep Hash.In(input, len, bytes, p, rem, counter)
+      keep Wide.Lv(wl, k, flags, bytes, counter)
+      keep Cv.At(key, k)
+    chunks32(ptrs, 16, key, counter, kp, cvs)
+      with k; p; 32#64; flags; (Wide.group bytes counter)
+      know Wide.k32in
+      keep Hash.In(input, len, bytes, p, rem, counter)
+      keep Wide.Lv(wl, k, flags, bytes, counter)
+      keep Cv.At(key, k)
+    tree32(res, cvs, key, flags)
+      with k; (K32.values k flags counter 32#64 (Wide.group bytes counter))
+      keep Hash.In(input, len, bytes, p, rem, counter)
+      keep Wide.Lv(wl, k, flags, bytes, counter)
+      keep Cv.At(key, k)
+    ladd(wl, key, flags, AVX512, res)
+      with k; (Wide.units k flags bytes counter.toNat); (Wide.unit k flags bytes (counter.toNat / 32))
+      know Wide.unit_cv
+      keep Hash.In(input, len, bytes, p, rem, counter)
+      keep Cv.At(key, k)
+    p = p + 32768
+    rem = rem - 32768
+    counter = counter + 32
+  }
+  return counter
+}
+
+callee wide at 0x130000 meets Wide.contract by Proof_wide.wide_meets budget 16384
+
+// The first n of the 32 values at cvs (a wide kernel's, for the chunks of a last, short group) are added to
+// the levels, one after another. What addn is claimed to do is Addn.contract (../lang/Spec_addn.lean).
+fn addn(lv, key, flags, cvs, n)
+  reg i, p, lv, key, flags, n
+  meets Addn.contract(k: Blake3.CV, chunks: Array Blake3.Node, news: List Blake3.Node, vals: List Blake3.CV)
+  uses Lemmas_addn
+  leave by Addn.exit
+{
+  var i = 0
+  var p = cvs
+  while i < n
+    invariant Addn.Mid(lv, cvs, k, flags, chunks, news, vals, n, i, p)   by Addn.Mid.step   from Addn.Mid.start
+    invariant Cv.At(key, k)
+    decreases n - i
+  {
+    ladd(lv, key, flags, AVX512, p)
+      with k; (chunks ++ (news.take i.toNat).toArray); (news.getD i.toNat default)
+      know Addn.Mid.next
+      keep Cv.At(key, k)
+      keep Cvs32.At(cvs, vals)
+    p = p + 32
+    i = i + 1
+  }
+}
+
+callee addn at 0x160000 meets Addn.contract by Proof_addn.addn_meets budget 512
+
+// The root, from levels over a message's whole groups (wl) and levels over its last group's chunks (lv); sel
+// says which case it is (the caller knows: 0, no whole group; 1, whole groups and a last group of one chunk;
+// 2, of two or more). With no whole group the root is the last group's own. Otherwise the last group's value
+// (its only chunk's, waiting in the bottom level's first place, or the top of its levels, not as a root) is
+// added to the groups' levels, whose root is the message's. What finish is claimed to do is Finish.contract
+// (../lang/Spec_finish.lean).
+fn finish(out, wl, lv, key, flags, sel)
+  meets Finish.contract(k: Blake3.CV, units: Array Blake3.Node, tail: Array Blake3.Node)
+  uses Lemmas_finish
+  leave by Finish.exit
+{
+  buf cv[32]
+  var bottom = lv + 64                  // the bottom level's first place
+  if sel == 0 {
+    lroot(out, lv, key, flags, AVX512, ROOT)
+      with k; tail
+      know Finish.none
+      keep Hash.Lv(wl, k, flags, units)
+  } else {
+    if sel == 1 {
+      ladd(wl, key, flags, AVX512, bottom)
+        with k; units; (tail[0]!)
+        know Finish.one
+        keep Cv.At(key, k)
+        keep Region(out, 32)
+      lroot(out, wl, key, flags, AVX512, ROOT)
+        with k; (Finish.w1 units tail)
+        know Finish.one_root
+        keep Hash.Lv(wl, k, flags, Finish.w1(units, tail))
+    } else {
+      lroot(cv, lv, key, flags, AVX512, 0)
+        with k; tail
+        know Finish.many
+        keep Hash.Lv(wl, k, flags, units)
+        keep Cv.At(key, k)
+        keep Region(out, 32)
+      ladd(wl, key, flags, AVX512, cv)
+        with k; units; (Blake3.tree k ⟨flags.setWidth 32⟩ tail)
+        know Finish.sub
+        keep Cv.At(key, k)
+        keep Region(out, 32)
+      lroot(out, wl, key, flags, AVX512, ROOT)
+        with k; (Finish.w2 k flags units tail)
+        know Finish.many_root
+        keep Hash.Lv(wl, k, flags, Finish.w2(k, flags, units, tail))
+    }
+  }
+}
+
+callee finish at 0x170000 meets Finish.contract by Proof_finish.finish_meets budget 1024
+
+// The chunks of some bytes of a message (a last group), numbered from cfirst, into levels: hashl's loop, each
+// chunk's node by chunk_node and its value by node_out, and the last chunk too (it is not a root here: the
+// caller makes the root, finish). What group is claimed to do is Group.contract (../lang/Spec_group.lean).
+fn group(lv, input, len, key, flags, cfirst)
+  reg p, rem, counter, key, flags, lv
+  meets Group.contract(k: Blake3.CV, bytes: List (BitVec 8))
+  uses Lemmas_group
+  leave open Group.last as _u
+  leave open Cv.At.vectors as k0, k1
+  leave by Group.exit
+{
+  buf nd[120]
+  buf cv[32]
+  u64[lv] = 0
+  var p = input
+  var rem = len
+  var counter = 0
+  while rem > 1024
+    invariant Hash.In(input, len, bytes, p, rem, counter)                             by Hash.In.step    from Hash.In.start
+    invariant Hash.Lv(lv, k, flags, Group.nodesTo(k, flags, cfirst, bytes, counter))       by Group.Lv.step   from Group.Lv.start
+    invariant Cv.At(key, k)
+    decreases rem
+    open Group.turn as _u
+    open Cv.At.vectors as k0, k1
+  {
+    var t = cfirst + counter
+    copy 32 nd <- key
+    chunk_node(nd, p, 1024, t, flags, AVX512)
+      with k; (Hash.chunk bytes counter)
+      keep Hash.In(input, len, bytes, p, rem, counter)
+      keep Hash.Lv(lv, k, flags, Group.nodesTo(k, flags, cfirst, bytes, counter))
+      keep Cv.At(key, k)
+    node_out(cv, nd, 0, AVX512)
+      with (Chunk.node k flags (cfirst + counter) (Hash.chunk bytes counter))
+      keep Hash.In(input, len, bytes, p, rem, counter)
+      keep Hash.Lv(lv, k, flags, Group.nodesTo(k, flags, cfirst, bytes, counter))
+      keep Cv.At(key, k)
+    ladd(lv, key, flags, AVX512, cv)
+      with k; (Group.nodesTo k flags cfirst bytes counter); (Chunk.node k flags (cfirst + counter) (Hash.chunk bytes counter))
+      know Hash.cv_of
+      keep Hash.In(input, len, bytes, p, rem, counter)
+      keep Cv.At(key, k)
+    p = p + 1024
+    rem = rem - 1024
+    counter = counter + 1
+  }
+  var tl = cfirst + counter
+  copy 32 nd <- key
+  chunk_node(nd, p, rem, tl, flags, AVX512)
+    with k; (Hash.chunk bytes counter)
+    keep Hash.In(input, len, bytes, p, rem, counter)
+    keep Hash.Lv(lv, k, flags, Group.nodesTo(k, flags, cfirst, bytes, counter))
+    keep Cv.At(key, k)
+  node_out(cv, nd, 0, AVX512)
+    with (Chunk.node k flags (cfirst + counter) (Hash.chunk bytes counter))
+    keep Hash.In(input, len, bytes, p, rem, counter)
+    keep Hash.Lv(lv, k, flags, Group.nodesTo(k, flags, cfirst, bytes, counter))
+    keep Cv.At(key, k)
+  ladd(lv, key, flags, AVX512, cv)
+    with k; (Group.nodesTo k flags cfirst bytes counter); (Chunk.node k flags (cfirst + counter) (Hash.chunk bytes counter))
+    know Hash.cv_of
+    know Group.all
+}
+
+callee group at 0x180000 meets Group.contract by Proof_group.group_meets budget 1024
+
+// The last group, fast: what group does (Group.contract), for more than one chunk and at most 32. Every
+// chunk but the last goes through the chunk kernel in one call (the lanes past them hash the first chunk
+// again, unused), their values are added to the levels (addn), and the last chunk, which may be short, is
+// made as group makes it. What groupf is claimed to do is Groupf.contract (../lang/Spec_groupf.lean).
+fn groupf(lv, input, len, key, flags, cfirst)
+  meets Groupf.contract(k: Blake3.CV, bytes: List (BitVec 8))
+  uses Lemmas_groupf
+  enter know Groupf.msg
+  leave by Group.exit
+{
+  buf nd[120]
+  buf cv[32]
+  buf ptrs[256]
+  buf cvs[1024]
+  var kp = flags | 0x40020100           // the chunk's start and end flags and a last block of 64 bytes, packed above the mode's
+  var w = (len - 1) >> 10               // the chunks before the last: 1 to 31
+  var p = input + (w << 10)
+  var r = len - (w << 10)
+  var tl = cfirst + w
+  fillp(ptrs, input, w, 1024)
+    keep Hash.In(input, len, bytes, input, len, 0)
+    keep Cv.At(key, k)
+    keep Region(lv, 3520)
+  chunks32(ptrs, 16, key, cfirst, kp, cvs)
+    with k; input; $w; flags; (Groupf.head bytes $w)
+    know Groupf.k32in
+    keep Hash.In(input, len, bytes, input, len, 0)
+    keep Cv.At(key, k)
+    keep Region(lv, 3520)
+  u64[lv] = 0
+  addn(lv, key, flags, cvs, w)
+    with k; (#[] : Array Blake3.Node); (Groupf.news k flags cfirst bytes $w); (K32.values k flags cfirst $w (Groupf.head bytes $w))
+    know Groupf.addin (k := k) (flags := flags) (c0 := cfirst) (bytes := bytes)
+    keep Hash.In(input, len, bytes, input, len, 0)
+    keep Cv.At(key, k)
+  copy 32 nd <- key
+  chunk_node(nd, p, r, tl, flags, AVX512)
+    open Cv.At.vectors as k0, k1
+    with k; (Hash.chunk bytes $w)
+    know Groupf.after
+    keep Hash.In(input, len, bytes, p, r, w)
+    keep Hash.Lv(lv, k, flags, Group.nodesTo(k, flags, cfirst, bytes, w))
+    keep Cv.At(key, k)
+  node_out(cv, nd, 0, AVX512)
+    with (Chunk.node k flags (cfirst + $w) (Hash.chunk bytes $w))
+    keep Hash.In(input, len, bytes, p, r, w)
+    keep Hash.Lv(lv, k, flags, Group.nodesTo(k, flags, cfirst, bytes, w))
+    keep Cv.At(key, k)
+  ladd(lv, key, flags, AVX512, cv)
+    with k; (Group.nodesTo k flags cfirst bytes $w); (Chunk.node k flags (cfirst + $w) (Hash.chunk bytes $w))
+    know Hash.cv_of
+    know Group.all
+}
+
+callee groupf at 0x1B0000 meets Groupf.contract by Proof_groupf.groupf_meets budget 8192
+
+callee hashl at 0x40000 meets Hashl.contract by Proof_hashl.hashl_meets budget 4608
+
+// The whole hash for a machine with AVX-512: a message of more than a chunk goes by groups of 32 chunks
+// through the wide kernels (wide), its last group through the chunk kernel too but for its last chunk
+// (groupf; a last group of one chunk by group), and finish makes the root from the two sets of levels; a
+// message of one chunk goes to hashl. What hashw is claimed to do is
+// Hashw.contract (../lang/Spec_hashw.lean): what hashl does. The tree's part is ../alg/Groups.lean.
+fn hashw(out, input, len, key, flags)
+  meets Hashw.contract(k: Blake3.CV, bytes: List (BitVec 8))
+  uses Lemmas_hashw
+  enter know Hashw.msg
+  leave by Hashl.exit
+{
+  buf wl[3520]
+  buf lv[3520]
+  if len > 1024 {
+    var c = wide(wl, input, len, key, flags)
+      with k; bytes
+      keep Hash.In(input, len, bytes, input, len, 0)
+      keep Cv.At(key, k)
+      keep Region(out, 32)
+    var p = input + (c << 10)
+    var rem = len - (c << 10)
+    if c == 0 {
+      groupf(lv, p, rem, key, flags, c)
+        with k; (Hashw.rest bytes)
+        know Hashw.tailin
+        keep Hash.Lv(wl, k, flags, Hashw.units(k, flags, bytes))
+        keep Cv.At(key, k)
+        keep Region(out, 32)
+      finish(out, wl, lv, key, flags, 0)
+        with k; (Hashw.units k flags bytes); (Group.nodes k flags $c (Hashw.rest bytes))
+        know Hashw.way0
+    } else {
+      if rem > 1024 {
+        groupf(lv, p, rem, key, flags, c)
+          with k; (Hashw.rest bytes)
+          know Hashw.tailin
+          keep Hash.Lv(wl, k, flags, Hashw.units(k, flags, bytes))
+          keep Cv.At(key, k)
+          keep Region(out, 32)
+        finish(out, wl, lv, key, flags, 2)
+          with k; (Hashw.units k flags bytes); (Group.nodes k flags $c (Hashw.rest bytes))
+          know Hashw.way2
+      } else {
+        group(lv, p, rem, key, flags, c)
+          with k; (Hashw.rest bytes)
+          know Hashw.tailin
+          keep Hash.Lv(wl, k, flags, Hashw.units(k, flags, bytes))
+          keep Cv.At(key, k)
+          keep Region(out, 32)
+        finish(out, wl, lv, key, flags, 1)
+          with k; (Hashw.units k flags bytes); (Group.nodes k flags $c (Hashw.rest bytes))
+          know Hashw.way1
+      }
+    }
+  } else {
+    hashl(out, input, len, key, flags, AVX512)
+      with k; bytes
+      know Hashw.same
+  }
+}
+
+callee hashw at 0x190000 meets Hashw.contract by Proof_hashw.hashw_meets budget 32768
+
+// The fast hash: hashw where the machine has AVX-512, hashl elsewhere. What hashf is claimed to do is
+// Hashf.contract (../lang/Spec_hashw.lean): what hashl does.
+fn hashf(out, input, len, key, flags, plat)
+  meets Hashf.contract(k: Blake3.CV, bytes: List (BitVec 8))
+  uses Lemmas_hashw
+  enter know Hashw.msg
+  leave by Hashl.exit
+{
+  if plat == AVX512 {
+    hashw(out, input, len, key, flags)
+      with k; bytes
+      know Hashw.same
+  } else {
+    hashl(out, input, len, key, flags, plat)
+      with k; bytes
+      know Hashw.same
+  }
+}
 
 def fill_ptrs(base, shift, count) {
   i = 0

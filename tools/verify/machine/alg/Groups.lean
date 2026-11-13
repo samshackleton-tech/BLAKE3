@@ -95,4 +95,109 @@ theorem tree_groups (b last count : Nat) (hc : 1 ≤ count) (hl1 : 1 ≤ last) (
   simp only [Nat.zero_mul, Nat.zero_add, Nat.lt_irrefl, if_false] at this
   rw [tree, tree, hsize, hgs]; exact this
 
+/-! ## A level of parents at a time
+
+A wide kernel makes sixteen parents in one call. Each pair's parent, in order, is one level of a tree; five
+levels over the values of 32 chunks one after another are the specification's subtree over them. -/
+
+/-- One level of a tree: each pair's parent value, in order (C2SP's BLAKE3, section 4.3.1). -/
+def level : List CV → List CV
+  | x :: y :: rest => (parentNode key mode x y).cv :: level rest
+  | _ => []
+
+/-- The values of `n` subtrees of the specification, `w` chunks each, one after another from chunk `s`. -/
+def subs (s w : Nat) : Nat → List CV
+  | 0 => []
+  | n + 1 => sub key mode chunks s w :: subs (s + w) w n
+
+theorem subs_succ (s w n : Nat) : subs key mode chunks s w (n + 1) = sub key mode chunks s w :: subs key mode chunks (s + w) w n := rfl
+
+theorem level_cons (x y : CV) (rest : List CV) : level key mode (x :: y :: rest) = (parentNode key mode x y).cv :: level key mode rest := rfl
+
+theorem subs_length (s w n : Nat) : (subs key mode chunks s w n).length = n := by
+  induction n generalizing s with
+  | zero => rfl
+  | succ n ih => rw [subs_succ, List.length_cons, ih]
+
+/-- One level of parents over subtrees of `2^a` chunks: the subtrees of `2^(a+1)`. -/
+theorem level_subs (a : Nat) : ∀ (n s : Nat),
+    level key mode (subs key mode chunks s (2 ^ a) (2 * n)) = subs key mode chunks s (2 ^ (a + 1)) n := by
+  intro n
+  induction n with
+  | zero => intro s; rfl
+  | succ n ih =>
+    intro s
+    have hp := Nat.two_pow_pos a
+    have e2 : 2 ^ (a + 1) = 2 ^ a + 2 ^ a := by rw [Nat.pow_succ]; omega
+    rw [show 2 * (n + 1) = (2 * n + 1) + 1 by omega, subs_succ, subs_succ, level_cons, subs_succ,
+        show s + 2 ^ a + 2 ^ a = s + 2 ^ (a + 1) by omega, ih (s + 2 ^ (a + 1))]
+    have := go_split key mode chunks s a (2 ^ a) hp (Nat.le_refl _)
+    rw [← e2] at this
+    have hv : (parentNode key mode (sub key mode chunks s (2 ^ a)) (sub key mode chunks (s + 2 ^ a) (2 ^ a))).cv
+        = sub key mode chunks s (2 ^ (a + 1)) := by
+      unfold sub at this ⊢
+      rw [this]
+    rw [hv]
+
+/-- The values of the chunks one after another are the subtrees of one chunk. -/
+theorem subs_one : ∀ (n s : Nat), subs key mode chunks s 1 n = (List.range n).map fun i => (chunks[s + i]!).cv := by
+  intro n
+  induction n with
+  | zero => intro s; rfl
+  | succ n ih =>
+    intro s
+    rw [subs_succ, ih (s + 1), List.range_succ_eq_map, List.map_cons, List.map_map]
+    have h0 : sub key mode chunks s 1 = (chunks[s + 0]!).cv := by
+      unfold sub; rw [go_one, Nat.add_zero]
+    have hr : (List.range n).map (fun i => (chunks[s + 1 + i]!).cv) = (List.range n).map ((fun i => (chunks[s + i]!).cv) ∘ Nat.succ) := by
+      apply List.map_congr_left
+      intro i _
+      show (chunks[s + 1 + i]!).cv = (chunks[s + (i + 1)]!).cv
+      rw [show s + 1 + i = s + (i + 1) by omega]
+    rw [h0, hr]
+
+/-- **Five levels of parents over the values of 32 chunks one after another are the specification's
+subtree over them.** -/
+theorem level5 (s : Nat) :
+    level key mode (level key mode (level key mode (level key mode (level key mode
+      ((List.range 32).map fun i => (chunks[s + i]!).cv))))) = [sub key mode chunks s 32] := by
+  rw [← subs_one key mode chunks 32 s]
+  have h1 := level_subs key mode chunks 0 16 s
+  have h2 := level_subs key mode chunks 1 8 s
+  have h3 := level_subs key mode chunks 2 4 s
+  have h4 := level_subs key mode chunks 3 2 s
+  have h5 := level_subs key mode chunks 4 1 s
+  rw [show 2 * 16 = 32 from rfl, show (2:Nat) ^ 0 = 1 from rfl, show (2:Nat) ^ (0 + 1) = 2 from rfl] at h1
+  rw [show 2 * 8 = 16 from rfl, show (2:Nat) ^ 1 = 2 from rfl, show (2:Nat) ^ (1 + 1) = 4 from rfl] at h2
+  rw [show 2 * 4 = 8 from rfl, show (2:Nat) ^ 2 = 4 from rfl, show (2:Nat) ^ (2 + 1) = 8 from rfl] at h3
+  rw [show 2 * 2 = 4 from rfl, show (2:Nat) ^ 3 = 8 from rfl, show (2:Nat) ^ (3 + 1) = 16 from rfl] at h4
+  rw [show 2 * 1 = 2 from rfl, show (2:Nat) ^ 4 = 16 from rfl, show (2:Nat) ^ (4 + 1) = 32 from rfl] at h5
+  rw [h1, h2, h3, h4, h5]
+  rfl
+
+/-- The specification's subtree over a range reads only that range: over other chunks that are the same
+there, it is the same. -/
+theorem go_congr (other : Array Node) (s s' : Nat) : ∀ (n start : Nat), 1 ≤ n →
+    (∀ i, i < n → chunks[s + start + i]! = other[s' + start + i]!) →
+    tree.go key mode chunks (s + start) n = tree.go key mode other (s' + start) n := by
+  intro n
+  induction n using Nat.strongRecOn with
+  | _ n ih =>
+    intro start hn h
+    rw [tree.go, tree.go]
+    by_cases h1 : n ≤ 1
+    · simp only [h1, dite_true]
+      have := h 0 (by omega); simpa using this
+    · simp only [h1, dite_false]
+      have hk := leftCount_lt n (by omega)
+      have hk0 := leftCount_pos n
+      rw [ih (leftCount n) hk start hk0 (fun i hi => h i (by omega))]
+      have := ih (n - leftCount n) (by omega) (start + leftCount n) (by omega) (fun i hi => by
+        have := h (leftCount n + i) (by omega)
+        rw [show s + (start + leftCount n) + i = s + start + (leftCount n + i) by omega,
+            show s' + (start + leftCount n) + i = s' + start + (leftCount n + i) by omega]; exact this)
+      rw [show s + (start + leftCount n) = s + start + leftCount n by omega,
+          show s' + (start + leftCount n) = s' + start + leftCount n by omega] at this
+      rw [this]
+
 end Blake3
