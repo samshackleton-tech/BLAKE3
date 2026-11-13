@@ -26,9 +26,12 @@ def touched (s : State) : Instr → List Obs
   | .movv _ _ x | .paddd _ x | .pxor _ x | .por _ x | .pshufb _ x | .pshufd _ x _ | .shufps _ x _ | .pblendw _ x _
   | .punpcklqdq _ x | .punpckldq _ x | .punpckhdq _ x | .vpaddd _ _ x | .vpxor _ _ x | .vprord _ x _
   | .pand _ x | .paddb _ x | .pcmpgtb _ x | .punpcklbw _ x | .punpckhbw _ x
-  | .vshufps _ _ x _ | .vpblendd _ _ x _ | .vpunpcklqdq _ _ x | .vpunpckldq _ _ x | .vpunpckhdq _ _ x => srcObs s x
+  | .vshufps _ _ x _ | .vpblendd _ _ x _ | .vpunpcklqdq _ _ x | .vpunpckldq _ _ x | .vpunpckhdq _ _ x
+  | .vmovv _ _ x | .vpshufd _ x _ => srcObs s x
   | .storev _ b d _ => [.addr (s.get b + d)]
-  | .movvi _ _ b i d => [.addr (s.get b + s.get i + d)]
+  | .movvi _ _ b i d | .vmovvi _ _ b i d | .zloadi _ b i d => [.addr (s.get b + s.get i + d)]
+  | .zload _ _ b d | .zstore _ b d _ => [.addr (s.get b + d)]
+  | .zbroadcast _ x => opObs s x
   | .mov _ d x | .or _ d x | .add _ d x | .sub _ d x | .cmp _ d x | .and _ d x | .xor _ d x => opObs s d ++ opObs s x
   | .movzx8 _ x => opObs s x
   | .push _ | .call _ => [.addr (s.rsp - 8)]
@@ -95,11 +98,11 @@ theorem stepsL_seen (prog : Nat → Option (Instr × Nat)) : ∀ (k : Nat) (c : 
         rw [← List.append_assoc, ih]
 
 theorem stepsL_mk (prog : Nat → Option (Instr × Nat)) (k : Nat) (rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r12 r13 r14 r15 : BitVec 64) (zf cf : Option Bool)
-    (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 : V) (mem : Mem) (pc : Nat) (leak : List Obs) :
-    stepsL prog (k + 1) ⟨⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, pc⟩, leak⟩ =
+    (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 : V) (mem : Mem) (pc : Nat) (w : Wide) (leak : List Obs) :
+    stepsL prog (k + 1) ⟨⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, pc, w⟩, leak⟩ =
       match prog pc with
       | none => none
-      | some (i, next) => (stepL i next ⟨⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, pc⟩, leak⟩).bind (stepsL prog k) := rfl
+      | some (i, next) => (stepL i next ⟨⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, pc, w⟩, leak⟩).bind (stepsL prog k) := rfl
 
 theorem stepsL_zero (prog : Nat → Option (Instr × Nat)) (s : LState) : stepsL prog 0 s = some s := rfl
 

@@ -65,11 +65,36 @@ puts = "".join(f"    let m0 := Try.fill m0 ({a}) (Array.replicate ({l}).size.toN
                f"    let m0 := {sample(l)}.put m0 ({a}) ({v})\n" for kind, l, a, v, _ in pieces)
 # The source printer's module also declares the compiler CLI's root `main`. Embed its generated
 # declarations (unchanged, without that CLI) so this executable can have its own entry point.
+# A kernel is its instructions: it has no other meaning to run beside the machine's (no blame to share).
+KERNEL = bool(clauses[name].get("kernel"))
 source_module = os.environ.get('ODEMOD', 'HasherOde')
-with open(source_module + '.lean') as f:
-    source_declarations, separator, _ = f.read().partition('\ndef main (')
-assert separator, f"{source_module}.lean has no compiler entry point"
-source_declarations = re.sub(r'^import [^\n]+\n', '', source_declarations, flags=re.M)
+if KERNEL:
+    source_declarations = ""
+else:
+    with open(source_module + '.lean') as f:
+        source_declarations, separator, _ = f.read().partition('\ndef main (')
+    assert separator, f"{source_module}.lean has no compiler entry point"
+    source_declarations = re.sub(r'^import [^\n]+\n', '', source_declarations, flags=re.M)
+BLAME = f"""/-- The same example through the source's meaning: who is at fault when the assembled code breaks the contract. -/
+def blame : {types} → Mem → String
+  | ({names}), m0 =>
+    let c := {CNAME} {' '.join(n for n, _ in params)}
+    match Try.sourceIn Ode.all Ode.{name} c.args m0 with
+    | none => "The source traps on it too (or does not end): the source or the contract is wrong."
+    | some ({returns[0]}, m') =>
+      let m0' : Mem := fun x => some ((m0 x).getD 0)
+      let post : List (String × Bool) := [{', '.join(post_of("m'"))}] ++
+        [("memory the function only reads is unchanged", c.reads.all fun p => Try.sameBytes m0' m' p.addr p.size.toNat),
+         ("the bytes beside its pieces are unchanged", Try.besideSame c m0' m')]
+      match Try.firstFailure post with
+      | some f => s!"The source breaks the contract on it too (not so: {{f}}): the source or the contract is wrong."
+      | none => "The source keeps the contract on it: the code the compiler made is wrong."
+"""
+if KERNEL:
+    BLAME = f"""/-- A kernel is its instructions; there is no second meaning of the source to run. -/
+def blame : {types} → Mem → String
+  | _, _ => "A kernel is its instructions: they, or the contract, are wrong."
+"""
 L = f"""import Try
 import TrySem
 import Lang
@@ -85,21 +110,7 @@ end
 
 namespace Try_{name}
 
-/-- The same example through the source's meaning: who is at fault when the assembled code breaks the contract. -/
-def blame : {types} → Mem → String
-  | ({names}), m0 =>
-    let c := {CNAME} {' '.join(n for n, _ in params)}
-    match Try.sourceIn Ode.all Ode.{name} c.args m0 with
-    | none => "The source traps on it too (or does not end): the source or the contract is wrong."
-    | some ({returns[0]}, m') =>
-      let m0' : Mem := fun x => some ((m0 x).getD 0)
-      let post : List (String × Bool) := [{', '.join(post_of("m'"))}] ++
-        [("memory the function only reads is unchanged", c.reads.all fun p => Try.sameBytes m0' m' p.addr p.size.toNat),
-         ("the bytes beside its pieces are unchanged", Try.besideSame c m0' m')]
-      match Try.firstFailure post with
-      | some f => s!"The source breaks the contract on it too (not so: {{f}}): the source or the contract is wrong."
-      | none => "The source keeps the contract on it: the code the compiler made is wrong."
-
+{BLAME}
 def one (i_ : Nat) : {types} → String
   | ({names}) =>
     let c := {CNAME} {' '.join(n for n, _ in params)}

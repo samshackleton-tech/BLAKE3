@@ -73,7 +73,7 @@ def main():
            "  simp (config := {maxSteps := 100000000, implicitDefEqProofs := false}) (disch := decide) only [stepsL_mk, stepsL_zero, stepL, touched, srcObs, opObs, branches,",
            "    List.nil_append, List.cons_append, List.append_nil,",
            "    steps_mk, steps_zero, step, src,",
-           "    X86.read, write, State.get, State.set, State.xmm, State.setx, trunc, merge_at,",
+           "    X86.read, write, State.get, State.set, State.xmm, State.setx, State.setxz, State.zmm, State.setz, State.zeroupper, trunc, merge_at,",
            "    Option.bind_eq_bind, Option.bind_some, Option.pure_def, Option.map_some, bind_pure_comp, Option.isSome_some,",
            "    Nat.reduceEqDiff, ↓reduceIte, reduceCtorEq,",
            "    Mem.read8, Mem.write8, upd_apply, none_apply, Option.some_or, Option.none_or,",

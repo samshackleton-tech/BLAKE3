@@ -49,6 +49,26 @@ theorem Mem.write128_dom {m m' : Mem} {a : BitVec 64} {v : V} (h : m.write128 a 
 @[simp] theorem State.set_mem (s : State) (r : Reg) (v : BitVec 64) : (s.set r v).mem = s.mem := by cases r <;> rfl
 @[simp] theorem State.setx_mem (s : State) (i : Nat) (v : V) : (s.setx i v).mem = s.mem := by
   unfold State.setx; split <;> rfl
+@[simp] theorem State.setxz_mem (s : State) (i : Nat) (v : V) : (s.setxz i v).mem = s.mem := by
+  unfold State.setxz; split <;> rfl
+@[simp] theorem State.setz_mem (s : State) (i : Nat) (v : Z) : (s.setz i v).mem = s.mem := by
+  unfold State.setz; split <;> rfl
+@[simp] theorem State.zeroupper_mem (s : State) : s.zeroupper.mem = s.mem := rfl
+
+theorem Mem.write512_dom {m m' : Mem} {a : BitVec 64} {v : Z} (h : m.write512 a v = some m') : m.SameDom m' := by
+  unfold Mem.write512 at h
+  cases h0 : m.write128 a (zquarter v 0) with
+  | none => rw [h0] at h; cases h
+  | some m0 =>
+    rw [h0] at h
+    cases h1 : m0.write128 (a + 16) (zquarter v 1) with
+    | none => simp only [h1, Option.bind_eq_bind, Option.bind_some, Option.bind_none] at h; cases h
+    | some m1 =>
+      cases h2 : m1.write128 (a + 32) (zquarter v 2) with
+      | none => simp only [h1, h2, Option.bind_eq_bind, Option.bind_some, Option.bind_none] at h; cases h
+      | some m2 =>
+        simp only [h1, h2, Option.bind_eq_bind, Option.bind_some] at h
+        exact (((Mem.write128_dom h0).trans (Mem.write128_dom h1)).trans (Mem.write128_dom h2)).trans (Mem.write128_dom h)
 
 /-- Whatever state this gives, its memory has the domain of `m`. -/
 def Keeps (m : Mem) (o : Option State) : Prop := ∀ s', o = some s' → m.SameDom s'.mem
@@ -88,11 +108,17 @@ theorem keeps_mwrite128 {m : Mem} {t : State} {a : BitVec 64} {v : V} {f : Mem �
   cases hw : t.mem.write128 a v with
   | none => rw [hw] at e; cases e
   | some m1 => rw [hw] at e; cases e; rw [hf]; exact h.trans (Mem.write128_dom hw)
+theorem keeps_mwrite512 {m : Mem} {t : State} {a : BitVec 64} {v : Z} {f : Mem → State} (h : m.SameDom t.mem) (hf : ∀ m1, (f m1).mem = m1) :
+    Keeps m ((t.mem.write512 a v).map f) := by
+  intro s' e
+  cases hw : t.mem.write512 a v with
+  | none => rw [hw] at e; cases e
+  | some m1 => rw [hw] at e; cases e; rw [hf]; exact h.trans (Mem.write512_dom hw)
 
 macro "dom_leaf" : tactic => `(tactic| (first
   | exact Mem.SameDom.refl _
-  | (simp only [State.set_mem, State.setx_mem]; exact Mem.SameDom.refl _)
-  | (intro _; simp only [State.set_mem, State.setx_mem]; exact Mem.SameDom.refl _)
+  | (simp only [State.set_mem, State.setx_mem, State.setxz_mem, State.setz_mem, State.zeroupper_mem]; exact Mem.SameDom.refl _)
+  | (intro _; simp only [State.set_mem, State.setx_mem, State.setxz_mem, State.setz_mem, State.zeroupper_mem]; exact Mem.SameDom.refl _)
   | (intro _; rfl)
   | (intro _; split <;> exact Mem.SameDom.refl _)))
 
@@ -103,6 +129,7 @@ macro "dom_arm" : tactic => `(tactic| (
     | (apply keeps_write; dom_leaf)
     | (apply keeps_mwrite <;> dom_leaf)
     | (apply keeps_mwrite128 <;> dom_leaf)
+    | (apply keeps_mwrite512 <;> dom_leaf)
     | (apply keeps_map; dom_leaf)
     | (apply keeps_ite)
     | (apply keeps_bind; intro _)

@@ -31,7 +31,7 @@ theorem unbyte64 (v : BitVec 64) : BitVec.setWidth 64 (byte v 0) ||| BitVec.setW
 /-- Run `merge`'s instructions on a state that is written out; its frame's bytes are kept by region. -/
 macro "run_merge" "[" hs:Lean.Parser.Tactic.simpLemma,* "]" : tactic => `(tactic|
   simp (config := {maxSteps := 100000000, implicitDefEqProofs := false}) (disch := decide) only [steps_mk, steps_zero, step, src,
-    X86.read, write, State.get, State.set, State.xmm, State.setx, trunc, merge_at,
+    X86.read, write, State.get, State.set, State.xmm, State.setx, State.setxz, State.zmm, State.setz, State.zeroupper, trunc, merge_at,
     Option.bind_eq_bind, Option.bind_some, Option.pure_def, Option.map_some, bind_pure_comp, Option.isSome_some,
     Nat.reduceEqDiff, ↓reduceIte, reduceCtorEq,
     Mem.read8, Mem.write8, upd_apply, none_apply, Option.some_or, Option.none_or,

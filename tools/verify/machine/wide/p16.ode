@@ -5,6 +5,10 @@
 
 data p16_iv = 0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a
 
+// The contract its callers assume of it (../lang/Spec_p16.lean); tried on that contract's examples in the machine
+// model by ../lang/try_kernel.sh.
+kernel p16 meets P16.contract(k: Blake3.CV, base: BitVec 64, n: BitVec 64, flags: BitVec 64, l: List Blake3.CV)
+
 kernel p16 replaces "blake3_servil_avx512_p16" {
   .p2align 6
   def g4(a0, a1, a2, a3, b0, b1, b2, b3, c0, c1, c2, c3, d0, d1, d2, d3, x0, x1, x2, x3, y0, y1, y2, y3) {

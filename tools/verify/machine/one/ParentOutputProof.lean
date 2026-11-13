@@ -18,7 +18,7 @@ the node holding: the left value at +0, the right at +0x20, the key at +0x40, th
 +0x60, the quadword 0 at +0x68, the flags with PARENT (4) at +0x70 and the platform at +0x71.
 It changes no byte outside the node's 0x72 and the 64 below the stack pointer's red zone it uses. -/
 theorem parent_output_fills (l0 l1 r0 r1 k0 k1 : V) (ra : BitVec 64) (rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r12 r13 r14 r15 : BitVec 64) (zf cf : Option Bool)
-    (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 : V) (mem : Mem)
+    (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 : V) (mem : Mem) (w : Wide)
     (hL0 : Vec mem (rsi + 0x0) l0) (hL1 : Vec mem (rsi + 0x10) l1) (hR0 : Vec mem (rdx + 0x0) r0) (hR1 : Vec mem (rdx + 0x10) r1)
     (hK0 : Vec mem (rcx + 0x0) k0) (hK1 : Vec mem (rcx + 0x10) k1)
     (oS0 : Owned16 mem (rsp + 0xFFFFFFFFFFFFFFB8)) (oS1 : Owned16 mem (rsp + 0xFFFFFFFFFFFFFFC8)) (oS2 : Owned16 mem (rsp + 0xFFFFFFFFFFFFFFD8)) (oS3 : Owned16 mem (rsp + 0xFFFFFFFFFFFFFFE8))
@@ -30,7 +30,7 @@ theorem parent_output_fills (l0 l1 r0 r1 k0 k1 : V) (ra : BitVec 64) (rax rcx rd
     (aKS : ∀ x, (x - rcx).toNat < 32 → 0x40 ≤ (x - (rsp - 0x48)).toNat)
     (aKO : ∀ x, (x - rcx).toNat < 32 → 0x78 ≤ (x - rdi).toNat)
     (aTO : ∀ x, (x - rsp).toNat < 8 → 0x78 ≤ (x - rdi).toNat) :
-    ∃ s', steps Code.prog 23 ⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, 0x10000⟩ = some s' ∧ s'.pc = ra.toNat ∧ s'.rsp = rsp + 8 ∧ s'.rax = rdi ∧
+    ∃ s', steps Code.prog 23 ⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, 0x10000, w⟩ = some s' ∧ s'.pc = ra.toNat ∧ s'.rsp = rsp + 8 ∧ s'.rax = rdi ∧
       (s'.rbx = rbx ∧ s'.rbp = rbp ∧ s'.r12 = r12 ∧ s'.r13 = r13 ∧ s'.r14 = r14 ∧ s'.r15 = r15) ∧
       Vec s'.mem (rdi + 0x0) l0 ∧ Vec s'.mem (rdi + 0x10) l1 ∧ Vec s'.mem (rdi + 0x20) r0 ∧ Vec s'.mem (rdi + 0x30) r1 ∧
       Vec s'.mem (rdi + 0x40) k0 ∧ Vec s'.mem (rdi + 0x50) k1 ∧

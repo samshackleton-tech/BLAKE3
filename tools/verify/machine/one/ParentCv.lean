@@ -29,7 +29,7 @@ What is assumed: the three inputs and the node and `out` are owned memory where 
 is 16-aligned and the stack pointer is as the ABI has it at a call (8 modulo 16); 0x48 bytes
 below the stack pointer are owned; and the regions that must not overlap do not (each `a…`). -/
 theorem parent_cv_by_the_crates_code (l0 l1 r0 r1 k0 k1 : V) (ra ra2 out : BitVec 64)
-    (rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r12 r13 r14 r15 : BitVec 64) (zf cf : Option Bool) (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 : V) (mem : Mem)
+    (rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r12 r13 r14 r15 : BitVec 64) (zf cf : Option Bool) (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 : V) (mem : Mem) (w : Wide)
     (hL0 : Vec mem (rsi + 0x0) l0) (hL1 : Vec mem (rsi + 0x10) l1) (hR0 : Vec mem (rdx + 0x0) r0) (hR1 : Vec mem (rdx + 0x10) r1)
     (hK0 : Vec mem (rcx + 0x0) k0) (hK1 : Vec mem (rcx + 0x10) k1)
     (oS0 : Owned16 mem (rsp + 0xFFFFFFFFFFFFFFB8)) (oS1 : Owned16 mem (rsp + 0xFFFFFFFFFFFFFFC8)) (oS2 : Owned16 mem (rsp + 0xFFFFFFFFFFFFFFD8)) (oS3 : Owned16 mem (rsp + 0xFFFFFFFFFFFFFFE8))
@@ -47,20 +47,20 @@ theorem parent_cv_by_the_crates_code (l0 l1 r0 r1 k0 k1 : V) (ra ra2 out : BitVe
     (oU0 : Owned16 mem (out + 0x0)) (oU1 : Owned16 mem (out + 0x10))
     (aOS : ∀ x, (x - rdi).toNat < 0x72 → 0x38 ≤ (x - (rsp - 0x30)).toNat)
     (aUS : ∀ x, (x - out).toNat < 32 → 0x38 ≤ (x - (rsp - 0x30)).toNat) :
-    ∃ n1 s1, steps Code.prog n1 ⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, 0x10000⟩ = some s1 ∧ s1.pc = ra.toNat ∧ s1.rax = rdi ∧
-      ∀ (rax' rcx' rdx' rbx' rsp' rbp' rsi' rdi' r8' r9' r12' r13' r14' r15' : BitVec 64) (zf' cf' : Option Bool) (x0' x1' x2' x3' x4' x5' x6' x7' x8' x9' x10' x11' x12' x13' x14' x15' : V),
+    ∃ n1 s1, steps Code.prog n1 ⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, 0x10000, w⟩ = some s1 ∧ s1.pc = ra.toNat ∧ s1.rax = rdi ∧
+      ∀ (rax' rcx' rdx' rbx' rsp' rbp' rsi' rdi' r8' r9' r12' r13' r14' r15' : BitVec 64) (zf' cf' : Option Bool) (x0' x1' x2' x3' x4' x5' x6' x7' x8' x9' x10' x11' x12' x13' x14' x15' : V) (w' : Wide),
         rdi' = out → rsi' = s1.rax → rsp' = rsp →
-        ∃ n2 s2, steps Code.prog n2 ⟨rax', rcx', rdx', rbx', rsp', rbp', rsi', rdi', r8', r9', r12', r13', r14', r15', zf', cf', x0', x1', x2', x3', x4', x5', x6', x7', x8', x9', x10', x11', x12', x13', x14', x15', s1.mem.put64 (rsp + 0) ra2, 0x11000⟩ = some s2 ∧
+        ∃ n2 s2, steps Code.prog n2 ⟨rax', rcx', rdx', rbx', rsp', rbp', rsi', rdi', r8', r9', r12', r13', r14', r15', zf', cf', x0', x1', x2', x3', x4', x5', x6', x7', x8', x9', x10', x11', x12', x13', x14', x15', s1.mem.put64 (rsp + 0) ra2, 0x11000, w'⟩ = some s2 ∧
           s2.pc = ra2.toNat ∧ s2.rax = out ∧ s2.rsp = rsp + 8 ∧
           Vec s2.mem (out + 0x0) (mk4 (parentCv (cvWords k0 k1) l0 l1 r0 r1 (BitVec.setWidth 32 (BitVec.setWidth 8 r8)))[0] (parentCv (cvWords k0 k1) l0 l1 r0 r1 (BitVec.setWidth 32 (BitVec.setWidth 8 r8)))[1]
             (parentCv (cvWords k0 k1) l0 l1 r0 r1 (BitVec.setWidth 32 (BitVec.setWidth 8 r8)))[2] (parentCv (cvWords k0 k1) l0 l1 r0 r1 (BitVec.setWidth 32 (BitVec.setWidth 8 r8)))[3]) ∧
           Vec s2.mem (out + 0x10) (mk4 (parentCv (cvWords k0 k1) l0 l1 r0 r1 (BitVec.setWidth 32 (BitVec.setWidth 8 r8)))[4] (parentCv (cvWords k0 k1) l0 l1 r0 r1 (BitVec.setWidth 32 (BitVec.setWidth 8 r8)))[5]
             (parentCv (cvWords k0 k1) l0 l1 r0 r1 (BitVec.setWidth 32 (BitVec.setWidth 8 r8)))[6] (parentCv (cvWords k0 k1) l0 l1 r0 r1 (BitVec.setWidth 32 (BitVec.setWidth 8 r8)))[7]) := by
   obtain ⟨s1, e1, pc1, sp1, ax1, _, v0, v1, v2, v3, v4, v5, b60, q68, b70, b71, fr1, own1⟩ :=
-    parent_output_fills l0 l1 r0 r1 k0 k1 ra rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r12 r13 r14 r15 zf cf x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 mem hL0 hL1 hR0 hR1 hK0 hK1 oS0 oS1 oS2 oS3
+    parent_output_fills l0 l1 r0 r1 k0 k1 ra rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r12 r13 r14 r15 zf cf x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 mem w hL0 hL1 hR0 hR1 hK0 hK1 oS0 oS1 oS2 oS3
       oO0 oO1 oO2 oO3 oO4 oO5 oB60 oQ68 oB70 oB71 hsp hdi hret aRS aKS aKO aTO
   refine ⟨23, s1, e1, pc1, ax1, ?_⟩
-  intro rax' rcx' rdx' rbx' rsp' rbp' rsi' rdi' r8' r9' r12' r13' r14' r15' zf' cf' x0' x1' x2' x3' x4' x5' x6' x7' x8' x9' x10' x11' x12' x13' x14' x15' hdi' hsi' hsp'
+  intro rax' rcx' rdx' rbx' rsp' rbp' rsi' rdi' r8' r9' r12' r13' r14' r15' zf' cf' x0' x1' x2' x3' x4' x5' x6' x7' x8' x9' x10' x11' x12' x13' x14' x15' w' hdi' hsi' hsp'
   subst rdi' rsp'
   rw [ax1] at hsi'
   subst rsi'
@@ -71,7 +71,7 @@ theorem parent_cv_by_the_crates_code (l0 l1 r0 r1 k0 k1 : V) (ra ra2 out : BitVe
   have e0 : rdi + 0 = rdi + 0x0 := rfl
   obtain ⟨n2, s2, e2, pc2, sp2, ax2, _, _, o0, o1, _⟩ :=
     chaining_value_is_the_cv k0 k1 l0 l1 r0 r1 0x40 (BitVec.setWidth 8 r8 ||| 4) (BitVec.setWidth 8 r9) 0 ra2
-      rax' rcx' rdx' rbx' rsp rbp' rdi out r8' r9' r12' r13' r14' r15' zf' cf' x0' x1' x2' x3' x4' x5' x6' x7' x8' x9' x10' x11' x12' x13' x14' x15' (s1.mem.put64 (rsp + 0) ra2)
+      rax' rcx' rdx' rbx' rsp rbp' rdi out r8' r9' r12' r13' r14' r15' zf' cf' x0' x1' x2' x3' x4' x5' x6' x7' x8' x9' x10' x11' x12' x13' x14' x15' (s1.mem.put64 (rsp + 0) ra2) w'
       (vec_congr (fun x hx => keep x (by bv_omega)) v4) (vec_congr (fun x hx => keep x (by bv_omega)) v5)
       (vec_congr (fun x hx => keep x (by bv_omega)) v0) (vec_congr (fun x hx => keep x (by bv_omega)) v1)
       (vec_congr (fun x hx => keep x (by bv_omega)) v2) (vec_congr (fun x hx => keep x (by bv_omega)) v3)

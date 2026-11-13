@@ -58,6 +58,12 @@ def run (prog : Nat → Option (Instr × Nat)) (ra : Nat) (owned : Array (BitVec
 def stackTop : BitVec 64 := 0x7FFFF000#64
 def returnAddress : BitVec 64 := 0x0DEAD000#64
 
+/-- R10, R11 and the wide registers at a call: marks. No function may depend on what a caller left there. -/
+def junkWide : Wide :=
+  { r10 := 0x1010101010101010#64, r11 := 0x1111111111111111#64,
+    u0 := BitVec.ofNat 384 (0x5A5A5A5A5A5A5A5A * 3 + 0xD00D), u1 := BitVec.ofNat 384 (0x5A5A5A5A5A5A5A5A * 4 + 0xD00D), u2 := BitVec.ofNat 384 (0x5A5A5A5A5A5A5A5A * 5 + 0xD00D), u3 := BitVec.ofNat 384 (0x5A5A5A5A5A5A5A5A * 6 + 0xD00D), u4 := BitVec.ofNat 384 (0x5A5A5A5A5A5A5A5A * 7 + 0xD00D), u5 := BitVec.ofNat 384 (0x5A5A5A5A5A5A5A5A * 8 + 0xD00D), u6 := BitVec.ofNat 384 (0x5A5A5A5A5A5A5A5A * 9 + 0xD00D), u7 := BitVec.ofNat 384 (0x5A5A5A5A5A5A5A5A * 10 + 0xD00D), u8 := BitVec.ofNat 384 (0x5A5A5A5A5A5A5A5A * 11 + 0xD00D), u9 := BitVec.ofNat 384 (0x5A5A5A5A5A5A5A5A * 12 + 0xD00D), u10 := BitVec.ofNat 384 (0x5A5A5A5A5A5A5A5A * 13 + 0xD00D), u11 := BitVec.ofNat 384 (0x5A5A5A5A5A5A5A5A * 14 + 0xD00D), u12 := BitVec.ofNat 384 (0x5A5A5A5A5A5A5A5A * 15 + 0xD00D), u13 := BitVec.ofNat 384 (0x5A5A5A5A5A5A5A5A * 16 + 0xD00D), u14 := BitVec.ofNat 384 (0x5A5A5A5A5A5A5A5A * 17 + 0xD00D), u15 := BitVec.ofNat 384 (0x5A5A5A5A5A5A5A5A * 18 + 0xD00D),
+    z16 := BitVec.ofNat 512 (0xA5A5A5A5A5A5A5A5A5A5A5A5 * 23 + 0xBEEF), z17 := BitVec.ofNat 512 (0xA5A5A5A5A5A5A5A5A5A5A5A5 * 24 + 0xBEEF), z18 := BitVec.ofNat 512 (0xA5A5A5A5A5A5A5A5A5A5A5A5 * 25 + 0xBEEF), z19 := BitVec.ofNat 512 (0xA5A5A5A5A5A5A5A5A5A5A5A5 * 26 + 0xBEEF), z20 := BitVec.ofNat 512 (0xA5A5A5A5A5A5A5A5A5A5A5A5 * 27 + 0xBEEF), z21 := BitVec.ofNat 512 (0xA5A5A5A5A5A5A5A5A5A5A5A5 * 28 + 0xBEEF), z22 := BitVec.ofNat 512 (0xA5A5A5A5A5A5A5A5A5A5A5A5 * 29 + 0xBEEF), z23 := BitVec.ofNat 512 (0xA5A5A5A5A5A5A5A5A5A5A5A5 * 30 + 0xBEEF), z24 := BitVec.ofNat 512 (0xA5A5A5A5A5A5A5A5A5A5A5A5 * 31 + 0xBEEF), z25 := BitVec.ofNat 512 (0xA5A5A5A5A5A5A5A5A5A5A5A5 * 32 + 0xBEEF), z26 := BitVec.ofNat 512 (0xA5A5A5A5A5A5A5A5A5A5A5A5 * 33 + 0xBEEF), z27 := BitVec.ofNat 512 (0xA5A5A5A5A5A5A5A5A5A5A5A5 * 34 + 0xBEEF), z28 := BitVec.ofNat 512 (0xA5A5A5A5A5A5A5A5A5A5A5A5 * 35 + 0xBEEF), z29 := BitVec.ofNat 512 (0xA5A5A5A5A5A5A5A5A5A5A5A5 * 36 + 0xBEEF), z30 := BitVec.ofNat 512 (0xA5A5A5A5A5A5A5A5A5A5A5A5 * 37 + 0xBEEF), z31 := BitVec.ofNat 512 (0xA5A5A5A5A5A5A5A5A5A5A5A5 * 38 + 0xBEEF) }
+
 /-- The machine at a call of the function at `entry`: the arguments in their registers, the return address
 on the stack, the contract's budget of stack below it owned, and marks in the registers a callee keeps. -/
 def start (c : Abi.Contract) (entry : Nat) (m : Mem) : State :=
@@ -67,7 +73,7 @@ def start (c : Abi.Contract) (entry : Nat) (m : Mem) : State :=
   { rax := 0x1111#64, rcx := arg 3, rdx := arg 2, rbx := 0xB0B0#64, rsp := stackTop, rbp := 0xB1B1#64, rsi := arg 1, rdi := arg 0,
     r8 := arg 4, r9 := arg 5, r12 := 0xC2C2#64, r13 := 0xC3C3#64, r14 := 0xC4C4#64, r15 := 0xC5C5#64, zf := none, cf := none,
     x0 := 0, x1 := 0, x2 := 0, x3 := 0, x4 := 0, x5 := 0, x6 := 0, x7 := 0, x8 := 0, x9 := 0, x10 := 0, x11 := 0, x12 := 0, x13 := 0,
-    x14 := 0, x15 := 0, mem := m, pc := entry }
+    x14 := 0, x15 := 0, mem := m, pc := entry, w := junkWide }
 
 def apartB (a n b k : BitVec 64) : Bool := decide (n ≤ b - a) && decide (k ≤ a - b)
 

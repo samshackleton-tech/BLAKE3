@@ -21,7 +21,7 @@ set_option maxHeartbeats 0 in
 /-- The first sixteen instructions, on the avx path: the key copied to the stack, the node's
 length, counter and flags in the kernel's argument registers, and the call. -/
 theorem pre_avx (k0 k1 b0 b1 b2 b3 : V) (len8 fl8 pl8 : BitVec 8) (ctr ra : BitVec 64) (rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r12 r13 r14 r15 : BitVec 64) (zf cf : Option Bool)
-    (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 : V) (mem : Mem)
+    (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 : V) (mem : Mem) (w : Wide)
     (hK0 : Vec mem (rsi + 0x40) k0) (hK1 : Vec mem (rsi + 0x50) k1)
     (hB0 : Vec mem (rsi + 0) b0) (hB1 : Vec mem (rsi + 16) b1) (hB2 : Vec mem (rsi + 32) b2) (hB3 : Vec mem (rsi + 48) b3)
     (hLen : mem (rsi + 0x60) = some len8) (hCtr : Quad mem (rsi + 0x68) ctr) (hFl : mem (rsi + 0x70) = some fl8)
@@ -31,7 +31,7 @@ theorem pre_avx (k0 k1 b0 b1 b2 b3 : V) (len8 fl8 pl8 : BitVec 8) (ctr ra : BitV
     (hsp : rsp &&& 15 = 8) (hsi : rsi &&& 15 = 0)
     (aOS : ∀ x, (x - rsi).toNat < 0x72 → 0x30 ≤ (x - (rsp - 0x30)).toNat)
     (hp : pl8 = 5) :
-    ∃ s', steps Code.prog 16 ⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, 0x11000⟩ = some s' ∧ s'.pc = 0x30000 ∧
+    ∃ s', steps Code.prog 16 ⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, 0x11000, w⟩ = some s' ∧ s'.pc = 0x30000 ∧
       s'.rdi = rsp - 0x28 ∧ s'.rsi = rsi ∧ s'.rdx = BitVec.setWidth 64 len8 &&& 255 ∧ s'.rcx = ctr ∧
       s'.r8 = BitVec.setWidth 64 fl8 &&& 255 ∧ s'.rsp = rsp - 0x30 ∧ s'.rbx = rdi ∧
       (s'.rbp = rbp ∧ s'.r12 = r12 ∧ s'.r13 = r13 ∧ s'.r14 = r14 ∧ s'.r15 = r15) ∧
@@ -76,7 +76,7 @@ set_option maxHeartbeats 0 in
 /-- The first sixteen instructions, on the sse path: the key copied to the stack, the node's
 length, counter and flags in the kernel's argument registers, and the call. -/
 theorem pre_sse (k0 k1 b0 b1 b2 b3 : V) (len8 fl8 pl8 : BitVec 8) (ctr ra : BitVec 64) (rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r12 r13 r14 r15 : BitVec 64) (zf cf : Option Bool)
-    (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 : V) (mem : Mem)
+    (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 : V) (mem : Mem) (w : Wide)
     (hK0 : Vec mem (rsi + 0x40) k0) (hK1 : Vec mem (rsi + 0x50) k1)
     (hB0 : Vec mem (rsi + 0) b0) (hB1 : Vec mem (rsi + 16) b1) (hB2 : Vec mem (rsi + 32) b2) (hB3 : Vec mem (rsi + 48) b3)
     (hLen : mem (rsi + 0x60) = some len8) (hCtr : Quad mem (rsi + 0x68) ctr) (hFl : mem (rsi + 0x70) = some fl8)
@@ -86,7 +86,7 @@ theorem pre_sse (k0 k1 b0 b1 b2 b3 : V) (len8 fl8 pl8 : BitVec 8) (ctr ra : BitV
     (hsp : rsp &&& 15 = 8) (hsi : rsi &&& 15 = 0)
     (aOS : ∀ x, (x - rsi).toNat < 0x72 → 0x30 ≤ (x - (rsp - 0x30)).toNat)
     (hp : pl8 ≠ 5) :
-    ∃ s', steps Code.prog 16 ⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, 0x11000⟩ = some s' ∧ s'.pc = 0x20000 ∧
+    ∃ s', steps Code.prog 16 ⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, 0x11000, w⟩ = some s' ∧ s'.pc = 0x20000 ∧
       s'.rdi = rsp - 0x28 ∧ s'.rsi = rsi ∧ s'.rdx = BitVec.setWidth 64 len8 &&& 255 ∧ s'.rcx = ctr ∧
       s'.r8 = BitVec.setWidth 64 fl8 &&& 255 ∧ s'.rsp = rsp - 0x30 ∧ s'.rbx = rdi ∧
       (s'.rbp = rbp ∧ s'.r12 = r12 ∧ s'.r13 = r13 ∧ s'.r14 = r14 ∧ s'.r15 = r15) ∧
@@ -139,7 +139,7 @@ theorem suf_avx (c0 c1 : V) (rbx0 ra : BitVec 64) (s : State) (hpc : s.pc = 0x11
     ∃ s', steps Code.prog 9 s = some s' ∧ s'.pc = ra.toNat ∧ s'.rsp = s.rsp + 32 + 8 + 8 ∧ s'.rax = s.rbx ∧ s'.rbx = rbx0 ∧
       (s'.rbp = s.rbp ∧ s'.r12 = s.r12 ∧ s'.r13 = s.r13 ∧ s'.r14 = s.r14 ∧ s'.r15 = s.r15) ∧
       s'.mem = (s.mem.put128 (s.rbx + 0x10) c1).put128 (s.rbx + 0x0) c0 := by
-  obtain ⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, pc⟩ := s
+  obtain ⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, pc, w⟩ := s
   simp only at hpc hC0 hC1 al0 al1 oU1 oU0 hpop hret aUS
   subst hpc
   have w1 : ∀ (a w : V), (mem.put128 (rbx + 0x10) a).write128 (rbx + 0x0) w = some ((mem.put128 (rbx + 0x10) a).put128 (rbx + 0x0) w) :=
@@ -170,7 +170,7 @@ theorem suf_sse (c0 c1 : V) (rbx0 ra : BitVec 64) (s : State) (hpc : s.pc = 0x11
     ∃ s', steps Code.prog 8 s = some s' ∧ s'.pc = ra.toNat ∧ s'.rsp = s.rsp + 32 + 8 + 8 ∧ s'.rax = s.rbx ∧ s'.rbx = rbx0 ∧
       (s'.rbp = s.rbp ∧ s'.r12 = s.r12 ∧ s'.r13 = s.r13 ∧ s'.r14 = s.r14 ∧ s'.r15 = s.r15) ∧
       s'.mem = (s.mem.put128 (s.rbx + 0x10) c1).put128 (s.rbx + 0x0) c0 := by
-  obtain ⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, pc⟩ := s
+  obtain ⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, pc, w⟩ := s
   simp only at hpc hC0 hC1 al0 al1 oU1 oU0 hpop hret aUS
   subst hpc
   have w1 : ∀ (a w : V), (mem.put128 (rbx + 0x10) a).write128 (rbx + 0x0) w = some ((mem.put128 (rbx + 0x10) a).put128 (rbx + 0x0) w) :=

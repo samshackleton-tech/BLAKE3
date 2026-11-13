@@ -12,7 +12,7 @@ first eight words of the specification's `BLAKE3_COMPRESS` of the node's key, bl
 length and flags: whichever kernel the platform's byte chose. RBX, RBP and R12 to R15 are as
 they were, and no byte is changed but the result's 32 and the 48 of its own stack frame. -/
 theorem chaining_value_is_the_cv (k0 k1 b0 b1 b2 b3 : V) (len8 fl8 pl8 : BitVec 8) (ctr ra : BitVec 64) (rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r12 r13 r14 r15 : BitVec 64) (zf cf : Option Bool)
-    (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 : V) (mem : Mem)
+    (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 : V) (mem : Mem) (w : Wide)
     (hK0 : Vec mem (rsi + 0x40) k0) (hK1 : Vec mem (rsi + 0x50) k1)
     (hB0 : Vec mem (rsi + 0) b0) (hB1 : Vec mem (rsi + 16) b1) (hB2 : Vec mem (rsi + 32) b2) (hB3 : Vec mem (rsi + 48) b3)
     (hLen : mem (rsi + 0x60) = some len8) (hCtr : Quad mem (rsi + 0x68) ctr) (hFl : mem (rsi + 0x70) = some fl8)
@@ -23,7 +23,7 @@ theorem chaining_value_is_the_cv (k0 k1 b0 b1 b2 b3 : V) (len8 fl8 pl8 : BitVec 
     (aOS : ∀ x, (x - rsi).toNat < 0x72 → 0x30 ≤ (x - (rsp - 0x30)).toNat)
     (oU0 : Owned16 mem (rdi + 0x0)) (oU1 : Owned16 mem (rdi + 0x10)) (hret : mem.read rsp 64 = some ra)
     (aUS : ∀ x, (x - rdi).toNat < 32 → 0x38 ≤ (x - (rsp - 0x30)).toNat) :
-    ∃ k s', steps Code.prog k ⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, 0x11000⟩ = some s' ∧ s'.pc = ra.toNat ∧ s'.rsp = rsp + 8 ∧ s'.rax = rdi ∧ s'.rbx = rbx ∧
+    ∃ k s', steps Code.prog k ⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, 0x11000, w⟩ = some s' ∧ s'.pc = ra.toNat ∧ s'.rsp = rsp + 8 ∧ s'.rax = rdi ∧ s'.rbx = rbx ∧
       (s'.rbp = rbp ∧ s'.r12 = r12 ∧ s'.r13 = r13 ∧ s'.r14 = r14 ∧ s'.r15 = r15) ∧
       Vec s'.mem (rdi + 0x0) (mk4 (specCv (cvWords k0 k1) (blockWords b0 b1 b2 b3) ctr (BitVec.setWidth 32 len8) (BitVec.setWidth 32 fl8))[0] (specCv (cvWords k0 k1) (blockWords b0 b1 b2 b3) ctr (BitVec.setWidth 32 len8) (BitVec.setWidth 32 fl8))[1]
         (specCv (cvWords k0 k1) (blockWords b0 b1 b2 b3) ctr (BitVec.setWidth 32 len8) (BitVec.setWidth 32 fl8))[2] (specCv (cvWords k0 k1) (blockWords b0 b1 b2 b3) ctr (BitVec.setWidth 32 len8) (BitVec.setWidth 32 fl8))[3]) ∧
@@ -32,7 +32,7 @@ theorem chaining_value_is_the_cv (k0 k1 b0 b1 b2 b3 : V) (len8 fl8 pl8 : BitVec 
       (∀ x, 32 ≤ (x - rdi).toNat → 0x30 ≤ (x - (rsp - 0x30)).toNat → s'.mem x = mem x) := by
   by_cases hp : pl8 = 5
   · -- the AVX-512 kernel
-    obtain ⟨s1, e1, pc1, di1, si1, dx1, cx1, r81, sp1, bx1, ⟨bp1, a12, a13, a14, a15⟩, mem1⟩ := pre_avx k0 k1 b0 b1 b2 b3 len8 fl8 pl8 ctr ra rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r12 r13 r14 r15 zf cf x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 mem hK0 hK1 hB0 hB1 hB2 hB3 hLen hCtr hFl hPl oPush oC1 oC0 oCall hsp hsi aOS hp
+    obtain ⟨s1, e1, pc1, di1, si1, dx1, cx1, r81, sp1, bx1, ⟨bp1, a12, a13, a14, a15⟩, mem1⟩ := pre_avx k0 k1 b0 b1 b2 b3 len8 fl8 pl8 ctr ra rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r12 r13 r14 r15 zf cf x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 mem w hK0 hK1 hB0 hB1 hB2 hB3 hLen hCtr hFl hPl oPush oC1 oC0 oCall hsp hsi aOS hp
     have n0 : rsp - 0x28 + 0 = rsp - 0x28 := by bv_decide
     have n16 : rsp - 0x28 + 16 = rsp - 0x18 := by bv_decide
     have hc0 : Vec s1.mem (s1.rdi + 0) k0 := by
@@ -89,7 +89,7 @@ theorem chaining_value_is_the_cv (k0 k1 b0 b1 b2 b3 : V) (len8 fl8 pl8 : BitVec 
       rw [mem3, put128_other _ _ _ x (by bv_omega), put128_other _ _ _ x (by bv_omega), mem2,
         put128_other _ _ _ x (by bv_omega), put128_other _ _ _ x (by bv_omega), put64_other _ _ _ x (by bv_omega), put128_other _ _ _ x (by bv_omega), put128_other _ _ _ x (by bv_omega), put64_other _ _ _ x (by bv_omega)]
   · -- the SSE4.1 kernel
-    obtain ⟨s1, e1, pc1, di1, si1, dx1, cx1, r81, sp1, bx1, ⟨bp1, a12, a13, a14, a15⟩, mem1⟩ := pre_sse k0 k1 b0 b1 b2 b3 len8 fl8 pl8 ctr ra rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r12 r13 r14 r15 zf cf x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 mem hK0 hK1 hB0 hB1 hB2 hB3 hLen hCtr hFl hPl oPush oC1 oC0 oCall hsp hsi aOS hp
+    obtain ⟨s1, e1, pc1, di1, si1, dx1, cx1, r81, sp1, bx1, ⟨bp1, a12, a13, a14, a15⟩, mem1⟩ := pre_sse k0 k1 b0 b1 b2 b3 len8 fl8 pl8 ctr ra rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r12 r13 r14 r15 zf cf x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 mem w hK0 hK1 hB0 hB1 hB2 hB3 hLen hCtr hFl hPl oPush oC1 oC0 oCall hsp hsi aOS hp
     have n0 : rsp - 0x28 + 0 = rsp - 0x28 := by bv_decide
     have n16 : rsp - 0x28 + 16 = rsp - 0x18 := by bv_decide
     have hc0 : Vec s1.mem (s1.rdi + 0) k0 := by

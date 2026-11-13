@@ -31,7 +31,7 @@ theorem put_frame (mem : Mem) (out : BitVec 64) (v0 v1 v2 v3 : V) (x : BitVec 64
 set_option maxRecDepth 100000 in
 macro "run_hex" "[" hs:Lean.Parser.Tactic.simpLemma,* "]" : tactic => `(tactic|
   simp (config := {maxSteps := 100000000, implicitDefEqProofs := false}) only [stepsL_mk, stepsL_zero, stepL, touched, srcObs, opObs, branches,
-    step, src, X86.read, write, State.get, State.set, State.xmm, State.setx, trunc, hex_at,
+    step, src, X86.read, write, State.get, State.set, State.xmm, State.setx, State.setxz, State.zmm, State.setz, State.zeroupper, trunc, hex_at,
     Option.bind_eq_bind, Option.bind_some, Option.pure_def, Option.map_some, bind_pure_comp, Option.isSome_some,
     List.nil_append, List.cons_append, List.append_nil,
     Nat.reduceEqDiff, Nat.reduceLT, ↓reduceIte, reduceCtorEq, BitVec.reduceAdd, BitVec.reduceSub, BitVec.reduceEq, BitVec.reduceBEq,

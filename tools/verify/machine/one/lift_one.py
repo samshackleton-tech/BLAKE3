@@ -37,17 +37,55 @@ if obj:
                 data[at + i] = b
                 if sec is not None: sections[sec][at + i] = b
 
-G64 = "rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r12 r13 r14 r15".split()
+G64 = "rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r10 r11 r12 r13 r14 r15".split()
 REG = {r: (r, 64) for r in G64}
 for r in "rax rcx rdx rbx rsp rbp rsi rdi".split(): REG["e" + r[1:]] = (r, 32)
 for r8, r in dict(al="rax", cl="rcx", dl="rdx", bl="rbx", sil="rsi", dil="rdi").items(): REG[r8] = (r, 8)
-for r in "r8 r9 r12 r13 r14 r15".split(): REG[r + "d"] = (r, 32); REG[r + "b"] = (r, 8)
+for r in "r8 r9 r10 r11 r12 r13 r14 r15".split(): REG[r + "d"] = (r, 32); REG[r + "b"] = (r, 8)
 PTR = {"byte": 8, "dword": 32, "qword": 64}
 
 def bv(n): return f"0x{n & (2**64 - 1):X}"
 def xmm(t):
     m = re.fullmatch(r"xmm(\d+)", t.strip()); assert m, t; return int(m.group(1))
 def is_xmm(t): return re.fullmatch(r"xmm\d+", t.strip()) is not None
+def zmm(t):
+    m = re.fullmatch(r"zmm(\d+)", t.strip()); assert m, t; return int(m.group(1))
+def is_zmm(t): return re.fullmatch(r"zmm\d+", t.strip()) is not None
+def const32(sym):
+    """The four bytes a RIP-relative doubleword operand names (ELF), as a number."""
+    assert sym and sym.startswith("elf:"), sym
+    m = re.fullmatch(r"(.+?)([+-]0x[0-9a-f]+)?", sym[4:]); name = m.group(1); add = int(m.group(2), 16) if m.group(2) else 0
+    sec, start = (name, 0) if name in sections else (symsec[name], symbols[name])
+    at = start + add + 4
+    return "0x" + "".join(f"{sections[sec][at + i]:02X}" for i in reversed(range(4)))
+def wide(op, a, reloc):
+    """An AVX-512 instruction on whole ZMM registers, without a mask; None if it is not one."""
+    if op in ("vmovdqu32", "vmovdqa32", "vmovdqu64", "vmovdqa64"):
+        al = "true" if op.startswith("vmovdqa") else "false"
+        if is_zmm(a[0]) and is_zmm(a[1]): return f".zmov {zmm(a[0])} {zmm(a[1])}"
+        if is_zmm(a[0]):
+            assert a[1].startswith("zmmword ptr "), a
+            mi = re.fullmatch(r"\[(\w+) \+ (\w+)(?: \+ (0x[0-9a-f]+))?\]", a[1][len("zmmword ptr "):])
+            if mi and mi.group(2) in REG:
+                assert al == "false", a
+                return f".zloadi {zmm(a[0])} .{REG[mi.group(1)][0]} .{REG[mi.group(2)][0]} {bv(int(mi.group(3), 16) if mi.group(3) else 0)}"
+            r, d = memref(a[1][len("zmmword ptr "):]); return f".zload {al} {zmm(a[0])} .{r} {bv(d)}"
+        if a[0].startswith("zmmword ptr ") and is_zmm(a[1]):
+            r, d = memref(a[0][len("zmmword ptr "):]); return f".zstore {al} .{r} {bv(d)} {zmm(a[1])}"
+        return None
+    if op == "vpbroadcastd" and is_zmm(a[0]):
+        if a[1] in REG:
+            r, w = REG[a[1]]; assert w == 32, a; return f".zbroadcast {zmm(a[0])} (.reg .{r})"
+        if a[1] == "dword ptr [rip]": return f".zbroadcast {zmm(a[0])} (.imm {const32(reloc)})"
+        m = re.fullmatch(r"dword ptr (\[.*\])", a[1]); assert m, a
+        r, d = memref(m.group(1)); return f".zbroadcast {zmm(a[0])} (.mem .{r} {bv(d)})"
+    if not (a and all(is_zmm(x) for x in a[:2])): return None
+    three = {"vpaddd": "zpaddd", "vpxord": "zpxord", "vpunpckldq": "zunpckldq", "vpunpckhdq": "zunpckhdq",
+             "vpunpcklqdq": "zunpcklqdq", "vpunpckhqdq": "zunpckhqdq"}
+    if op in three and len(a) == 3 and is_zmm(a[2]): return f".{three[op]} {zmm(a[0])} {zmm(a[1])} {zmm(a[2])}"
+    if op == "vprord" and len(a) == 3: return f".zprord {zmm(a[0])} {zmm(a[1])} {int(a[2], 16)}"
+    if op == "vshufi32x4" and len(a) == 4 and is_zmm(a[2]): return f".zshufi32x4 {zmm(a[0])} {zmm(a[1])} {zmm(a[2])} {int(a[3], 16)}"
+    return None
 def memref(t):
     """(base register, displacement) of `[reg]`, `[reg + d]`, `[reg - d]`"""
     m = re.fullmatch(r"\[(\w+)(?: ([+-]) (0x[0-9a-f]+))?\]", t.strip()); assert m, t
@@ -101,19 +139,22 @@ for at, size, op, args, reloc, raw in insns:
         assert op.startswith("nop") or op in ("int3", "ud2"), f"code after the return: {op}"; continue
     at2, nxt = base + at - start, base + at - start + size
     mi = re.fullmatch(r"xmmword ptr \[(\w+) \+ (\w+)(?: \+ (0x[0-9a-f]+))?\]", a[1]) if len(a) > 1 else None
-    if op in ALIGNED + UNALIGNED and mi and mi.group(2) in REG and is_xmm(a[0]):
-        ins = f".movvi {'true' if op in ALIGNED else 'false'} {xmm(a[0])} .{REG[mi.group(1)][0]} .{REG[mi.group(2)][0]} {bv(int(mi.group(3), 16) if mi.group(3) else 0)}"
+    vex = "v" if op.startswith("v") else ""      # written the new way: the register is cleared above bit 127
+    w512 = wide(op, a, reloc)
+    if w512 is not None: ins = w512
+    elif op in ALIGNED + UNALIGNED and mi and mi.group(2) in REG and is_xmm(a[0]):
+        ins = f".{vex}movvi {'true' if op in ALIGNED else 'false'} {xmm(a[0])} .{REG[mi.group(1)][0]} .{REG[mi.group(2)][0]} {bv(int(mi.group(3), 16) if mi.group(3) else 0)}"
     elif op in ALIGNED + UNALIGNED:
         if is_xmm(a[0]):
-            s, mem = vsrc(a[1], reloc); ins = f".movv {'true' if (op in ALIGNED and mem) else 'false'} {xmm(a[0])} {s}"
+            s, mem = vsrc(a[1], reloc); ins = f".{vex}movv {'true' if (op in ALIGNED and mem) else 'false'} {xmm(a[0])} {s}"
         else:
             assert a[0].startswith("xmmword ptr "), args
             r, d = memref(a[0][len("xmmword ptr "):]); ins = f".storev {'true' if op in ALIGNED else 'false'} .{r} {bv(d)} {xmm(a[1])}"
-    elif op in ("movq", "vmovq"): r, w = REG[a[1]]; assert w == 64; ins = f".movq {xmm(a[0])} .{r}"
+    elif op in ("movq", "vmovq"): r, w = REG[a[1]]; assert w == 64; ins = f".{vex}movq {xmm(a[0])} .{r}"
     elif op in ("paddd", "pxor", "por", "pshufb", "punpcklqdq", "punpckldq", "punpckhdq", "pand", "paddb", "pcmpgtb", "punpcklbw", "punpckhbw"): ins = f".{op} {xmm(a[0])} {vsrc(a[1], reloc)[0]}"
     elif op in ("pslld", "psrld", "psrlw"): ins = f".{op} {xmm(a[0])} {int(a[1], 16)}"
     elif op in ("pshufd", "shufps", "pblendw"): ins = f".{op} {xmm(a[0])} {vsrc(a[1], reloc)[0]} {int(a[2], 16)}"
-    elif op == "vpshufd": ins = f".pshufd {xmm(a[0])} {vsrc(a[1], reloc)[0]} {int(a[2], 16)}"
+    elif op == "vpshufd": ins = f".vpshufd {xmm(a[0])} {vsrc(a[1], reloc)[0]} {int(a[2], 16)}"
     elif op in ("vpaddd", "vpxord", "vpxor", "vpunpcklqdq", "vpunpckldq", "vpunpckhdq"):
         ins = f".{op.replace('vpxord', 'vpxor')} {xmm(a[0])} {xmm(a[1])} {vsrc(a[2], reloc)[0]}"
     elif op == "vprord": ins = f".vprord {xmm(a[0])} {vsrc(a[1], reloc)[0]} {int(a[2], 16)}"
@@ -124,12 +165,14 @@ for at, size, op, args, reloc, raw in insns:
     elif op == "movzx":
         r, w = REG[a[0]]; s, ws = opnd(a[1]); assert w == 32 and ws == 8, args; ins = f".movzx8 .{r} {s}"
     elif op == "shl": r, w = REG[a[0]]; assert w == 64; ins = f".shl64 .{r} {int(a[1], 16)}"
-    elif op == "shr": r, w = REG[a[0]]; assert w == 64; ins = f".shr64 .{r} {int(a[1], 16) if len(a) > 1 else 1}"   # `shr r` alone is by one
+    elif op == "shr":
+        r, w = REG[a[0]]; assert w in (32, 64); ins = f".shr{w} .{r} {int(a[1], 16) if len(a) > 1 else 1}"   # `shr r` alone is by one
     elif op == "dec":
-        r, w = REG[a[0]]; assert w in (8, 64); ins = f".decb .{r}" if w == 8 else f".dec64 .{r}"
+        r, w = REG[a[0]]; assert w in (8, 32, 64); ins = f".decb .{r}" if w == 8 else f".dec{w} .{r}"
     elif op == "lea":
         r, w = REG[a[0]]; assert w == 64; b, d = memref(a[1]); ins = f".lea .{r} .{b} {bv(d)}"
-    elif op.startswith("nop"): ins = ".nop"
+    elif op.startswith("nop") or op == "endbr64": ins = ".nop"     # ENDBR64 does nothing where it is reached by a call
+    elif op == "vzeroupper": ins = ".vzeroupper"
     elif op in ("push", "pop"): r, w = REG[a[0]]; assert w == 64; ins = f".{op} .{r}"
     elif op in ("je", "jne", "jmp", "jbe", "jae"):
         # a jump to another function of the object goes to the address given for its symbol

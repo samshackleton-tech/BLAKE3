@@ -31,6 +31,7 @@ The machine level, for kernels: the programmer chooses every instruction and reg
     data NAME = WORD, WORD, ...              32-bit words, 64-byte aligned; `#NAME` names them in an instruction
     kernel NAME replaces "symbol" {          a function whose body is instructions, one a line
     kernel NAME on aarch64 {                 the same for AArch64: `odec.py SOURCE aarch64 NAME` prints it
+    kernel NAME meets CONTRACT(x: TYPE, ...) the contract (Lean, Spec_*.lean) the kernel is to meet, and what it is stated for
       def NAME(a, b) {                       instructions, substituted where used; `$a` is the argument
         vpaddd xmm0, xmm0, $a
       }
@@ -66,6 +67,10 @@ def contracts_of(text):
     own.clear()
     for line in text.split("\n"):
         s = line.split("//")[0].strip()
+        # a kernel's contract: `kernel NAME meets CONTRACT(things it is stated for)`, a line of its own
+        m = re.match(r"^kernel\s+(\w+)\s+meets\s+(.+)$", s)
+        if m:
+            out[m.group(1)] = {"head": [("meets", m.group(2).strip())], "loops": [], "calls": [], "kernel": True}; kept.append(""); continue
         m = re.match(r"^fn\s+(\w+)\s*\(", s)
         if m:
             fn = m.group(1); out[fn] = {"head": [], "loops": [], "calls": []}; where = out[fn]["head"]; kept.append(line); continue

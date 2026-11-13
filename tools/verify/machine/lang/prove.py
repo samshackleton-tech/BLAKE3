@@ -82,7 +82,7 @@ names = {"rdi": "rdi_", "rsi": "rsi_"}
 P += ["set_option maxRecDepth 100000 in",
       f"macro \"run_{name}\" \"[\" hs:Lean.Parser.Tactic.simpLemma,* \"]\" : tactic => `(tactic|",
       "  simp (config := {maxSteps := 100000000, implicitDefEqProofs := false}) only [stepsL_mk, stepsL_zero, stepL, touched, srcObs, opObs, branches,",
-      f"    step, src, X86.read, write, State.get, State.set, State.xmm, State.setx, trunc, {name}_at,",
+      f"    step, src, X86.read, write, State.get, State.set, State.xmm, State.setx, State.setxz, State.zmm, State.setz, State.zeroupper, trunc, {name}_at,",
       "    Option.bind_eq_bind, Option.bind_some, Option.pure_def, Option.map_some, bind_pure_comp, Option.isSome_some,",
       "    List.nil_append, List.cons_append, List.append_nil,",
       "    Nat.reduceEqDiff, Nat.reduceLT, ↓reduceIte, reduceCtorEq, BitVec.reduceAdd, BitVec.reduceSub, BitVec.reduceEq, BitVec.reduceBEq,",

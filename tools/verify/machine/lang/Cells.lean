@@ -220,7 +220,7 @@ macro "mem_disch" : tactic => `(tactic| first
 /-- Run a function's instructions on a state that is written out, memory in cells. -/
 macro "run_fn" "[" hs:Lean.Parser.Tactic.simpLemma,* "]" : tactic => `(tactic|
   simp (config := {maxSteps := 100000000, implicitDefEqProofs := false}) (disch := mem_disch) only [steps_mk, steps_zero, step, src,
-    X86.read, write, State.get, State.set, State.xmm, State.setx, trunc, ode_at,
+    X86.read, write, State.get, State.set, State.xmm, State.setx, State.setxz, State.zmm, State.setz, State.zeroupper, trunc, ode_at,
     read_put64_same, read128_put128_same, read_put64_far, read_put128_far, read128_put64_far, read128_put128_far,
     write64_owned, write128_owned, read_cell, read128_cell,
     read8_put8_same, read8_put8_far, read8_put64_far, read8_put128_far, read_put8_far, read128_put8_far, write8_owned, read8_cell, byte_low, byte_zero,
