@@ -1,7 +1,7 @@
 # The hash's hexadecimal: source, compiler, proof
 
 `Hash::to_hex` is two kernels of vector instructions, one for x86-64 (SSE2, 45 instructions) and one for
-AArch64 (NEON, 32). Neither is written by hand in assembly: both are printed from `hex.ode`, and Lean
+AArch64 (NEON, 27). Neither is written by hand in assembly: both are printed from `hex.ode`, and Lean
 checks, of the instructions as assembled, that they write the hexadecimal and show an observer of time
 and cache nothing of the hash.
 
@@ -20,7 +20,7 @@ to `f`). `spec/Contract.lean` says what a contract is.
 | the machine | a model written here (`x86/Machine.lean`, 435 lines) | Google DeepMind's (`arm64-semantics` of github.com/google-deepmind/code-verification, Apache-2.0, unchanged, fetched at the commit `arm/lakefile.toml` names) |
 | what meeting a contract means there | `x86/Abi.lean`, `x86/AbiBytes.lean` (System V) | `arm/ArmAbi.lean` (AAPCS64, in their logic) |
 | the theorem | `hex_meets_bytes` (`x86/Meets_hex_bytes.lean`): for every hash the instructions meet the contract, and what an observer sees (`x86/Observer.lean`: every address read or written, every jump) is one list, whatever the hash | `hex_neon_meets` (`arm/HexNeonBytes.lean`): the instructions meet the contract; `hex_neon_quiet`, `hex_neon_observed` (`arm/Quiet_hex_neon.lean`): two machines that differ only in what memory holds and in the vector registers show an observer (`arm/Observer.lean`) the same |
-| the instructions the theorem is about | read back from the assembled object by `x86/lift_one.py` (llvm-objdump's listing) | the object's 32 words; Lean decodes them with their decoder |
+| the instructions the theorem is about | read back from the assembled object by `x86/lift_one.py` (llvm-objdump's listing) | the object's 27 words; Lean decodes them with their decoder |
 
 ## How it is checked
 

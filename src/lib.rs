@@ -478,11 +478,11 @@ impl Hash {
 
     /// Encode a `Hash` in lowercase hexadecimal.
     ///
-    /// Each character is computed from its four bits by arithmetic, sixteen
-    /// bytes at a time: no table is indexed by the hash and no branch is
-    /// taken on it, so the call's time and memory accesses are the same for
-    /// every hash (a hash may be a secret: a keyed hash's tag, a derived
-    /// key). The instructions that do it are proved, as assembled, to write
+    /// Each character is made from its four bits sixteen bytes at a time, by
+    /// arithmetic on x86-64 and by a lookup in a register on AArch64: no
+    /// memory is indexed by the hash and no branch is taken on it, so the
+    /// call's time and memory accesses are the same for every hash (a hash
+    /// may be a secret: a keyed hash's tag, a derived key). The instructions that do it are proved, as assembled, to write
     /// the hexadecimal and to show an observer the same whatever the hash
     /// is (`tools/verify/hex`).
     ///
@@ -492,6 +492,9 @@ impl Hash {
     /// type.
     ///
     /// [`ArrayString`]: https://docs.rs/arrayvec/0.5.1/arrayvec/struct.ArrayString.html
+    // Inlined in the caller, the buffer's copy into the string is the caller's
+    // own code and the call left is the kernel's (measured: tools/verify/hex).
+    #[inline]
     pub fn to_hex(&self) -> ArrayString<{ 2 * OUT_LEN }> {
         unsafe extern "C" {
             #[cfg_attr(target_arch = "x86_64", link_name = "blake3_servil_hex")]
