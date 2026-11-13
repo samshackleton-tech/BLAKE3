@@ -38,7 +38,7 @@ def Inv (fb out lv key flags plat root ra : BitVec 64) (sv : Abi.Saved) (k : Bla
   Quad s.mem (fb + 104#64) out ∧
   Quad s.mem (fb + 112#64) flags ∧
   Quad s.mem (fb + 120#64) root ∧
-  Abi.AllApart ((fb, (Abi.Contract.framed (Lroot.contract out lv key flags plat root k chunks) 192#64).stack + 8#64) :: (Abi.Contract.framed (Lroot.contract out lv key flags plat root k chunks) 192#64).regions) ∧
+  Abi.WriteApart ((fb, (Abi.Contract.framed (Lroot.contract out lv key flags plat root k chunks) 192#64).stack + 8#64) :: (Abi.Contract.framed (Lroot.contract out lv key flags plat root k chunks) 192#64).modifies) (Abi.Contract.framed (Lroot.contract out lv key flags plat root k chunks) 192#64).reading ∧
   (∀ x : BitVec 64, (Abi.Contract.framed (Lroot.contract out lv key flags plat root k chunks) 192#64).stack + 8#64 ≤ x - fb → (∀ r ∈ (Abi.Contract.framed (Lroot.contract out lv key flags plat root k chunks) 192#64).modifies, r.2 ≤ x - r.1) → s.mem x = m0 x) ∧
   (Abi.Contract.framed (Lroot.contract out lv key flags plat root k chunks) 192#64).accepts ∧
   (Abi.Contract.framed (Lroot.contract out lv key flags plat root k chunks) 192#64).requires m0 ∧
@@ -56,7 +56,7 @@ theorem enter (fb out lv key flags plat root ra : BitVec 64) (sv : Abi.Saved) (k
   obtain ⟨ha0, ha1, ha2, ha3, ha4, ha5⟩ := hargs
   subst pc rsp rdi rsi rdx rcx r8 r9 rbx rbp r12 r13 r14 r15 mem
   have hAp0 := hAp
-  simp only [Lroot.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd] at hAp
+  simp only [Lroot.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd] at hAp
   split_ands hAp
   have hAcc0 := hAcc
   try (simp only [Lroot.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true] at hAcc; split_ands hAcc)
@@ -111,7 +111,7 @@ theorem turn (fb out lv key flags plat root ra : BitVec 64) (sv : Abi.Saved) (k 
   simp only at hpc hsp hp0 hp1 hp2 hF hRa hS0 hS1 hS2 hS3 hS4 hS5 hPs0 hPs1 hPs2 hOut hZ0 hI0 hI1 hI2 hc
   subst pc rsp r13 r14 r15
   have hAp0 := hAp
-  simp only [Lroot.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd] at hAp
+  simp only [Lroot.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd] at hAp
   split_ands hAp
   have hAcc0 := hAcc
   try (simp only [Lroot.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true] at hAcc; split_ands hAcc)
@@ -348,7 +348,7 @@ theorem leave (fb out lv key flags plat root ra : BitVec 64) (sv : Abi.Saved) (k
   simp only at hpc hsp hp0 hp1 hp2 hF hRa hS0 hS1 hS2 hS3 hS4 hS5 hPs0 hPs1 hPs2 hOut hZ0 hI0 hI1 hI2 hc
   subst pc rsp r13 r14 r15
   have hAp0 := hAp
-  simp only [Lroot.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd] at hAp
+  simp only [Lroot.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd] at hAp
   split_ands hAp
   have hAcc0 := hAcc
   try (simp only [Lroot.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true] at hAcc; split_ands hAcc)

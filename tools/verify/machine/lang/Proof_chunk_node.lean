@@ -40,7 +40,7 @@ def Inv (fb nd input len counter flags plat ra : BitVec 64) (sv : Abi.Saved) (k 
   Quad s.mem (fb + 72#64) input ∧
   Quad s.mem (fb + 80#64) len ∧
   Quad s.mem (fb + 88#64) flags ∧
-  Abi.AllApart ((fb, (Abi.Contract.framed (ChunkNode.contract nd input len counter flags plat k bytes) 160#64).stack + 8#64) :: (Abi.Contract.framed (ChunkNode.contract nd input len counter flags plat k bytes) 160#64).regions) ∧
+  Abi.WriteApart ((fb, (Abi.Contract.framed (ChunkNode.contract nd input len counter flags plat k bytes) 160#64).stack + 8#64) :: (Abi.Contract.framed (ChunkNode.contract nd input len counter flags plat k bytes) 160#64).modifies) (Abi.Contract.framed (ChunkNode.contract nd input len counter flags plat k bytes) 160#64).reading ∧
   (∀ x : BitVec 64, (Abi.Contract.framed (ChunkNode.contract nd input len counter flags plat k bytes) 160#64).stack + 8#64 ≤ x - fb → (∀ r ∈ (Abi.Contract.framed (ChunkNode.contract nd input len counter flags plat k bytes) 160#64).modifies, r.2 ≤ x - r.1) → s.mem x = m0 x) ∧
   (Abi.Contract.framed (ChunkNode.contract nd input len counter flags plat k bytes) 160#64).accepts ∧
   (Abi.Contract.framed (ChunkNode.contract nd input len counter flags plat k bytes) 160#64).requires m0 ∧
@@ -55,7 +55,7 @@ theorem enter (fb nd input len counter flags plat ra : BitVec 64) (sv : Abi.Save
   obtain ⟨ha0, ha1, ha2, ha3, ha4, ha5⟩ := hargs
   subst pc rsp rdi rsi rdx rcx r8 r9 rbx rbp r12 r13 r14 r15 mem
   have hAp0 := hAp
-  simp only [ChunkNode.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd] at hAp
+  simp only [ChunkNode.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd] at hAp
   split_ands hAp
   have hAcc0 := hAcc
   try (simp only [ChunkNode.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true] at hAcc; split_ands hAcc)
@@ -97,7 +97,7 @@ theorem turn (fb nd input len counter flags plat ra : BitVec 64) (sv : Abi.Saved
   simp only at hpc hsp hp0 hp1 hp2 hF hRa hS0 hS1 hS2 hS3 hS4 hS5 hPs0 hPs1 hPs2 hOut hI0 hc
   subst pc rsp r13 r14 r15
   have hAp0 := hAp
-  simp only [ChunkNode.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd] at hAp
+  simp only [ChunkNode.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd] at hAp
   split_ands hAp
   have hAcc0 := hAcc
   try (simp only [ChunkNode.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true] at hAcc; split_ands hAcc)
@@ -186,7 +186,7 @@ theorem leave (fb nd input len counter flags plat ra : BitVec 64) (sv : Abi.Save
   simp only at hpc hsp hp0 hp1 hp2 hF hRa hS0 hS1 hS2 hS3 hS4 hS5 hPs0 hPs1 hPs2 hOut hI0 hc
   subst pc rsp r13 r14 r15
   have hAp0 := hAp
-  simp only [ChunkNode.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd] at hAp
+  simp only [ChunkNode.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd] at hAp
   split_ands hAp
   have hAcc0 := hAcc
   try (simp only [ChunkNode.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true] at hAcc; split_ands hAcc)
@@ -207,7 +207,7 @@ theorem leave (fb nd input len counter flags plat ra : BitVec 64) (sv : Abi.Save
   · dsimp only; mem_fact
   · dsimp only [Pad.contract]; mem_subregion
   · dsimp only
-    simp only [Pad.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
+    simp only [Pad.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart, BitVec.reduceAdd]
     try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
     repeat' (with_reducible apply And.intro)
     all_goals bv_side

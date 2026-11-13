@@ -29,7 +29,7 @@ theorem call_meets {prog : Nat → Option (Instr × Nat)} {entry : Nat} {c : Con
     (hargs : c.args = [s.rdi, s.rsi, s.rdx, s.rcx, s.r8, s.r9].take c.args.length)
     (hra : Quad s.mem s.rsp ra)
     (hstack : Cells.Region s.mem (s.rsp - c.stack) c.stack)
-    (hap : AllApart ((s.rsp - c.stack, c.stack + 8#64) :: c.regions))
+    (hap : WriteApart ((s.rsp - c.stack, c.stack + 8#64) :: c.modifies) c.reading)
     (hacc : c.accepts) (hreq : c.requires s.mem)
     (next : ∀ s' : State, s'.pc = ra.toNat → s'.rsp = s.rsp + 8#64 →
       s'.rbx = s.rbx → s'.rbp = s.rbp → s'.r12 = s.r12 → s'.r13 = s.r13 → s'.r14 = s.r14 → s'.r15 = s.r15 →

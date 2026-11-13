@@ -20,7 +20,7 @@ theorem hex_meets : ∀ (out inp : BitVec 64),
   intro hash s hpc hsp hargs hra hstack hap _ hreq
   simp only [Hex.contract, List.length_cons, List.length_nil, List.take, List.cons.injEq, and_true] at hargs
   obtain ⟨hdi, hsi⟩ := hargs
-  simp only [Hex.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, Abi.AllApart, Abi.Apart,
+  simp only [Hex.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, Abi.WriteApart, Abi.Apart,
     List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.sub_zero, BitVec.zero_add] at hap hreq
   obtain ⟨⟨apOut, apInp⟩, _⟩ := hap
   obtain ⟨hOwn, hLen, hAt⟩ := hreq

@@ -20,6 +20,12 @@ def AllApart : List (BitVec 64 × BitVec 64) → Prop
   | [] => True
   | r :: rest => (∀ q ∈ rest, Apart r.1 r.2 q.1 q.2) ∧ AllApart rest
 
+/-- Regions that may be written (the first list), each apart from every other region, written or only read
+(the second list). Nothing is asked of two regions that are only read: they may overlap, or be the same. -/
+def WriteApart : List (BitVec 64 × BitVec 64) → List (BitVec 64 × BitVec 64) → Prop
+  | [], _ => True
+  | w :: rest, reads => (∀ q ∈ rest ++ reads, Apart w.1 w.2 q.1 q.2) ∧ WriteApart rest reads
+
 /-- A kind of thing in memory: how many bytes it takes, and what it means for memory to hold the value `v`
 of it at the address `a`. -/
 structure Layout (α : Type) where
@@ -62,8 +68,11 @@ structure Contract where
   /-- What holds of the result. -/
   returns : BitVec 64 → Prop
 
-/-- The memory the contract speaks of, as (address, size): apart from one another and from the stack. -/
+/-- The memory the contract speaks of, as (address, size). -/
 @[abi] def Contract.regions (c : Contract) : List (BitVec 64 × BitVec 64) := (c.updates ++ c.reads).map fun p => (p.addr, p.size)
+/-- The memory the function only reads, as (address, size): apart from the stack and from what it may change;
+two such pieces may overlap. -/
+@[abi] def Contract.reading (c : Contract) : List (BitVec 64 × BitVec 64) := c.reads.map fun p => (p.addr, p.size)
 /-- What must hold of memory at the call. No code can test this: a caller shows it. -/
 @[abi] def Contract.requires (c : Contract) (m : Mem) : Prop := ∀ p ∈ c.updates ++ c.reads, p.before m
 /-- What holds of the result and of memory at the return. -/
@@ -73,7 +82,8 @@ structure Contract where
 
 /-- **The function at `entry` of `prog` meets the contract `c`.** From any state at its first instruction
 with the arguments in the registers the System V calling convention names, the return address on the
-stack, `c.stack` bytes below it free, the stack and the contract's pieces of memory apart, `c.accepts` of
+stack, `c.stack` bytes below it free, the stack and each piece the function may change apart from every
+other piece (pieces that are only read may overlap one another), `c.accepts` of
 the arguments and every piece holding what the contract says: the instructions run, without a fault, to
 that return address, with the stack pointer popped, the registers a callee must keep as they were,
 `c.returns` of RAX, every piece the function may change holding what the contract says, and every byte
@@ -84,7 +94,7 @@ def Meets (prog : Nat → Option (Instr × Nat)) (entry : Nat) (c : Contract) : 
     c.args = [s.rdi, s.rsi, s.rdx, s.rcx, s.r8, s.r9].take c.args.length →
     Quad s.mem s.rsp ra →
     Cells.Region s.mem (s.rsp - c.stack) c.stack →
-    AllApart ((s.rsp - c.stack, c.stack + 8#64) :: c.regions) →
+    WriteApart ((s.rsp - c.stack, c.stack + 8#64) :: c.modifies) c.reading →
     c.accepts → c.requires s.mem →
     ∃ k s', steps prog k s = some s' ∧
       s'.pc = ra.toNat ∧ s'.rsp = s.rsp + 8#64 ∧
@@ -103,7 +113,7 @@ def MeetsQuietly {G : Type} (prog : Nat → Option (Instr × Nat)) (entry : Nat)
     (c g).args = [s.rdi, s.rsi, s.rdx, s.rcx, s.r8, s.r9].take (c g).args.length →
     Quad s.mem s.rsp ra →
     Cells.Region s.mem (s.rsp - (c g).stack) (c g).stack →
-    AllApart ((s.rsp - (c g).stack, (c g).stack + 8#64) :: (c g).regions) →
+    WriteApart ((s.rsp - (c g).stack, (c g).stack + 8#64) :: (c g).modifies) (c g).reading →
     (c g).accepts → (c g).requires s.mem →
     ∃ k S, stepsL prog k ⟨s, []⟩ = some S ∧ S.leak = seen ∧
       S.core.pc = ra.toNat ∧ S.core.rsp = s.rsp + 8#64 ∧
@@ -117,7 +127,7 @@ asks the impossible is met by any code; each contract here comes with a theorem 
 (`Usable.lean`). -/
 def Contract.Usable (c : Contract) : Prop :=
   ∃ (rsp : BitVec 64) (m : Mem), Cells.Region m (rsp - c.stack) c.stack ∧
-    AllApart ((rsp - c.stack, c.stack + 8#64) :: c.regions) ∧ c.accepts ∧ c.requires m
+    WriteApart ((rsp - c.stack, c.stack + 8#64) :: c.modifies) c.reading ∧ c.accepts ∧ c.requires m
 
 /-- **The contract of a function's checked entry.** Any arguments are accepted. Where the function's own
 contract `c` accepts them, the checked entry does as `c` says; where it does not, the checked entry returns

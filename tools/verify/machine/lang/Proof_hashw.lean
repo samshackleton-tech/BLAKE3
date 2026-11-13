@@ -34,7 +34,7 @@ theorem whole (ext : Nat → Option (Instr × Nat)) (hA_chunks32 : ∀ x0 x1 x2 
   obtain ⟨ha0, ha1, ha2, ha3, ha4⟩ := hargs
   subst pc rsp rdi rsi rdx rcx r8 rbx rbp r12 r13 r14 r15 mem
   have hAp0 := hAp
-  simp only [Hashw.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd] at hAp
+  simp only [Hashw.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd] at hAp
   split_ands hAp
   have hAcc0 := hAcc
   try (simp only [Hashw.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true] at hAcc; split_ands hAcc)
@@ -53,7 +53,7 @@ theorem whole (ext : Nat → Option (Instr × Nat)) (hA_chunks32 : ∀ x0 x1 x2 
     · dsimp only; mem_fact
     · dsimp only [Wide.contract]; mem_subregion
     · dsimp only
-      simp only [Wide.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
+      simp only [Wide.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart, BitVec.reduceAdd]
       try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
       repeat' (with_reducible apply And.intro)
       all_goals bv_side
@@ -102,7 +102,7 @@ theorem whole (ext : Nat → Option (Instr × Nat)) (hA_chunks32 : ∀ x0 x1 x2 
         · dsimp only; mem_fact
         · dsimp only [Groupf.contract]; mem_subregion
         · dsimp only
-          simp only [Groupf.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
+          simp only [Groupf.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart, BitVec.reduceAdd]
           try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
           repeat' (with_reducible apply And.intro)
           all_goals bv_side
@@ -151,7 +151,7 @@ theorem whole (ext : Nat → Option (Instr × Nat)) (hA_chunks32 : ∀ x0 x1 x2 
           · dsimp only; mem_fact
           · dsimp only [Finish.contract]; mem_subregion
           · dsimp only
-            simp only [Finish.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
+            simp only [Finish.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart, BitVec.reduceAdd]
             try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
             repeat' (with_reducible apply And.intro)
             all_goals bv_side
@@ -212,7 +212,7 @@ theorem whole (ext : Nat → Option (Instr × Nat)) (hA_chunks32 : ∀ x0 x1 x2 
           · dsimp only; mem_fact
           · dsimp only [Groupf.contract]; mem_subregion
           · dsimp only
-            simp only [Groupf.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
+            simp only [Groupf.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart, BitVec.reduceAdd]
             try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
             repeat' (with_reducible apply And.intro)
             all_goals bv_side
@@ -261,7 +261,7 @@ theorem whole (ext : Nat → Option (Instr × Nat)) (hA_chunks32 : ∀ x0 x1 x2 
             · dsimp only; mem_fact
             · dsimp only [Finish.contract]; mem_subregion
             · dsimp only
-              simp only [Finish.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
+              simp only [Finish.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart, BitVec.reduceAdd]
               try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
               repeat' (with_reducible apply And.intro)
               all_goals bv_side
@@ -321,7 +321,7 @@ theorem whole (ext : Nat → Option (Instr × Nat)) (hA_chunks32 : ∀ x0 x1 x2 
           · dsimp only; mem_fact
           · dsimp only [Group.contract]; mem_subregion
           · dsimp only
-            simp only [Group.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
+            simp only [Group.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart, BitVec.reduceAdd]
             try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
             repeat' (with_reducible apply And.intro)
             all_goals bv_side
@@ -370,7 +370,7 @@ theorem whole (ext : Nat → Option (Instr × Nat)) (hA_chunks32 : ∀ x0 x1 x2 
             · dsimp only; mem_fact
             · dsimp only [Finish.contract]; mem_subregion
             · dsimp only
-              simp only [Finish.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
+              simp only [Finish.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart, BitVec.reduceAdd]
               try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
               repeat' (with_reducible apply And.intro)
               all_goals bv_side
@@ -429,7 +429,7 @@ theorem whole (ext : Nat → Option (Instr × Nat)) (hA_chunks32 : ∀ x0 x1 x2 
     · dsimp only; mem_fact
     · dsimp only [Hashl.contract]; mem_subregion
     · dsimp only
-      simp only [Hashl.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
+      simp only [Hashl.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart, BitVec.reduceAdd]
       try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
       repeat' (with_reducible apply And.intro)
       all_goals bv_side

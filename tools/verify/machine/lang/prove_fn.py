@@ -368,7 +368,7 @@ def env_at(reg):
 CARGS = " ".join(params + [g for g, _ in fn_ghosts])
 C = f"(Abi.Contract.framed ({CNAME} {CARGS}) {F}#64)"                  # the contract, with the frame the compiler made
 OPEN_C = f"{CNAME}, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true"
-UNFOLD = f"{OPEN_C}, Abi.AllApart, Abi.Apart, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd"
+UNFOLD = f"{OPEN_C}, Abi.WriteApart, Abi.Apart, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd"
 UNFOLD_X = f"{OPEN_C}, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd"
 CALLEE_SAVED = ["rbx", "rbp", "r12", "r13", "r14", "r15"]
 ARGDECL = f"(fb {' '.join(params)} ra : BitVec 64) (sv : Abi.Saved) " + " ".join(f"({g} : {t})" for g, t in fn_ghosts) + " (m0 : Mem)"
@@ -385,7 +385,7 @@ inv_fixed = [f"s.pc = 0x{HEAD or 0:X}", f"s.rsp = {at(C0)}"] + [f"s.{r} = {p}" f
 inv_mem = [(f"Region s.mem fb {F}#64", "mem_region", "hF"), (f"Quad s.mem (fb + {F}#64) ra", "mem_fact", "hRa")] + \
     [(f"Quad s.mem {at(F - 8 * (i + 1))} sv.{r}", "mem_fact", f"hS{i}") for i, r in enumerate(saved)] + \
     [(f"Quad s.mem {at(o)} {p}", "mem_fact", f"hPs{i}") for i, (p, o) in enumerate(param_slot)] + \
-    [(f"Abi.AllApart ((fb, {C}.stack + 8#64) :: {C}.regions)", "exact hAp0", "hAp"), (outside, None, "hOut"),
+    [(f"Abi.WriteApart ((fb, {C}.stack + 8#64) :: {C}.modifies) {C}.reading", "exact hAp0", "hAp"), (outside, None, "hOut"),
      (f"{C}.accepts", "exact hAcc0", "hAcc"), (f"{C}.requires m0", "exact hReq0", "hReq")]
 inv_frozen = [(f"s.{home[x]} = {e}" if slot_of(x) is None else f"Quad s.mem {at(slot_of(x))} {e}", slot_of(x) is None) for x, e in frozen.items()]
 env_s = env_at(lambda x: f"s.{home[x]}")
@@ -502,7 +502,7 @@ def own_call(i, sym, target, args, ra, oc, ind, prev, has_out, env):
          f"{ind}· dsimp only; mem_fact",
          f"{ind}· dsimp only [{info['contract']}]; mem_subregion",
          f"{ind}· dsimp only",
-         f"{ind}  simp only [{OPENK}, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]",
+         f"{ind}  simp only [{OPENK}, Abi.WriteApart, Abi.Apart, BitVec.reduceAdd]",
          f"{ind}  try simp only [{NORM}]",
          f"{ind}  repeat' (with_reducible apply And.intro)",
          f"{ind}  all_goals bv_side",

@@ -3,7 +3,7 @@ import KCode
 import Cells
 open X86
 
-/-! `p16s` as assembled: 61 instructions. Written from the lifter's rows. -/
+/-! `p16s` as assembled: 57 instructions. Written from the lifter's rows. -/
 
 set_option maxRecDepth 100000
 namespace Code_p16s
@@ -16,60 +16,56 @@ def table : List (Nat × Instr × Nat) := [
   (0x18006, .push .r14, 0x18008),
   (0x18008, .push .r15, 0x1800A),
   (0x1800A, .sub 64 (.reg .rsp) (.imm 0x28), 0x1800E),
-  (0x1800E, .mov 64 (.reg .rbx) (.reg .rdi), 0x18011),
-  (0x18011, .mov 64 (.reg .rbp) (.reg .rsi), 0x18014),
-  (0x18014, .mov 64 (.reg .r12) (.reg .rdx), 0x18017),
-  (0x18017, .mov 64 (.reg .r13) (.reg .rcx), 0x1801A),
-  (0x1801A, .mov 64 (.reg .r14) (.reg .r8), 0x1801D),
-  (0x1801D, .mov 64 (.reg .r15) (.reg .r9), 0x18020),
-  (0x18020, .mov 64 (.reg .rax) (.reg .r14), 0x18023),
-  (0x18023, .and 64 (.reg .rax) (.imm 0xFF), 0x18029),
-  (0x18029, .mov 64 (.mem .rsp 0x0) (.reg .rax), 0x1802D),
-  (0x1802D, .mov 64 (.reg .rax) (.imm 0x0), 0x18034),
-  (0x18034, .mov 64 (.mem .rsp 0x8) (.reg .rax), 0x18039),
-  (0x18039, .mov 64 (.reg .rax) (.imm 0x0), 0x18040),
-  (0x18040, .mov 64 (.mem .rsp 0x10) (.reg .rax), 0x18045),
-  (0x18045, .mov 64 (.reg .rax) (.imm 0x0), 0x1804C),
-  (0x1804C, .mov 64 (.mem .rsp 0x18) (.reg .rax), 0x18051),
-  (0x18051, .mov 64 (.reg .rax) (.mem .rsp 0x8), 0x18056),
-  (0x18056, .mov 64 (.reg .rcx) (.imm 0x10), 0x1805D),
-  (0x1805D, .cmp 64 (.reg .rax) (.reg .rcx), 0x18060),
-  (0x18060, .jae 0x180D7, 0x18062),
-  (0x18062, .mov 64 (.reg .rax) (.reg .rbx), 0x18065),
-  (0x18065, .mov 64 (.reg .rcx) (.mem .rsp 0x8), 0x1806A),
-  (0x1806A, .shl64 .rcx 3, 0x1806E),
-  (0x1806E, .add 64 (.reg .rax) (.reg .rcx), 0x18071),
-  (0x18071, .mov 64 (.reg .rax) (.mem .rax 0x0), 0x18074),
-  (0x18074, .mov 64 (.mem .rsp 0x10) (.reg .rax), 0x18079),
-  (0x18079, .mov 64 (.reg .rax) (.reg .r15), 0x1807C),
-  (0x1807C, .mov 64 (.reg .rcx) (.mem .rsp 0x8), 0x18081),
-  (0x18081, .shl64 .rcx 5, 0x18085),
-  (0x18085, .add 64 (.reg .rax) (.reg .rcx), 0x18088),
-  (0x18088, .mov 64 (.mem .rsp 0x18) (.reg .rax), 0x1808D),
-  (0x1808D, .mov 64 (.reg .rax) (.reg .r12), 0x18090),
-  (0x18090, .mov 64 (.reg .rcx) (.mem .rsp 0x18), 0x18095),
-  (0x18095, .movv false 0 (.m .rax 0x0), 0x18098),
-  (0x18098, .storev false .rcx 0x0 0, 0x1809B),
-  (0x1809B, .movv false 0 (.m .rax 0x10), 0x1809F),
-  (0x1809F, .storev false .rcx 0x10 0, 0x180A3),
-  (0x180A3, .mov 64 (.reg .rdi) (.mem .rsp 0x18), 0x180A8),
-  (0x180A8, .mov 64 (.reg .rsi) (.mem .rsp 0x10), 0x180AD),
-  (0x180AD, .mov 64 (.reg .rdx) (.imm 0x40), 0x180B4),
-  (0x180B4, .mov 64 (.reg .rcx) (.imm 0x0), 0x180BB),
-  (0x180BB, .mov 64 (.reg .r8) (.mem .rsp 0x0), 0x180BF),
-  (0x180BF, .call 0x30000, 0x180C4),
-  (0x180C4, .mov 64 (.reg .rax) (.mem .rsp 0x8), 0x180C9),
-  (0x180C9, .add 64 (.reg .rax) (.imm 0x1), 0x180CD),
-  (0x180CD, .mov 64 (.mem .rsp 0x8) (.reg .rax), 0x180D2),
-  (0x180D2, .jmp 0x18051, 0x180D7),
-  (0x180D7, .add 64 (.reg .rsp) (.imm 0x28), 0x180DB),
-  (0x180DB, .pop .r15, 0x180DD),
-  (0x180DD, .pop .r14, 0x180DF),
-  (0x180DF, .pop .r13, 0x180E1),
-  (0x180E1, .pop .r12, 0x180E3),
-  (0x180E3, .pop .rbp, 0x180E4),
-  (0x180E4, .pop .rbx, 0x180E5),
-  (0x180E5, .ret, 0x180E6)
+  (0x1800E, .mov 64 (.reg .r12) (.reg .rdi), 0x18011),
+  (0x18011, .mov 64 (.reg .r15) (.reg .rsi), 0x18014),
+  (0x18014, .mov 64 (.reg .r13) (.reg .rdx), 0x18017),
+  (0x18017, .mov 64 (.mem .rsp 0x0) (.reg .rcx), 0x1801B),
+  (0x1801B, .mov 64 (.mem .rsp 0x8) (.reg .r8), 0x18020),
+  (0x18020, .mov 64 (.reg .r14) (.reg .r9), 0x18023),
+  (0x18023, .mov 64 (.reg .rax) (.mem .rsp 0x8), 0x18028),
+  (0x18028, .and 64 (.reg .rax) (.imm 0xFF), 0x1802E),
+  (0x1802E, .mov 64 (.reg .rbp) (.reg .rax), 0x18031),
+  (0x18031, .mov 64 (.reg .rax) (.imm 0x0), 0x18038),
+  (0x18038, .mov 64 (.reg .rbx) (.reg .rax), 0x1803B),
+  (0x1803B, .mov 64 (.reg .rax) (.reg .rbx), 0x1803E),
+  (0x1803E, .mov 64 (.reg .rcx) (.imm 0x10), 0x18045),
+  (0x18045, .cmp 64 (.reg .rax) (.reg .rcx), 0x18048),
+  (0x18048, .jae 0x180B3, 0x1804A),
+  (0x1804A, .mov 64 (.reg .rax) (.reg .r12), 0x1804D),
+  (0x1804D, .mov 64 (.reg .rcx) (.reg .rbx), 0x18050),
+  (0x18050, .shl64 .rcx 3, 0x18054),
+  (0x18054, .add 64 (.reg .rax) (.reg .rcx), 0x18057),
+  (0x18057, .mov 64 (.reg .rax) (.mem .rax 0x0), 0x1805A),
+  (0x1805A, .mov 64 (.mem .rsp 0x10) (.reg .rax), 0x1805F),
+  (0x1805F, .mov 64 (.reg .rax) (.reg .r14), 0x18062),
+  (0x18062, .mov 64 (.reg .rcx) (.reg .rbx), 0x18065),
+  (0x18065, .shl64 .rcx 5, 0x18069),
+  (0x18069, .add 64 (.reg .rax) (.reg .rcx), 0x1806C),
+  (0x1806C, .mov 64 (.mem .rsp 0x18) (.reg .rax), 0x18071),
+  (0x18071, .mov 64 (.reg .rax) (.reg .r13), 0x18074),
+  (0x18074, .mov 64 (.reg .rcx) (.mem .rsp 0x18), 0x18079),
+  (0x18079, .movv false 0 (.m .rax 0x0), 0x1807C),
+  (0x1807C, .storev false .rcx 0x0 0, 0x1807F),
+  (0x1807F, .movv false 0 (.m .rax 0x10), 0x18083),
+  (0x18083, .storev false .rcx 0x10 0, 0x18087),
+  (0x18087, .mov 64 (.reg .rdi) (.mem .rsp 0x18), 0x1808C),
+  (0x1808C, .mov 64 (.reg .rsi) (.mem .rsp 0x10), 0x18091),
+  (0x18091, .mov 64 (.reg .rdx) (.imm 0x40), 0x18098),
+  (0x18098, .mov 64 (.reg .rcx) (.imm 0x0), 0x1809F),
+  (0x1809F, .mov 64 (.reg .r8) (.reg .rbp), 0x180A2),
+  (0x180A2, .call 0x30000, 0x180A7),
+  (0x180A7, .mov 64 (.reg .rax) (.reg .rbx), 0x180AA),
+  (0x180AA, .add 64 (.reg .rax) (.imm 0x1), 0x180AE),
+  (0x180AE, .mov 64 (.reg .rbx) (.reg .rax), 0x180B1),
+  (0x180B1, .jmp 0x1803B, 0x180B3),
+  (0x180B3, .add 64 (.reg .rsp) (.imm 0x28), 0x180B7),
+  (0x180B7, .pop .r15, 0x180B9),
+  (0x180B9, .pop .r14, 0x180BB),
+  (0x180BB, .pop .r13, 0x180BD),
+  (0x180BD, .pop .r12, 0x180BF),
+  (0x180BF, .pop .rbp, 0x180C0),
+  (0x180C0, .pop .rbx, 0x180C1),
+  (0x180C1, .ret, 0x180C2)
 ]
 
 def pre0 : List (Nat × Instr × Nat) := KCode.table
@@ -95,59 +91,55 @@ theorem has_kernels : ∀ pc x, KCode.prog pc = some x → prog pc = some x := b
 @[ode_at] theorem at_18006 : prog 0x18006 = some (.push .r14, 0x18008) := rfl
 @[ode_at] theorem at_18008 : prog 0x18008 = some (.push .r15, 0x1800A) := rfl
 @[ode_at] theorem at_1800A : prog 0x1800A = some (.sub 64 (.reg .rsp) (.imm 0x28), 0x1800E) := rfl
-@[ode_at] theorem at_1800E : prog 0x1800E = some (.mov 64 (.reg .rbx) (.reg .rdi), 0x18011) := rfl
-@[ode_at] theorem at_18011 : prog 0x18011 = some (.mov 64 (.reg .rbp) (.reg .rsi), 0x18014) := rfl
-@[ode_at] theorem at_18014 : prog 0x18014 = some (.mov 64 (.reg .r12) (.reg .rdx), 0x18017) := rfl
-@[ode_at] theorem at_18017 : prog 0x18017 = some (.mov 64 (.reg .r13) (.reg .rcx), 0x1801A) := rfl
-@[ode_at] theorem at_1801A : prog 0x1801A = some (.mov 64 (.reg .r14) (.reg .r8), 0x1801D) := rfl
-@[ode_at] theorem at_1801D : prog 0x1801D = some (.mov 64 (.reg .r15) (.reg .r9), 0x18020) := rfl
-@[ode_at] theorem at_18020 : prog 0x18020 = some (.mov 64 (.reg .rax) (.reg .r14), 0x18023) := rfl
-@[ode_at] theorem at_18023 : prog 0x18023 = some (.and 64 (.reg .rax) (.imm 0xFF), 0x18029) := rfl
-@[ode_at] theorem at_18029 : prog 0x18029 = some (.mov 64 (.mem .rsp 0x0) (.reg .rax), 0x1802D) := rfl
-@[ode_at] theorem at_1802D : prog 0x1802D = some (.mov 64 (.reg .rax) (.imm 0x0), 0x18034) := rfl
-@[ode_at] theorem at_18034 : prog 0x18034 = some (.mov 64 (.mem .rsp 0x8) (.reg .rax), 0x18039) := rfl
-@[ode_at] theorem at_18039 : prog 0x18039 = some (.mov 64 (.reg .rax) (.imm 0x0), 0x18040) := rfl
-@[ode_at] theorem at_18040 : prog 0x18040 = some (.mov 64 (.mem .rsp 0x10) (.reg .rax), 0x18045) := rfl
-@[ode_at] theorem at_18045 : prog 0x18045 = some (.mov 64 (.reg .rax) (.imm 0x0), 0x1804C) := rfl
-@[ode_at] theorem at_1804C : prog 0x1804C = some (.mov 64 (.mem .rsp 0x18) (.reg .rax), 0x18051) := rfl
-@[ode_at] theorem at_18051 : prog 0x18051 = some (.mov 64 (.reg .rax) (.mem .rsp 0x8), 0x18056) := rfl
-@[ode_at] theorem at_18056 : prog 0x18056 = some (.mov 64 (.reg .rcx) (.imm 0x10), 0x1805D) := rfl
-@[ode_at] theorem at_1805D : prog 0x1805D = some (.cmp 64 (.reg .rax) (.reg .rcx), 0x18060) := rfl
-@[ode_at] theorem at_18060 : prog 0x18060 = some (.jae 0x180D7, 0x18062) := rfl
-@[ode_at] theorem at_18062 : prog 0x18062 = some (.mov 64 (.reg .rax) (.reg .rbx), 0x18065) := rfl
-@[ode_at] theorem at_18065 : prog 0x18065 = some (.mov 64 (.reg .rcx) (.mem .rsp 0x8), 0x1806A) := rfl
-@[ode_at] theorem at_1806A : prog 0x1806A = some (.shl64 .rcx 3, 0x1806E) := rfl
-@[ode_at] theorem at_1806E : prog 0x1806E = some (.add 64 (.reg .rax) (.reg .rcx), 0x18071) := rfl
-@[ode_at] theorem at_18071 : prog 0x18071 = some (.mov 64 (.reg .rax) (.mem .rax 0x0), 0x18074) := rfl
-@[ode_at] theorem at_18074 : prog 0x18074 = some (.mov 64 (.mem .rsp 0x10) (.reg .rax), 0x18079) := rfl
-@[ode_at] theorem at_18079 : prog 0x18079 = some (.mov 64 (.reg .rax) (.reg .r15), 0x1807C) := rfl
-@[ode_at] theorem at_1807C : prog 0x1807C = some (.mov 64 (.reg .rcx) (.mem .rsp 0x8), 0x18081) := rfl
-@[ode_at] theorem at_18081 : prog 0x18081 = some (.shl64 .rcx 5, 0x18085) := rfl
-@[ode_at] theorem at_18085 : prog 0x18085 = some (.add 64 (.reg .rax) (.reg .rcx), 0x18088) := rfl
-@[ode_at] theorem at_18088 : prog 0x18088 = some (.mov 64 (.mem .rsp 0x18) (.reg .rax), 0x1808D) := rfl
-@[ode_at] theorem at_1808D : prog 0x1808D = some (.mov 64 (.reg .rax) (.reg .r12), 0x18090) := rfl
-@[ode_at] theorem at_18090 : prog 0x18090 = some (.mov 64 (.reg .rcx) (.mem .rsp 0x18), 0x18095) := rfl
-@[ode_at] theorem at_18095 : prog 0x18095 = some (.movv false 0 (.m .rax 0x0), 0x18098) := rfl
-@[ode_at] theorem at_18098 : prog 0x18098 = some (.storev false .rcx 0x0 0, 0x1809B) := rfl
-@[ode_at] theorem at_1809B : prog 0x1809B = some (.movv false 0 (.m .rax 0x10), 0x1809F) := rfl
-@[ode_at] theorem at_1809F : prog 0x1809F = some (.storev false .rcx 0x10 0, 0x180A3) := rfl
-@[ode_at] theorem at_180A3 : prog 0x180A3 = some (.mov 64 (.reg .rdi) (.mem .rsp 0x18), 0x180A8) := rfl
-@[ode_at] theorem at_180A8 : prog 0x180A8 = some (.mov 64 (.reg .rsi) (.mem .rsp 0x10), 0x180AD) := rfl
-@[ode_at] theorem at_180AD : prog 0x180AD = some (.mov 64 (.reg .rdx) (.imm 0x40), 0x180B4) := rfl
-@[ode_at] theorem at_180B4 : prog 0x180B4 = some (.mov 64 (.reg .rcx) (.imm 0x0), 0x180BB) := rfl
-@[ode_at] theorem at_180BB : prog 0x180BB = some (.mov 64 (.reg .r8) (.mem .rsp 0x0), 0x180BF) := rfl
-@[ode_at] theorem at_180BF : prog 0x180BF = some (.call 0x30000, 0x180C4) := rfl
-@[ode_at] theorem at_180C4 : prog 0x180C4 = some (.mov 64 (.reg .rax) (.mem .rsp 0x8), 0x180C9) := rfl
-@[ode_at] theorem at_180C9 : prog 0x180C9 = some (.add 64 (.reg .rax) (.imm 0x1), 0x180CD) := rfl
-@[ode_at] theorem at_180CD : prog 0x180CD = some (.mov 64 (.mem .rsp 0x8) (.reg .rax), 0x180D2) := rfl
-@[ode_at] theorem at_180D2 : prog 0x180D2 = some (.jmp 0x18051, 0x180D7) := rfl
-@[ode_at] theorem at_180D7 : prog 0x180D7 = some (.add 64 (.reg .rsp) (.imm 0x28), 0x180DB) := rfl
-@[ode_at] theorem at_180DB : prog 0x180DB = some (.pop .r15, 0x180DD) := rfl
-@[ode_at] theorem at_180DD : prog 0x180DD = some (.pop .r14, 0x180DF) := rfl
-@[ode_at] theorem at_180DF : prog 0x180DF = some (.pop .r13, 0x180E1) := rfl
-@[ode_at] theorem at_180E1 : prog 0x180E1 = some (.pop .r12, 0x180E3) := rfl
-@[ode_at] theorem at_180E3 : prog 0x180E3 = some (.pop .rbp, 0x180E4) := rfl
-@[ode_at] theorem at_180E4 : prog 0x180E4 = some (.pop .rbx, 0x180E5) := rfl
-@[ode_at] theorem at_180E5 : prog 0x180E5 = some (.ret, 0x180E6) := rfl
+@[ode_at] theorem at_1800E : prog 0x1800E = some (.mov 64 (.reg .r12) (.reg .rdi), 0x18011) := rfl
+@[ode_at] theorem at_18011 : prog 0x18011 = some (.mov 64 (.reg .r15) (.reg .rsi), 0x18014) := rfl
+@[ode_at] theorem at_18014 : prog 0x18014 = some (.mov 64 (.reg .r13) (.reg .rdx), 0x18017) := rfl
+@[ode_at] theorem at_18017 : prog 0x18017 = some (.mov 64 (.mem .rsp 0x0) (.reg .rcx), 0x1801B) := rfl
+@[ode_at] theorem at_1801B : prog 0x1801B = some (.mov 64 (.mem .rsp 0x8) (.reg .r8), 0x18020) := rfl
+@[ode_at] theorem at_18020 : prog 0x18020 = some (.mov 64 (.reg .r14) (.reg .r9), 0x18023) := rfl
+@[ode_at] theorem at_18023 : prog 0x18023 = some (.mov 64 (.reg .rax) (.mem .rsp 0x8), 0x18028) := rfl
+@[ode_at] theorem at_18028 : prog 0x18028 = some (.and 64 (.reg .rax) (.imm 0xFF), 0x1802E) := rfl
+@[ode_at] theorem at_1802E : prog 0x1802E = some (.mov 64 (.reg .rbp) (.reg .rax), 0x18031) := rfl
+@[ode_at] theorem at_18031 : prog 0x18031 = some (.mov 64 (.reg .rax) (.imm 0x0), 0x18038) := rfl
+@[ode_at] theorem at_18038 : prog 0x18038 = some (.mov 64 (.reg .rbx) (.reg .rax), 0x1803B) := rfl
+@[ode_at] theorem at_1803B : prog 0x1803B = some (.mov 64 (.reg .rax) (.reg .rbx), 0x1803E) := rfl
+@[ode_at] theorem at_1803E : prog 0x1803E = some (.mov 64 (.reg .rcx) (.imm 0x10), 0x18045) := rfl
+@[ode_at] theorem at_18045 : prog 0x18045 = some (.cmp 64 (.reg .rax) (.reg .rcx), 0x18048) := rfl
+@[ode_at] theorem at_18048 : prog 0x18048 = some (.jae 0x180B3, 0x1804A) := rfl
+@[ode_at] theorem at_1804A : prog 0x1804A = some (.mov 64 (.reg .rax) (.reg .r12), 0x1804D) := rfl
+@[ode_at] theorem at_1804D : prog 0x1804D = some (.mov 64 (.reg .rcx) (.reg .rbx), 0x18050) := rfl
+@[ode_at] theorem at_18050 : prog 0x18050 = some (.shl64 .rcx 3, 0x18054) := rfl
+@[ode_at] theorem at_18054 : prog 0x18054 = some (.add 64 (.reg .rax) (.reg .rcx), 0x18057) := rfl
+@[ode_at] theorem at_18057 : prog 0x18057 = some (.mov 64 (.reg .rax) (.mem .rax 0x0), 0x1805A) := rfl
+@[ode_at] theorem at_1805A : prog 0x1805A = some (.mov 64 (.mem .rsp 0x10) (.reg .rax), 0x1805F) := rfl
+@[ode_at] theorem at_1805F : prog 0x1805F = some (.mov 64 (.reg .rax) (.reg .r14), 0x18062) := rfl
+@[ode_at] theorem at_18062 : prog 0x18062 = some (.mov 64 (.reg .rcx) (.reg .rbx), 0x18065) := rfl
+@[ode_at] theorem at_18065 : prog 0x18065 = some (.shl64 .rcx 5, 0x18069) := rfl
+@[ode_at] theorem at_18069 : prog 0x18069 = some (.add 64 (.reg .rax) (.reg .rcx), 0x1806C) := rfl
+@[ode_at] theorem at_1806C : prog 0x1806C = some (.mov 64 (.mem .rsp 0x18) (.reg .rax), 0x18071) := rfl
+@[ode_at] theorem at_18071 : prog 0x18071 = some (.mov 64 (.reg .rax) (.reg .r13), 0x18074) := rfl
+@[ode_at] theorem at_18074 : prog 0x18074 = some (.mov 64 (.reg .rcx) (.mem .rsp 0x18), 0x18079) := rfl
+@[ode_at] theorem at_18079 : prog 0x18079 = some (.movv false 0 (.m .rax 0x0), 0x1807C) := rfl
+@[ode_at] theorem at_1807C : prog 0x1807C = some (.storev false .rcx 0x0 0, 0x1807F) := rfl
+@[ode_at] theorem at_1807F : prog 0x1807F = some (.movv false 0 (.m .rax 0x10), 0x18083) := rfl
+@[ode_at] theorem at_18083 : prog 0x18083 = some (.storev false .rcx 0x10 0, 0x18087) := rfl
+@[ode_at] theorem at_18087 : prog 0x18087 = some (.mov 64 (.reg .rdi) (.mem .rsp 0x18), 0x1808C) := rfl
+@[ode_at] theorem at_1808C : prog 0x1808C = some (.mov 64 (.reg .rsi) (.mem .rsp 0x10), 0x18091) := rfl
+@[ode_at] theorem at_18091 : prog 0x18091 = some (.mov 64 (.reg .rdx) (.imm 0x40), 0x18098) := rfl
+@[ode_at] theorem at_18098 : prog 0x18098 = some (.mov 64 (.reg .rcx) (.imm 0x0), 0x1809F) := rfl
+@[ode_at] theorem at_1809F : prog 0x1809F = some (.mov 64 (.reg .r8) (.reg .rbp), 0x180A2) := rfl
+@[ode_at] theorem at_180A2 : prog 0x180A2 = some (.call 0x30000, 0x180A7) := rfl
+@[ode_at] theorem at_180A7 : prog 0x180A7 = some (.mov 64 (.reg .rax) (.reg .rbx), 0x180AA) := rfl
+@[ode_at] theorem at_180AA : prog 0x180AA = some (.add 64 (.reg .rax) (.imm 0x1), 0x180AE) := rfl
+@[ode_at] theorem at_180AE : prog 0x180AE = some (.mov 64 (.reg .rbx) (.reg .rax), 0x180B1) := rfl
+@[ode_at] theorem at_180B1 : prog 0x180B1 = some (.jmp 0x1803B, 0x180B3) := rfl
+@[ode_at] theorem at_180B3 : prog 0x180B3 = some (.add 64 (.reg .rsp) (.imm 0x28), 0x180B7) := rfl
+@[ode_at] theorem at_180B7 : prog 0x180B7 = some (.pop .r15, 0x180B9) := rfl
+@[ode_at] theorem at_180B9 : prog 0x180B9 = some (.pop .r14, 0x180BB) := rfl
+@[ode_at] theorem at_180BB : prog 0x180BB = some (.pop .r13, 0x180BD) := rfl
+@[ode_at] theorem at_180BD : prog 0x180BD = some (.pop .r12, 0x180BF) := rfl
+@[ode_at] theorem at_180BF : prog 0x180BF = some (.pop .rbp, 0x180C0) := rfl
+@[ode_at] theorem at_180C0 : prog 0x180C0 = some (.pop .rbx, 0x180C1) := rfl
+@[ode_at] theorem at_180C1 : prog 0x180C1 = some (.ret, 0x180C2) := rfl
 
 end Code_p16s

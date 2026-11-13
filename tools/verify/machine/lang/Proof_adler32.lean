@@ -34,7 +34,7 @@ def Inv (fb input n ra : BitVec 64) (sv : Abi.Saved) (bytes : List (BitVec 8)) (
   Quad s.mem (fb + 16#64) sv.r12 ∧
   Quad s.mem (fb + 8#64) sv.r13 ∧
   Quad s.mem fb sv.r14 ∧
-  Abi.AllApart ((fb, (Abi.Contract.framed (Adler32.contract input n bytes) 40#64).stack + 8#64) :: (Abi.Contract.framed (Adler32.contract input n bytes) 40#64).regions) ∧
+  Abi.WriteApart ((fb, (Abi.Contract.framed (Adler32.contract input n bytes) 40#64).stack + 8#64) :: (Abi.Contract.framed (Adler32.contract input n bytes) 40#64).modifies) (Abi.Contract.framed (Adler32.contract input n bytes) 40#64).reading ∧
   (∀ x : BitVec 64, (Abi.Contract.framed (Adler32.contract input n bytes) 40#64).stack + 8#64 ≤ x - fb → (∀ r ∈ (Abi.Contract.framed (Adler32.contract input n bytes) 40#64).modifies, r.2 ≤ x - r.1) → s.mem x = m0 x) ∧
   (Abi.Contract.framed (Adler32.contract input n bytes) 40#64).accepts ∧
   (Abi.Contract.framed (Adler32.contract input n bytes) 40#64).requires m0 ∧
@@ -49,7 +49,7 @@ theorem enter (fb input n ra : BitVec 64) (sv : Abi.Saved) (bytes : List (BitVec
   obtain ⟨ha0, ha1⟩ := hargs
   subst pc rsp rdi rsi rbx rbp r12 r13 r14 r15 mem
   have hAp0 := hAp
-  simp only [Adler32.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd] at hAp
+  simp only [Adler32.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd] at hAp
   split_ands hAp
   have hAcc0 := hAcc
   try (simp only [Adler32.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true] at hAcc; split_ands hAcc)
@@ -87,7 +87,7 @@ theorem turn (fb input n ra : BitVec 64) (sv : Abi.Saved) (bytes : List (BitVec 
   simp only at hpc hsp hp0 hp1 hu0 hF hRa hS0 hS1 hS2 hS3 hS4 hOut hI0 hc
   subst pc rsp rbx rbp r15
   have hAp0 := hAp
-  simp only [Adler32.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd] at hAp
+  simp only [Adler32.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd] at hAp
   split_ands hAp
   have hAcc0 := hAcc
   try (simp only [Adler32.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true] at hAcc; split_ands hAcc)
@@ -228,7 +228,7 @@ theorem leave (fb input n ra : BitVec 64) (sv : Abi.Saved) (bytes : List (BitVec
   simp only at hpc hsp hp0 hp1 hu0 hF hRa hS0 hS1 hS2 hS3 hS4 hOut hI0 hc
   subst pc rsp rbx rbp r15
   have hAp0 := hAp
-  simp only [Adler32.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd] at hAp
+  simp only [Adler32.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd] at hAp
   split_ands hAp
   have hAcc0 := hAcc
   try (simp only [Adler32.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true] at hAcc; split_ands hAcc)

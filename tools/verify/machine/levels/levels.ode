@@ -360,18 +360,24 @@ callee fillp at 0x110000 meets Fillp.contract by Proof_fillp.fillp_meets budget 
 extern parents16/6 = "blake3_servil_avx512_p16"
 callee parents16 at 0x18000 assumes P16.contract (11) budget 4096 standin p16s
 
-// The stand-in: the same contract, one parent at a time through the one-block kernel. Tried on the
-// contract's examples; not proved yet (a proof of it is the witness that the contract can be met).
+// The stand-in: the same contract, one parent at a time through the one-block kernel. Proved to meet it
+// (Proof_p16s.lean): the witness that the contract the callers assume can be met.
 fn p16s(inputs, blocks, key, counter, packed, out)
+  reg i, f, inputs, key, out
   meets P16.contract(k: Blake3.CV, base: BitVec 64, n: BitVec 64, flags: BitVec 64, l: List Blake3.CV)
+  uses Lemmas_p16s
+  leave by P16s.exit
 {
   var f = packed & 255
   var i = 0
-  var src = 0
-  var dst = 0
-  while i < 16 {
-    src = u64[inputs + (i << 3)]
-    dst = out + (i << 5)
+  while i < 16
+    invariant P16s.Mid(inputs, key, out, k, base, n, flags, l, i)   by P16s.Mid.step   from P16s.Mid.start
+    invariant f == packed & 255
+    decreases 16 - i
+    open P16s.Mid.turn as k0, k1, a0, a1, b0, b1
+  {
+    var src = u64[inputs + (i << 3)]
+    var dst = out + (i << 5)
     copy 32 dst <- key
     compress_avx512(dst, src, 64, 0, f)
     i = i + 1

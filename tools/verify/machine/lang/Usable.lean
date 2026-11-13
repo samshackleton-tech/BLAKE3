@@ -11,6 +11,7 @@ import Spec_nodeout
 import Spec_pad
 import Spec_fillp
 import Spec_tree32
+import Spec_p16
 import Spec_wide
 import Spec_addn
 import Spec_finish
@@ -47,35 +48,35 @@ theorem zeroMem_stack (a : BitVec 64) : Stack.At zeroMem a [] := ⟨by decide, z
 
 theorem Merge.usable : (Merge.contract 0x100000#64 0x200000#64 0#64 5#64 1#64 zeroCv []).Usable := by
   refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, ?_, ?_⟩
-  · simp only [Merge.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart]; decide
+  · simp only [Merge.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart]; decide
   · simp only [Merge.contract]; decide
   · simp only [Merge.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
     exact ⟨zeroMem_stack _, zeroMem_cv _⟩
 
 theorem MergeSteps.usable : (MergeSteps.contract 0x100000#64 0x200000#64 0#64 5#64 1#64 zeroCv []).Usable := by
   refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, ?_, ?_⟩
-  · simp only [MergeSteps.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart]; decide
+  · simp only [MergeSteps.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart]; decide
   · simp only [MergeSteps.contract]; decide
   · simp only [MergeSteps.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
     exact ⟨zeroMem_stack _, zeroMem_cv _⟩
 
 theorem Push.usable : (Push.contract 0x100000#64 0x200000#64 zeroCv []).Usable := by
   refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, ?_, ?_⟩
-  · simp only [Push.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart]; decide
+  · simp only [Push.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart]; decide
   · simp only [Push.contract]; decide
   · simp only [Push.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
     exact ⟨zeroMem_stack _, zeroMem_cv _⟩
 
 theorem Add.usable : (Add.contract 0x100000#64 0x200000#64 0#64 5#64 0x300000#64 1#64 zeroCv zeroCv []).Usable := by
   refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, ?_, ?_⟩
-  · simp only [Add.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart]; decide
+  · simp only [Add.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart]; decide
   · simp only [Add.contract]; decide
   · simp only [Add.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
     exact ⟨zeroMem_stack _, zeroMem_cv _, zeroMem_cv _⟩
 
 theorem Hex.usable : (Hex.contract 0x100000#64 0x200000#64 (List.replicate 32 0#8)).Usable := by
   refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, ?_, ?_⟩
-  · simp only [Hex.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart]; decide
+  · simp only [Hex.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart]; decide
   · simp only [Hex.contract]
   · simp only [Hex.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
     refine ⟨zeroMem_region _ _, List.length_replicate, ?_⟩
@@ -97,7 +98,7 @@ theorem Ladd.usable : (Ladd.contract 0x100000#64 0x200000#64 0#64 5#64 0x300000#
   obtain ⟨k0, k1, hk0, hk1, hk⟩ := zeroMem_cv 0x200000#64
   refine ⟨0x7ff00000#64, (zeroMem.put128 0x300000#64 v0).put128 (0x300000#64 + 16#64) v1,
     Cells.region_put128 _ _ (Cells.region_put128 _ _ (zeroMem_region _ _)), ?_, ?_, ?_⟩
-  · simp only [Ladd.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart]; decide
+  · simp only [Ladd.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart]; decide
   · simp only [Ladd.contract]; decide
   · simp only [Ladd.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
     refine ⟨⟨by decide, Cells.region_put128 _ _ (Cells.region_put128 _ _ (zeroMem_region _ _)), ?_, fun h => absurd h (by decide)⟩,
@@ -118,7 +119,7 @@ theorem Lroot.usable : (Lroot.contract 0x300000#64 0x100000#64 0x200000#64 0#64 
     fun b n => Cells.region_put128 _ _ (Cells.region_put128 _ _ (Cells.region_put128 _ _ (Cells.region_put128 _ _ (Cells.region_put64 _ _ (zeroMem_region b n)))))
   refine ⟨0x7ff00000#64, ((((zeroMem.put64 0x100000#64 2#64).put128 0x100040#64 v0).put128 0x100050#64 v1).put128 0x100060#64 v0).put128 0x100070#64 v1,
     reg _ _, ?_, ?_, ?_⟩
-  · simp only [Lroot.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart]; decide
+  · simp only [Lroot.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart]; decide
   · simp only [Lroot.contract]; decide
   · simp only [Lroot.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
     have sub0 : Blake3.sub zeroCv ⟨BitVec.setWidth 32 0#64⟩ #[default, default] 0 1 = (default : Blake3.Node).cv := by
@@ -148,7 +149,7 @@ theorem Finish.usable : (Finish.contract 0x300000#64 0x400000#64 0x100000#64 0x2
     fun b n => Cells.region_put128 _ _ (Cells.region_put128 _ _ (Cells.region_put128 _ _ (Cells.region_put128 _ _ (Cells.region_put64 _ _ (zeroMem_region b n)))))
   refine ⟨0x7ff00000#64, ((((zeroMem.put64 0x100000#64 2#64).put128 0x100040#64 v0).put128 0x100050#64 v1).put128 0x100060#64 v0).put128 0x100070#64 v1,
     reg _ _, ?_, ?_, ?_⟩
-  · simp only [Finish.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart]; decide
+  · simp only [Finish.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart]; decide
   · simp only [Finish.contract, Finish.way]; decide
   · simp only [Finish.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
     have sub0 : Blake3.sub zeroCv ⟨BitVec.setWidth 32 0#64⟩ #[default, default] 0 1 = (default : Blake3.Node).cv := by
@@ -173,14 +174,14 @@ theorem Finish.usable : (Finish.contract 0x300000#64 0x400000#64 0x100000#64 0x2
 
 theorem Group.usable : (Group.contract 0x300000#64 0x100000#64 0#64 0x200000#64 0#64 0#64 zeroCv []).Usable := by
   refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, ?_, ?_⟩
-  · simp only [Group.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart]; decide
+  · simp only [Group.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart]; decide
   · simp only [Group.contract]; decide
   · simp only [Group.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
     exact ⟨zeroMem_region _ _, zeroMem_cv _, trivial, fun i h => absurd h (by simp)⟩
 
 theorem Groupf.usable : (Groupf.contract 0x300000#64 0x100000#64 1025#64 0x200000#64 0#64 0#64 zeroCv (List.replicate 1025 0#8)).Usable := by
   refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, ?_, ?_⟩
-  · simp only [Groupf.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, List.length_replicate]; decide
+  · simp only [Groupf.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart, List.length_replicate]; decide
   · simp only [Groupf.contract, List.length_replicate]; decide
   · simp only [Groupf.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
     refine ⟨zeroMem_region _ _, zeroMem_cv _, trivial, fun i h => ?_⟩
@@ -189,14 +190,14 @@ theorem Groupf.usable : (Groupf.contract 0x300000#64 0x100000#64 1025#64 0x20000
 
 theorem Hashw.usable : (Hashw.contract 0x300000#64 0x100000#64 0#64 0x200000#64 0#64 zeroCv []).Usable := by
   refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, ?_, ?_⟩
-  · simp only [Hashw.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart]; decide
+  · simp only [Hashw.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart]; decide
   · simp only [Hashw.contract]; decide
   · simp only [Hashw.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
     exact ⟨zeroMem_region _ _, zeroMem_cv _, trivial, fun i h => absurd h (by simp)⟩
 
 theorem Hashf.usable : (Hashf.contract 0x300000#64 0x100000#64 0#64 0x200000#64 0#64 5#64 zeroCv []).Usable := by
   refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, ?_, ?_⟩
-  · simp only [Hashf.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart]; decide
+  · simp only [Hashf.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart]; decide
   · simp only [Hashf.contract]; decide
   · simp only [Hashf.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
     exact ⟨zeroMem_region _ _, zeroMem_cv _, trivial, fun i h => absurd h (by simp)⟩
@@ -204,7 +205,7 @@ theorem Hashf.usable : (Hashf.contract 0x300000#64 0x100000#64 0#64 0x200000#64 
 theorem Adler32.usable : (Adler32.contract 0x100000#64 1#64 [0#8]).Usable := by
   refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, rfl, ?_⟩
   · simp only [Adler32.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append,
-      List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart]; decide
+      List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart]; decide
   · simp only [Adler32.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append,
       List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
     refine ⟨trivial, fun i h => ?_⟩
@@ -227,21 +228,21 @@ theorem zeroMem_node (a : BitVec 64) : Node.At zeroMem a zeroNode :=
 
 theorem NodeOut.usable : (NodeOut.contract 0x300000#64 0x100000#64 0#64 5#64 zeroNode).Usable := by
   refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, ?_, ?_⟩
-  · simp only [NodeOut.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart]; decide
+  · simp only [NodeOut.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart]; decide
   · simp only [NodeOut.contract]; decide
   · simp only [NodeOut.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
     exact ⟨zeroMem_region _ _, zeroMem_node _⟩
 
 theorem Pad.usable : (Pad.contract 0x100000#64 0x200000#64 0#64 []).Usable := by
   refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, ?_, ?_⟩
-  · simp only [Pad.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart]; decide
+  · simp only [Pad.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart]; decide
   · simp only [Pad.contract]; decide
   · simp only [Pad.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
     exact ⟨zeroMem_region _ _, trivial, fun i h => absurd h (by simp)⟩
 
 theorem Fillp.usable : (Fillp.contract 0x100000#64 0x200000#64 0#64 64#64).Usable := by
   refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, ?_, ?_⟩
-  · simp only [Fillp.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart]; decide
+  · simp only [Fillp.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart]; decide
   · simp only [Fillp.contract]
   · simp only [Fillp.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
     exact zeroMem_region _ _
@@ -252,35 +253,52 @@ theorem zeroMem_cvl : ∀ (n : Nat) (a : BitVec 64), Cvl.At zeroMem a (List.repl
 
 theorem Tree32.usable : (Tree32.contract 0x100000#64 0x200000#64 0x300000#64 0#64 zeroCv (List.replicate 32 zeroCv)).Usable := by
   refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, ?_, ?_⟩
-  · simp only [Tree32.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart]; decide
+  · simp only [Tree32.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart]; decide
   · simp only [Tree32.contract]; decide
   · simp only [Tree32.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
     exact ⟨zeroMem_region _ _, zeroMem_cv _, List.length_replicate, zeroMem_cvl 32 _⟩
 
+theorem spread_zero (j : Nat) : Ptrs.spread 0#64 1#64 64#64 j = 0#64 := by
+  unfold Ptrs.spread
+  by_cases h : j < (1#64).toNat
+  · have h0 : j = 0 := by
+      have : (1#64).toNat = 1 := rfl
+      omega
+    subst h0; simp
+  · rw [if_neg h]
+
+theorem P16.usable : (P16.contract 0x100000#64 1#64 0x200000#64 0#64 0x40000004#64 0x300000#64 zeroCv 0#64 1#64 0#64 [zeroCv, zeroCv]).Usable := by
+  refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, ?_, ?_⟩
+  · simp only [P16.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart]; decide
+  · simp only [P16.contract]; decide
+  · simp only [P16.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
+    exact ⟨zeroMem_region _ _, zeroMem_cv _, fun j _ => by rw [spread_zero]; exact zeroMem_quad _,
+      by decide, rfl, zeroMem_cv _, zeroMem_cv _, trivial⟩
+
 theorem Wide.usable : (Wide.contract 0x100000#64 0x200000#64 0#64 0x300000#64 0#64 zeroCv []).Usable := by
   refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, ?_, ?_⟩
-  · simp only [Wide.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart]; decide
+  · simp only [Wide.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart]; decide
   · simp only [Wide.contract]; decide
   · simp only [Wide.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
     exact ⟨zeroMem_region _ _, zeroMem_cv _, trivial, fun i h => absurd h (by simp)⟩
 
 theorem Addn.usable : (Addn.contract 0x100000#64 0x200000#64 0#64 0x300000#64 0#64 zeroCv #[] [] (List.replicate 32 zeroCv)).Usable := by
   refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, ?_, ?_⟩
-  · simp only [Addn.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart]; decide
+  · simp only [Addn.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart]; decide
   · simp only [Addn.contract]; decide
   · simp only [Addn.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
     exact ⟨⟨by decide, zeroMem_region _ _, zeroMem_quad _, fun h => absurd h (by decide)⟩, zeroMem_cv _, List.length_replicate, zeroMem_cvl 32 _⟩
 
 theorem ChunkNode.usable : (ChunkNode.contract 0x100000#64 0x200000#64 0#64 0#64 0#64 5#64 zeroCv []).Usable := by
   refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, ?_, ?_⟩
-  · simp only [ChunkNode.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart]; decide
+  · simp only [ChunkNode.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart]; decide
   · simp only [ChunkNode.contract]; decide
   · simp only [ChunkNode.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
     exact ⟨zeroMem_cv _, zeroMem_region _ _, trivial, fun i h => absurd h (by simp)⟩
 
 theorem Hashl.usable : (Hashl.contract 0x300000#64 0x100000#64 0#64 0x200000#64 0#64 5#64 zeroCv []).Usable := by
   refine ⟨0x7ff00000#64, zeroMem, zeroMem_region _ _, ?_, ?_, ?_⟩
-  · simp only [Hashl.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart]; decide
+  · simp only [Hashl.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart]; decide
   · simp only [Hashl.contract]; decide
   · simp only [Hashl.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
     exact ⟨zeroMem_region _ _, zeroMem_cv _, trivial, fun i h => absurd h (by simp)⟩

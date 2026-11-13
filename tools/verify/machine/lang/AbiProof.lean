@@ -29,7 +29,7 @@ def Pre (entry : Nat) (c : Contract) (fb ra : BitVec 64) (sv : Saved) (m0 : Mem)
   c.args = [s.rdi, s.rsi, s.rdx, s.rcx, s.r8, s.r9].take c.args.length ∧
   s.rbx = sv.rbx ∧ s.rbp = sv.rbp ∧ s.r12 = sv.r12 ∧ s.r13 = sv.r13 ∧ s.r14 = sv.r14 ∧ s.r15 = sv.r15 ∧
   s.mem = m0 ∧ Cells.Region m0 fb c.stack ∧ Quad m0 (fb + c.stack) ra ∧
-  AllApart ((fb, c.stack + 8#64) :: c.regions) ∧ c.accepts ∧ c.requires m0
+  WriteApart ((fb, c.stack + 8#64) :: c.modifies) c.reading ∧ c.accepts ∧ c.requires m0
 
 def Post (c : Contract) (fb ra : BitVec 64) (sv : Saved) (m0 : Mem) (s : State) : Prop :=
   s.pc = ra.toNat ∧ s.rsp = fb + c.stack + 8#64 ∧
@@ -54,7 +54,7 @@ theorem meets_of_triple {prog : Nat → Option (Instr × Nat)} {entry : Nat} {c 
     intro d hd
     have := hstack (c.stack - F + d) (by bv_omega)
     rw [show s.rsp - F + d = s.rsp - c.stack + (c.stack - F + d) by bv_omega]; exact this
-  have hap' : AllApart ((s.rsp - F, F + 8#64) :: c.regions) := by
+  have hap' : WriteApart ((s.rsp - F, F + 8#64) :: c.modifies) c.reading := by
     obtain ⟨h1, h2⟩ := hap
     exact ⟨fun q hq => by rw [ea]; exact apart_shrink hF hS (h1 q hq), h2⟩
   obtain ⟨k, s', hrun, hpc', hsp', hbx, hbp, h12, h13, h14, h15, hout, hens⟩ :=
@@ -77,6 +77,9 @@ theorem checked_modifies (c : Contract) (refused : BitVec 64) : (c.checked refus
 theorem checked_regions (c : Contract) (refused : BitVec 64) : (c.checked refused).regions = c.regions := by
   simp only [Contract.regions, Contract.checked, List.map_append, List.map_map]; rfl
 
+theorem checked_reading (c : Contract) (refused : BitVec 64) : (c.checked refused).reading = c.reading := by
+  simp only [Contract.reading, Contract.checked]
+
 theorem checked_requires {c : Contract} {refused : BitVec 64} {m : Mem} (h : (c.checked refused).requires m) : c.requires m := by
   intro p hp
   rcases List.mem_append.mp hp with hu | hr
@@ -91,7 +94,7 @@ theorem checked_accepted {prog : Nat → Option (Instr × Nat)} {entry : Nat} {c
     (hacc : c.accepts)
     (hargs : c.args = [s.rdi, s.rsi, s.rdx, s.rcx, s.r8, s.r9].take c.args.length)
     (hra : Quad s.mem s.rsp ra) (hstack : Cells.Region s.mem (s.rsp - c.stack) c.stack)
-    (hap : AllApart ((s.rsp - c.stack, c.stack + 8#64) :: (c.checked refused).regions))
+    (hap : WriteApart ((s.rsp - c.stack, c.stack + 8#64) :: (c.checked refused).modifies) (c.checked refused).reading)
     (hreq : (c.checked refused).requires s.mem) :
     ∃ k s', steps prog k s = some s' ∧
       s'.pc = ra.toNat ∧ s'.rsp = s.rsp + 8#64 ∧
@@ -99,7 +102,7 @@ theorem checked_accepted {prog : Nat → Option (Instr × Nat)} {entry : Nat} {c
       (c.checked refused).ensures s'.rax s'.mem ∧
       ∀ x : BitVec 64, (c.checked refused).stack + 8#64 ≤ x - (s.rsp - (c.checked refused).stack) →
         (∀ r ∈ (c.checked refused).modifies, r.2 ≤ x - r.1) → s'.mem x = s.mem x := by
-  rw [checked_regions] at hap
+  rw [checked_modifies, checked_reading] at hap
   obtain ⟨n, s', hr, hpc', hsp', hbx, hbp, h12, h13, h14, h15, hens, hout⟩ :=
     h { s with pc := entry, zf := zf, cf := cf } ra rfl hargs hra hstack hap hacc (checked_requires hreq)
   refine ⟨K + n, s', by rw [steps_add, hrun, Option.bind_some, hr], hpc', hsp', hbx, hbp, h12, h13, h14, h15,

@@ -39,7 +39,7 @@ def Inv (fb st key flags plat target ra : BitVec 64) (sv : Abi.Saved) (k : Blake
   Quad s.mem (fb + 288#64) sv.r13 ∧
   Quad s.mem (fb + 280#64) sv.r14 ∧
   Quad s.mem (fb + 272#64) sv.r15 ∧
-  Abi.AllApart ((fb, (Abi.Contract.framed (MergeSteps.contract st key flags plat target k cvs) 320#64).stack + 8#64) :: (Abi.Contract.framed (MergeSteps.contract st key flags plat target k cvs) 320#64).regions) ∧
+  Abi.WriteApart ((fb, (Abi.Contract.framed (MergeSteps.contract st key flags plat target k cvs) 320#64).stack + 8#64) :: (Abi.Contract.framed (MergeSteps.contract st key flags plat target k cvs) 320#64).modifies) (Abi.Contract.framed (MergeSteps.contract st key flags plat target k cvs) 320#64).reading ∧
   (∀ x : BitVec 64, (Abi.Contract.framed (MergeSteps.contract st key flags plat target k cvs) 320#64).stack + 8#64 ≤ x - fb → (∀ r ∈ (Abi.Contract.framed (MergeSteps.contract st key flags plat target k cvs) 320#64).modifies, r.2 ≤ x - r.1) → s.mem x = m0 x) ∧
   (Abi.Contract.framed (MergeSteps.contract st key flags plat target k cvs) 320#64).accepts ∧
   (Abi.Contract.framed (MergeSteps.contract st key flags plat target k cvs) 320#64).requires m0 ∧
@@ -57,7 +57,7 @@ theorem enter (fb st key flags plat target ra : BitVec 64) (sv : Abi.Saved) (k :
   obtain ⟨ha0, ha1, ha2, ha3, ha4⟩ := hargs
   subst pc rsp rdi rsi rdx rcx r8 rbx rbp r12 r13 r14 r15 mem
   have hAp0 := hAp
-  simp only [MergeSteps.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd] at hAp
+  simp only [MergeSteps.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd] at hAp
   split_ands hAp
   have hAcc0 := hAcc
   try (simp only [MergeSteps.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true] at hAcc; split_ands hAcc)
@@ -101,7 +101,7 @@ theorem turn (fb st key flags plat target ra : BitVec 64) (sv : Abi.Saved) (k : 
   simp only at hpc hsp hp0 hp1 hp2 hp3 hp4 hF hRa hS0 hS1 hS2 hS3 hS4 hS5 hAp hOut hAcc hReq hI0 hI1 hI3 hc
   subst pc rsp rbx rbp r12 r13 r14
   have hAp0 := hAp
-  simp only [MergeSteps.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd] at hAp
+  simp only [MergeSteps.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd] at hAp
   split_ands hAp
   have hAcc0 := hAcc
   try (simp only [MergeSteps.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true] at hAcc; split_ands hAcc)
@@ -119,7 +119,7 @@ theorem turn (fb st key flags plat target ra : BitVec 64) (sv : Abi.Saved) (k : 
   · dsimp only; mem_fact
   · dsimp only [Merge.contract]; mem_subregion
   · dsimp only
-    simp only [Merge.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, BitVec.reduceAdd]
+    simp only [Merge.contract, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart, BitVec.reduceAdd]
     try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]
     repeat' (with_reducible apply And.intro)
     all_goals bv_side
@@ -191,7 +191,7 @@ theorem leave (fb st key flags plat target ra : BitVec 64) (sv : Abi.Saved) (k :
   simp only at hpc hsp hp0 hp1 hp2 hp3 hp4 hF hRa hS0 hS1 hS2 hS3 hS4 hS5 hAp hOut hAcc hReq hI0 hI1 hI3 hc
   subst pc rsp rbx rbp r12 r13 r14
   have hAp0 := hAp
-  simp only [MergeSteps.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.AllApart, Abi.Apart, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd] at hAp
+  simp only [MergeSteps.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, Abi.WriteApart, Abi.Apart, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true, BitVec.reduceAdd] at hAp
   split_ands hAp
   have hAcc0 := hAcc
   try (simp only [MergeSteps.contract, Abi.Contract.framed, abi, List.map_cons, List.map_nil, List.cons_append, List.nil_append, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true] at hAcc; split_ands hAcc)

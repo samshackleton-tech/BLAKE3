@@ -46,6 +46,8 @@ X86 = [  # (module, theorem, contract and where, what it says)
      "`fillp`, as assembled, fills the table of 32 addresses a wide kernel is given"),
     ("Proof_tree32", "Proof_tree32.tree32_meets", "`Tree32.contract` (lang/Spec_tree32.lean); assumes `P16.contract` (lang/Spec_p16.lean) of the 16-lane parent kernel's address",
      "**over any program in which the library's 16-lane parent kernel meets its contract**, `tree32`, as assembled, makes the value of the tree over 32 chaining values: five calls of that kernel"),
+    ("Proof_p16s", "Proof_p16s.p16s_meets", "`P16.contract` (lang/Spec_p16.lean)",
+     "**the 16-lane parent kernel's contract can be met**: `p16s`, a function of ours that makes the sixteen parents one at a time through the one-block kernel, meets the contract the fast path assumes of the library's kernel (the witness; it stands at the kernel's address when examples run)"),
     ("Proof_wide", "Proof_wide.wide_meets", "`Wide.contract` (lang/Spec_wide.lean); assumes `K32.contract` (lang/Spec_k32.lean) and `P16.contract`",
      "**over any program in which the two wide kernels meet their contracts**, `wide`, as assembled, puts into levels the top node of every whole group of 32 chunks that has more of the message after it"),
     ("Proof_addn", "Proof_addn.addn_meets", "`Addn.contract` (lang/Spec_addn.lean)",

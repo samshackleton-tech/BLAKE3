@@ -243,10 +243,13 @@ program in which those two addresses meet them (`../lang/DESIGN.md`, "The fast p
 `Code_hashf.prog ext` is `hashf`'s instructions and those of every function of ours it calls, over any other
 instructions `ext`. The two hypotheses are the part not proved here: the kernels are proved by the library's
 own system (Z3), and `K32.contract` and `P16.contract` (`../lang/Spec_k32.lean`, `Spec_p16.lean`) are those
-kernels' contracts as our callers use them, written by hand. What stands behind them today: a function of
-ours at each kernel's address when examples run (`k32s`, `p16s`: the same contract, slowly, tried on the
-contract's examples; not proved yet), and the assembled `hashf` linked with the library's own kernels, which
-gives the library's hash on 2,871 messages (to 5 MiB, around every multiple of 32 KiB, three modes).
+kernels' contracts as our callers use them, written by hand. What stands behind them today:
+- a function of ours at each kernel's address when examples run (`p16s`, `k32s`: the same contract, slowly).
+  **`p16s` is proved to meet `P16.contract`** (`Proof_p16s.p16s_meets`): the parent kernel's contract can be
+  met, so a theorem that assumes it is not empty. `k32s` is tried on its contract's examples and not proved
+  yet: for the chunk kernel's contract that witness is owed.
+- the assembled `hashf` linked with the library's own kernels gives the library's hash on 2,871 messages (to
+  5 MiB, around every multiple of 32 KiB, three modes).
 
 How it goes (`levels.ode`; each function called by its contract):
 

@@ -75,12 +75,17 @@ def allApartB : List (BitVec 64 × BitVec 64) → Bool
   | [] => true
   | r :: rest => rest.all (fun q => apartB r.1 r.2 q.1 q.2) && allApartB rest
 
+/-- `Abi.WriteApart`, decided: what may be written is apart from everything else. -/
+def writeApartB : List (BitVec 64 × BitVec 64) → List (BitVec 64 × BitVec 64) → Bool
+  | [], _ => true
+  | w :: rest, reads => (rest ++ reads).all (fun q => apartB w.1 w.2 q.1 q.2) && writeApartB rest reads
+
 /-- Every address the function may own: its stack, the return address, and the contract's pieces. -/
 def owned (c : Abi.Contract) : Array (BitVec 64) :=
   (((stackTop - c.stack, c.stack + 8#64) :: c.regions).flatMap fun r => (List.range r.2.toNat).map fun i => r.1 + BitVec.ofNat 64 i).toArray
 
-/-- The stack and the contract's pieces of memory are apart. -/
-def apart (c : Abi.Contract) : Bool := allApartB ((stackTop - c.stack, c.stack + 8#64) :: c.regions)
+/-- The stack and what the function may change are apart from every other piece (as `Abi.Meets` asks). -/
+def apart (c : Abi.Contract) : Bool := writeApartB ((stackTop - c.stack, c.stack + 8#64) :: c.modifies) c.reading
 
 def sameBytes (m m' : Mem) (a : BitVec 64) (n : Nat) : Bool :=
   (List.range n).all fun i => m (a + BitVec.ofNat 64 i) == m' (a + BitVec.ofNat 64 i)

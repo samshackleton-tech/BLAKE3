@@ -455,8 +455,11 @@ Lean theorem, in steps:
   function that calls such a function carries the hypothesis on.
 - **An assumed contract must be shown able to be met, and is tried:** a function of ours stands in for the
   kernel when examples run (`standin NAME`: the same contract, slowly, through the one-block kernel; `p16s`).
-  It is tried on the contract's examples today; proved, it is the witness that the contract can be met and
-  gives the callers' theorems for a program wholly inside the model.
+  Proved, it is the witness that the contract can be met (a contract no code could meet would make every
+  theorem that assumes it say nothing). **`p16s` is proved** (`Proof_p16s.p16s_meets`, November 13): the
+  parent kernel's contract has its witness. `k32s`, for the chunk kernel, is tried on its examples and not
+  proved yet. (Not done either: the callers' theorems restated for the program with the stand-ins in it,
+  wholly inside the model.)
 - **What joins the kernel's own proof to the contract is not yet a Lean theorem.** Z3's statement about
   the kernel and `P16.contract` are two texts. To close: the kernels proved in a Lean model with their
   registers (the 512-bit state `wide/` has for three instructions), then one model.
@@ -493,6 +496,17 @@ kernels for short inputs that this path does not call yet.
   compressions), the last chunk's blocks, and everything in a message of one chunk. The library has kernels
   for each of these; behind contracts they are the same work again.
 
+**Pieces that are only read may overlap (Devon's observation, #361; November 13).** `Abi.Meets` asked that
+the stack and every piece of a contract be pairwise apart, reads and updates alike: the whole-hash theorem
+refused a message that overlaps the key's bytes, which a C caller may pass. Nothing needs it: no proof
+writes to a piece it only reads. `Meets` now asks `Abi.WriteApart`: the stack and each piece the function
+may change apart from every other piece, and nothing of two pieces that are only read. Every theorem is
+stronger for it (it accepts more calls) and every call easier to show. What it took: one definition, the
+three statements that name it, the examples' own test of apartness (`Try.lean`), and the name in the
+generator's simp sets; no lemma and no source changed, and every proof checked again as generated. (The
+AArch64 statements are in Google's separation logic, where two pieces named in one assertion are apart by
+construction: not changed.)
+
 What the generator learned on this stretch (`prove_fn.py`):
 - A condition on a callee's result is split, and said as a fact, where the result is at hand (it was split
   at entry, before the result had a name): `hashw` branches on what `wide` returns.
@@ -512,8 +526,6 @@ Warts met on this stretch, each to remove:
 - What a function writes itself before a call cannot be named in a `keep` at that call (a `keep` is shown
   of the memory the last call left): the write goes after the call, or an `.intro` lemma makes the fact
   where the next callee asks for it (`Levels.At.intro`).
-- `Abi.Meets` asks that pieces which are only read be apart from each other (Devon, #361): it refuses a
-  message that overlaps the key. To change in `Abi.lean`: only the stack and what is written need be apart.
 - A term given at a call (`with`) is raw Lean: a number must be written `16#64`, and a variable of the
   source is `$x` where the code is straight-line. It should be read like a clause.
 - In this model a call of the chunk kernel's stand-in is four minutes (the model's memory is a function, and

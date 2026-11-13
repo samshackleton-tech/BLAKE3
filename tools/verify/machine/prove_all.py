@@ -39,8 +39,15 @@ def fn(name, base, levels=False):
     return f"{LV if levels else ''}./prove_fn.sh {name} {base}"
 
 
-def audit(name, levels=False):
-    return f"{LV if levels else ''}python3 mutants_code.py {name} {AJ}"
+def audit(name, levels=False, jobs=AJ):
+    return f"{LV if levels else ''}python3 mutants_code.py {name} {jobs}"
+
+# A call of the chunk kernel's stand-in is minutes in this model, and more on a busy machine: the functions
+# whose examples reach it have long to be tried (the limit is a backstop, not a measure), and their audits run
+# more changed copies at once (each is one thread, running examples).
+SLOW = "TRY_SECONDS=9000 "
+SLOW_AUDIT = "TRY_SECONDS=9000 LIMIT=10800 "
+AJ_SLOW = os.environ.get("AUDIT_JOBS") or "32"
 
 
 # (label, folder, command, is it an audit). A chain: steps that share a copy of lang/, in order.
@@ -61,22 +68,22 @@ CHAINS = [
     [("hashl", "lang", fn("hashl", "0x40000", True), False),
      ("hash-bytes", "lang", 'lake build Meets_hashl_bytes > hashbytes.log 2>&1 && ! grep -q -E "error|sorry" hashbytes.log && grep -q "hashl_meets_bytes. depends on axioms" hashbytes.log', False),
      ("audit-hashl", "lang", audit("hashl", True), True)],
-    # the fast path: wide kernels behind contracts their callers assume (p16s stands in for one when examples run)
+    # the fast path: wide kernels behind contracts their callers assume (p16s and k32s stand in for them when
+    # examples run; p16s is proved to meet the parent kernel's contract: the witness that it can be met)
     [("fillp", "lang", fn("fillp", "0x110000", True), False), ("audit-fillp", "lang", audit("fillp", True), True)],
-    [("p16s-tried", "lang", "PROVE=0 " + fn("p16s", "0x18000", True), False), ("tree32", "lang", fn("tree32", "0x120000", True), False),
-     ("audit-tree32", "lang", audit("tree32", True), True)],
-    # (a call of the chunk kernel's stand-in is minutes in this model: the functions that reach it have longer to be tried)
-    [("k32s-tried", "lang", "TRY_SECONDS=1500 PROVE=0 " + fn("k32s", "0x10000", True), False)],
-    [("wide", "lang", "TRY_SECONDS=1500 " + fn("wide", "0x130000", True), False), ("audit-wide", "lang", "TRY_SECONDS=1500 LIMIT=2400 " + audit("wide", True), True)],
+    [("p16s", "lang", fn("p16s", "0x18000", True), False), ("tree32", "lang", fn("tree32", "0x120000", True), False),
+     ("audit-tree32", "lang", audit("tree32", True), True), ("audit-p16s", "lang", audit("p16s", True), True)],
+    [("k32s-tried", "lang", SLOW + "PROVE=0 " + fn("k32s", "0x10000", True), False)],
+    [("wide", "lang", SLOW + fn("wide", "0x130000", True), False), ("audit-wide", "lang", SLOW_AUDIT + audit("wide", True, AJ_SLOW), True)],
     [("addn", "lang", fn("addn", "0x160000", True), False), ("audit-addn", "lang", audit("addn", True), True)],
     [("finish", "lang", fn("finish", "0x170000", True), False), ("audit-finish", "lang", audit("finish", True), True)],
     [("group", "lang", fn("group", "0x180000", True), False), ("audit-group", "lang", audit("group", True), True)],
-    [("groupf", "lang", "TRY_SECONDS=1500 " + fn("groupf", "0x1B0000", True), False), ("audit-groupf", "lang", "TRY_SECONDS=1500 LIMIT=2400 " + audit("groupf", True), True)],
-    [("hashw", "lang", "TRY_SECONDS=3000 " + fn("hashw", "0x190000", True), False),
-     ("hashf", "lang", "TRY_SECONDS=1500 " + fn("hashf", "0x1A0000", True), False),
+    [("groupf", "lang", SLOW + fn("groupf", "0x1B0000", True), False), ("audit-groupf", "lang", SLOW_AUDIT + audit("groupf", True, AJ_SLOW), True)],
+    [("hashw", "lang", SLOW + fn("hashw", "0x190000", True), False),
+     ("hashf", "lang", SLOW + fn("hashf", "0x1A0000", True), False),
      ("hashf-bytes", "lang", 'lake build Meets_hashf_bytes > hashfbytes.log 2>&1 && ! grep -q -E "error|sorry" hashfbytes.log && grep -q "hashf_meets_bytes. depends on axioms" hashfbytes.log', False),
      # (hashw's audit is left out: each changed copy would be run on examples that take half an hour)
-     ("audit-hashf", "lang", "TRY_SECONDS=1500 LIMIT=2400 " + audit("hashf", True), True)],
+     ("audit-hashf", "lang", SLOW_AUDIT + audit("hashf", True, AJ_SLOW), True)],
     [("adler32", "lang", "SOURCE=../experiments/adler32/adler32.ode ODEMOD=AdlerOde ./prove_fn.sh adler32 0x100000", False)],
     [("any-machine", "lang", 'lake build Meets_hex_bytes Meets_push_bytes Meets_merge_bytes UsableBytes > any.log 2>&1 && ! grep -q -E "error|sorry" any.log && [ "$(grep -c "_meets_bytes. depends on axioms" any.log)" = 4 ] && grep -q "usable_bytes. depends on axioms" any.log', False)],
     [(None, "lang", fn("push", "0x70000") + " && " + fn("merge", "0x60000"), False),
@@ -87,9 +94,9 @@ CHAINS = [
     [("audit-spec", "lang", f"python3 mutants_spec.py {AJ}", True)],
     [(None, "lang", "python3 odec.py hasher.ode HasherOde.lean", True), ("audit-hash", "lang", "python3 mutants_hash.py", True)],
 ]
-ORDER = ["hex", "merge", "push", "merge_sse", "add-and-swap", "merge_steps", "levels-model", "ladd", "lroot", "node_out", "pad", "chunk_node", "hashl", "hash-bytes", "fillp", "p16s-tried", "tree32", "k32s-tried", "wide", "addn", "finish", "group", "groupf", "hashw", "hashf", "hashf-bytes", "adler32",
+ORDER = ["hex", "merge", "push", "merge_sse", "add-and-swap", "merge_steps", "levels-model", "ladd", "lroot", "node_out", "pad", "chunk_node", "hashl", "hash-bytes", "fillp", "p16s", "tree32", "k32s-tried", "wide", "addn", "finish", "group", "groupf", "hashw", "hashf", "hashf-bytes", "adler32",
          "any-machine", "direct", "hash-tried", "hex_neon", "push-aarch64",
-         "audit-merge", "audit-push", "audit-add", "audit-steps", "audit-ladd", "audit-lroot", "audit-node_out", "audit-pad", "audit-chunk_node", "audit-hashl", "audit-fillp", "audit-tree32", "audit-wide", "audit-addn", "audit-finish", "audit-group", "audit-groupf", "audit-hashf",
+         "audit-merge", "audit-push", "audit-add", "audit-steps", "audit-ladd", "audit-lroot", "audit-node_out", "audit-pad", "audit-chunk_node", "audit-hashl", "audit-fillp", "audit-tree32", "audit-p16s", "audit-wide", "audit-addn", "audit-finish", "audit-group", "audit-groupf", "audit-hashf",
          "audit-spec", "audit-hash"]
 GENERATED = re.compile(r"(Code|Proof|Checked)_\w+\.lean$")
 
