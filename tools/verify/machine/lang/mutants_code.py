@@ -104,7 +104,10 @@ def run(k):
             rc, _ = call(["lake", "build", f"Code_{name}"] + [f"Code_{s}" for s in fn_args.standins(SRC, name)] + [EX, "Checks", "TrySem", ODEMOD], w)
             if rc == 0:
                 _, tried_out = call([sys.executable, "try_fn.py", SRC, name, ROWS], w)
-                bad = [l for l in tried_out.splitlines() if "REFUTED" in l or "NO VERDICT" in l]
+                unknown = [l for l in tried_out.splitlines() if "NO VERDICT" in l]
+                if unknown and not stopping:
+                    return k, what, "NO VERDICT", time.time() - start, "the examples: " + unknown[0][:150]
+                bad = [l for l in tried_out.splitlines() if "REFUTED" in l]
                 ran = re.search(r"^tried: (\d+) meet", tried_out, re.M)
                 if not bad and not (ran and int(ran.group(1)) > 0) and not stopping:
                     tried = "the examples DID NOT RUN: " + " ".join(tried_out.split())[-200:]

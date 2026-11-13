@@ -1,6 +1,10 @@
 name = "lang"
 defaultTargets = ["Proof_hex"]
 
+[[lean_exe]]
+name = "tryExamples"
+root = "TryMain"
+
 [[require]]
 name = "one"
 path = "../one"

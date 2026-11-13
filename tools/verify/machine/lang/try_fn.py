@@ -17,7 +17,7 @@ One line an example:
     example I: NO VERDICT: ...
 and a last line: `tried: A meet, B refuted, C not examples`. Exit status 0 only if at least one example
 meets the contract's requirements and none is refuted. This is a test by running, not a proof."""
-import os, re, subprocess, sys
+import os, re, subprocess, sys, time
 import odec
 
 src, name, rows_path = sys.argv[1:4]
@@ -63,14 +63,25 @@ post = post_of("s'.mem")
 # a piece the function fills is, at the call, bytes the program owns (zeroes here)
 puts = "".join(f"    let m0 := Try.fill m0 ({a}) (Array.replicate ({l}).size.toNat 0#8)\n" if kind == "fill" else
                f"    let m0 := {sample(l)}.put m0 ({a}) ({v})\n" for kind, l, a, v, _ in pieces)
+# The source printer's module also declares the compiler CLI's root `main`. Embed its generated
+# declarations (unchanged, without that CLI) so this executable can have its own entry point.
+source_module = os.environ.get('ODEMOD', 'HasherOde')
+with open(source_module + '.lean') as f:
+    source_declarations, separator, _ = f.read().partition('\ndef main (')
+assert separator, f"{source_module}.lean has no compiler entry point"
+source_declarations = re.sub(r'^import [^\n]+\n', '', source_declarations, flags=re.M)
 L = f"""import Try
 import TrySem
-import {os.environ.get('ODEMOD', 'HasherOde')}
+import Lang
 import Code_{name}{"".join(chr(10) + "import Code_" + s for s in STANDINS)}
 import Example_{CNAME.split('.')[0].lower()}
 open X86
 
 /-! Written by try_fn.py from what `#pieces {CNAME}` read in the contract. A test by running, not a proof. -/
+
+section
+{source_declarations}
+end
 
 namespace Try_{name}
 
@@ -116,22 +127,36 @@ def all : List ({types}) → Nat → IO Unit
     IO.println line
     if (line.splitOn "meets the contract").length > 1 || (line.splitOn "NOT AN EXAMPLE").length > 1 then all rest (i + 1)
 
-#eval all {NS}.examples 0
-
 end Try_{name}
+
+/-- Executable diagnostics only; correctness theorems still check in Lean. -/
+def main : IO Unit := Try_{name}.all {NS}.examples 0
 """
 with open(f"Try_{name}.lean", "w") as f: f.write(L)
-pr = subprocess.Popen(["lake", "env", "lean", f"Try_{name}.lean"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=True)
-try:
-    so, se = pr.communicate(timeout=LIMIT)
-except subprocess.TimeoutExpired:
-    import signal
-    os.killpg(pr.pid, signal.SIGKILL); pr.communicate()
-    print(f"tried: NO VERDICT: the examples ran for more than {LIMIT} s"); sys.exit(1)
+with open("TryMain.lean", "w") as f: f.write(L)
+# One executable target, rebuilt from this invocation's generated source. Native execution is a
+# diagnostic accelerator, not a replacement for the kernel's checking of correctness proofs.
+started = time.monotonic()
+for command, stage in [(["lake", "build", "tryExamples"], "building the examples"),
+                       ([".lake/build/bin/tryExamples"], "running the examples")]:
+    pr = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=True)
+    try:
+        so, se = pr.communicate(timeout=max(0.01, LIMIT - (time.monotonic() - started)))
+    except subprocess.TimeoutExpired:
+        import signal
+        os.killpg(pr.pid, signal.SIGKILL); pr.communicate()
+        print(f"tried: NO VERDICT: more than {LIMIT} s while {stage}"); sys.exit(1)
+    if pr.returncode:
+        print(f"tried: NO VERDICT: failed while {stage} (exit {pr.returncode})")
+        # Keep the full diagnostic: Lean's useful details follow the line containing `error`.
+        print(so, end="")
+        print(se, end="")
+        break
 class r: stdout, stderr, returncode = so, se, pr.returncode
 lines = [l for l in r.stdout.splitlines() if l.startswith("example ")]
 for l in r.stdout.splitlines() + r.stderr.splitlines():
     if l.startswith("example ") or "error" in l: print(l)
 meet = sum("meets the contract" in l for l in lines); ref = sum("REFUTED" in l for l in lines); bad = sum("NOT AN EXAMPLE" in l for l in lines)
-print(f"tried: {meet} meet, {ref} refuted, {bad} not examples" + ("" if lines else " (the examples did not run)"))
-sys.exit(0 if (meet > 0 and ref == 0 and r.returncode == 0) else 1)
+no_verdict = sum("NO VERDICT" in l for l in lines)
+print(f"tried: {meet} meet, {ref} refuted, {bad} not examples" + (f", {no_verdict} NO VERDICT" if no_verdict else "") + ("" if lines else " (the examples did not run)"))
+sys.exit(0 if (meet > 0 and ref == 0 and no_verdict == 0 and r.returncode == 0) else 1)
