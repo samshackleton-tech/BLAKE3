@@ -38,6 +38,18 @@ class Crates(unittest.TestCase):
         self.assertEqual(check.build_args(""), ["--profile", "mutants", "--features", "serde,zeroize"])
         self.assertEqual(check.build_args("threads"), ["--profile", "mutants"])
 
+    def test_binary_crates_run_unit_and_cli_tests_without_a_library_target(self):
+        library = [{"kind": ["lib"]}, {"kind": ["test"]}]
+        binary = [{"kind": ["bin"]}, {"kind": ["test"]}]
+        self.assertEqual(check.test_args(library), ["--lib", "--tests"])
+        self.assertEqual(check.test_args(binary), ["--tests"])
+        self.assertEqual(check.test_args(library + binary), ["--lib", "--tests"])
+
+    def test_a_cli_executable_must_not_be_skipped_by_test_harness_hashes(self):
+        self.assertTrue(check.same_code_supported([{"kind": ["lib"]}, {"kind": ["test"]}]))
+        self.assertFalse(check.same_code_supported([{"kind": ["bin"]}, {"kind": ["test"]}]))
+        self.assertFalse(check.same_code_supported([{"kind": ["lib"]}, {"kind": ["bin"]}]))
+
     def test_a_list_divides_by_the_files_that_moved(self):
         moved = {"src/lanes.rs", "src/stream.rs", "src/stream/receiver.rs", "src/finish.rs", "src/park.rs"}
         stays, goes = check.divide_list(LIST, moved)
