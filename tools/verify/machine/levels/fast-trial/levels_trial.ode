@@ -1,0 +1,432 @@
+// The tree of chaining values another way (an experiment beside hasher.ode's stack; Sam's design, November 12).
+//
+// The stack (push, merge) keeps one value a pending subtree, puts a parent where its left child was, and
+// is merged when a value arrives, so its caller must hold back whatever might be the root.
+// Here:
+//   - a parent is written into memory of its own, never over its children: each level of the tree
+//     has room for two values side by side, which are a parent's 64-byte block as they lie;
+//   - the two newest values wait at the bottom level until a third arrives: only then is it known that
+//     they are not the root's children (the root is hashed differently). Above the bottom a pair
+//     becomes its parent as soon as it is complete, for by then a later value exists. So every chunk's
+//     value is added, the last one too, and `lroot` makes the root, by one fold.
+//
+// The levels: the count of values added (a word) at offset 0; level L's two places at offset
+// 64 + 64 L, 32 bytes each; 54 levels; 3520 bytes. What is held follows from the count n: the bottom
+// level holds the newest value if n is odd and the newest two if it is even; with e = (n - 1) / 2
+// pairs given upward, level L >= 1 holds one value, in its first place, if bit L - 1 of e is set.
+//
+// (A first form waited at every level, not only the bottom: as fast, but its root took three cases a
+// level, 272 instructions; it is in this folder's history, and README.md has its numbers.)
+
+const CHUNK_START = 1
+const CHUNK_END   = 2
+const PARENT      = 4
+const ROOT        = 8
+const AVX512      = 5
+const AVX2        = 4
+
+extern compress_avx512/5  = "blake3_servil_compress_in_place_avx512"
+extern compress_sse41/5   = "blake3_servil_compress_in_place_sse41"
+extern hash_many_avx512/10 = "blake3_servil_hash_many_avx512"
+extern hash_many_avx2/10   = "blake3_servil_hash_many_avx2"
+extern hash_many_sse41/10  = "blake3_servil_hash_many_sse41"
+
+def compress(cv, block, block_len, counter, flags) {
+  if plat == AVX512 { compress_avx512(cv, block, block_len, counter, flags) }
+  else              { compress_sse41(cv, block, block_len, counter, flags) }
+}
+
+def level_at(L) = lv + 64 + (L << 6)
+
+// The value at t is added. While a level holds two values (x, the count of values that reached it, is
+// even), they give their parent to the level above: to its first place, or to its second if it holds one
+// already (then the next turn finds that level full). Every parent is written where nothing needed
+// lies. Then the new value takes the bottom's next place. (This is `ladd`'s body: `ladd` below has it
+// written out with what the prover needs; `hash2` uses it from here.)
+def levels_add() {
+  ln = u64[lv]
+  x = ln | ((ln - 1) >> 63)          // the count; or 1 where nothing was added yet (no pair to give)
+  src = lv + 64
+  while x & 1 == 0 {
+    x = x >> 1
+    dst = src + 64 + (((x + 1) & 1) << 5)
+    copy 32 dst <- key
+    compress(dst, src, 64, 0, pf)
+    src = src + 64
+  }
+  copy 32 lv + 64 + ((ln & 1) << 5) <- t
+  u64[lv] = ln + 1
+}
+
+// The root of the values added (two or more), written at out; the levels are left as they are.
+// The newest chunk's value waits at the bottom; each level that holds a value (a bit of the count less
+// one) is folded onto it, the lowest first. The last parent made is the root.
+def levels_root() {
+  ln = u64[lv]
+  e = ln - 1                              // the levels have received all the chunks but the newest
+  base = lv + 64
+  copy 32 acc <- base + ((e & 1) << 5)    // the newest chunk's value: in the bottom's next place
+  while e > 0 {
+    if e & 1 == 1 {
+      f = pf
+      if e == 1 { f = pf | ROOT }         // the highest level that holds a value: this parent is the root
+      copy 32 blk <- base
+      copy 32 blk + 32 <- acc
+      copy 32 acc <- key
+      compress(acc, blk, 64, 0, f)
+    }
+    e = e >> 1
+    base = base + 64
+  }
+  copy 32 out <- acc
+}
+
+def fill_ptrs(base, shift, count) {
+  i = 0
+  while i < count {
+    u64[ptrs + (i << 3)] = base + (i << shift)
+    i = i + 1
+  }
+}
+
+extern chunks32/6         = "blake3_servil_avx512_k32"
+extern parents16/6        = "blake3_servil_avx512_p16"
+
+// ptrs[i] = base + 64 (i & mask), sixteen of them: the pairs of a level, the first ones again past the count.
+def fill_wrap(base, mask) {
+  i = 0
+  while i < 16 {
+    u64[ptrs + (i << 3)] = base + ((i & mask) << 6)
+    i = i + 1
+  }
+}
+
+// A value of 32 chunks is received at level 5 (never the root: more of the message follows): while the
+// level holds a value, the two give their parent to the level above.
+def wide_add() {
+  x = counter >> 5
+  src = lv + 64 + (5 << 6)
+  copy 32 acc <- t
+  while x & 1 == 1 {
+    copy 32 blk <- src
+    copy 32 blk + 32 <- acc
+    copy 32 acc <- key
+    compress(acc, blk, 64, 0, pf)
+    x = x >> 1
+    src = src + 64
+  }
+  copy 32 src <- acc
+}
+
+// After the wide turns the levels have received every chunk and none waits: the next value takes the
+// bottom's first place.
+def levels_add2() {
+  if fresh == 1 {
+    ln = u64[lv]
+    copy 32 lv + 64 <- t
+    u64[lv] = ln + 1
+    fresh = 0
+  } else { levels_add() }
+}
+
+fn hash2(out, input, len, key, flags, plat)
+  reg p, rem, counter, i, n, key
+{
+  buf lv[3520] align 64
+  buf cvs[1024]
+  buf ptrs[256]
+  buf block[64]
+  buf cv[32]
+  buf blk[64]
+  buf acc[32]
+  var p = input
+  var rem = len
+  var counter = 0
+  var pf = flags | PARENT
+  var i = 0
+  var n = 0
+  var t = 0
+  var f = 0
+  var ln = 0
+  var x = 0
+  var e = 0
+  var src = 0
+  var dst = 0
+  var base = 0
+  u64[lv] = 0
+
+  // Whole chunks, up to sixteen at a time, while more than one chunk's bytes are left.
+  while rem > 1024 {
+    n = rem >> 10
+    if n > 16 { n = 16 }
+    fill_ptrs(p, 10, n)
+    if plat == AVX512 { hash_many_avx512(ptrs, n, 16, key, counter, 1, flags, CHUNK_START, CHUNK_END, cvs) }
+    else { if plat == AVX2 { hash_many_avx2(ptrs, n, 16, key, counter, 1, flags, CHUNK_START, CHUNK_END, cvs) }
+           else            { hash_many_sse41(ptrs, n, 16, key, counter, 1, flags, CHUNK_START, CHUNK_END, cvs) } }
+    p = p + (n << 10)
+    rem = rem - (n << 10)
+    i = 0
+    while i < n {
+      t = cvs + (i << 5)
+      levels_add()
+      i = i + 1
+    }
+    counter = counter + n
+  }
+
+  // What is left: the only chunk (it is the root), or the last one if bytes are left.
+  var one = 0
+  if counter == 0 { one = 1 }
+  var tail = one
+  if rem != 0 { tail = 1 }
+  if tail == 1 {
+    copy 32 cv <- key
+    var first = CHUNK_START
+    while rem > 64 {
+      f = flags | first
+      compress(cv, p, 64, counter, f)
+      first = 0
+      p = p + 64
+      rem = rem - 64
+    }
+    var lastp = p
+    if rem != 64 {
+      for k8 in 0..8 { u64[block + (k8 << 3)] = 0 }
+      var jj = 0
+      while jj < rem {
+        u8[block + jj] = u8[p + jj]
+        jj = jj + 1
+      }
+      lastp = block
+    }
+    f = flags | first | CHUNK_END
+    if one == 1 { f = f | ROOT }
+    compress(cv, lastp, rem, counter, f)
+  }
+  if one == 1 { copy 32 out <- cv }
+  else {
+    if tail == 1 {
+      t = cv
+      levels_add()
+    }
+    levels_root()
+  }
+}
+
+fn hashwa(out, input, len, key, flags, plat)
+  reg p, rem, counter, i, n, key
+{
+  buf lv[3520] align 64
+  buf cvs[1024]
+  buf ptrs[256]
+  buf block[64]
+  buf cv[32]
+  buf blk[64]
+  buf acc[32]
+  buf par[512]
+  var fresh = 0
+  var p = input
+  var rem = len
+  var counter = 0
+  var pf = flags | PARENT
+  var i = 0
+  var n = 0
+  var t = 0
+  var f = 0
+  var ln = 0
+  var x = 0
+  var e = 0
+  var src = 0
+  var dst = 0
+  var base = 0
+  u64[lv] = 0
+
+  // Trial A: 32 chunks by the 32-lane kernel, their values added one at a time.
+  if plat == AVX512 {
+    var kp = flags | (CHUNK_START << 8) | (CHUNK_END << 16) | (64 << 24)
+    while rem > 32768 {
+      fill_ptrs(p, 10, 32)
+      chunks32(ptrs, 16, key, counter, kp, cvs)
+      i = 0
+      while i < 32 {
+        t = cvs + (i << 5)
+        levels_add()
+        i = i + 1
+      }
+      p = p + 32768
+      rem = rem - 32768
+      counter = counter + 32
+    }
+  }
+  // Whole chunks, up to sixteen at a time, while more than one chunk's bytes are left.
+  while rem > 1024 {
+    n = rem >> 10
+    if n > 16 { n = 16 }
+    fill_ptrs(p, 10, n)
+    if plat == AVX512 { hash_many_avx512(ptrs, n, 16, key, counter, 1, flags, CHUNK_START, CHUNK_END, cvs) }
+    else { if plat == AVX2 { hash_many_avx2(ptrs, n, 16, key, counter, 1, flags, CHUNK_START, CHUNK_END, cvs) }
+           else            { hash_many_sse41(ptrs, n, 16, key, counter, 1, flags, CHUNK_START, CHUNK_END, cvs) } }
+    p = p + (n << 10)
+    rem = rem - (n << 10)
+    i = 0
+    while i < n {
+      t = cvs + (i << 5)
+      levels_add()
+      i = i + 1
+    }
+    counter = counter + n
+  }
+
+  // What is left: the only chunk (it is the root), or the last one if bytes are left.
+  var one = 0
+  if counter == 0 { one = 1 }
+  var tail = one
+  if rem != 0 { tail = 1 }
+  if tail == 1 {
+    copy 32 cv <- key
+    var first = CHUNK_START
+    while rem > 64 {
+      f = flags | first
+      compress(cv, p, 64, counter, f)
+      first = 0
+      p = p + 64
+      rem = rem - 64
+    }
+    var lastp = p
+    if rem != 64 {
+      for k8 in 0..8 { u64[block + (k8 << 3)] = 0 }
+      var jj = 0
+      while jj < rem {
+        u8[block + jj] = u8[p + jj]
+        jj = jj + 1
+      }
+      lastp = block
+    }
+    f = flags | first | CHUNK_END
+    if one == 1 { f = f | ROOT }
+    compress(cv, lastp, rem, counter, f)
+  }
+  if one == 1 { copy 32 out <- cv }
+  else {
+    if tail == 1 {
+      t = cv
+      levels_add()
+    }
+    levels_root()
+  }
+}
+
+fn hashwb(out, input, len, key, flags, plat)
+  reg p, rem, counter, i, n, key
+{
+  buf lv[3520] align 64
+  buf cvs[1024]
+  buf ptrs[256]
+  buf block[64]
+  buf cv[32]
+  buf blk[64]
+  buf acc[32]
+  buf par[512]
+  var fresh = 0
+  var p = input
+  var rem = len
+  var counter = 0
+  var pf = flags | PARENT
+  var i = 0
+  var n = 0
+  var t = 0
+  var f = 0
+  var ln = 0
+  var x = 0
+  var e = 0
+  var src = 0
+  var dst = 0
+  var base = 0
+  u64[lv] = 0
+
+  // Trial B: 32 chunks by the 32-lane kernel; their 32 values become one by five calls of the 16-lane
+  // parent kernel; that one is received at level 5.
+  if plat == AVX512 {
+    var kp = flags | (CHUNK_START << 8) | (CHUNK_END << 16) | (64 << 24)
+    var pp = pf | (64 << 24)
+    while rem > 32768 {
+      fill_ptrs(p, 10, 32)
+      chunks32(ptrs, 16, key, counter, kp, cvs)
+      fill_wrap(cvs, 15)
+      parents16(ptrs, 1, key, 0, pp, par)
+      fill_wrap(par, 7)
+      parents16(ptrs, 1, key, 0, pp, cvs)
+      fill_wrap(cvs, 3)
+      parents16(ptrs, 1, key, 0, pp, par)
+      fill_wrap(par, 1)
+      parents16(ptrs, 1, key, 0, pp, cvs)
+      fill_wrap(cvs, 0)
+      parents16(ptrs, 1, key, 0, pp, par)
+      t = par
+      wide_add()
+      p = p + 32768
+      rem = rem - 32768
+      counter = counter + 32
+    }
+    if counter != 0 {
+      u64[lv] = counter
+      fresh = 1
+    }
+  }
+  // Whole chunks, up to sixteen at a time, while more than one chunk's bytes are left.
+  while rem > 1024 {
+    n = rem >> 10
+    if n > 16 { n = 16 }
+    fill_ptrs(p, 10, n)
+    if plat == AVX512 { hash_many_avx512(ptrs, n, 16, key, counter, 1, flags, CHUNK_START, CHUNK_END, cvs) }
+    else { if plat == AVX2 { hash_many_avx2(ptrs, n, 16, key, counter, 1, flags, CHUNK_START, CHUNK_END, cvs) }
+           else            { hash_many_sse41(ptrs, n, 16, key, counter, 1, flags, CHUNK_START, CHUNK_END, cvs) } }
+    p = p + (n << 10)
+    rem = rem - (n << 10)
+    i = 0
+    while i < n {
+      t = cvs + (i << 5)
+      levels_add2()
+      i = i + 1
+    }
+    counter = counter + n
+  }
+
+  // What is left: the only chunk (it is the root), or the last one if bytes are left.
+  var one = 0
+  if counter == 0 { one = 1 }
+  var tail = one
+  if rem != 0 { tail = 1 }
+  if tail == 1 {
+    copy 32 cv <- key
+    var first = CHUNK_START
+    while rem > 64 {
+      f = flags | first
+      compress(cv, p, 64, counter, f)
+      first = 0
+      p = p + 64
+      rem = rem - 64
+    }
+    var lastp = p
+    if rem != 64 {
+      for k8 in 0..8 { u64[block + (k8 << 3)] = 0 }
+      var jj = 0
+      while jj < rem {
+        u8[block + jj] = u8[p + jj]
+        jj = jj + 1
+      }
+      lastp = block
+    }
+    f = flags | first | CHUNK_END
+    if one == 1 { f = f | ROOT }
+    compress(cv, lastp, rem, counter, f)
+  }
+  if one == 1 { copy 32 out <- cv }
+  else {
+    if tail == 1 {
+      t = cv
+      levels_add2()
+    }
+    levels_root()
+  }
+}
