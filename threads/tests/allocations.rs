@@ -520,3 +520,80 @@ fn single_threaded_calls_allocate_as_the_memory_section_says() {
         assert_eq!(*digest, *blake3::hash(&Block::bytes(item.0)[..item.1]).as_bytes());
     }
 }
+
+#[test]
+fn pipeline_allocates_nothing_after_creation() {
+    use blake3_servil::throughput::{Event, Limits, Pipeline, ROOM_LEN, block_on};
+
+    pool_ready(4);
+    let mut pipeline = Pipeline::<usize, Vec<u8>>::with_owners(Mode::Plain, Limits { messages: 8, rooms: 6 });
+    let mut owned_bufs: Vec<Vec<u8>> = vec![vec![0x11; 64], vec![0x22; 200_000], vec![0x33; 1 << 20]];
+    let lent_short = vec![0x44u8; 512];
+    let lent_long = vec![0x55u8; (1 << 20) + 123];
+    let mut batch_holder = Some((Batch::new(64, 512), vec![[0u8; 32]; 512].into_boxed_slice()));
+    let stream_data = vec![0x66u8; 3 * ROOM_LEN + 700];
+
+    let work = counts_with_workers(|| {
+        for round in 0..3 {
+            // 1. Multi-room streaming message + shared short rooms + abort
+            block_on(async {
+                let mut long_m = pipeline.message(100 + round, Some(stream_data.len() as u64)).await;
+                for part in stream_data.chunks(ROOM_LEN) {
+                    let mut r = pipeline.room().await;
+                    r.bytes_mut()[..part.len()].copy_from_slice(part);
+                    pipeline.commit(&mut long_m, &mut r, part.len());
+                }
+                pipeline.end(long_m);
+
+                let mut r = pipeline.room().await;
+                for s in 0..4 {
+                    let mut m = pipeline.message(s, None).await;
+                    r.bytes_mut()[..64].fill(s as u8);
+                    pipeline.commit(&mut m, &mut r, 64);
+                    if s == 2 {
+                        pipeline.abort(m);
+                    } else {
+                        pipeline.end(m);
+                    }
+                }
+            });
+
+            // 2. Owned messages (Vecs moved in and recovered without reallocation)
+            while let Some(buf) = owned_bufs.pop() {
+                let m = block_on(pipeline.message(200, None));
+                pipeline.owned(m, buf);
+            }
+
+            // 3. Batch moved in and recovered without reallocation
+            let (b, d) = batch_holder.take().unwrap();
+            let bm = block_on(pipeline.message(300, None));
+            pipeline.batch(bm, b, d);
+
+            // Drain events so far, recovering owned Vecs and Batch
+            let mut got = 0;
+            while got < 9 {
+                if let Some(ev) = pipeline.next_event() {
+                    got += 1;
+                    match ev {
+                        Event::Hashed { owner: Some(buf), .. } => owned_bufs.push(buf),
+                        Event::Batch { batch, digests, .. } => batch_holder = Some((batch, digests)),
+                        _ => {}
+                    }
+                } else {
+                    block_on(pipeline.ready());
+                }
+            }
+
+            // 4. Lent short + multi-piece messages
+            for slice in [&lent_short[..], &lent_long[..]] {
+                let m = block_on(pipeline.message(400, None));
+                let guard = unsafe { pipeline.lent(m, slice) };
+                block_on(pipeline.ready());
+                drop(guard);
+                assert!(matches!(pipeline.next_event(), Some(Event::Hashed { .. })));
+            }
+        }
+    });
+
+    assert_eq!(work, Counts::default(), "Pipeline allocated after creation: {work:?}");
+}

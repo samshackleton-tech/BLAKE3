@@ -89,7 +89,8 @@
 //! | Many messages of one length, in one buffer | [`throughput::hash_many_multithreaded`] |
 //! | Many 16- or 32-byte messages (a Merkle layer's leaves or digests) | [`throughput::hash_many_multithreaded`] over a [`throughput::Packed`] |
 //! | Many messages of different lengths, in memory | [`throughput::hash_each_multithreaded`] |
-//! | Many messages arriving at once (a server's uploads) | [`throughput::update_each`] |
+//! | Many messages arriving at once (a server's uploads) | [`throughput::update_each`], or across cores [`throughput::Pipeline`] |
+//! | Continuous stream of messages or batches | [`throughput::Pipeline`] |
 //!
 //! Each call returns once its hash is done, and uses other CPU cores
 //! where that is faster (the forms without `multithreaded` stay on the
@@ -151,6 +152,7 @@
 //!   [`throughput::update_each`] allocates and frees nothing.
 //!   [`throughput::update_each_multithreaded`] may allocate worker-job lists
 //!   when a large piece uses other cores.
+//! - **[`throughput::Pipeline`]** pre-allocates its [`Limits`](throughput::Limits) rooms and message slots once at construction and allocates nothing thereafter on the calling thread or the workers.
 //! - **[`throughput::hash_multithreaded`]** allocates nothing below 512 KiB,
 //!   where it hashes on the calling thread. Above that length it keeps a list
 //!   of pieces it hands out, freed when it returns: 48 bytes for each 128 KiB of
@@ -197,10 +199,6 @@
 
 #![allow(clippy::too_many_arguments)]
 
-// The stream's tests name the crate as a program does (src/stream_tests).
-#[cfg(test)]
-extern crate self as blake3_servil;
-
 pub use blake3_servil_core::{BLOCK_LEN, BUILD_VERSION, CHUNK_LEN, ContextKey, Hash, HexError, KEY_LEN, Mode, OUT_LEN, OutputReader, convenience, initialize};
 
 // The core's inside, under the names this crate's files know it by.
@@ -240,27 +238,25 @@ mod park_sync {
     pub use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
     pub use std::thread;
 }
+mod waker_sync {
+    pub use core::cell::UnsafeCell;
+    pub use std::sync::atomic::{AtomicUsize, Ordering};
+    #[inline(always)]
+    pub fn spin() {
+        core::hint::spin_loop();
+    }
+    #[inline(always)]
+    pub unsafe fn with_mut<T, R>(cell: &UnsafeCell<T>, f: impl FnOnce(&mut T) -> R) -> R {
+        f(unsafe { &mut *cell.get() })
+    }
+}
 mod lanes;
 mod park;
-#[cfg(test)]
-mod stream;
+mod pipeline;
+mod waker;
 
 #[cfg(test)]
 mod forms_test;
-/// The stream through its calls, as a program made them: integration tests
-/// while the stream was public; unit tests now, since 0.9 ships no
-/// streaming API and compiles the stream for its tests alone. Under
-/// nextest each still runs in a process of its own.
-#[cfg(test)]
-mod stream_tests {
-    mod api_plan;
-    mod stream_collect_no_workers;
-    mod stream_collect_one_worker;
-    mod stream_collect_parked_workers;
-    mod stream_collect_with_workers;
-    mod stream_finish_parked_workers;
-    mod stream_one_cpu;
-}
 /// The tests' helpers, the core's own file: this crate's tests use the
 /// same messages, fixed values and guard pages.
 #[cfg(test)]
@@ -280,7 +276,6 @@ pub(crate) enum Ran {
 #[cfg(test)]
 std::thread_local! {
     pub(crate) static RAN: core::cell::Cell<u32> = const { core::cell::Cell::new(0) };
-    pub(crate) static COUNTED: [core::cell::Cell<u64>; 6] = const { [const { core::cell::Cell::new(0) }; 6] };
 }
 #[inline(always)]
 #[allow(dead_code)]
@@ -288,18 +283,6 @@ pub(crate) fn ran(kind: Ran) {
     #[cfg(test)]
     RAN.with(|r| r.set(r.get() | kind as u32));
     let _ = kind;
-}
-#[derive(Clone, Copy)]
-#[allow(dead_code)]
-pub(crate) enum Counted {
-    BatchZeroed = 1,
-}
-#[inline(always)]
-#[allow(dead_code)]
-pub(crate) fn counted(what: Counted) {
-    #[cfg(test)]
-    COUNTED.with(|c| c[what as usize].set(c[what as usize].get() + 1));
-    let _ = what;
 }
 
 /// [`initialize`], and start the threads that the multithreaded calls
@@ -393,12 +376,8 @@ pub fn __all_workers_parked() -> bool {
 
 /// The throughput API: the core's, and the calls that use other cores.
 pub mod throughput {
+    pub use crate::pipeline::{Event, Lent, Limits, Message, Pipeline, ROOM_LEN, Room, block_on};
     use crate::platform::Platform;
-    // 0.9 ships no streaming API: the stream is compiled for its tests
-    // alone, until the Pipeline (BLAKE3 #356) is built on it.
-    #[cfg(test)]
-    #[allow(unused_imports)]
-    pub(crate) use crate::stream::{Stream, stream};
     use crate::{Hash, Hasher, Mode, OUT_LEN};
     use blake3_servil_core::hazmat::each::{Item, hash_each_on};
     pub use blake3_servil_core::throughput::*;

@@ -1,0 +1,82 @@
+//! The pipeline's single-waiter lockless Dekker handshake (`WakerSlot`):
+//! a waiting caller stores its `Waker` and publishes `REGISTERED` in `SeqCst`
+//! before re-checking completion; a worker finishes its item with a `SeqCst`
+//! operation and then checks `state == REGISTERED` in `SeqCst`.
+//!
+//! `tests/shuttle_waker.rs` compiles this same file beside Shuttle's
+//! atomics and `UnsafeCell` (`waker_sync`), checking both causal race-freedom
+//! on the stored `Waker` and freedom from lost wakes.
+
+use super::waker_sync::{AtomicUsize, Ordering, UnsafeCell, spin, with_mut};
+use core::task::{Context, Waker};
+
+const IDLE: usize = 0;
+const WRITING: usize = 1;
+const REGISTERED: usize = 2;
+const WAKING: usize = 3;
+
+#[repr(align(128))]
+pub(crate) struct Line<T>(pub(crate) T);
+
+pub(crate) struct WakerSlot {
+    state: Line<AtomicUsize>,
+    waker: UnsafeCell<Option<Waker>>,
+}
+
+unsafe impl Send for WakerSlot {}
+unsafe impl Sync for WakerSlot {}
+
+impl WakerSlot {
+    pub(crate) fn new() -> Self {
+        WakerSlot { state: Line(AtomicUsize::new(IDLE)), waker: UnsafeCell::new(None) }
+    }
+
+    pub(crate) fn register(&self, cx: &Context<'_>) {
+        let next = cx.waker().clone();
+        loop {
+            let s = self.state.0.load(Ordering::SeqCst);
+            if (s == IDLE || s == REGISTERED) && self.state.0.compare_exchange(s, WRITING, Ordering::SeqCst, Ordering::SeqCst).is_ok() {
+                let old = unsafe { with_mut(&self.waker, |slot| slot.replace(next)) };
+                self.state.0.store(REGISTERED, Ordering::SeqCst);
+                drop(old);
+                return;
+            }
+            spin();
+        }
+    }
+
+    pub(crate) fn clear(&self) {
+        loop {
+            let s = self.state.0.load(Ordering::SeqCst);
+            if s == IDLE {
+                return;
+            }
+            if s == REGISTERED && self.state.0.compare_exchange(REGISTERED, WRITING, Ordering::SeqCst, Ordering::SeqCst).is_ok() {
+                let old = unsafe { with_mut(&self.waker, Option::take) };
+                self.state.0.store(IDLE, Ordering::SeqCst);
+                drop(old);
+                return;
+            }
+            spin();
+        }
+    }
+
+    #[inline(always)]
+    pub(crate) fn notify_after_seqcst(&self) {
+        if self.state.0.load(Ordering::SeqCst) == REGISTERED {
+            self.wake_slow();
+        }
+    }
+
+    #[cold]
+    #[inline(never)]
+    fn wake_slow(&self) {
+        if self.state.0.compare_exchange(REGISTERED, WAKING, Ordering::SeqCst, Ordering::SeqCst).is_ok() {
+            let waker = unsafe { with_mut(&self.waker, Option::take) };
+            self.state.0.store(IDLE, Ordering::SeqCst);
+            if let Some(w) = waker {
+                w.wake();
+            }
+        }
+    }
+}

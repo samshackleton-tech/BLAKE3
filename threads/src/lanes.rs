@@ -160,7 +160,7 @@ pub(crate) fn poll_pause(yielded: &mut std::time::Instant) {
 /// and YIELD_EVERY stay in microseconds, and their comparisons are
 /// counted exactly).
 #[inline(always)]
-fn now() -> std::time::Instant {
+pub(crate) fn now() -> std::time::Instant {
     #[cfg(test)]
     if let Some((base, at, step)) = TEST_CLOCK.with(|c| c.get()) {
         TEST_CLOCK.with(|c| c.set(Some((base, at + step, step))));
@@ -442,12 +442,17 @@ fn cut_messages(pieces: &mut Vec<Piece>, count: usize, message_len: usize, threa
 /// stream's body runs, and forgotten once the workers are done, so it drops
 /// only when the caller unwinds with workers possibly still reading its
 /// memory (the one mechanism for that: crash-only, Zooko, November 2).
-pub(crate) struct AbortOnUnwind;
+struct AbortOnUnwind;
 
 impl Drop for AbortOnUnwind {
     fn drop(&mut self) {
         std::process::abort()
     }
+}
+
+#[cfg(test)]
+pub(crate) fn drop_abort_on_unwind_for_test() {
+    let _g = AbortOnUnwind;
 }
 
 /// A counted call (spare_pool), until it returns, unwinding too.
@@ -535,7 +540,7 @@ impl Job<'_> {
 /// The platform every piece runs on (see the module docs, "Kernels"): on
 /// an SME2 CPU the NEON hybrids, which no other core slows down; elsewhere
 /// the detected one.
-fn pool_platform() -> Platform {
+pub(crate) fn pool_platform() -> Platform {
     #[cfg(blake3_sme2)]
     if matches!(Platform::detect(), Platform::SME2) {
         return Platform::NEON;
@@ -775,13 +780,6 @@ pub(crate) fn require() {
     pool();
 }
 
-#[cfg(test)]
-/// Whether a call may leave the calling thread: the process has more
-/// than one CPU. Requires the pool (`require`).
-pub(crate) fn splits() -> bool {
-    pool().threads > 1
-}
-
 /// The pool, once [`initialize`] has created it.
 static POOL: OnceLock<Pool> = OnceLock::new();
 
@@ -987,8 +985,6 @@ fn spin_ends(elapsed: std::time::Duration, open: impl FnOnce() -> bool) -> bool 
 /// done with it.
 pub(crate) mod sources {
     use super::*;
-    use core::cell::UnsafeCell;
-    use core::mem::MaybeUninit;
 
     /// Sources registered at once. A stream or a job that finds none free
     /// is hashed on its own thread.
@@ -999,24 +995,26 @@ pub(crate) mod sources {
     /// Streams open: workers spin a while for more work only when some are.
     static OPEN: OwnLine<AtomicUsize> = OwnLine(AtomicUsize::new(0));
 
-    /// A task's place in a source.
-    struct Place {
-        task: UnsafeCell<MaybeUninit<Task>>,
-        /// Whether the place holds a published task not yet copied out (by
-        /// its claimer's copy): set as the task is
-        /// published, cleared after the copy. The check of `publish`'s
-        /// contract, in tests and debug builds alone; release builds carry
-        /// none.
-        #[cfg(any(test, debug_assertions))]
-        uncopied: core::sync::atomic::AtomicBool,
+    /// Bit 63 of an action's `arg`: whether the SME2 thread runs it under
+    /// the SME2 turn (a subtree of 16 KiB or more) rather than on NEON.
+    pub(crate) const ACTION_SME2: u64 = 1 << 63;
+
+    /// A pipeline's item in a source: three atomic words read before the
+    /// claimer's CAS (`take_claimed`) and rewritten only after `claimed`
+    /// has passed it (`publish_actions`), so no claimer copies non-atomic
+    /// memory after its claim (BLAKE3 #302).
+    struct Action {
+        run: AtomicPtr<()>,
+        context: AtomicPtr<()>,
+        arg: AtomicU64,
     }
 
     #[repr(align(128))]
     pub(crate) struct Source {
         claimed: OwnLine<AtomicUsize>,
-        /// A stream's tasks, publication `p`'s in place `p % len`; empty for
-        /// a caller's jobs.
-        places: Box<[Place]>,
+        /// A pipeline's actions (`with_actions`), publication `p`'s at
+        /// `p % len`; empty for a caller's jobs.
+        actions: Box<[Action]>,
         /// A caller's current job and its first number; the job stays the
         /// claimed numbers' until `finish.finished` passes them.
         job: AtomicPtr<Job<'static>>,
@@ -1032,38 +1030,45 @@ pub(crate) mod sources {
     // copied out by its claimer: the publisher's contract (`publish`),
     // checked in tests and debug builds. It is read by the one thread
     // whose CAS claimed the publication in it, across the Release store
-    // of `published` and the Acquire load.
+    // of `published` and the Acquire load. An action's words are atomics,
+    // read before the claimer's AcqRel CAS and written again only after an
+    // Acquire load of `claimed` passes that slot.
     // `owner` is behind its lock; the rest is atomics.
     unsafe impl Sync for Source {}
     unsafe impl Send for Source {}
 
-    /// What a claim takes: a stream's task, or a run of a job's pieces
-    /// (`n` from `index`, consecutive).
+    /// What a claim takes: a stream's task, a pipeline's action, or a run
+    /// of a job's pieces (`n` from `index`, consecutive).
     pub(crate) enum Item {
-        Task(Task),
+        Action { run: *mut (), context: *mut (), arg: u64 },
         Pieces(*const Job<'static>, usize, usize),
     }
 
     impl Source {
-        /// A source with `len` places for tasks, taken in the order
-        /// published (a stream's: `publish`), or none (a caller's jobs).
-        pub(crate) fn new(len: usize) -> Source {
+        /// A source for a calling thread's one-shot jobs.
+        pub(crate) fn new() -> Source {
+            Self::with_actions(0)
+        }
+
+        /// A source with `actions` slots for a pipeline's items.
+        pub(crate) fn with_actions(actions: usize) -> Source {
             Source {
                 claimed: OwnLine(AtomicUsize::new(0)),
-                // Each place holds a whole task from the start, so a
-                // publication writes its task's header and the members it
-                // holds alone (`push`).
-                places: (0..len)
-                    .map(|_| Place {
-                        task: UnsafeCell::new(MaybeUninit::new(Task::of(&[], 0))),
-                        #[cfg(any(test, debug_assertions))]
-                        uncopied: core::sync::atomic::AtomicBool::new(false),
-                    })
+                actions: (0..actions)
+                    .map(|_| Action { run: AtomicPtr::new(core::ptr::null_mut()), context: AtomicPtr::new(core::ptr::null_mut()), arg: AtomicU64::new(0) })
                     .collect(),
                 job: AtomicPtr::new(core::ptr::null_mut()),
                 base: AtomicUsize::new(0),
                 finish: crate::finish::Finish::new(),
             }
+        }
+
+        pub(crate) fn actions_len(&self) -> usize {
+            self.actions.len()
+        }
+
+        fn carries_tasks(&self) -> bool {
+            !self.actions.is_empty()
         }
 
         /// Register for the workers: the slot, or None when all are taken.
@@ -1079,59 +1084,43 @@ pub(crate) mod sources {
             REGISTERED[slot].store(core::ptr::null_mut(), Ordering::SeqCst);
         }
 
-        #[cfg(test)]
-        /// A stream's task to the workers, in the next place in order: one
-        /// write, one Release store; then the SME2 thread first, and with
-        /// two or more waiting and a worker parked, a worker.
-        ///
-        /// The caller's contract: the task published `len` publications
-        /// ago, whose place this one takes, has been copied out by its
-        /// claimer. A stream keeps it by the count of its places (its
-        /// TASK_SLOTS: a place comes round only after its task completed,
-        /// BLAKE3 #302), checked in tests and debug builds.
-        pub(crate) fn publish(&self, task: &Task) {
-            self.push(task);
+        /// Publish one or more pipeline actions in order with one Release
+        /// store and one fence, then wake parked workers only where awake
+        /// workers fall short of the items waiting.
+        pub(crate) fn publish_actions(&self, run: unsafe fn(*const (), u64, Platform), context: *const (), args: &[u64]) {
+            debug_assert!(!args.is_empty());
+            let p = self.finish.published.load(Ordering::Relaxed);
+            assert!(p - self.claimed.load(Ordering::Acquire) + args.len() <= self.actions.len(), "a source's actions hold every item not yet taken");
+            let cap = self.actions.len();
+            for (k, &arg) in args.iter().enumerate() {
+                let slot = &self.actions[(p + k) % cap];
+                slot.run.store(run as *mut (), Ordering::Relaxed);
+                slot.context.store(context as *mut (), Ordering::Relaxed);
+                slot.arg.store(arg, Ordering::Relaxed);
+            }
+            self.finish.published.store(p + args.len(), Ordering::Release);
+            core::sync::atomic::fence(Ordering::SeqCst);
+            let pool = pool();
+            if pool.sme2 {
+                wake_sme2();
+            }
             if self.waiting() >= 2 {
                 noted(Noted::WakeTry);
-                pool().park.wake_one();
+                pool.park.wake_one();
             }
         }
 
-        #[cfg(test)]
-        /// Write `task` to the next place in order and make it visible (the
-        /// SME2 thread woken for it where there is one).
-        fn push(&self, task: &Task) {
-            let p = self.finish.published.load(Ordering::Relaxed);
-            // Every build: a task written over one not yet claimed would
-            // be lost (at the cost of a load and a comparison).
-            assert!(p - self.claimed.load(Ordering::Relaxed) < self.places.len(), "a source's places hold every task not yet taken");
-            let place = p % self.places.len();
-            let slot = &self.places[place];
-            #[cfg(any(test, debug_assertions))]
-            assert!(!slot.uncopied.swap(true, Ordering::SeqCst), "a publication met a task claimed and not yet copied (BLAKE3 #302)");
-            // Sound: the place's last task was copied out by its claimer
-            // (the publisher's contract): no claimer is still to read it;
-            // and the place holds an initialized task (`new`).
-            let to = unsafe { (*slot.task.get()).assume_init_mut() };
-            // The header and the members the task holds, alone: a task of
-            // four 4 KiB messages moves 312 of its 1,640 bytes, a piece of
-            // a long message 120. Every field is named here, so a field
-            // added to Task fails to compile until it is written too.
-            let Task { input, len, counter, batch, key, flags, out, left, members, member } = task;
-            to.input = *input;
-            to.len = *len;
-            to.counter = *counter;
-            to.batch = *batch;
-            to.key = *key;
-            to.flags = *flags;
-            to.out = *out;
-            to.left = *left;
-            to.members = *members;
-            to.member[..*members].copy_from_slice(&member[..*members]);
-            self.finish.published.store(p + 1, Ordering::Release);
-            core::sync::atomic::fence(Ordering::SeqCst);
-            if pool().sme2 {
-                wake_sme2();
+        /// Run one unclaimed action from this source on the calling thread,
+        /// if any remains.
+        pub(crate) fn run_waiting_action(&self) -> bool {
+            match self.take() {
+                Some(Item::Action { run, context, arg }) => {
+                    let f: unsafe fn(*const (), u64, Platform) = unsafe { core::mem::transmute(run) };
+                    unsafe { f(context as *const (), arg & !ACTION_SME2, pool_platform()) };
+                    true
+                }
+                Some(_) => unreachable!("an action source carries actions"),
+                None => false,
             }
         }
 
@@ -1152,42 +1141,28 @@ pub(crate) mod sources {
 
         /// Claim the next published item, if any.
         pub(crate) fn take(&self) -> Option<Item> {
-            self.take_claimed(|| {})
-        }
-
-        /// `take`, with `claimed` run between a task's claim and its copy
-        /// (a test holds a claimer there).
-        #[inline(always)]
-        fn take_claimed(&self, claimed: impl FnOnce()) -> Option<Item> {
             let mut c = self.claimed.load(Ordering::Acquire);
             loop {
                 let p = self.finish.published.load(Ordering::Acquire);
                 if c >= p {
                     return None;
                 }
-                // Read after the publication Acquire: the fixture reserved
-                // its batch before publishing this task.
-                // A job's pieces go in runs, consecutive, sized to the work
-                // left (guided self-scheduling): each worker reads its input
-                // front to back, so a mapped file from storage meets the
-                // kernel's readahead stream by stream (official's I/O
-                // pattern), and runs shrink to one piece near the end for
-                // balance. A stream's tasks go one at a time.
-                let n = if self.places.is_empty() { Self::run_len(p - c, pool().threads) } else { 1 };
-                match self.claimed.compare_exchange_weak(c, c + n, Ordering::AcqRel, Ordering::Acquire) {
-                    Ok(_) if self.places.is_empty() => return Some(Item::Pieces(self.job.load(Ordering::Relaxed), c - self.base.load(Ordering::Relaxed), n)),
-                    Ok(_) => {
-                        claimed();
-                        let slot = &self.places[c % self.places.len()];
-                        // Sound: this thread alone claimed the publication
-                        // in this place, written before `published` passed
-                        // it; its publisher writes the place again only
-                        // after this copy (the publisher's contract).
-                        let task = unsafe { (*slot.task.get()).assume_init_read() };
-                        #[cfg(any(test, debug_assertions))]
-                        slot.uncopied.store(false, Ordering::SeqCst);
-                        return Some(Item::Task(task));
+                if !self.actions.is_empty() {
+                    let slot = &self.actions[c % self.actions.len()];
+                    let run = slot.run.load(Ordering::Relaxed);
+                    let context = slot.context.load(Ordering::Relaxed);
+                    let arg = slot.arg.load(Ordering::Relaxed);
+                    match self.claimed.compare_exchange_weak(c, c + 1, Ordering::AcqRel, Ordering::Acquire) {
+                        Ok(_) => return Some(Item::Action { run, context, arg }),
+                        Err(now) => {
+                            c = now;
+                            continue;
+                        }
                     }
+                }
+                let n = Self::run_len(p - c, pool().threads);
+                match self.claimed.compare_exchange_weak(c, c + n, Ordering::AcqRel, Ordering::Acquire) {
+                    Ok(_) => return Some(Item::Pieces(self.job.load(Ordering::Relaxed), c - self.base.load(Ordering::Relaxed), n)),
                     Err(now) => c = now,
                 }
             }
@@ -1206,27 +1181,10 @@ pub(crate) mod sources {
             Self::run_len(waiting, threads)
         }
 
-        /// A stream's next task, if any (this source is a stream's).
-        pub(crate) fn take_task(&self) -> Option<Task> {
-            self.take_task_claimed(|| {})
-        }
-
-        /// `take_task`, with `claimed` run between the claim and the copy
-        /// (a test holds a claimer there).
-        #[inline(always)]
-        pub(crate) fn take_task_claimed(&self, claimed: impl FnOnce()) -> Option<Task> {
-            match self.take_claimed(claimed) {
-                Some(Item::Task(task)) => Some(task),
-                Some(Item::Pieces(..)) => unreachable!("a stream's source carries tasks"),
-                None => None,
-            }
-        }
-
         fn waiting(&self) -> usize {
             self.finish.published.load(Ordering::Acquire).saturating_sub(self.claimed.load(Ordering::Acquire))
         }
 
-        #[cfg(test)]
         /// Wake a parked worker for a task this stream has published that no
         /// thread has taken: `publish` wakes one for the second task in
         /// waiting, expecting the caller to take a lone one, and a caller
@@ -1303,7 +1261,7 @@ pub(crate) mod sources {
     pub(crate) fn job_source() -> &'static Source {
         MINE.with(|mine| {
             mine.get_or_init(|| {
-                let source = FREE_JOBS.lock().unwrap().pop().unwrap_or_else(|| Box::leak(Box::new(Source::new(0))));
+                let source = FREE_JOBS.lock().unwrap().pop().unwrap_or_else(|| Box::leak(Box::new(Source::new())));
                 source.finish.own();
                 Held(source)
             })
@@ -1311,12 +1269,10 @@ pub(crate) mod sources {
         })
     }
 
-    #[cfg(test)]
     pub(crate) fn opened() {
         OPEN.fetch_add(1, Ordering::SeqCst);
     }
 
-    #[cfg(test)]
     pub(crate) fn closed() {
         OPEN.fetch_sub(1, Ordering::SeqCst);
     }
@@ -1374,7 +1330,10 @@ pub(crate) mod sources {
             pool().park.wake_one();
         }
         match item {
-            Item::Task(task) => task.run(pool_platform()),
+            Item::Action { run, context, arg } => {
+                let f: unsafe fn(*const (), u64, Platform) = unsafe { core::mem::transmute(run) };
+                unsafe { f(context as *const (), arg & !ACTION_SME2, pool_platform()) };
+            }
             Item::Pieces(job, index, n) => {
                 // Sound: the job lives until its pieces are finished,
                 // these among them; this thread alone took them.
@@ -1386,19 +1345,19 @@ pub(crate) mod sources {
         }
     }
 
-    /// A task from any stream (the SME2 thread takes these alone).
-    pub(crate) fn take_stream_task() -> Option<Task> {
+    /// An item from any stream or pipeline (the SME2 thread takes these alone).
+    pub(crate) fn take_stream_item() -> Option<Item> {
         let mut found = None;
         find(|source| {
-            found = if !source.places.is_empty() { source.take_task() } else { None };
+            found = if source.carries_tasks() { source.take() } else { None };
             found.is_some()
         });
         found
     }
 
-    /// Whether any source has work waiting (`streams`: any stream).
+    /// Whether any source has work waiting (`streams`: any stream or pipeline).
     pub(crate) fn visible(streams: bool) -> bool {
-        find(|source| (!streams || !source.places.is_empty()) && source.waiting() > 0)
+        find(|source| (!streams || source.carries_tasks()) && source.waiting() > 0)
     }
 
     #[cfg(test)]
@@ -1410,11 +1369,23 @@ pub(crate) mod sources {
         /// every stream hashes on its caller alone.)
         #[test]
         fn test_unregister_gives_the_slot_back() {
-            let source: &'static Source = &*Box::leak(Box::new(Source::new(0)));
+            let source: &'static Source = &*Box::leak(Box::new(Source::new()));
             let slot = source.register().expect("a free slot");
             assert!(find(|t| core::ptr::eq(t, source)), "a registered source is reached");
             Source::unregister(slot);
             assert!(!find(|t| core::ptr::eq(t, source)), "an unregistered source is still reached");
+        }
+
+        #[test]
+        fn test_take_stream_item_claims_from_registered_action_source() {
+            crate::initialize_multithreaded(core::num::NonZeroUsize::new(1));
+            unsafe fn noop(_: *const (), _: u64, _: Platform) {}
+            let source: &'static Source = &*Box::leak(Box::new(Source::with_actions(4)));
+            let slot = source.register().expect("a free slot");
+            source.publish_actions(noop, core::ptr::null(), &[77]);
+            let item = take_stream_item();
+            Source::unregister(slot);
+            assert!(matches!(item, Some(Item::Action { arg: 77, .. })));
         }
 
         /// What a worker looks for before it parks: a registered source
@@ -1427,8 +1398,8 @@ pub(crate) mod sources {
             // Made-up items (no job, an unwritten ring): safe only because
             // nothing here starts the pool, so no worker takes one (see
             // test_a_worker_serves_the_lowest_source_until_it_is_empty).
-            let job: &'static Source = &*Box::leak(Box::new(Source::new(0)));
-            let stream: &'static Source = &*Box::leak(Box::new(Source::new(4)));
+            let job: &'static Source = &*Box::leak(Box::new(Source::new()));
+            let stream: &'static Source = &*Box::leak(Box::new(Source::with_actions(4)));
             let slots = [job.register().expect("a free slot"), stream.register().expect("a free slot")];
             assert!(!visible(false) && !visible(true), "nothing published: nothing visible");
             job.finish.published.store(1, Ordering::SeqCst);
@@ -1454,60 +1425,32 @@ pub(crate) mod sources {
             assert_eq!(first, second, "the second thread takes the source the first gave back");
         }
 
-        /// A publication writes its task's header and the members it holds,
-        /// and leaves the place's other members as they were: a task of few
-        /// members moves a few cache lines where a whole task is 1,640
-        /// bytes (BLAKE3 #306). The digests cannot tell (the members past a
-        /// task's own are never read), so this counts the work.
+        /// Publishing past `actions_len()` unclaimed items violates `publish_actions`'s
+        /// capacity contract and stops in every build before overwriting an unclaimed slot.
         #[test]
-        fn a_publication_writes_the_members_its_task_holds_alone() {
+        #[should_panic(expected = "a source's actions hold every item not yet taken")]
+        fn a_publication_past_actions_capacity_is_stopped() {
+            unsafe fn noop(_: *const (), _: u64, _: Platform) {}
             crate::initialize_multithreaded(core::num::NonZeroUsize::new(1));
-            let source = Source::new(1);
-            let mut full = Task::members(crate::IV, 0, None);
-            full.members = MEMBERS;
-            full.member = [Member { input: core::ptr::null(), len: 7, out: core::ptr::null_mut() }; MEMBERS];
-            source.publish(&full);
-            let task = source.take_task().expect("the full task");
-            assert_eq!(task.members, MEMBERS);
-            assert!(task.member.iter().all(|m| m.len == 7), "every member of a full task is written");
-            let mut two = Task::members(crate::IV, 0, None);
-            two.members = 2;
-            two.member[0].len = 1;
-            two.member[1].len = 2;
-            two.counter = 9;
-            source.publish(&two);
-            let task = source.take_task().expect("the task of two");
-            assert_eq!((task.members, task.counter, task.member[0].len, task.member[1].len), (2, 9, 1, 2), "the header and the task's own members");
-            assert!(task.member[2..].iter().all(|m| m.len == 7), "the members past the task's own are the place's last task's, unwritten");
+            let source = Source::with_actions(2);
+            source.publish_actions(noop, core::ptr::null(), &[1, 2]);
+            source.publish_actions(noop, core::ptr::null(), &[3]);
         }
 
-        /// A publication into a place whose task is claimed and not yet
-        /// copied breaks `publish`'s contract; the check stops it before
-        /// the write (tests and debug builds).
         #[test]
-        #[should_panic(expected = "a publication met a task claimed and not yet copied")]
-        fn a_publication_into_a_place_still_to_be_copied_is_stopped() {
-            a_publication_while_the_first_task_is_held(Source::new(1), |source, i| source.publish(&Task::of(&[], i)));
-        }
-
-        /// Publish, hold the task's claimer before its copy, publish again.
-        fn a_publication_while_the_first_task_is_held(source: Source, publish: impl Fn(&Source, u64)) {
-            crate::initialize_multithreaded(core::num::NonZeroUsize::new(1));
-            publish(&source, 0);
-            let (claimed_tx, claimed_rx) = std::sync::mpsc::channel();
-            let (go_tx, go_rx) = std::sync::mpsc::channel::<()>();
-            std::thread::scope(|scope| {
-                let source = &source;
-                scope.spawn(move || {
-                    let _ = source.take_task_claimed(|| {
-                        claimed_tx.send(()).unwrap();
-                        let _ = go_rx.recv();
-                    });
-                });
-                claimed_rx.recv().unwrap();
-                let _go = crate::test::Released(go_tx);
-                publish(source, 1);
-            });
+        fn actions_len_and_run_waiting_action_execute_queued_action() {
+            unsafe fn set_val(ctx: *const (), arg: u64, _: Platform) {
+                unsafe { (*(ctx as *const AtomicU64)).store(arg, Ordering::SeqCst) };
+            }
+            let _ = pool();
+            let source = Source::with_actions(3);
+            assert_eq!(source.actions_len(), 3);
+            assert!(!source.run_waiting_action());
+            let flag = AtomicU64::new(0);
+            source.publish_actions(set_val, (&flag as *const AtomicU64).cast(), &[42 | ACTION_SME2]);
+            assert!(source.run_waiting_action());
+            assert_eq!(flag.load(Ordering::SeqCst), 42, "ACTION_SME2 bit stripped before running");
+            assert!(!source.run_waiting_action());
         }
 
         /// Unregistering one source leaves the others registered: its bit
@@ -1515,7 +1458,7 @@ pub(crate) mod sources {
         /// would strand the rest, unseen by a test of one source).
         #[test]
         fn test_unregister_leaves_the_other_sources_registered() {
-            let sources: Vec<&'static Source> = (0..3).map(|_| &*Box::leak(Box::new(Source::new(0)))).collect();
+            let sources: Vec<&'static Source> = (0..3).map(|_| &*Box::leak(Box::new(Source::new()))).collect();
             let slots: Vec<usize> = sources.iter().map(|s| s.register().expect("a free slot")).collect();
             Source::unregister(slots[1]);
             assert!(!find(|t| core::ptr::eq(t, sources[1])), "the unregistered source is still reached");
@@ -1541,7 +1484,7 @@ pub(crate) mod sources {
             // A worker that won one of them dereferenced its null job:
             // SIGSEGV, once, under the mutation check's load (November 6).
             crate::initialize_multithreaded(core::num::NonZeroUsize::new(1));
-            let sources: Vec<&'static Source> = (0..2).map(|_| &*Box::leak(Box::new(Source::new(0)))).collect();
+            let sources: Vec<&'static Source> = (0..2).map(|_| &*Box::leak(Box::new(Source::new()))).collect();
             let slots: Vec<usize> = sources.iter().map(|s| s.register().expect("a free slot")).collect();
             for s in &sources {
                 s.finish.published.store(3, Ordering::SeqCst);
@@ -1567,7 +1510,7 @@ pub(crate) mod sources {
         /// a time, so only a test of several sees the walk past the first.
         #[test]
         fn test_find_reaches_every_registered_source() {
-            let sources: Vec<&'static Source> = (0..3).map(|_| &*Box::leak(Box::new(Source::new(0)))).collect();
+            let sources: Vec<&'static Source> = (0..3).map(|_| &*Box::leak(Box::new(Source::new()))).collect();
             // Registered for the rest of the process, which is this test's.
             for s in &sources {
                 s.register().expect("a free slot");
@@ -1579,30 +1522,17 @@ pub(crate) mod sources {
     }
 }
 
-#[cfg(test)]
 /// The longest part of a stream's input planned as tasks
 /// (a stream's piece): a task is a whole subtree within one part.
 pub(crate) const TASK_LEN: usize = 64 * CHUNK_LEN;
 
-/// One piece of a stream's work (crate::stream), hashed by whichever thread
-/// takes it from the stream's source: a whole subtree at chunk `counter` of a message,
-/// as [`crate::hasher::subtree_len`] cuts it, its result a 64-byte block at `out`;
-/// or, with `batch` the messages' length, a range of a batch's messages in
-/// their slots, their digests at `out`. Then it counts down `left`; the
-/// stream keeps the bytes, `out`, and `left` in place until `left` is zero.
+/// A gathered group of up to [`MEMBERS`] short messages (or small batches of
+/// one message length), hashed side by side via [`Task::run_members`].
 pub(crate) struct Task {
-    pub(crate) input: *const u8,
     pub(crate) len: usize,
-    pub(crate) counter: u64,
     pub(crate) batch: Option<usize>,
     pub(crate) key: crate::CVWords,
     pub(crate) flags: u8,
-    pub(crate) out: *mut u8,
-    pub(crate) left: *const AtomicUsize,
-    /// With `members` above zero, the task is that many separate short
-    /// messages instead (or, with `batch`, batches of that length's
-    /// messages): each one's digest (digests) to its `out`, then `left`
-    /// counted down by `members`; `len` sums their bytes.
     pub(crate) members: usize,
     pub(crate) member: [Member; MEMBERS],
 }
@@ -1620,61 +1550,13 @@ pub(crate) struct Member {
 
 const NO_MEMBER: Member = Member { input: core::ptr::null(), len: 0, out: core::ptr::null_mut() };
 
-// Sound: a task's pointers stay valid until its `left` reaches zero.
 unsafe impl Send for Task {}
 
 impl Task {
-    /// A task over `input` at chunk `counter`, its mode, kind, and
-    /// destinations still to fill in.
-    pub(crate) fn of(input: &[u8], counter: u64) -> Task {
-        Task {
-            input: input.as_ptr(),
-            len: input.len(),
-            counter,
-            batch: None,
-            key: [0; 8],
-            flags: 0,
-            out: core::ptr::null_mut(),
-            left: core::ptr::null(),
-            members: 0,
-            member: [NO_MEMBER; MEMBERS],
-        }
-    }
-
-    #[cfg(test)]
     /// An empty task of short messages (with `batch`, batches of messages
     /// of that length) in the mode of `key` and `flags`.
     pub(crate) fn members(key: &crate::CVWords, flags: u8, batch: Option<usize>) -> Task {
-        Task { key: *key, flags, batch, ..Task::of(&[], 0) }
-    }
-
-    /// Hash on `platform` into `out`: for a subtree of two chunks or more at
-    /// chunk zero (it may be the whole message), its pair of child chaining
-    /// values; for any other, its chaining value (first 32 bytes). Then
-    /// count down.
-    /// By reference: a task is 1,640 bytes, and by value each call it was
-    /// not inlined into copied it whole.
-    pub(crate) fn run(&self, platform: Platform) {
-        if self.members > 0 {
-            self.run_members(platform);
-            // Sound: the stream keeps `left` in place until it is zero.
-            unsafe { &*self.left }.fetch_sub(self.members, Ordering::Release);
-            return;
-        }
-        // A task without members is a piece of a long message: a stream's
-        // batch parts are always members (Stream::add_part adds one to the
-        // task it opens, and only an opened task is handed over).
-        assert!(self.batch.is_none(), "a task of batch parts has members");
-        // Sound: the stream keeps these in place until `left` is zero.
-        let bytes = unsafe { core::slice::from_raw_parts(self.input, self.len) };
-        // Sound: a subtree's `out` is one 64-byte block.
-        let out = unsafe { &mut *(self.out as *mut [u8; crate::BLOCK_LEN]) };
-        if self.counter == 0 && self.len > CHUNK_LEN {
-            *out = crate::compress_subtree_to_parent_node(bytes, 0, &self.key, 0, self.flags, platform);
-        } else {
-            out[..crate::OUT_LEN].copy_from_slice(&crate::hash_all_at_once(bytes, &self.key, self.counter, self.flags, platform).chaining_value());
-        }
-        unsafe { &*self.left }.fetch_sub(1, Ordering::Release);
+        Task { len: 0, batch, key: *key, flags, members: 0, member: [NO_MEMBER; MEMBERS] }
     }
 }
 
@@ -1683,7 +1565,7 @@ impl Task {
     /// multi-lane kernels (`hash_many`'s, from a table of pointers) where
     /// that length is one block, or on x86 two to sixteen blocks of a power
     /// of two (128 B to 1 KiB); any others one at a time.
-    fn run_members(&self, platform: Platform) {
+    pub(crate) fn run_members(&self, platform: Platform) {
         let members = &self.member[..self.members];
         if let Some(message_len) = self.batch {
             for m in members {
@@ -1765,19 +1647,26 @@ fn sme2_main() {
 
 fn sme2_serve() -> ! {
     assert!(SME2_THREAD.set(std::thread::current()).is_ok(), "one SME2 thread");
+    // Prepare this thread's 64 KiB SME2 flat-walk scratch before reporting parked,
+    // so the first pipeline or stream task on SME2 allocates nothing.
+    {
+        let turn = crate::platform::Sme2Turn::take(Platform::detect(), true);
+        let _ = crate::hash_all_at_once(&[0u8; 32 * 1024], crate::IV, 0, 0, turn.platform());
+    }
     loop {
-        if let Some(task) = sources::take_stream_task() {
-            if task.members > 0 {
-                // Short messages and small batches, gathered, run faster
-                // on NEON than through an SME2 session per task (Mac:
-                // 64-byte messages 14-15% faster, batches of 16 and 64
-                // 10-15%); below 16 KiB the other members run the NEON
-                // kernels on either platform.
-                task.run(pool_platform());
-            } else {
-                let turn = crate::platform::Sme2Turn::take(Platform::detect(), true);
-                task.run(turn.platform());
-                drop(turn);
+        if let Some(item) = sources::take_stream_item() {
+            match item {
+                sources::Item::Action { run, context, arg } => {
+                    let f: unsafe fn(*const (), u64, Platform) = unsafe { core::mem::transmute(run) };
+                    if arg & sources::ACTION_SME2 == 0 {
+                        unsafe { f(context as *const (), arg, pool_platform()) };
+                    } else {
+                        let turn = crate::platform::Sme2Turn::take(Platform::detect(), true);
+                        unsafe { f(context as *const (), arg & !sources::ACTION_SME2, turn.platform()) };
+                        drop(turn);
+                    }
+                }
+                sources::Item::Pieces(..) => unreachable!("the SME2 thread takes stream and pipeline items alone"),
             }
             continue;
         }
@@ -1797,7 +1686,6 @@ fn sme2_serve() -> ! {
 static SME2_THREAD: OnceLock<std::thread::Thread> = OnceLock::new();
 static SME2_PARKED: core::sync::atomic::AtomicBool = core::sync::atomic::AtomicBool::new(false);
 
-#[cfg(test)]
 fn wake_sme2() {
     if SME2_PARKED.swap(false, Ordering::SeqCst) {
         if let Some(thread) = SME2_THREAD.get() {
@@ -1814,12 +1702,6 @@ fn wake_sme2() {
 pub(crate) fn assert_past_the_split(what: &str) {
     let kinds = crate::RAN.with(|r| r.get());
     assert!(pool().threads == 1 || kinds & crate::Ran::Pool as u32 != 0, "{what} went to the pool");
-}
-
-#[cfg(test)]
-/// Run `task` on this thread, as a worker would.
-pub(crate) fn run_task(task: &Task) {
-    task.run(pool_platform());
 }
 
 fn worker_main(me: usize) {
@@ -1967,11 +1849,9 @@ mod test {
                                 inputs.iter().flat_map(|input| crate::test::official::hash(api_mode, &input[offset..])).collect()
                             });
                             for &platform in &platforms {
-                                let done = AtomicUsize::new(count);
                                 let mut out = vec![[0xAA; crate::OUT_LEN]; count + 2];
                                 let mut task = Task::members(words, *flags, None);
                                 task.members = count;
-                                task.left = &done;
                                 // Every destination from one raw base (Stacked Borrows).
                                 let base = out.as_mut_ptr();
                                 for m in 0..count {
@@ -1979,7 +1859,7 @@ mod test {
                                     task.member[m] = Member { input: inputs[m][offset..].as_ptr(), len: inputs[m].len() - offset, out };
                                 }
                                 crate::RAN.with(|r| r.set(0));
-                                task.run(platform);
+                                task.run_members(platform);
                                 // Which path (BLAKE3 #219): one length, two
                                 // members or more, a length with a kernel
                                 // (one block everywhere; 128 B to 1 KiB on
@@ -2000,7 +1880,6 @@ mod test {
                                 assert_eq!(&out[1..count + 1], &expected[..], "{platform:?}, {count} x {len}, mixed {mixed}, offset {offset}, mode {mode}");
                                 assert_eq!(out[0], [0xAA; crate::OUT_LEN]);
                                 assert_eq!(out[count + 1], [0xAA; crate::OUT_LEN]);
-                                assert_eq!(done.load(Ordering::Acquire), 0);
                             }
                         }
                     }
@@ -2275,43 +2154,44 @@ mod test {
     #[test]
     fn test_a_wake_is_tried_for_the_second_task_waiting() {
         let _ = pool();
-        let source: &'static sources::Source = Box::leak(Box::new(sources::Source::new(8)));
-        let task = || Task::members(crate::IV, 0, None);
+        unsafe fn noop(_: *const (), _: u64, _: Platform) {}
+        let source: &'static sources::Source = Box::leak(Box::new(sources::Source::with_actions(8)));
+        let pub1 = || source.publish_actions(noop, core::ptr::null(), &[0]);
         counts();
-        source.publish(&task());
+        pub1();
         assert_eq!(counts()[Noted::WakeTry as usize], 0, "one task waiting: the caller's");
-        source.publish(&task());
+        pub1();
         assert_eq!(counts()[Noted::WakeTry as usize], 1, "two waiting: a wake");
-        source.publish(&task());
+        pub1();
         assert_eq!(counts()[Noted::WakeTry as usize], 1, "three waiting: a wake");
-        assert!(source.take_task().is_some());
-        assert!(source.take_task().is_some());
+        assert!(source.take().is_some());
+        assert!(source.take().is_some());
         counts();
-        source.publish(&task());
+        pub1();
         assert_eq!(counts()[Noted::WakeTry as usize], 1, "one waiting, then two: a wake");
-        assert!(source.take_task().is_some() && source.take_task().is_some() && source.take_task().is_none());
+        assert!(source.take().is_some() && source.take().is_some() && source.take().is_none());
         counts();
         source.wake_for_waiting();
         assert_eq!(counts()[Noted::WakeTry as usize], 0, "none waiting: no wake");
-        source.publish(&task());
+        pub1();
         counts();
         source.wake_for_waiting();
         assert_eq!(counts()[Noted::WakeTry as usize], 1, "one waiting: a wake");
-        assert!(source.take_task().is_some());
+        assert!(source.take().is_some());
     }
 
     /// A source registered is active for the workers at its slot, and
     /// unregistered is not (BLAKE3 #219).
     #[test]
     fn test_a_source_unregistered_leaves_its_slot() {
-        let source: &'static sources::Source = Box::leak(Box::new(sources::Source::new(0)));
+        let source: &'static sources::Source = Box::leak(Box::new(sources::Source::new()));
         let slot = source.register().expect("a slot free");
         assert!(sources::Source::active(slot) && sources::Source::registered(slot));
         sources::Source::unregister(slot);
         assert!(!sources::Source::active(slot) && !sources::Source::registered(slot), "the slot's bit and pointer cleared");
         // A second source takes the next slot; its bit is its own to clear
         // (a shift the wrong way clears slot 0's alone).
-        let second: &'static sources::Source = Box::leak(Box::new(sources::Source::new(0)));
+        let second: &'static sources::Source = Box::leak(Box::new(sources::Source::new()));
         let first = source.register().expect("a slot free");
         let next = second.register().expect("a slot free");
         assert!(next > first && sources::Source::active(next));
@@ -2417,27 +2297,28 @@ mod test {
     /// stream runs; none again when it has finished.
     #[test]
     fn test_a_stream_is_what_opens_the_sources() {
+        use crate::throughput::{Event, Limits, Pipeline, block_on};
         let _ = pool();
         assert!(!sources::open(), "at rest, nothing is open");
-        let mut digest = Hash::from([0u8; 32]);
-        crate::throughput::stream(
-            crate::Mode::Plain,
-            |_: &mut [Hash]| {},
-            |s| {
-                assert!(sources::open(), "a stream open");
-                s.submit_with(
-                    64,
-                    |_, room| {
-                        room.fill(7);
-                        64
-                    },
-                    &mut digest,
-                );
-                s.finish();
-                assert!(sources::open(), "finished, open until the stream is dropped");
-            },
-        );
-        assert!(!sources::open(), "the stream finished: nothing open");
+        let digest = {
+            let mut pipe = Pipeline::new(crate::Mode::Plain, Limits { messages: 2, rooms: 1 });
+            assert!(sources::open(), "a pipeline open");
+            block_on(async {
+                let mut m = pipe.message((), None).await;
+                let mut r = pipe.room().await;
+                r.bytes_mut()[..64].fill(7);
+                pipe.commit(&mut m, &mut r, 64);
+                drop(r);
+                pipe.end(m);
+                pipe.ready().await;
+            });
+            assert!(sources::open(), "finished, open until the pipeline is dropped");
+            match pipe.next_event() {
+                Some(Event::Hashed { hash, .. }) => hash,
+                _ => unreachable!(),
+            }
+        };
+        assert!(!sources::open(), "the pipeline dropped: nothing open");
         assert_eq!(digest, crate::convenience::hash(&[7u8; 64]));
     }
 
@@ -2449,14 +2330,12 @@ mod test {
         crate::initialize();
         for len in [64, 128, 1024, 100] {
             let input: Vec<u8> = (0..len).map(|i| i as u8).collect();
-            let done = AtomicUsize::new(1);
             let mut out = [[0u8; crate::OUT_LEN]; 1];
             let mut task = Task::members(crate::IV, 0, None);
             task.members = 1;
-            task.left = &done;
             task.member[0] = Member { input: input.as_ptr(), len, out: out.as_mut_ptr().cast::<u8>() };
             crate::RAN.with(|r| r.set(0));
-            task.run(Platform::detect());
+            task.run_members(Platform::detect());
             let ran = crate::RAN.with(|r| r.get());
             assert!(ran & crate::Ran::MemberAlone as u32 != 0 && ran & crate::Ran::EqualMembers as u32 == 0, "{len} B alone");
             assert_eq!(out[0], *crate::convenience::hash(&input).as_bytes());
@@ -2744,18 +2623,13 @@ mod test {
 
     #[test]
     fn test_idle_workers_park_while_a_stream_is_open() {
+        use crate::throughput::{Limits, Pipeline};
         let pool = pool();
         let workers = pool.threads - 1;
         let all_parked = || pool.park.parked_count() == workers;
-        crate::throughput::stream(
-            crate::Mode::Plain,
-            |_: &mut [Hash]| {},
-            |s| {
-                while !all_parked() {
-                    std::thread::sleep(std::time::Duration::from_millis(1));
-                }
-                s.finish();
-            },
-        );
+        let _pipe = Pipeline::<()>::new(crate::Mode::Plain, Limits { messages: 2, rooms: 0 });
+        while !all_parked() {
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
     }
 }

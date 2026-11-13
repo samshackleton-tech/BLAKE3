@@ -3,7 +3,7 @@
 //! its twin in the core, which checks the one-thread form against the
 //! fixed values; these check the multithreaded form against that.
 
-use crate::test::guard::{Guarded, digests, filled, places};
+use crate::test::guard::{Guarded, digests, filled};
 use crate::throughput::{self, Batch, Block, Packed};
 use crate::{CHUNK_LEN, Hasher, KEY_LEN, Mode, OUT_LEN};
 
@@ -168,31 +168,46 @@ fn test_every_multithreaded_call_inside_guard_pages() {
                 }
                 let batch_blocks =
                     Block::from_bytes(unsafe { core::slice::from_raw_parts(batch.base.add(batch.start), batch.len) }).expect("a page-end batch starts aligned");
-                let batch_in_place = Batch::in_place(batch_blocks, len);
-                let (_page_one, one) = places(1, !at_end);
-                let (_page_with, with) = places(1, at_end);
-                let (_page_batch, batched) = places(count, !at_end);
                 let input: &[u8] = unsafe { core::slice::from_raw_parts(flush.base.add(flush.start), flush.len) };
-                throughput::stream(
-                    mode,
-                    |_| {},
-                    |s| {
-                        s.submit(blocks, len, &mut one[0]);
-                        s.submit_with(
-                            len,
-                            |at, room| {
-                                room.copy_from_slice(&input[at..][..room.len()]);
-                                room.len()
-                            },
-                            &mut with[0],
-                        );
-                        s.submit_batch(&batch_in_place, batched);
-                        s.finish();
-                    },
-                );
-                assert_eq!(*one[0].as_bytes(), want, "stream submit, {what}");
-                assert_eq!(*with[0].as_bytes(), want, "stream submit_with, {what}");
-                assert!(batched.iter().all(|h| *h.as_bytes() == want), "stream submit_batch, {what}");
+                let _ = batch_blocks;
+                let mut owned_batch = Batch::new(len, count);
+                for i in 0..count {
+                    owned_batch.set(i, &message);
+                }
+                let mut pipe = throughput::Pipeline::new(mode, throughput::Limits { messages: 4, rooms: 2 });
+                throughput::block_on(async {
+                    let m_lent = pipe.message(0u8, None).await;
+                    let guard = unsafe { pipe.lent(m_lent, &Block::bytes(blocks)[..len]) };
+
+                    let mut m_room = pipe.message(1u8, None).await;
+                    for part in input.chunks(throughput::ROOM_LEN) {
+                        let mut r = pipe.room().await;
+                        r.bytes_mut()[..part.len()].copy_from_slice(part);
+                        pipe.commit(&mut m_room, &mut r, part.len());
+                    }
+                    pipe.end(m_room);
+
+                    let m_batch = pipe.message(2u8, None).await;
+                    pipe.batch(m_batch, owned_batch, std::vec![[0u8; 32]; count].into_boxed_slice());
+
+                    let mut seen = 0;
+                    while seen < 3 {
+                        if let Some(ev) = pipe.next_event() {
+                            seen += 1;
+                            match ev {
+                                throughput::Event::Hashed { tag: 0, hash, .. } => assert_eq!(*hash.as_bytes(), want, "pipeline lent, {what}"),
+                                throughput::Event::Hashed { tag: 1, hash, .. } => assert_eq!(*hash.as_bytes(), want, "pipeline rooms, {what}"),
+                                throughput::Event::Batch { tag: 2, digests, .. } => {
+                                    assert!(digests.iter().all(|h| *h == want), "pipeline batch, {what}");
+                                }
+                                _ => unreachable!(),
+                            }
+                        } else {
+                            pipe.ready().await;
+                        }
+                    }
+                    drop(guard);
+                });
             }
         }
     }

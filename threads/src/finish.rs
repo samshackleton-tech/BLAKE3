@@ -151,7 +151,7 @@ mod tests {
         // Read at run time, not embedded (include_str!), so the test binary
         // holds none of the files' text: an embedded copy changed with every
         // mutant of them, and code_hash.py found none same code (#219).
-        for name in ["finish.rs", "park.rs"] {
+        for name in ["finish.rs", "park.rs", "waker.rs"] {
             let text = std::fs::read_to_string(std::format!("{}/src/{name}", env!("CARGO_MANIFEST_DIR"))).expect("the file, beside the crate's manifest");
             for (n, line) in text.lines().enumerate() {
                 if line.contains("Ordering::") && !line.contains("Ordering::SeqCst") && !line.trim_start().starts_with("//") {
