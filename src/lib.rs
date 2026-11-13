@@ -478,10 +478,13 @@ impl Hash {
 
     /// Encode a `Hash` in lowercase hexadecimal.
     ///
-    /// Each character is computed from its four bits by arithmetic: no
-    /// table is indexed by the hash and no branch is taken on it, so the
-    /// call's time and memory accesses are the same for every hash (a
-    /// hash may be a secret: a keyed hash's tag, a derived key).
+    /// Each character is made from its four bits sixteen bytes at a time, by
+    /// arithmetic on x86-64 and by a lookup in a register on AArch64: no
+    /// memory is indexed by the hash and no branch is taken on it, so the
+    /// call's time and memory accesses are the same for every hash (a hash
+    /// may be a secret: a keyed hash's tag, a derived key). The instructions that do it are proved, as assembled, to write
+    /// the hexadecimal and to show an observer the same whatever the hash
+    /// is (`tools/verify/hex`).
     ///
     /// The returned [`ArrayString`] is a fixed size and doesn't allocate memory
     /// on the heap. Note that [`ArrayString`] doesn't provide constant-time
@@ -489,16 +492,32 @@ impl Hash {
     /// type.
     ///
     /// [`ArrayString`]: https://docs.rs/arrayvec/0.5.1/arrayvec/struct.ArrayString.html
+    // Inlined in the caller, the buffer's copy into the string is the caller's
+    // own code and the call left is the kernel's (measured: tools/verify/hex).
+    #[inline]
     pub fn to_hex(&self) -> ArrayString<{ 2 * OUT_LEN }> {
-        // 0..=9 are '0' + n; 10..=15 are 'a' + n - 10, which is '0' + n + 39:
-        // (n + 6) >> 4 is 1 exactly for those.
-        let character = |n: u8| (b'0' + n + ((n + 6) >> 4) * 39) as char;
-        let mut s = ArrayString::new();
-        for &b in self.0.iter() {
-            s.push(character(b >> 4));
-            s.push(character(b & 0xf));
+        unsafe extern "C" {
+            #[cfg_attr(target_arch = "x86_64", link_name = "blake3_servil_hex")]
+            #[cfg_attr(target_arch = "aarch64", link_name = "blake3_servil_hex_neon")]
+            fn hex(out: *mut u8, hash: *const u8);
         }
-        s
+        // The kernel fills a buffer of its own and the string is made from
+        // that. (Filled in place, the string is copied out of this function
+        // by loads that straddle the kernel's sixteen-byte stores, which
+        // costs more than the kernel does.) The buffer is not zeroed first:
+        // the kernel writes every byte of it.
+        let mut text = core::mem::MaybeUninit::<[u8; 2 * OUT_LEN]>::uninit();
+        // SAFETY: the kernel reads the 32 bytes at `hash`, writes the 64 at
+        // `out` and touches nothing else (its contract, proved of the
+        // assembled instructions: tools/verify/hex). It uses SSE2 on x86-64
+        // and NEON on AArch64, which every supported CPU has.
+        unsafe { hex(text.as_mut_ptr().cast(), self.0.as_ptr()) };
+        // SAFETY: all 64 bytes are written (the same contract).
+        let text = unsafe { text.assume_init() };
+        // SAFETY: the 64 bytes are the hexadecimal's characters, `0` to `9`
+        // and `a` to `f` (the same contract).
+        let text = unsafe { core::str::from_utf8_unchecked(&text) };
+        ArrayString::from(text).expect("64 characters fill the string exactly")
     }
 
     /// Decode a `Hash` from hexadecimal. Both uppercase and lowercase ASCII

@@ -1,0 +1,67 @@
+name = "hex_x86"
+defaultTargets = ["Meets_hex_bytes"]
+
+# What names no machine: the contract and the hexadecimal itself.
+[[require]]
+name = "spec"
+path = "../spec"
+
+[[lean_lib]]
+name = "Abi"
+
+[[lean_lib]]
+name = "AbiBytes"
+
+[[lean_lib]]
+name = "AbiProof"
+
+[[lean_lib]]
+name = "Attr_hex"
+
+[[lean_lib]]
+name = "BytesAt"
+
+[[lean_lib]]
+name = "BytesLemmas"
+
+[[lean_lib]]
+name = "Cells"
+
+[[lean_lib]]
+name = "Code_hex"
+
+[[lean_lib]]
+name = "HexSpec"
+
+[[lean_lib]]
+name = "Hoare"
+
+[[lean_lib]]
+name = "Lemmas_hex"
+
+[[lean_lib]]
+name = "Machine"
+
+[[lean_lib]]
+name = "Meets_hex"
+
+[[lean_lib]]
+name = "Meets_hex_bytes"
+
+[[lean_lib]]
+name = "MemLemmas"
+
+[[lean_lib]]
+name = "Observer"
+
+[[lean_lib]]
+name = "Proof_hex"
+
+[[lean_lib]]
+name = "ReadingList"
+
+[[lean_lib]]
+name = "Spec_bytes"
+
+[[lean_lib]]
+name = "Spec_hex"
