@@ -311,10 +311,16 @@ def Fn.asm (f : Fn) : String :=
   let prologue := L.saved.map (fun r => s!"push {r}") ++ down ++
     (f.params.zip abiArgs).map (fun (p, r) => s!"mov {L.home p}, {r}")
   let (body, _) := Stmts.asm L f.name 0 f.body
+  -- A kernel may choose its entry alignment. Hoist the first directive
+  -- before both entry symbols, so padding is never part of the entry.
+  let (alignment, body) := match body with
+    | first :: rest => if f.naked && first.startsWith ".p2align " then (first, rest)
+        else (".p2align 4", body)
+    | [] => (".p2align 4", body)
   let epilogue := (if f.noResult then [] else Exp.asm L 0 f.ret) ++ up ++
     L.saved.reverse.map (fun r => s!"pop {r}") ++ ["ret"]
   let line (s : String) := if s.endsWith ":" then s ++ "\n" else "    " ++ s ++ "\n"
-  s!".global {f.name}\n.global _{f.name}\n.p2align 4\n{f.name}:\n_{f.name}:\n" ++
+  s!".global {f.name}\n.global _{f.name}\n{alignment}\n{f.name}:\n_{f.name}:\n" ++
     String.join ((if f.naked then body else prologue ++ body ++ epilogue).map line)
 
 /-- Every call of `old` becomes a call of `new`. -/
