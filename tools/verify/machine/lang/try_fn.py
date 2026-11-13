@@ -34,6 +34,10 @@ OVER = "(fun pc => " + "".join(f"(Code_{s}.prog pc).or (" for s in STANDINS) + "
 PROG = f"(Code_{name}.prog {OVER})" if ASSUMED else f"Code_{name}.prog"
 # seconds the examples may take in all (TRY_SECONDS: a function that runs a kernel's stand-in on 32 chunks needs more)
 LIMIT = int(os.environ.get("TRY_SECONDS", "240"))
+# instructions an example may run (TRY_FUEL): enough for every function but those whose examples run a wide
+# kernel's stand-in on 32 chunks (a quarter of a million and more). A changed copy that loops runs to this
+# bound in an audit: at four million it took an hour of the interpreter, so the bound is a function's own.
+FUEL = int(os.environ.get("TRY_FUEL", "400000"))
 with open(f"{name}.pieces.lean", "w") as f:
     f.write(f"import Checks\nimport Spec_{CNAME.split('.')[0].lower()}\n#pieces {CNAME}\n")
 out = subprocess.run(["lake", "env", "lean", f"{name}.pieces.lean"], capture_output=True, text=True).stdout
@@ -94,9 +98,9 @@ def one (i_ : Nat) : {types} → String
     match Try.firstFailure pre with
     | some f => s!"example {{i_}}: NOT AN EXAMPLE: not so: {{f}}"
     | none =>
-      match Try.run {PROG} Try.returnAddress.toNat (Try.owned c) 4000000 0 s0 with
+      match Try.run {PROG} Try.returnAddress.toNat (Try.owned c) {FUEL} 0 s0 with
       | .faulted pc ran_ => s!"example {{i_}}: REFUTED: after {{ran_}} instructions {{Try.why {PROG} pc}}. {{blame ({names}) s0.mem}}"
-      | .outOfFuel _ => s!"example {{i_}}: NO VERDICT: still running after 4000000 instructions (a loop that does not end?)"
+      | .outOfFuel _ => s!"example {{i_}}: NO VERDICT: still running after {FUEL} instructions (a loop that does not end?)"
       | .returned s' ran_ =>
         let {returns[0]} := s'.rax
         let post : List (String × Bool) := Try.returnChecks c s0 s' ++ [{', '.join(post)}]

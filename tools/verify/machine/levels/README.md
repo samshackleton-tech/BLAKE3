@@ -270,7 +270,8 @@ How it goes (`levels.ode`; each function called by its contract):
 | `addn` | the first `n` of a wide kernel's 32 values added to levels | 41 | `ladd` |
 | `finish` | the root from the two sets of levels | 74 | `lroot` (the root flag is now its parameter), `ladd` |
 | `hashw` | `wide`, `groupf` or `group`, `finish`; a message of one chunk goes to `hashl` | 101 | those, `hashl` |
-| `hashf` | `hashw` where the machine has AVX-512, `hashl` elsewhere | | `hashw`, `hashl` |
+| `hashf` | `hashw` where the machine has AVX-512, `hashl` elsewhere | 39 | `hashw`, `hashl` |
+| `p16s`, `k32s` | the two kernels' work one block at a time: the witnesses, and the stand-ins when examples run | 57, 66 | the one-block kernel; `chunk_node`, `node_out` |
 
 The tree's part has no machine in it (`../alg/Groups.lean`): with the chunks in groups of a power of two, the
 last group short or whole, the specification's tree over the chunks is its tree over the groups' own trees
@@ -300,7 +301,8 @@ The examples in the model: a call of the chunk kernel's stand-in is four minutes
 memory is a function, and the examples are interpreted), so the examples that reach it are few (`wide` 1,
 `groupf` 2, `hashw` 2, `hashf` 1), and the way through `hashw` with two such calls was run once (it meets
 the contract) and is not among them. Not audited yet for that reason: `hashw` (each changed copy would be
-run on those examples).
+run on those examples). Running the examples as compiled code is the next thing to build: it shortens
+every audit and lets the examples be many.
 
 ## The contracts in bytes (`../spec/LevelsContract.lean`; no theorem about these yet)
 

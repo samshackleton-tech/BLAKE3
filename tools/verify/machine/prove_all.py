@@ -49,8 +49,8 @@ def audit(name, levels=False, jobs=AJ):
 # of try_fn.py's 240 s, and an audit's copy out of mutants_code.py's 900 s. Every step gets long ones unless told.
 os.environ.setdefault("TRY_SECONDS", "1800")
 os.environ.setdefault("LIMIT", "3600")
-SLOW = "TRY_SECONDS=9000 "
-SLOW_AUDIT = "TRY_SECONDS=9000 LIMIT=10800 "
+SLOW = "TRY_SECONDS=9000 TRY_FUEL=1000000 "
+SLOW_AUDIT = "TRY_SECONDS=9000 TRY_FUEL=1000000 LIMIT=10800 "
 AJ_SLOW = os.environ.get("AUDIT_JOBS") or "32"
 
 
