@@ -71,7 +71,7 @@ fn main() {
     for len in [16384usize, 65536, 1 << 20, 16 << 20] {
         let reps = (200_000_000 / (len as u64 + 200)).max(5);
         let crate_ns = least(15, reps, || {
-            std::hint::black_box(blake3_servil_core::hash(std::hint::black_box(&data[..len])));
+            std::hint::black_box(blake3_servil_core::convenience::hash(std::hint::black_box(&data[..len])));
         });
         let serial_ns = least(15, reps, || {
             std::hint::black_box(blake3_servil_core::hash_serial(std::hint::black_box(&data[..len]), &key, 0));
