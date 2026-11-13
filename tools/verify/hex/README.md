@@ -17,7 +17,7 @@ to `f`). `spec/Contract.lean` says what a contract is.
 
 | | x86-64 | AArch64 |
 |---|---|---|
-| the machine | a model written here (`x86/Machine.lean`, 432 lines) | Google DeepMind's (`arm64-semantics` of github.com/google-deepmind/code-verification, Apache-2.0, unchanged, fetched at the commit `arm/lakefile.toml` names) |
+| the machine | a model written here (`x86/Machine.lean`, 435 lines) | Google DeepMind's (`arm64-semantics` of github.com/google-deepmind/code-verification, Apache-2.0, unchanged, fetched at the commit `arm/lakefile.toml` names) |
 | what meeting a contract means there | `x86/Abi.lean`, `x86/AbiBytes.lean` (System V) | `arm/ArmAbi.lean` (AAPCS64, in their logic) |
 | the theorem | `hex_meets_bytes` (`x86/Meets_hex_bytes.lean`): for every hash the instructions meet the contract, and what an observer sees (`x86/Observer.lean`: every address read or written, every jump) is one list, whatever the hash | `hex_neon_meets` (`arm/HexNeonBytes.lean`): the instructions meet the contract; `hex_neon_quiet`, `hex_neon_observed` (`arm/Quiet_hex_neon.lean`): two machines that differ only in what memory holds and in the vector registers show an observer (`arm/Observer.lean`) the same |
 | the instructions the theorem is about | read back from the assembled object by `x86/lift_one.py` (llvm-objdump's listing) | the object's 32 words; Lean decodes them with their decoder |
@@ -45,8 +45,8 @@ theorem Lean refuses.
 - The proofs are about the instructions of ELF objects. The kernels use no relocation that differs on
   Mach-O (AArch64: none at all).
 - Axioms beyond Lean's three: `bv_decide`'s (each a claim that a SAT certificate was checked by compiled
-  code): 5 for `hex_meets_bytes`; 72 for `hex_neon_meets` (8 in the kernel's own proof, 64 in the lemmas
-  between bytes and vectors); the AArch64 observer's theorems need none.
+  code): 5 for `hex_meets_bytes`; 8 for `hex_neon_meets`, all in the kernel's own proof (the lemmas between
+  bytes and vectors are checked by Lean's kernel alone); the AArch64 observer's theorems need none.
 - That `Hash::to_hex` passes the kernel the right addresses is Rust's, and the tests'.
 
 ## What a call takes, measured (single runs; no judged timing yet)

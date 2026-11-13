@@ -15,7 +15,9 @@ what the assembly is printed from, so this compiler is not trusted for either.
     def NAME(a, b) { STATEMENTS }            statements, substituted where they are used
     fn NAME(p, q, ...) [reg a, b, ...] [requires TEXT]* { STATEMENTS  return EXPR }
 
-    var x = EXPR          x = EXPR          buf name[BYTES]
+    var x = EXPR          x = EXPR          buf name[BYTES] [align BOUNDARY]
+                                            (a buffer starts on a 16-byte boundary, or on the one named:
+                                             64 a cache line, 4096 a page; a power of two)
     u8[ADDR] = EXPR       u32[ADDR] = EXPR  u64[ADDR] = EXPR
     copy BYTES DST <- SRC
     NAME(ARGS)            a kernel (extern) or a statement `def`
@@ -73,16 +75,17 @@ def contracts_of(text):
                                "code": m.group(6) or m.group(1)}       # whose instructions stand there (Code_X.lean)
             kept.append(""); continue
         # in a function's body: a call of such a function, then what the prover needs at it, one a line:
-        # `with TERM; TERM` (what its contract is stated for besides the arguments) and `keep CLAUSE` (what
-        # still holds after it, besides what its contract promises)
+        # `with TERM; TERM` (what its contract is stated for besides the arguments), `know LEMMA` (facts to
+        # have at hand before it: what its contract asks, said in the contract's words) and `keep CLAUSE`
+        # (what still holds after it, besides what its contract promises)
         m = re.match(r"^(?:return\s+|(?:var\s+)?\w+\s*=\s*)?(\w+)\(.*\)$", s)
         if fn and where is None and m and m.group(1) in own:
-            out[fn]["calls"].append({"callee": m.group(1), "with": [], "keep": []}); kept.append(line); continue
+            out[fn]["calls"].append({"callee": m.group(1), "with": [], "keep": [], "know": []}); kept.append(line); continue
         word0 = s.split(None, 1)[0] if s else ""
-        if fn and where is None and word0 in ("with", "keep") and out[fn]["calls"]:
+        if fn and where is None and word0 in ("with", "keep", "know") and out[fn]["calls"]:
             rest = s[len(word0):].strip()
             if word0 == "with": out[fn]["calls"][-1]["with"] = [x.strip() for x in rest.split(";")]
-            else: out[fn]["calls"][-1]["keep"].append(rest)
+            else: out[fn]["calls"][-1][word0].append(rest)
             kept.append(""); continue
         if fn and re.match(r"^while\b", s) and not s.endswith("{"):
             out[fn]["loops"].append([]); where = out[fn]["loops"][-1]; kept.append(line); continue
@@ -181,7 +184,10 @@ class Parser:
         if tok == "var":
             x = self.take(); self.take("="); return ("var", x, self.expr())
         if tok == "buf":
-            b = self.take(); self.take("["); n = self.expr(); self.take("]"); return ("buf", b, n)
+            b = self.take(); self.take("["); n = self.expr(); self.take("]")
+            if self.peek() == "align":
+                self.take(); return ("buf", b, n, self.expr())
+            return ("buf", b, n)
         if tok in ("u8", "u32", "u64"):
             self.take("["); a = self.expr(); self.take("]"); self.take("="); return ("store", int(tok[1:]), a, self.expr())
         if tok == "copy":
@@ -294,10 +300,16 @@ class Lower:
                 if not self.result_call(s[1], s[2], env, fn, out):
                     out.append(("set", s[1], self.expr(s[2], env)))
             elif k == "set":
+                # a statement `def` assigns its user's variables: those are checked where it is used
+                assert s[1] in fn["locals"] or s[1] in fn["params"] or s[1] in env, f"{s[1]} is assigned and was never declared (var {s[1]} = ...)"
                 if not self.result_call(s[1], s[2], env, fn, out):
                     out.append(("set", s[1], self.expr(s[2], env)))
             elif k == "buf":
                 fn["bufs"].append((s[1], self.value(s[2], env)))
+                if len(s) == 4:
+                    a = self.value(s[3], env)
+                    assert a >= 32 and a & (a - 1) == 0, f"buf {s[1]}: a boundary is a power of two above 16"
+                    fn.setdefault("aligns", []).append((s[1], a))
             elif k == "store":
                 out.append(("store", s[1], self.expr(s[2], env), self.expr(s[3], env)))
             elif k == "copy":
@@ -370,6 +382,10 @@ class Lower:
         return ".trap"
 
     def function(self, name, params, regs, requires, body):
+        # The printers take a function's arguments from the six registers of C's convention and no further:
+        # a seventh parameter would be read from nowhere.
+        assert len(params) <= 6, f"{name}: {len(params)} parameters; a function takes at most six"
+        assert len(set(params)) == len(params), f"{name}: a parameter is named twice"
         fn = {"params": params, "locals": [], "bufs": [], "externs": [], "ret": ("const", 0)}
         # buffers are known before expressions are printed: collect them first
         low = self.stmts(body, {}, fn)
@@ -379,7 +395,7 @@ class Lower:
         return (f"/-- `{name}`, from the source.\n{doc}-/\n" if doc else "") + \
             f"def {name} : Fn where\n  name := \"b3l_{name}\"\n  params := {q(params)}\n  locals := {q(fn['locals'])}\n" \
             f"  regs := {q(regs)}\n  bufs := [{', '.join(f'(\"{b}\", {n})' for b, n in fn['bufs'])}]\n  externs := {q(fn['externs'])}\n" \
-            f"  body := [" + ",".join("\n    " + self.lean_s(s, bufs, "    ") for s in low) + f"]\n  ret := {self.lean_e(fn['ret'], bufs)}\n" + ("" if fn.get("returns") else "  noResult := true\n")
+            f"  body := [" + ",".join("\n    " + self.lean_s(s, bufs, "    ") for s in low) + f"]\n  ret := {self.lean_e(fn['ret'], bufs)}\n" + ("" if not fn.get("aligns") else "  aligns := [" + ", ".join(f'("{b}", {a})' for b, a in fn["aligns"]) + "]\n") + ("" if fn.get("returns") else "  noResult := true\n")
 
 
 contracts = []

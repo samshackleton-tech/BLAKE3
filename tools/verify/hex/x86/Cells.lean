@@ -98,6 +98,70 @@ theorem quad_put128_far (m : Mem) (a : BitVec 64) (w : V) (b v : BitVec 64) (h :
 theorem quad_put64_far (m : Mem) (a w b v : BitVec 64) (h : 8#64 ≤ b - a ∧ 8#64 ≤ a - b) (hv : Quad m b v) : Quad (m.put64 a w) b v :=
   quad_congr (fun x hx => put64_other m a w x (by obtain ⟨h1, h2⟩ := h; bv_omega)) hv
 
+/-! ## One byte: a third kind of cell, for code that reads and writes bytes
+
+The same three things as for words and vectors: a read finds its cell through the puts, a write needs the
+byte owned, and a fact about a byte stays under a put that is apart. -/
+
+/-- The byte at `a` is the program's and holds `v`. -/
+def Byte (m : Mem) (a : BitVec 64) (v : BitVec 8) : Prop := m a = some v
+/-- The byte at `a` is the program's. -/
+def Owned1 (m : Mem) (a : BitVec 64) : Prop := (m a).isSome
+
+theorem put8_away (m : Mem) (a : BitVec 64) (v : BitVec 8) (x : BitVec 64) (h : 1#64 ≤ x - a) : m.put8 a v x = m x :=
+  put8_other m a v x (by intro e; subst e; revert h; bv_omega)
+
+theorem byte_owned {m : Mem} {a : BitVec 64} {v : BitVec 8} (h : Byte m a v) : Owned1 m a := by simp [Owned1, show m a = some v from h]
+theorem owned1_region {m : Mem} {b n : BitVec 64} (h : Region m b n) (c : BitVec 64) (hc : c < n) : Owned1 m (b + c) := h c hc
+theorem owned1_region0 {m : Mem} {b n : BitVec 64} (h : Region m b n) (hc : 0#64 < n) : Owned1 m b := by
+  have := h 0#64 hc; rwa [BitVec.add_zero] at this
+theorem owned1_put8 (m : Mem) (a : BitVec 64) (v : BitVec 8) (b : BitVec 64) (o : Owned1 m b) : Owned1 (m.put8 a v) b := put8_isSome m a v b o
+theorem owned1_put64 (m : Mem) (a v b : BitVec 64) (o : Owned1 m b) : Owned1 (m.put64 a v) b := put64_isSome m a v b o
+theorem owned1_put128 (m : Mem) (a : BitVec 64) (v : V) (b : BitVec 64) (o : Owned1 m b) : Owned1 (m.put128 a v) b := put128_isSome m a v b o
+theorem owned8_put8 (m : Mem) (a : BitVec 64) (v : BitVec 8) (b : BitVec 64) (o : Owned8 m b) : Owned8 (m.put8 a v) b := by
+  obtain ⟨o0, o1, o2, o3, o4, o5, o6, o7⟩ := o
+  exact ⟨put8_isSome _ _ _ _ o0, put8_isSome _ _ _ _ o1, put8_isSome _ _ _ _ o2, put8_isSome _ _ _ _ o3, put8_isSome _ _ _ _ o4,
+    put8_isSome _ _ _ _ o5, put8_isSome _ _ _ _ o6, put8_isSome _ _ _ _ o7⟩
+theorem owned16_put8 (m : Mem) (a : BitVec 64) (v : BitVec 8) (b : BitVec 64) (o : Owned16 m b) : Owned16 (m.put8 a v) b := by
+  obtain ⟨o0, o1, o2, o3, o4, o5, o6, o7, o8, o9, o10, o11, o12, o13, o14, o15⟩ := o
+  exact ⟨put8_isSome _ _ _ _ o0, put8_isSome _ _ _ _ o1, put8_isSome _ _ _ _ o2, put8_isSome _ _ _ _ o3, put8_isSome _ _ _ _ o4,
+    put8_isSome _ _ _ _ o5, put8_isSome _ _ _ _ o6, put8_isSome _ _ _ _ o7, put8_isSome _ _ _ _ o8, put8_isSome _ _ _ _ o9,
+    put8_isSome _ _ _ _ o10, put8_isSome _ _ _ _ o11, put8_isSome _ _ _ _ o12, put8_isSome _ _ _ _ o13, put8_isSome _ _ _ _ o14,
+    put8_isSome _ _ _ _ o15⟩
+theorem region_put8 {m : Mem} {b n : BitVec 64} (a : BitVec 64) (v : BitVec 8) (h : Region m b n) : Region (m.put8 a v) b n :=
+  fun d hd => put8_isSome m a v _ (h d hd)
+
+theorem byte_put8 (m : Mem) (a : BitVec 64) (v : BitVec 8) : Byte (m.put8 a v) a v := by simp [Byte, Mem.put8]
+theorem byte_put8_far (m : Mem) (a : BitVec 64) (w : BitVec 8) (b : BitVec 64) (v : BitVec 8) (h : 1#64 ≤ b - a) (hv : Byte m b v) : Byte (m.put8 a w) b v := by
+  rw [Byte, put8_away m a w b h]; exact hv
+theorem byte_put64_far (m : Mem) (a w b : BitVec 64) (v : BitVec 8) (h : 8#64 ≤ b - a) (hv : Byte m b v) : Byte (m.put64 a w) b v := by
+  rw [Byte, put64_away m a w b h]; exact hv
+theorem byte_put128_far (m : Mem) (a : BitVec 64) (w : V) (b : BitVec 64) (v : BitVec 8) (h : 16#64 ≤ b - a) (hv : Byte m b v) : Byte (m.put128 a w) b v := by
+  rw [Byte, put128_away m a w b h]; exact hv
+theorem quad_put8_far (m : Mem) (a : BitVec 64) (w : BitVec 8) (b v : BitVec 64) (h : 8#64 ≤ a - b) (hv : Quad m b v) : Quad (m.put8 a w) b v :=
+  quad_congr (fun x hx => put8_away m a w x (by bv_omega)) hv
+theorem vec_put8_far (m : Mem) (a : BitVec 64) (w : BitVec 8) (b : BitVec 64) (v : V) (h : 16#64 ≤ a - b) (hv : Vec m b v) : Vec (m.put8 a w) b v :=
+  vec_congr (fun x hx => put8_away m a w x (by bv_omega)) hv
+
+theorem read8_cell (m : Mem) (a : BitVec 64) (v : BitVec 8) (h : Byte m a v) : m.read a 8 = some (v.setWidth 64) := by
+  simp [Mem.read, Mem.read8, show m a = some v from h]
+theorem read8_put8_same (m : Mem) (a : BitVec 64) (v : BitVec 8) : (m.put8 a v).read a 8 = some (v.setWidth 64) := read8_cell _ _ _ (byte_put8 m a v)
+theorem read8_put8_far (m : Mem) (a : BitVec 64) (v : BitVec 8) (b : BitVec 64) (h : 1#64 ≤ b - a) : (m.put8 a v).read b 8 = m.read b 8 := by
+  simp only [Mem.read, Mem.read8, put8_away m a v b h]
+theorem read8_put64_far (m : Mem) (a v b : BitVec 64) (h : 8#64 ≤ b - a) : (m.put64 a v).read b 8 = m.read b 8 := by
+  simp only [Mem.read, Mem.read8, put64_away m a v b h]
+theorem read8_put128_far (m : Mem) (a : BitVec 64) (v : V) (b : BitVec 64) (h : 16#64 ≤ b - a) : (m.put128 a v).read b 8 = m.read b 8 := by
+  simp only [Mem.read, Mem.read8, put128_away m a v b h]
+theorem read_put8_far (m : Mem) (a : BitVec 64) (v : BitVec 8) (b : BitVec 64) (h : 8#64 ≤ a - b) : (m.put8 a v).read b 64 = m.read b 64 :=
+  read_congr b (fun x hx => put8_away m a v x (by bv_omega))
+theorem read128_put8_far (m : Mem) (a : BitVec 64) (v : BitVec 8) (b : BitVec 64) (h : 16#64 ≤ a - b) : (m.put8 a v).read128 b = m.read128 b :=
+  read128_congr b (fun x hx => put8_away m a v x (by bv_omega))
+theorem write8_owned (m : Mem) (a v : BitVec 64) (o : Owned1 m a) : m.write a v 8 = some (m.put8 a (byte v 0)) := by
+  simp only [Mem.write, Mem.write8, show (m a).isSome = true from o, ↓reduceIte]
+/-- The byte a store of a register's low byte writes, when the register holds a byte read from memory. -/
+theorem byte_low (b : BitVec 8) : byte (BitVec.setWidth 64 b &&& 0xFF#64) 0 = b := by simp only [byte]; bv_decide
+theorem byte_zero : byte 0#64 0 = 0#8 := by decide
+
 /-! ## Addresses in one form: `base + offset` -/
 
 theorem add_sub_lit (a c d : BitVec 64) : a + c - d = a + (c - d) := by bv_decide
@@ -119,6 +183,12 @@ theorem X86.Quad.frame {m m' : Mem} {a v : BitVec 64} (h : Quad m a v) (same : �
 
 /-! ## The tactics -/
 
+/-- The solver for what a memory lemma asks on the side (two cells apart, an offset inside a region):
+bit-vector arithmetic by `bv_decide`, with time enough on a busy machine. Its own limit is ten seconds; `hashl`'s
+proof, accepted when checked alone, was refused at one such side condition in a run of everything at once
+(twenty chains side by side), which this limit explains. -/
+macro "bv_side" : tactic => `(tactic| bv_decide (config := { timeout := 120 }))
+
 /-- A fact that is several facts joined by "and", taken apart (cells stay whole). -/
 syntax "split_ands " ident : tactic
 macro_rules
@@ -133,23 +203,28 @@ matched without unfolding definitions (a put is sixteen puts of a byte underneat
 unfolded is slow). -/
 macro "mem_disch" : tactic => `(tactic| first
   | with_reducible assumption
-  | ((repeat (with_reducible (first | apply owned8_put64 | apply owned8_put128 | apply owned16_put64 | apply owned16_put128)))
+  | ((repeat (with_reducible (first | apply owned8_put64 | apply owned8_put128 | apply owned16_put64 | apply owned16_put128 | apply owned8_put8 | apply owned16_put8 | apply owned1_put8 | apply owned1_put64 | apply owned1_put128)))
      first
        | with_reducible assumption
-       | ((with_reducible apply owned8_region (by assumption)); bv_decide)
-       | ((with_reducible apply owned16_region (by assumption)); bv_decide)
-       | ((with_reducible apply owned8_region0 (by assumption)); bv_decide)
-       | ((with_reducible apply owned16_region0 (by assumption)); bv_decide)
+       | ((with_reducible apply owned1_region (by assumption)); bv_side)
+       | ((with_reducible apply owned1_region0 (by assumption)); bv_side)
+       | ((with_reducible apply byte_owned); with_reducible assumption)
+       | ((with_reducible apply owned8_region (by assumption)); bv_side)
+       | ((with_reducible apply owned16_region (by assumption)); bv_side)
+       | ((with_reducible apply owned8_region0 (by assumption)); bv_side)
+       | ((with_reducible apply owned16_region0 (by assumption)); bv_side)
        | ((with_reducible apply vec_owned); with_reducible assumption)
        | ((with_reducible apply quad_owned); with_reducible assumption))
-  | bv_decide)
+  | bv_side)
 
 /-- Run a function's instructions on a state that is written out, memory in cells. -/
 macro "run_fn" "[" hs:Lean.Parser.Tactic.simpLemma,* "]" : tactic => `(tactic|
   simp (config := {maxSteps := 100000000, implicitDefEqProofs := false}) (disch := mem_disch) only [steps_mk, steps_zero, step, src,
     X86.read, write, State.get, State.set, State.xmm, State.setx, trunc, ode_at,
     read_put64_same, read128_put128_same, read_put64_far, read_put128_far, read128_put64_far, read128_put128_far,
-    write64_owned, write128_owned, read_cell, read128_cell, add_sub_lit, BitVec.add_assoc, BitVec.add_zero,
+    write64_owned, write128_owned, read_cell, read128_cell,
+    read8_put8_same, read8_put8_far, read8_put64_far, read8_put128_far, read_put8_far, read128_put8_far, write8_owned, read8_cell, byte_low, byte_zero,
+    add_sub_lit, BitVec.add_assoc, BitVec.add_zero,
     Option.bind_eq_bind, Option.bind_some, Option.pure_def, Option.map_some, bind_pure_comp, Option.isSome_some,
     Nat.reduceEqDiff, ↓reduceIte, reduceCtorEq,
     BitVec.ofNat_eq_ofNat, BitVec.reduceAdd, BitVec.reduceSub, BitVec.reduceMul, BitVec.reduceAnd, BitVec.reduceOr, BitVec.reduceEq,
@@ -162,21 +237,27 @@ fact at hand below the puts that are apart from it. An unknown value is found on
 macro "mem_fact" : tactic => `(tactic| ((try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]); repeat (first
   | with_reducible exact vec_put128 _ _ _
   | with_reducible exact quad_put64 _ _ _
+  | with_reducible exact byte_put8 _ _ _
   | with_reducible assumption
   | with_reducible apply vec_put128_far
   | with_reducible apply vec_put64_far
   | with_reducible apply quad_put128_far
   | with_reducible apply quad_put64_far
-  | bv_decide)))
+  | with_reducible apply vec_put8_far
+  | with_reducible apply quad_put8_far
+  | with_reducible apply byte_put8_far
+  | with_reducible apply byte_put64_far
+  | with_reducible apply byte_put128_far
+  | bv_side)))
 
 /-- A region is still owned under any puts. -/
-macro "mem_region" : tactic => `(tactic| ((repeat (with_reducible (first | apply region_put64 | apply region_put128))); with_reducible assumption))
+macro "mem_region" : tactic => `(tactic| ((repeat (with_reducible (first | apply region_put64 | apply region_put128 | apply region_put8))); with_reducible assumption))
 
 /-- The same for a part of a region at hand (the stack lent to a callee is part of the frame). -/
-macro "mem_subregion" : tactic => `(tactic| ((try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]); (repeat (with_reducible (first | apply region_put64 | apply region_put128))); first | with_reducible assumption | ((with_reducible apply region_sub (by assumption)); bv_decide) | ((with_reducible apply region_prefix (by assumption)); bv_decide)))
+macro "mem_subregion" : tactic => `(tactic| ((try simp only [add_sub_lit, BitVec.add_assoc, BitVec.add_zero, BitVec.reduceAdd, BitVec.reduceSub]); (repeat (with_reducible (first | apply region_put64 | apply region_put128 | apply region_put8))); first | with_reducible assumption | ((with_reducible apply region_sub (by assumption)); bv_side) | ((with_reducible apply region_prefix (by assumption)); bv_side)))
 
 /-- A byte away from every put is what it was. -/
-macro "mem_away" : tactic => `(tactic| simp (disch := bv_decide) only [put64_away, put128_away])
+macro "mem_away" : tactic => `(tactic| simp (disch := bv_side) only [put64_away, put128_away, put8_away])
 
 open Lean Elab Tactic Meta in
 /-- Run a tactic on a goal that is a proposition; leave any other goal (a value still to be found) alone. -/
@@ -189,8 +270,9 @@ macro "mem_auto" : tactic => `(tactic| skip_unless_prop (first
   | with_reducible assumption
   | (mem_fact; done)
   | mem_region
+  | (mem_subregion; done)
   | (intros; mem_away; done)
-  | bv_decide))
+  | bv_side))
 
 open Lean Elab Tactic Meta in
 /-- `have_by h := LEMMA`: the lemma's conclusion as the new fact `h`, each of its hypotheses settled in
@@ -268,3 +350,12 @@ elab "apply_frame" : tactic => withMainContext do
   match t.getAppFn with
   | .const n _ => evalTactic (← `(tactic| apply $(mkIdent (n ++ `frame))))
   | _ => throwError "apply_frame: the goal is not a predicate applied to memory"
+
+open Lean Elab Tactic Meta in
+/-- For a goal `P m args` about memory: apply `P.intro` (by convention, the lemma that makes `P` from the cells
+and parts it is made of), whatever `P` is. -/
+elab "apply_intro" : tactic => withMainContext do
+  let t ← instantiateMVars (← getMainTarget)
+  match t.getAppFn with
+  | .const n _ => evalTactic (← `(tactic| apply $(mkIdent (n ++ `intro))))
+  | _ => throwError "apply_intro: the goal is not a predicate applied to memory"
