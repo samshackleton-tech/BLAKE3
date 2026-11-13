@@ -61,7 +61,7 @@ theorem pre_avx (self arr keyp fp len n : BitVec 64) (l0 l1 r0 r1 k0 k1 : V) (fl
     (hOwn : ∀ d : BitVec 64, inF d = true → (m (fp + d)).isSome = true)
     (hPlat : m (fp + 58#64) = some 5#8) (hFl : m (fp + 59#64) = some fl)
     (hF0 : m (fp + 60#64) = some fl) (hF1 : m (fp + 61#64) = some 0#8) (hF2 : m (fp + 62#64) = some 0#8) (hF3 : m (fp + 63#64) = some 0#8) :
-    ∃ s', steps Code.prog 52 ⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, over m fp inF none', 0x40094⟩ = some s' ∧ s'.pc = 0x30000 ∧
+    ∃ s', steps Code.prog 52 ⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, over m fp inF none', 0x40094, w⟩ = some s' ∧ s'.pc = 0x30000 ∧
       s'.rdi = fp + 64#64 ∧ s'.rsi = fp + 128#64 ∧ s'.rdx = 64#64 ∧ s'.rcx = 0#64 ∧ s'.r8 = fl.setWidth 64 ∧
       s'.rsp = fp + 18446744073709551608#64 ∧ s'.rbx = self ∧ s'.rbp = rbp ∧ s'.r12 = arr ∧
       s'.r13 = (len + 18446744073709551614#64) <<< 5 ∧ s'.r14 = keyp ∧ s'.r15 = n ∧
@@ -107,7 +107,7 @@ theorem pre_avx (self arr keyp fp len n : BitVec 64) (l0 l1 r0 r1 k0 k1 : V) (fl
   have hR1' : ∀ fF, (mm fF).read128 (arr + (len + 18446744073709551615#64) <<< 5 + 16#64) = some r1 := hR1
   have hK0' : ∀ fF, (mm fF).read128 (keyp + 0#64) = some k0 := hK0
   have hK1' : ∀ fF, (mm fF).read128 (keyp + 16#64) = some k1 := hK1
-  show ∃ s', steps Code.prog 52 ⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mm none', 0x40094⟩ = some s' ∧ _
+  show ∃ s', steps Code.prog 52 ⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mm none', 0x40094, w⟩ = some s' ∧ _
   run_merge [wF, rF, fp_add, fp_sub, rdF64, alF, rd128F, wr128F, rdF8, rdF32, wrF8, wrF32, wrF64, h1, h2, h3, h4, hTag', hL0', hL1', hR0', hR1', hK0', hK1', hOwn, hPlat, hFl, hF0, hF1, hF2, hF3]
   refine ⟨_, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   all_goals first
@@ -139,7 +139,7 @@ theorem pre_sse (self arr keyp fp len n : BitVec 64) (l0 l1 r0 r1 k0 k1 : V) (fl
     (plat : BitVec 8) (h5 : (BitVec.setWidth 64 plat - 5#64 &&& 255#64 == 0#64) = false)
     (hPlat : m (fp + 58#64) = some plat) (hFl : m (fp + 59#64) = some fl)
     (hF0 : m (fp + 60#64) = some fl) (hF1 : m (fp + 61#64) = some 0#8) (hF2 : m (fp + 62#64) = some 0#8) (hF3 : m (fp + 63#64) = some 0#8) :
-    ∃ s', steps Code.prog 52 ⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, over m fp inF none', 0x40094⟩ = some s' ∧ s'.pc = 0x20000 ∧
+    ∃ s', steps Code.prog 52 ⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, over m fp inF none', 0x40094, w⟩ = some s' ∧ s'.pc = 0x20000 ∧
       s'.rdi = fp + 64#64 ∧ s'.rsi = fp + 128#64 ∧ s'.rdx = 64#64 ∧ s'.rcx = 0#64 ∧ s'.r8 = fl.setWidth 64 ∧
       s'.rsp = fp + 18446744073709551608#64 ∧ s'.rbx = self ∧ s'.rbp = rbp ∧ s'.r12 = arr ∧
       s'.r13 = (len + 18446744073709551614#64) <<< 5 ∧ s'.r14 = keyp ∧ s'.r15 = n ∧
@@ -185,7 +185,7 @@ theorem pre_sse (self arr keyp fp len n : BitVec 64) (l0 l1 r0 r1 k0 k1 : V) (fl
   have hR1' : ∀ fF, (mm fF).read128 (arr + (len + 18446744073709551615#64) <<< 5 + 16#64) = some r1 := hR1
   have hK0' : ∀ fF, (mm fF).read128 (keyp + 0#64) = some k0 := hK0
   have hK1' : ∀ fF, (mm fF).read128 (keyp + 16#64) = some k1 := hK1
-  show ∃ s', steps Code.prog 52 ⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mm none', 0x40094⟩ = some s' ∧ _
+  show ∃ s', steps Code.prog 52 ⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mm none', 0x40094, w⟩ = some s' ∧ _
   run_merge [wF, rF, fp_add, fp_sub, rdF64, alF, rd128F, wr128F, rdF8, rdF32, wrF8, wrF32, wrF64, h1, h2, h3, h4, h5, hTag', hL0', hL1', hR0', hR1', hK0', hK1', hOwn, hPlat, hFl, hF0, hF1, hF2, hF3]
   refine ⟨_, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   all_goals first
@@ -216,7 +216,7 @@ theorem post_avx (self arr keyp fp len n oL : BitVec 64) (c0 c1 : V) (b : Mem)
     (rdLen : ∀ (fF : Written) (v w : V), (over ((b.put128 (oL + arr + 16#64) w).put128 (oL + arr + 0#64) v) fp inF fF).read (self + 0#64) 64 = some len)
     (wrLen : ∀ (fF : Written) (v w : V) (x : BitVec 64), (over ((b.put128 (oL + arr + 16#64) w).put128 (oL + arr + 0#64) v) fp inF fF).write (self + 0#64) x 64 =
       some (over (((b.put128 (oL + arr + 16#64) w).put128 (oL + arr + 0#64) v).put64 (self + 0#64) x) fp inF fF)) :
-    ∃ s', steps Code.prog 12 ⟨rax, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, oL, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, over b fp inF none', 0x4005B⟩ = some s' ∧
+    ∃ s', steps Code.prog 12 ⟨rax, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, oL, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, over b fp inF none', 0x4005B, w⟩ = some s' ∧
       s'.pc = (if n - 1#64 = 0#64 then 0x401AB else 0x40094) ∧ s'.rax = len - 1#64 ∧ s'.r15 = n - 1#64 ∧
       s'.rbx = self ∧ s'.rsp = fp ∧ s'.rbp = rbp ∧ s'.r12 = arr ∧ s'.r14 = keyp ∧
       ∃ fF : Written, s'.mem = over (((b.put128 (oL + arr + 16#64) c1).put128 (oL + arr + 0#64) c0).put64 (self + 0#64) (len - 1#64)) fp inF fF ∧
@@ -241,7 +241,7 @@ theorem post_avx (self arr keyp fp len n oL : BitVec 64) (c0 c1 : V) (b : Mem)
   simp only [Vec, fp_add, BitVec.ofNat_eq_ofNat, BitVec.reduceAdd] at hc0 hc1
   obtain ⟨a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15⟩ := hc0
   obtain ⟨b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15⟩ := hc1
-  show ∃ s', steps Code.prog 12 ⟨rax, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, oL, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mm b none', 0x4005B⟩ = some s' ∧ _
+  show ∃ s', steps Code.prog 12 ⟨rax, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, oL, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mm b none', 0x4005B, w⟩ = some s' ∧ _
   by_cases hz : n - 1#64 = 0#64
   · have hz' : (n - 1#64 == 0#64) = true := by simpa using hz
     rw [if_pos hz]
@@ -267,7 +267,7 @@ theorem post_sse (self arr keyp fp len n oL : BitVec 64) (c0 c1 : V) (b : Mem)
     (rdLen : ∀ (fF : Written) (v w : V), (over ((b.put128 (oL + arr + 16#64) w).put128 (oL + arr + 0#64) v) fp inF fF).read (self + 0#64) 64 = some len)
     (wrLen : ∀ (fF : Written) (v w : V) (x : BitVec 64), (over ((b.put128 (oL + arr + 16#64) w).put128 (oL + arr + 0#64) v) fp inF fF).write (self + 0#64) x 64 =
       some (over (((b.put128 (oL + arr + 16#64) w).put128 (oL + arr + 0#64) v).put64 (self + 0#64) x) fp inF fF)) :
-    ∃ s', steps Code.prog 13 ⟨rax, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, oL, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, over b fp inF none', 0x401A6⟩ = some s' ∧
+    ∃ s', steps Code.prog 13 ⟨rax, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, oL, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, over b fp inF none', 0x401A6, w⟩ = some s' ∧
       s'.pc = (if n - 1#64 = 0#64 then 0x401AB else 0x40094) ∧ s'.rax = len - 1#64 ∧ s'.r15 = n - 1#64 ∧
       s'.rbx = self ∧ s'.rsp = fp ∧ s'.rbp = rbp ∧ s'.r12 = arr ∧ s'.r14 = keyp ∧
       ∃ fF : Written, s'.mem = over (((b.put128 (oL + arr + 16#64) c1).put128 (oL + arr + 0#64) c0).put64 (self + 0#64) (len - 1#64)) fp inF fF ∧
@@ -292,7 +292,7 @@ theorem post_sse (self arr keyp fp len n oL : BitVec 64) (c0 c1 : V) (b : Mem)
   simp only [Vec, fp_add, BitVec.ofNat_eq_ofNat, BitVec.reduceAdd] at hc0 hc1
   obtain ⟨a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15⟩ := hc0
   obtain ⟨b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15⟩ := hc1
-  show ∃ s', steps Code.prog 13 ⟨rax, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, oL, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mm b none', 0x401A6⟩ = some s' ∧ _
+  show ∃ s', steps Code.prog 13 ⟨rax, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, oL, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mm b none', 0x401A6, w⟩ = some s' ∧ _
   by_cases hz : n - 1#64 = 0#64
   · have hz' : (n - 1#64 == 0#64) = true := by simpa using hz
     rw [if_pos hz]
@@ -327,7 +327,7 @@ theorem turn_avx (self arr keyp fp len n : BitVec 64) (l0 l1 r0 r1 k0 k1 : V) (f
     (oSelf : ∀ x : BitVec 64, (x - self).toNat < 9 → inF (x - fp) = false)
     -- the length is not in the lower slot
     (hLS : ∀ x : BitVec 64, (x - self).toNat < 8 → 32 ≤ (x - (arr + ((len + 18446744073709551614#64) <<< 5))).toNat) :
-    ∃ s', steps Code.prog (52 + (362 + 12)) ⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, m, 0x40094⟩ = some s' ∧
+    ∃ s', steps Code.prog (52 + (362 + 12)) ⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, m, 0x40094, w⟩ = some s' ∧
       s'.pc = (if n - 1#64 = 0#64 then 0x401AB else 0x40094) ∧ s'.rax = len - 1#64 ∧ s'.r15 = n - 1#64 ∧
       s'.rbx = self ∧ s'.rsp = fp ∧ s'.rbp = rbp ∧ s'.r12 = arr ∧ s'.r14 = keyp ∧
       Vec s'.mem (arr + ((len + 18446744073709551614#64) <<< 5) + 0#64) (merged k0 k1 l0 l1 r0 r1 fl).1 ∧
@@ -386,7 +386,7 @@ theorem turn_avx (self arr keyp fp len n : BitVec 64) (l0 l1 r0 r1 k0 k1 : V) (f
     rfl
   -- the last part, on the kernel's memory
   obtain ⟨rax2, rcx2, rdx2, rbx2, rsp2, rbp2, rsi2, rdi2, r82, r92, r122, r132, r142, r152, zf2, cf2,
-    y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, b, pcv⟩ := s2
+    y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, b, pcv, w'⟩ := s2
   simp only at pc2' sp2' mem2' bx2 bp2 d12 d13 d14 d15
   rw [bx1] at bx2; rw [bp1] at bp2; rw [c12] at d12; rw [c13] at d13; rw [c14] at d14; rw [c15] at d15
   subst pcv rsp2 rbx2 rbp2 r122 r132 r142 r152
@@ -491,7 +491,7 @@ theorem turn_sse (self arr keyp fp len n : BitVec 64) (l0 l1 r0 r1 k0 k1 : V) (f
     (oSelf : ∀ x : BitVec 64, (x - self).toNat < 9 → inF (x - fp) = false)
     -- the length is not in the lower slot
     (hLS : ∀ x : BitVec 64, (x - self).toNat < 8 → 32 ≤ (x - (arr + ((len + 18446744073709551614#64) <<< 5))).toNat) :
-    ∃ s', steps Code.prog (52 + (467 + 13)) ⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, m, 0x40094⟩ = some s' ∧
+    ∃ s', steps Code.prog (52 + (467 + 13)) ⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, m, 0x40094, w⟩ = some s' ∧
       s'.pc = (if n - 1#64 = 0#64 then 0x401AB else 0x40094) ∧ s'.rax = len - 1#64 ∧ s'.r15 = n - 1#64 ∧
       s'.rbx = self ∧ s'.rsp = fp ∧ s'.rbp = rbp ∧ s'.r12 = arr ∧ s'.r14 = keyp ∧
       Vec s'.mem (arr + ((len + 18446744073709551614#64) <<< 5) + 0#64) (merged k0 k1 l0 l1 r0 r1 fl).1 ∧
@@ -549,7 +549,7 @@ theorem turn_sse (self arr keyp fp len n : BitVec 64) (l0 l1 r0 r1 k0 k1 : V) (f
     rfl
   -- the last part, on the kernel's memory
   obtain ⟨rax2, rcx2, rdx2, rbx2, rsp2, rbp2, rsi2, rdi2, r82, r92, r122, r132, r142, r152, zf2, cf2,
-    y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, b, pcv⟩ := s2
+    y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, b, pcv, w'⟩ := s2
   simp only at pc2' sp2' mem2' bx2 bp2 d12 d13 d14 d15
   rw [bx1] at bx2; rw [bp1] at bp2; rw [c12] at d12; rw [c13] at d13; rw [c14] at d14; rw [c15] at d15
   subst pcv rsp2 rbx2 rbp2 r122 r132 r142 r152

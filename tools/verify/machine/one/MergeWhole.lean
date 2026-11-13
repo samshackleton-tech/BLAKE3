@@ -26,7 +26,7 @@ theorem prologue (self p keyp rsp0 fp len target : BitVec 64) (flags plat : BitV
     (gLen : ∀ x : BitVec 64, (x - (self + 0#64)).toNat < 8 → inF (x - fp) = false ∧ inP (x - rsp0) = false)
     (gP : ∀ x : BitVec 64, (x - p).toNat < 42 → inF (x - fp) = false ∧ inP (x - rsp0) = false)
     (ra : BitVec 64) (hRa : m.read (rsp0 + 0#64) 64 = some ra) :
-    ∃ s', steps Code.prog 24 ⟨rax, rcx, target, rbx, rsp0, rbp, p, self, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, m, 0x40000⟩ = some s' ∧ s'.pc = 0x40094 ∧
+    ∃ s', steps Code.prog 24 ⟨rax, rcx, target, rbx, rsp0, rbp, p, self, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, m, 0x40000, w⟩ = some s' ∧ s'.pc = 0x40094 ∧
       s'.rax = len ∧ s'.rbx = self ∧ s'.rsp = fp ∧ s'.rbp = rsp0 + 18446744073709551608#64 ∧ s'.r12 = self + 9#64 ∧ s'.r14 = keyp ∧
       s'.r15 = len - target ∧
       s'.mem.read (rsp0 + 18446744073709551568#64) 64 = some rbx ∧
@@ -111,7 +111,7 @@ theorem epilogue (rsp0 : BitVec 64) (b : Mem) (v0 v12 v13 v14 v15 vbp ra : BitVe
     (h32 : b.read (rsp0 + 18446744073709551584#64) 64 = some v13) (h24 : b.read (rsp0 + 18446744073709551592#64) 64 = some v14)
     (h16 : b.read (rsp0 + 18446744073709551600#64) 64 = some v15) (h8 : b.read (rsp0 + 18446744073709551608#64) 64 = some vbp)
     (hra : b.read (rsp0 + 0#64) 64 = some ra) :
-    ∃ s', steps Code.prog 8 ⟨rax, rcx, rdx, rbx, rsp, rsp0 + 18446744073709551608#64, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, b, 0x401AB⟩ = some s' ∧
+    ∃ s', steps Code.prog 8 ⟨rax, rcx, rdx, rbx, rsp, rsp0 + 18446744073709551608#64, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, b, 0x401AB, w⟩ = some s' ∧
       s'.pc = ra.toNat ∧ s'.rsp = rsp0 + 8#64 ∧ s'.rbx = v0 ∧ s'.rbp = vbp ∧ s'.r12 = v12 ∧ s'.r13 = v13 ∧ s'.r14 = v14 ∧
       s'.r15 = v15 ∧ s'.mem = b := by
   have r_add : ∀ c d : BitVec 64, rsp0 + c + d = rsp0 + (c + d) := by intro c d; bv_decide
@@ -146,7 +146,7 @@ theorem merge_is_mergeN (self p keyp rsp0 fp len target : BitVec 64) (k0 k1 : V)
     (gKeyArr : ∀ x : BitVec 64, (x - keyp).toNat < 32 → 1760 ≤ (x - (self + 9#64)).toNat)
     (gKeySelf : ∀ x : BitVec 64, (x - keyp).toNat < 32 → 9 ≤ (x - self).toNat)
     (hW : self ≤ 18446744073709549846#64) :
-    ∃ K s', steps Code.prog K ⟨rax, rcx, target, rbx, rsp0, rbp, p, self, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, m, 0x40000⟩ = some s' ∧
+    ∃ K s', steps Code.prog K ⟨rax, rcx, target, rbx, rsp0, rbp, p, self, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, m, 0x40000, w⟩ = some s' ∧
       s'.pc = ra.toNat ∧ s'.rsp = rsp0 + 8#64 ∧ s'.rbx = rbx ∧ s'.rbp = rbp ∧ s'.r12 = r12 ∧ s'.r13 = r13 ∧ s'.r14 = r14 ∧
       s'.r15 = r15 ∧
       Quad s'.mem (self + 0#64) target ∧
@@ -173,7 +173,7 @@ theorem merge_is_mergeN (self p keyp rsp0 fp len target : BitVec 64) (k0 k1 : V)
       exact out1 x (gArr x hx').1 (gArr x hx').2
     · exact vec_congr (fun x hx => out1 x (gKey x (by bv_omega)).1 (gKey x (by bv_omega)).2) hK0
     · exact vec_congr (fun x hx => out1 x (gKey x (by bv_omega)).1 (gKey x (by bv_omega)).2) hK1
-  obtain ⟨a1, b1, d1, bx1v, sp1v, bp1v, si1, di1, r81, r91, r121, r131, r141, r151, zf1, cf1, y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, m1, pcv⟩ := s1
+  obtain ⟨a1, b1, d1, bx1v, sp1v, bp1v, si1, di1, r81, r91, r121, r131, r141, r151, zf1, cf1, y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, m1, pcv, w'⟩ := s1
   simp only at pc1 ax1 bx1 sp1 bp1 c12 c14 c15 s48 s40 s32 s24 s16 s8 sra own1 out1 H1
   subst pcv a1 bx1v sp1v bp1v r121 r141 r151
   -- the loop

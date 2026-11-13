@@ -25,22 +25,22 @@ theorem apart_bytes {rsp rdi : BitVec 64} (h : 32#64 ≤ rsp - rdi ∧ 8#64 ≤ 
 /-- **A call of `blake3_servil_compress_in_place_avx512`**, in any program that has the kernels. -/
 theorem call_avx {prog : Nat → Option (Instr × Nat)} (hk : ∀ pc x, KCode.prog pc = some x → prog pc = some x)
     (cv0 cv1 b0 b1 b2 b3 : V) (ra : BitVec 64)
-    (rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r12 r13 r14 r15 : BitVec 64) (zf cf : Option Bool) (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 : V) (mem : Mem)
+    (rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r12 r13 r14 r15 : BitVec 64) (zf cf : Option Bool) (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 : V) (mem : Mem) (w : Wide)
     (hc0 : Vec mem rdi cv0) (hc1 : Vec mem (rdi + 16#64) cv1)
     (hb0 : Vec mem rsi b0) (hb1 : Vec mem (rsi + 16#64) b1) (hb2 : Vec mem (rsi + 32#64) b2) (hb3 : Vec mem (rsi + 48#64) b3)
     (hret : Quad mem rsp ra) (hapart : 32#64 ≤ rsp - rdi ∧ 8#64 ≤ rdi - rsp) :
-    ∃ (rax' rcx' rdx' rsi' rdi' r8' r9' : BitVec 64) (zf' cf' : Option Bool) (y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 y13 y14 y15 : V),
-      steps prog 362 ⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, 0x30000⟩ =
+    ∃ (rax' rcx' rdx' rsi' rdi' r8' r9' : BitVec 64) (zf' cf' : Option Bool) (y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 y13 y14 y15 : V) (w' : Wide),
+      steps prog 362 ⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, 0x30000, w⟩ =
         some ⟨rax', rcx', rdx', rbx, rsp + 8#64, rbp, rsi', rdi', r8', r9', r12, r13, r14, r15, zf', cf', y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15,
           (mem.put128 rdi (out cv0 cv1 b0 b1 b2 b3 rcx ((rdx.setWidth 8).setWidth 32) ((r8.setWidth 8).setWidth 32)).1).put128 (rdi + 16#64)
-            (out cv0 cv1 b0 b1 b2 b3 rcx ((rdx.setWidth 8).setWidth 32) ((r8.setWidth 8).setWidth 32)).2, ra.toNat⟩ := by
+            (out cv0 cv1 b0 b1 b2 b3 rcx ((rdx.setWidth 8).setWidth 32) ((r8.setWidth 8).setWidth 32)).2, ra.toNat, w'⟩ := by
   obtain ⟨s', hs, hpc, hsp, hmem, hbx, hbp, h12, h13, h14, h15⟩ :=
-    Avx.kcontract cv0 cv1 b0 b1 b2 b3 ra ⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, 0x30000⟩
+    Avx.kcontract cv0 cv1 b0 b1 b2 b3 ra ⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, 0x30000, w⟩
       rfl (by simpa using hc0) hc1 (by simpa using hb0) hb1 hb2 hb3 (read_quad hret) (apart_bytes hapart)
-  obtain ⟨rax', rcx', rdx', rbx', rsp', rbp', rsi', rdi', r8', r9', r12', r13', r14', r15', zf', cf', y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, mem', pc'⟩ := s'
+  obtain ⟨rax', rcx', rdx', rbx', rsp', rbp', rsi', rdi', r8', r9', r12', r13', r14', r15', zf', cf', y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, mem', pc', w'⟩ := s'
   simp only at hpc hsp hmem hbx hbp h12 h13 h14 h15
   subst hpc hsp hmem hbx hbp h12 h13 h14 h15
-  refine ⟨rax', rcx', rdx', rsi', rdi', r8', r9', zf', cf', y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, ?_⟩
+  refine ⟨rax', rcx', rdx', rsi', rdi', r8', r9', zf', cf', y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, w', ?_⟩
   rw [steps_mono hk _ _ _ hs]
   simp only [out, BitVec.add_zero, BitVec.ofNat_eq_ofNat]
 
@@ -48,65 +48,65 @@ theorem call_avx {prog : Nat → Option (Instr × Nat)} (hk : ∀ pc x, KCode.pr
 the length from all of EDX and the flags from all of R8D. -/
 theorem call_sse {prog : Nat → Option (Instr × Nat)} (hk : ∀ pc x, KCode.prog pc = some x → prog pc = some x)
     (cv0 cv1 b0 b1 b2 b3 : V) (ra : BitVec 64)
-    (rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r12 r13 r14 r15 : BitVec 64) (zf cf : Option Bool) (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 : V) (mem : Mem)
+    (rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r12 r13 r14 r15 : BitVec 64) (zf cf : Option Bool) (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 : V) (mem : Mem) (w : Wide)
     (hc0 : Vec mem rdi cv0) (hc1 : Vec mem (rdi + 16#64) cv1)
     (hb0 : Vec mem rsi b0) (hb1 : Vec mem (rsi + 16#64) b1) (hb2 : Vec mem (rsi + 32#64) b2) (hb3 : Vec mem (rsi + 48#64) b3)
     (hlen : rdx = (rdx.setWidth 32).setWidth 64)
     (hret : Quad mem rsp ra) (hapart : 32#64 ≤ rsp - rdi ∧ 8#64 ≤ rdi - rsp) :
-    ∃ (rax' rcx' rdx' rsi' rdi' r8' r9' : BitVec 64) (zf' cf' : Option Bool) (y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 y13 y14 y15 : V),
-      steps prog 467 ⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, 0x20000⟩ =
+    ∃ (rax' rcx' rdx' rsi' rdi' r8' r9' : BitVec 64) (zf' cf' : Option Bool) (y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 y13 y14 y15 : V) (w' : Wide),
+      steps prog 467 ⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, 0x20000, w⟩ =
         some ⟨rax', rcx', rdx', rbx, rsp + 8#64, rbp, rsi', rdi', r8', r9', r12, r13, r14, r15, zf', cf', y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15,
           (mem.put128 rdi (out cv0 cv1 b0 b1 b2 b3 rcx (rdx.setWidth 32) (r8.setWidth 32)).1).put128 (rdi + 16#64)
-            (out cv0 cv1 b0 b1 b2 b3 rcx (rdx.setWidth 32) (r8.setWidth 32)).2, ra.toNat⟩ := by
+            (out cv0 cv1 b0 b1 b2 b3 rcx (rdx.setWidth 32) (r8.setWidth 32)).2, ra.toNat, w'⟩ := by
   obtain ⟨s', hs, hpc, hsp, hmem, hbx, hbp, h12, h13, h14, h15⟩ :=
-    Sse.kcontract cv0 cv1 b0 b1 b2 b3 (rdx.setWidth 32) ra ⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, 0x20000⟩
+    Sse.kcontract cv0 cv1 b0 b1 b2 b3 (rdx.setWidth 32) ra ⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, 0x20000, w⟩
       rfl (by simpa using hc0) hc1 (by simpa using hb0) hb1 hb2 hb3 hlen (read_quad hret) (apart_bytes hapart)
-  obtain ⟨rax', rcx', rdx', rbx', rsp', rbp', rsi', rdi', r8', r9', r12', r13', r14', r15', zf', cf', y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, mem', pc'⟩ := s'
+  obtain ⟨rax', rcx', rdx', rbx', rsp', rbp', rsi', rdi', r8', r9', r12', r13', r14', r15', zf', cf', y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, mem', pc', w'⟩ := s'
   simp only at hpc hsp hmem hbx hbp h12 h13 h14 h15
   subst hpc hsp hmem hbx hbp h12 h13 h14 h15
-  refine ⟨rax', rcx', rdx', rsi', rdi', r8', r9', zf', cf', y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, ?_⟩
+  refine ⟨rax', rcx', rdx', rsi', rdi', r8', r9', zf', cf', y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, w', ?_⟩
   rw [steps_mono hk _ _ _ hs]
   simp only [out, BitVec.add_zero, BitVec.ofNat_eq_ofNat]
 
 /-- The call of the AVX kernel in a run: its contract's facts, then the rest of the run from the state it returns in. -/
 theorem call_avx_runs {prog : Nat → Option (Instr × Nat)} (hk : ∀ pc x, KCode.prog pc = some x → prog pc = some x)
     {cv0 cv1 b0 b1 b2 b3 : V} {ra : BitVec 64}
-    {rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r12 r13 r14 r15 : BitVec 64} {zf cf : Option Bool} {x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 : V} {mem : Mem}
+    {rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r12 r13 r14 r15 : BitVec 64} {zf cf : Option Bool} {x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 : V} {mem : Mem} {w : Wide}
     {Q : State → Prop}
     (hc0 : Vec mem rdi cv0) (hc1 : Vec mem (rdi + 16#64) cv1)
     (hb0 : Vec mem rsi b0) (hb1 : Vec mem (rsi + 16#64) b1) (hb2 : Vec mem (rsi + 32#64) b2) (hb3 : Vec mem (rsi + 48#64) b3)
     (hret : Quad mem rsp ra) (hapart : 32#64 ≤ rsp - rdi ∧ 8#64 ≤ rdi - rsp)
-    (next : ∀ (rax' rcx' rdx' rsi' rdi' r8' r9' : BitVec 64) (zf' cf' : Option Bool) (y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 y13 y14 y15 : V),
+    (next : ∀ (rax' rcx' rdx' rsi' rdi' r8' r9' : BitVec 64) (zf' cf' : Option Bool) (y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 y13 y14 y15 : V) (w' : Wide),
       Runs prog ⟨rax', rcx', rdx', rbx, rsp + 8#64, rbp, rsi', rdi', r8', r9', r12, r13, r14, r15, zf', cf', y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15,
           (mem.put128 rdi (out cv0 cv1 b0 b1 b2 b3 rcx ((rdx.setWidth 8).setWidth 32) ((r8.setWidth 8).setWidth 32)).1).put128 (rdi + 16#64)
-            (out cv0 cv1 b0 b1 b2 b3 rcx ((rdx.setWidth 8).setWidth 32) ((r8.setWidth 8).setWidth 32)).2, ra.toNat⟩ Q) :
-    Runs prog ⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, 0x30000⟩ Q := by
-  obtain ⟨rax', rcx', rdx', rsi', rdi', r8', r9', zf', cf', y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, h⟩ :=
-    call_avx hk cv0 cv1 b0 b1 b2 b3 ra rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r12 r13 r14 r15 zf cf x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 mem
+            (out cv0 cv1 b0 b1 b2 b3 rcx ((rdx.setWidth 8).setWidth 32) ((r8.setWidth 8).setWidth 32)).2, ra.toNat, w'⟩ Q) :
+    Runs prog ⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, 0x30000, w⟩ Q := by
+  obtain ⟨rax', rcx', rdx', rsi', rdi', r8', r9', zf', cf', y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, w', h⟩ :=
+    call_avx hk cv0 cv1 b0 b1 b2 b3 ra rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r12 r13 r14 r15 zf cf x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 mem w
       hc0 hc1 hb0 hb1 hb2 hb3 hret hapart
-  exact Cells.runs_then h (next rax' rcx' rdx' rsi' rdi' r8' r9' zf' cf' y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 y13 y14 y15)
+  exact Cells.runs_then h (next rax' rcx' rdx' rsi' rdi' r8' r9' zf' cf' y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 y13 y14 y15 w')
 
 /-- The call of the SSE kernel in a run: its contract's facts, then the rest of the run from the state it returns in.
 This kernel reads the length from all of EDX and the flags from all of R8D: the caller shows they are small, and
 the result is then stated as the other kernel's is. -/
 theorem call_sse_runs {prog : Nat → Option (Instr × Nat)} (hk : ∀ pc x, KCode.prog pc = some x → prog pc = some x)
     {cv0 cv1 b0 b1 b2 b3 : V} {ra : BitVec 64}
-    {rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r12 r13 r14 r15 : BitVec 64} {zf cf : Option Bool} {x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 : V} {mem : Mem}
+    {rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r12 r13 r14 r15 : BitVec 64} {zf cf : Option Bool} {x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 : V} {mem : Mem} {w : Wide}
     {Q : State → Prop}
     (hc0 : Vec mem rdi cv0) (hc1 : Vec mem (rdi + 16#64) cv1)
     (hb0 : Vec mem rsi b0) (hb1 : Vec mem (rsi + 16#64) b1) (hb2 : Vec mem (rsi + 32#64) b2) (hb3 : Vec mem (rsi + 48#64) b3)
     (hlen : rdx = (rdx.setWidth 32).setWidth 64) (hfl : r8.setWidth 32 = (r8.setWidth 8).setWidth 32)
     (hret : Quad mem rsp ra) (hapart : 32#64 ≤ rsp - rdi ∧ 8#64 ≤ rdi - rsp)
-    (next : ∀ (rax' rcx' rdx' rsi' rdi' r8' r9' : BitVec 64) (zf' cf' : Option Bool) (y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 y13 y14 y15 : V),
+    (next : ∀ (rax' rcx' rdx' rsi' rdi' r8' r9' : BitVec 64) (zf' cf' : Option Bool) (y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 y13 y14 y15 : V) (w' : Wide),
       Runs prog ⟨rax', rcx', rdx', rbx, rsp + 8#64, rbp, rsi', rdi', r8', r9', r12, r13, r14, r15, zf', cf', y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15,
           (mem.put128 rdi (out cv0 cv1 b0 b1 b2 b3 rcx (rdx.setWidth 32) ((r8.setWidth 8).setWidth 32)).1).put128 (rdi + 16#64)
-            (out cv0 cv1 b0 b1 b2 b3 rcx (rdx.setWidth 32) ((r8.setWidth 8).setWidth 32)).2, ra.toNat⟩ Q) :
-    Runs prog ⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, 0x20000⟩ Q := by
-  obtain ⟨rax', rcx', rdx', rsi', rdi', r8', r9', zf', cf', y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, h⟩ :=
-    call_sse hk cv0 cv1 b0 b1 b2 b3 ra rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r12 r13 r14 r15 zf cf x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 mem
+            (out cv0 cv1 b0 b1 b2 b3 rcx (rdx.setWidth 32) ((r8.setWidth 8).setWidth 32)).2, ra.toNat, w'⟩ Q) :
+    Runs prog ⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, 0x20000, w⟩ Q := by
+  obtain ⟨rax', rcx', rdx', rsi', rdi', r8', r9', zf', cf', y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, w', h⟩ :=
+    call_sse hk cv0 cv1 b0 b1 b2 b3 ra rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r12 r13 r14 r15 zf cf x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 mem w
       hc0 hc1 hb0 hb1 hb2 hb3 hlen hret hapart
   rw [hfl] at h
-  exact Cells.runs_then h (next rax' rcx' rdx' rsi' rdi' r8' r9' zf' cf' y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 y13 y14 y15)
+  exact Cells.runs_then h (next rax' rcx' rdx' rsi' rdi' r8' r9' zf' cf' y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 y13 y14 y15 w')
 
 -- From here on what a kernel leaves is compared by name: a wrong length, counter or flag is then a
 -- mismatch at once, not a search through the compression function.

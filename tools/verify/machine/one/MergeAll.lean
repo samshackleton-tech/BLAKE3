@@ -27,7 +27,7 @@ theorem turnL (self arr keyp fp len nB : BitVec 64) (l0 l1 r0 r1 k0 k1 : V) (fl 
     (oKey : ∀ x : BitVec 64, (x - keyp).toNat < 32 → inF (x - fp) = false)
     (oSelf : ∀ x : BitVec 64, (x - self).toNat < 9 → inF (x - fp) = false)
     (hLS : ∀ x : BitVec 64, (x - self).toNat < 8 → 32 ≤ (x - (arr + ((len + 18446744073709551614#64) <<< 5))).toNat) :
-    ∃ S, stepsL Code.prog (turnK plat) ⟨⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, nB, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, m, 0x40094⟩, []⟩ = some S ∧
+    ∃ S, stepsL Code.prog (turnK plat) ⟨⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, nB, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, m, 0x40094, w⟩, []⟩ = some S ∧
       S.leak = turnShows plat self arr keyp fp len (decide (nB - 1#64 = 0#64)) ∧
       S.core.pc = (if nB - 1#64 = 0#64 then 0x401AB else 0x40094) ∧ S.core.rax = len - 1#64 ∧ S.core.r15 = nB - 1#64 ∧
       S.core.rbx = self ∧ S.core.rsp = fp ∧ S.core.rbp = rbp ∧ S.core.r12 = arr ∧ S.core.r14 = keyp ∧
@@ -64,7 +64,7 @@ theorem loopL (self arr keyp fp : BitVec 64) (k0 k1 : V) (fl plat : BitVec 8) (P
     ∀ (n : Nat) (es : List (V × V)) (len nB : BitVec 64) (m : Mem) (rcx rdx rbp rsi rdi r8 r9 r13 : BitVec 64) (zf cf : Option Bool) (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 : V),
       1 ≤ n → n + 1 ≤ es.length → len.toNat = es.length → es.length ≤ 55 → nB.toNat = n →
       Head self arr keyp fp k0 k1 fl plat m len es →
-      ∃ S, stepsL Code.prog (n * turnK plat) ⟨⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, nB, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, m, 0x40094⟩, []⟩ = some S ∧
+      ∃ S, stepsL Code.prog (n * turnK plat) ⟨⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, nB, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, m, 0x40094, w⟩, []⟩ = some S ∧
         S.leak = loopShows plat self arr keyp fp n len nB ∧
         S.core.pc = 0x401AB ∧ S.core.rbx = self ∧ S.core.rsp = fp ∧ S.core.rbp = rbp ∧ S.core.r12 = arr ∧ S.core.r14 = keyp ∧
         Quad S.core.mem (self + 0#64) (len - nB) ∧
@@ -118,7 +118,7 @@ theorem loopL (self arr keyp fp : BitVec 64) (k0 k1 : V) (fl plat : BitVec 8) (P
       · intro x hx ha hs; exact out1 x hx (by rw [shl5]; bv_omega) (by omega)
     · have hne : nB - 1#64 ≠ 0#64 := by bv_omega
       have pc1' : s1.pc = 0x40094 := by rw [pc1, if_neg hne]
-      obtain ⟨rax1, rcx1, rdx1, rbx1, rsp1, rbp1, rsi1, rdi1, r81, r91, r121, r131, r141, r151v, zf1, cf1, y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, m1, pcv⟩ := s1
+      obtain ⟨rax1, rcx1, rdx1, rbx1, rsp1, rbp1, rsi1, rdi1, r81, r91, r121, r131, r141, r151v, zf1, cf1, y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, m1, pcv, w'⟩ := s1
       simp only at pc1' ax1 r151 bx1 sp1 bp1 c12 c14 vM0 vM1 qLen1 own1 f58 f59 f60 f61 f62 f63 out1 tag1 rest1 key0 key1
       subst pcv rax1 r151v rbx1 rsp1 rbp1 r121 r141
       have H1 : Head self arr keyp fp k0 k1 fl plat m1 (len - 1#64) (merged k0 k1 l.1 l.2 r.1 r.2 fl :: rest) :=
@@ -169,7 +169,7 @@ theorem merge_whole (self p keyp rsp0 fp len target : BitVec 64) (k0 k1 : V) (fl
     (gKeyArr : ∀ x : BitVec 64, (x - keyp).toNat < 32 → 1760 ≤ (x - (self + 9#64)).toNat)
     (gKeySelf : ∀ x : BitVec 64, (x - keyp).toNat < 32 → 9 ≤ (x - self).toNat)
     (hW : self ≤ 18446744073709549846#64) :
-    ∃ S, stepsL Code.prog (24 + ((len - target).toNat * turnK plat + 8)) ⟨⟨rax, rcx, target, rbx, rsp0, rbp, p, self, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, m, 0x40000⟩, []⟩ = some S ∧
+    ∃ S, stepsL Code.prog (24 + ((len - target).toNat * turnK plat + 8)) ⟨⟨rax, rcx, target, rbx, rsp0, rbp, p, self, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, m, 0x40000, w⟩, []⟩ = some S ∧
       S.leak = mergeShows plat self p keyp rsp0 fp ra len target ∧
       S.core.pc = ra.toNat ∧ S.core.rsp = rsp0 + 8#64 ∧ S.core.rbx = rbx ∧ S.core.rbp = rbp ∧ S.core.r12 = r12 ∧ S.core.r13 = r13 ∧ S.core.r14 = r14 ∧
       S.core.r15 = r15 ∧
@@ -199,7 +199,7 @@ theorem merge_whole (self p keyp rsp0 fp len target : BitVec 64) (k0 k1 : V) (fl
       exact out1 x (gArr x hx').1 (gArr x hx').2
     · exact vec_congr (fun x hx => out1 x (gKey x (by bv_omega)).1 (gKey x (by bv_omega)).2) hK0
     · exact vec_congr (fun x hx => out1 x (gKey x (by bv_omega)).1 (gKey x (by bv_omega)).2) hK1
-  obtain ⟨a1, b1, d1, bx1v, sp1v, bp1v, si1, di1, r81, r91, r121, r131, r141, r151, zf1, cf1, y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, m1, pcv⟩ := s1
+  obtain ⟨a1, b1, d1, bx1v, sp1v, bp1v, si1, di1, r81, r91, r121, r131, r141, r151, zf1, cf1, y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, m1, pcv, w'⟩ := s1
   simp only at pc1 ax1 bx1 sp1 bp1 c12 c14 c15 s48 s40 s32 s24 s16 s8 sra own1 out1 H1
   subst pcv a1 bx1v sp1v bp1v r121 r141 r151
   obtain ⟨⟨s2, lk2⟩, e2, hl2, pc2, bx2, sp2, bp2, d12, d14, q2, E2, tag2, out2⟩ :=

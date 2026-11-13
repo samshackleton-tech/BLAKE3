@@ -234,7 +234,7 @@ theorem kcontract (cv0 cv1 b0 b1 b2 b3 : V) {P["lenarg"]}(ra : BitVec 64) (s : S
         (mk4 {o}[4] {o}[5]
           {o}[6] {o}[7]) ∧
       s'.rbx = s.rbx ∧ s'.rbp = s.rbp ∧ s'.r12 = s.r12 ∧ s'.r13 = s.r13 ∧ s'.r14 = s.r14 ∧ s'.r15 = s.r15 := by
-  obtain ⟨s1, e1, pc1, r1, m1, {"x14, x15, " if rot else ""}al1, S1⟩ := start cv0 cv1 b0 b1 b2 b3 {P["lenuse"]}s hpc hc0 hc1 hb0 hb1 hb2 hb3{" hlen" if P["lenhyp"] else ""}
+  obtain ⟨s1, e1, pc1, r1, m1, {"x14, x15, " if rot else ""}al1, S1, w⟩ := start cv0 cv1 b0 b1 b2 b3 {P["lenuse"]}s hpc hc0 hc1 hb0 hb1 hb2 hb3{" hlen" if P["lenhyp"] else ""}
   have H1 : Head s1 _ _ 7 := ⟨pc1, r1, m1, al1{", x14, x15" if rot else ""}⟩
 {iters}  obtain ⟨kbx, ksp, kbp, kdi, k12, k13, k14, k15, kmem⟩ := S7
   obtain ⟨s8, e8, pc8, sp8, mem8, bx8, bp8, c12, c13, c14, c15⟩ := last _ _ ra s7 H7

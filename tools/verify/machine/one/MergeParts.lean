@@ -44,7 +44,7 @@ theorem pre_avx_leak (self arr keyp fp len n : BitVec 64) (l0 l1 r0 r1 k0 k1 : V
     (hOwn : ∀ d : BitVec 64, inF d = true → (m (fp + d)).isSome = true)
     (hPlat : m (fp + 58#64) = some 5#8) (hFl : m (fp + 59#64) = some fl)
     (hF0 : m (fp + 60#64) = some fl) (hF1 : m (fp + 61#64) = some 0#8) (hF2 : m (fp + 62#64) = some 0#8) (hF3 : m (fp + 63#64) = some 0#8) :
-    ∃ S, stepsL Code.prog 52 ⟨⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, over m fp inF none', 0x40094⟩, []⟩ = some S ∧ S.leak = pre_avx_shows self arr keyp fp len := by
+    ∃ S, stepsL Code.prog 52 ⟨⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, over m fp inF none', 0x40094, w⟩, []⟩ = some S ∧ S.leak = pre_avx_shows self arr keyp fp len := by
   let mm (fF : Written) : Mem := over m fp inF fF
   have wF : ∀ (fF : Written) (d : BitVec 64) (v : BitVec 8), inF d = true → (mm fF).put8 (fp + d) v = mm (upd fF d v) := by
     intro fF d v hd; simp only [mm]; rw [put8_over_in _ _ _ _ _ _ hd]
@@ -80,7 +80,7 @@ theorem pre_avx_leak (self arr keyp fp len n : BitVec 64) (l0 l1 r0 r1 k0 k1 : V
   have hR1' : ∀ fF, (mm fF).read128 (arr + (len + 18446744073709551615#64) <<< 5 + 16#64) = some r1 := hR1
   have hK0' : ∀ fF, (mm fF).read128 (keyp + 0#64) = some k0 := hK0
   have hK1' : ∀ fF, (mm fF).read128 (keyp + 16#64) = some k1 := hK1
-  show ∃ S, stepsL Code.prog 52 ⟨⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mm none', 0x40094⟩, []⟩ = some S ∧ _
+  show ∃ S, stepsL Code.prog 52 ⟨⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mm none', 0x40094, w⟩, []⟩ = some S ∧ _
   run_merge_leak [wF, rF, fp_add, fp_sub, rdF64, alF, rd128F, wr128F, rdF8, rdF32, wrF8, wrF32, wrF64, h1, h2, h3, h4, hTag', hL0', hL1', hR0', hR1', hK0', hK1', hOwn, hPlat, hFl, hF0, hF1, hF2, hF3]
   refine ⟨_, rfl, ?_⟩
   simp only [pre_avx_shows]
@@ -108,7 +108,7 @@ theorem pre_sse_leak (self arr keyp fp len n : BitVec 64) (l0 l1 r0 r1 k0 k1 : V
     (plat : BitVec 8) (h5 : (BitVec.setWidth 64 plat - 5#64 &&& 255#64 == 0#64) = false)
     (hPlat : m (fp + 58#64) = some plat) (hFl : m (fp + 59#64) = some fl)
     (hF0 : m (fp + 60#64) = some fl) (hF1 : m (fp + 61#64) = some 0#8) (hF2 : m (fp + 62#64) = some 0#8) (hF3 : m (fp + 63#64) = some 0#8) :
-    ∃ S, stepsL Code.prog 52 ⟨⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, over m fp inF none', 0x40094⟩, []⟩ = some S ∧ S.leak = pre_sse_shows self arr keyp fp len := by
+    ∃ S, stepsL Code.prog 52 ⟨⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, over m fp inF none', 0x40094, w⟩, []⟩ = some S ∧ S.leak = pre_sse_shows self arr keyp fp len := by
   let mm (fF : Written) : Mem := over m fp inF fF
   have wF : ∀ (fF : Written) (d : BitVec 64) (v : BitVec 8), inF d = true → (mm fF).put8 (fp + d) v = mm (upd fF d v) := by
     intro fF d v hd; simp only [mm]; rw [put8_over_in _ _ _ _ _ _ hd]
@@ -144,7 +144,7 @@ theorem pre_sse_leak (self arr keyp fp len n : BitVec 64) (l0 l1 r0 r1 k0 k1 : V
   have hR1' : ∀ fF, (mm fF).read128 (arr + (len + 18446744073709551615#64) <<< 5 + 16#64) = some r1 := hR1
   have hK0' : ∀ fF, (mm fF).read128 (keyp + 0#64) = some k0 := hK0
   have hK1' : ∀ fF, (mm fF).read128 (keyp + 16#64) = some k1 := hK1
-  show ∃ S, stepsL Code.prog 52 ⟨⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mm none', 0x40094⟩, []⟩ = some S ∧ _
+  show ∃ S, stepsL Code.prog 52 ⟨⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mm none', 0x40094, w⟩, []⟩ = some S ∧ _
   run_merge_leak [wF, rF, fp_add, fp_sub, rdF64, alF, rd128F, wr128F, rdF8, rdF32, wrF8, wrF32, wrF64, h1, h2, h3, h4, h5, hTag', hL0', hL1', hR0', hR1', hK0', hK1', hOwn, hPlat, hFl, hF0, hF1, hF2, hF3]
   refine ⟨_, rfl, ?_⟩
   simp only [pre_sse_shows]
@@ -168,7 +168,7 @@ theorem post_avx_leak (self arr keyp fp len n oL : BitVec 64) (c0 c1 : V) (b : M
     (rdLen : ∀ (fF : Written) (v w : V), (over ((b.put128 (oL + arr + 16#64) w).put128 (oL + arr + 0#64) v) fp inF fF).read (self + 0#64) 64 = some len)
     (wrLen : ∀ (fF : Written) (v w : V) (x : BitVec 64), (over ((b.put128 (oL + arr + 16#64) w).put128 (oL + arr + 0#64) v) fp inF fF).write (self + 0#64) x 64 =
       some (over (((b.put128 (oL + arr + 16#64) w).put128 (oL + arr + 0#64) v).put64 (self + 0#64) x) fp inF fF)) :
-    ∃ S, stepsL Code.prog 12 ⟨⟨rax, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, oL, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, over b fp inF none', 0x4005B⟩, []⟩ = some S ∧ S.leak = post_avx_shows self arr fp oL (decide (n - 1#64 = 0#64)) := by
+    ∃ S, stepsL Code.prog 12 ⟨⟨rax, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, oL, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, over b fp inF none', 0x4005B, w⟩, []⟩ = some S ∧ S.leak = post_avx_shows self arr fp oL (decide (n - 1#64 = 0#64)) := by
   let mm (B : Mem) (fF : Written) : Mem := over B fp inF fF
   have wF : ∀ (B : Mem) (fF : Written) (d : BitVec 64) (v : BitVec 8), inF d = true → (mm B fF).put8 (fp + d) v = mm B (upd fF d v) := by
     intro B fF d v hd; simp only [mm]; rw [put8_over_in _ _ _ _ _ _ hd]
@@ -189,7 +189,7 @@ theorem post_avx_leak (self arr keyp fp len n oL : BitVec 64) (c0 c1 : V) (b : M
   simp only [Vec, fp_add, BitVec.ofNat_eq_ofNat, BitVec.reduceAdd] at hc0 hc1
   obtain ⟨a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15⟩ := hc0
   obtain ⟨b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15⟩ := hc1
-  show ∃ S, stepsL Code.prog 12 ⟨⟨rax, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, oL, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mm b none', 0x4005B⟩, []⟩ = some S ∧ _
+  show ∃ S, stepsL Code.prog 12 ⟨⟨rax, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, oL, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mm b none', 0x4005B, w⟩, []⟩ = some S ∧ _
   by_cases hz : n - 1#64 = 0#64
   · have hz' : (n - 1#64 == 0#64) = true := by simpa using hz
     run_merge_leak [wF, rF, fp_add, alF, rd128F, wr128F, wrA1', wrA0', rdLen', wrLen', hOwn, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15, hz']
@@ -220,7 +220,7 @@ theorem post_sse_leak (self arr keyp fp len n oL : BitVec 64) (c0 c1 : V) (b : M
     (rdLen : ∀ (fF : Written) (v w : V), (over ((b.put128 (oL + arr + 16#64) w).put128 (oL + arr + 0#64) v) fp inF fF).read (self + 0#64) 64 = some len)
     (wrLen : ∀ (fF : Written) (v w : V) (x : BitVec 64), (over ((b.put128 (oL + arr + 16#64) w).put128 (oL + arr + 0#64) v) fp inF fF).write (self + 0#64) x 64 =
       some (over (((b.put128 (oL + arr + 16#64) w).put128 (oL + arr + 0#64) v).put64 (self + 0#64) x) fp inF fF)) :
-    ∃ S, stepsL Code.prog 13 ⟨⟨rax, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, oL, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, over b fp inF none', 0x401A6⟩, []⟩ = some S ∧ S.leak = post_sse_shows self arr fp oL (decide (n - 1#64 = 0#64)) := by
+    ∃ S, stepsL Code.prog 13 ⟨⟨rax, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, oL, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, over b fp inF none', 0x401A6, w⟩, []⟩ = some S ∧ S.leak = post_sse_shows self arr fp oL (decide (n - 1#64 = 0#64)) := by
   let mm (B : Mem) (fF : Written) : Mem := over B fp inF fF
   have wF : ∀ (B : Mem) (fF : Written) (d : BitVec 64) (v : BitVec 8), inF d = true → (mm B fF).put8 (fp + d) v = mm B (upd fF d v) := by
     intro B fF d v hd; simp only [mm]; rw [put8_over_in _ _ _ _ _ _ hd]
@@ -241,7 +241,7 @@ theorem post_sse_leak (self arr keyp fp len n oL : BitVec 64) (c0 c1 : V) (b : M
   simp only [Vec, fp_add, BitVec.ofNat_eq_ofNat, BitVec.reduceAdd] at hc0 hc1
   obtain ⟨a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15⟩ := hc0
   obtain ⟨b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15⟩ := hc1
-  show ∃ S, stepsL Code.prog 13 ⟨⟨rax, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, oL, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mm b none', 0x401A6⟩, []⟩ = some S ∧ _
+  show ∃ S, stepsL Code.prog 13 ⟨⟨rax, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, oL, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mm b none', 0x401A6, w⟩, []⟩ = some S ∧ _
   by_cases hz : n - 1#64 = 0#64
   · have hz' : (n - 1#64 == 0#64) = true := by simpa using hz
     run_merge_leak [wF, rF, fp_add, alF, rd128F, wr128F, wrA1', wrA0', rdLen', wrLen', hOwn, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15, hz']
@@ -273,7 +273,7 @@ theorem prologue_leak (self p keyp rsp0 fp len target : BitVec 64) (flags plat :
     (gLen : ∀ x : BitVec 64, (x - (self + 0#64)).toNat < 8 → inF (x - fp) = false ∧ inP (x - rsp0) = false)
     (gP : ∀ x : BitVec 64, (x - p).toNat < 42 → inF (x - fp) = false ∧ inP (x - rsp0) = false)
     (ra : BitVec 64) (hRa : m.read (rsp0 + 0#64) 64 = some ra) :
-    ∃ S, stepsL Code.prog 24 ⟨⟨rax, rcx, target, rbx, rsp0, rbp, p, self, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, m, 0x40000⟩, []⟩ = some S ∧ S.leak = prologue_shows self p rsp0 fp := by
+    ∃ S, stepsL Code.prog 24 ⟨⟨rax, rcx, target, rbx, rsp0, rbp, p, self, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, m, 0x40000, w⟩, []⟩ = some S ∧ S.leak = prologue_shows self p rsp0 fp := by
   let mm (fP fF : Written) : Mem := over (over m rsp0 inP fP) fp inF fF
   have hm : m = mm none' none' := by simp only [mm, over_none]
   have pNotF : ∀ d : BitVec 64, inP d = true → inF (rsp0 + d - fp) = false := by
@@ -337,7 +337,7 @@ theorem epilogue_leak (rsp0 : BitVec 64) (b : Mem) (v0 v12 v13 v14 v15 vbp ra : 
     (h32 : b.read (rsp0 + 18446744073709551584#64) 64 = some v13) (h24 : b.read (rsp0 + 18446744073709551592#64) 64 = some v14)
     (h16 : b.read (rsp0 + 18446744073709551600#64) 64 = some v15) (h8 : b.read (rsp0 + 18446744073709551608#64) 64 = some vbp)
     (hra : b.read (rsp0 + 0#64) 64 = some ra) :
-    ∃ S, stepsL Code.prog 8 ⟨⟨rax, rcx, rdx, rbx, rsp, rsp0 + 18446744073709551608#64, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, b, 0x401AB⟩, []⟩ = some S ∧ S.leak = epilogue_shows rsp0 ra := by
+    ∃ S, stepsL Code.prog 8 ⟨⟨rax, rcx, rdx, rbx, rsp, rsp0 + 18446744073709551608#64, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, b, 0x401AB, w⟩, []⟩ = some S ∧ S.leak = epilogue_shows rsp0 ra := by
   have r_add : ∀ c d : BitVec 64, rsp0 + c + d = rsp0 + (c + d) := by intro c d; bv_decide
   run_merge_leak [r_add, h48, h40, h32, h24, h16, h8, hra]
   refine ⟨_, rfl, ?_⟩

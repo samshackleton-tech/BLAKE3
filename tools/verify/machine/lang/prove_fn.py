@@ -410,7 +410,7 @@ if not STRAIGHT:
           f"def Inv {ARGDECL} (s : State) : Prop :=\n  " + " ∧\n  ".join(inv_fixed + [c for c, _, _ in inv_mem]) + " ∧\n  " + (f"∃ {ex}, " if ex else "") + inv_inner, ""]
 
 STATE = lambda names: "⟨" + ", ".join(names) + f", zf, cf, {', '.join(XS.split())}, mem, pc⟩"
-INTROS = "intro rax' rcx' rdx' rsi' rdi' r8' r9' zf' cf' y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 y13 y14 y15"
+INTROS = "intro rax' rcx' rdx' rsi' rdi' r8' r9' zf' cf' y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 y13 y14 y15 w'"
 
 
 def cond_fact(c, value, env):

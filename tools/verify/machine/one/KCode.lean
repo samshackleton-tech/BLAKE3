@@ -107,26 +107,26 @@ def prog (pc : Nat) : Option (Instr × Nat) := table.lookup pc
 @[kcode_at] theorem at_201AD : prog 0x201AD = some (.storev false .rdi 0x0 0, 0x201B0) := rfl
 @[kcode_at] theorem at_201B0 : prog 0x201B0 = some (.storev false .rdi 0x10 1, 0x201B4) := rfl
 @[kcode_at] theorem at_201B4 : prog 0x201B4 = some (.ret, 0x201B5) := rfl
-@[kcode_at] theorem at_30000 : prog 0x30000 = some (.movv false 0 (.m .rdi 0x0), 0x30004) := rfl
-@[kcode_at] theorem at_30004 : prog 0x30004 = some (.movv false 1 (.m .rdi 0x10), 0x30009) := rfl
+@[kcode_at] theorem at_30000 : prog 0x30000 = some (.vmovv false 0 (.m .rdi 0x0), 0x30004) := rfl
+@[kcode_at] theorem at_30004 : prog 0x30004 = some (.vmovv false 1 (.m .rdi 0x10), 0x30009) := rfl
 @[kcode_at] theorem at_30009 : prog 0x30009 = some (.movzx8 .rax (.reg .r8), 0x3000D) := rfl
 @[kcode_at] theorem at_3000D : prog 0x3000D = some (.movzx8 .rdx (.reg .rdx), 0x30010) := rfl
 @[kcode_at] theorem at_30010 : prog 0x30010 = some (.shl64 .rax 32, 0x30014) := rfl
 @[kcode_at] theorem at_30014 : prog 0x30014 = some (.add 64 (.reg .rdx) (.reg .rax), 0x30017) := rfl
-@[kcode_at] theorem at_30017 : prog 0x30017 = some (.movq 3 .rcx, 0x3001C) := rfl
-@[kcode_at] theorem at_3001C : prog 0x3001C = some (.movq 4 .rdx, 0x30021) := rfl
+@[kcode_at] theorem at_30017 : prog 0x30017 = some (.vmovq 3 .rcx, 0x3001C) := rfl
+@[kcode_at] theorem at_3001C : prog 0x3001C = some (.vmovq 4 .rdx, 0x30021) := rfl
 @[kcode_at] theorem at_30021 : prog 0x30021 = some (.vpunpcklqdq 3 3 (.x 4), 0x30025) := rfl
-@[kcode_at] theorem at_30025 : prog 0x30025 = some (.movv false 2 (.c 0xA54FF53A3C6EF372BB67AE856A09E667#128), 0x3002D) := rfl
-@[kcode_at] theorem at_3002D : prog 0x3002D = some (.movv false 8 (.m .rsi 0x0), 0x30031) := rfl
-@[kcode_at] theorem at_30031 : prog 0x30031 = some (.movv false 9 (.m .rsi 0x10), 0x30036) := rfl
+@[kcode_at] theorem at_30025 : prog 0x30025 = some (.vmovv false 2 (.c 0xA54FF53A3C6EF372BB67AE856A09E667#128), 0x3002D) := rfl
+@[kcode_at] theorem at_3002D : prog 0x3002D = some (.vmovv false 8 (.m .rsi 0x0), 0x30031) := rfl
+@[kcode_at] theorem at_30031 : prog 0x30031 = some (.vmovv false 9 (.m .rsi 0x10), 0x30036) := rfl
 @[kcode_at] theorem at_30036 : prog 0x30036 = some (.vshufps 4 8 (.x 9) 136, 0x3003C) := rfl
 @[kcode_at] theorem at_3003C : prog 0x3003C = some (.vshufps 5 8 (.x 9) 221, 0x30042) := rfl
-@[kcode_at] theorem at_30042 : prog 0x30042 = some (.movv false 8 (.m .rsi 0x20), 0x30047) := rfl
-@[kcode_at] theorem at_30047 : prog 0x30047 = some (.movv false 9 (.m .rsi 0x30), 0x3004C) := rfl
+@[kcode_at] theorem at_30042 : prog 0x30042 = some (.vmovv false 8 (.m .rsi 0x20), 0x30047) := rfl
+@[kcode_at] theorem at_30047 : prog 0x30047 = some (.vmovv false 9 (.m .rsi 0x30), 0x3004C) := rfl
 @[kcode_at] theorem at_3004C : prog 0x3004C = some (.vshufps 6 8 (.x 9) 136, 0x30052) := rfl
 @[kcode_at] theorem at_30052 : prog 0x30052 = some (.vshufps 7 8 (.x 9) 221, 0x30058) := rfl
-@[kcode_at] theorem at_30058 : prog 0x30058 = some (.pshufd 6 (.x 6) 147, 0x3005D) := rfl
-@[kcode_at] theorem at_3005D : prog 0x3005D = some (.pshufd 7 (.x 7) 147, 0x30062) := rfl
+@[kcode_at] theorem at_30058 : prog 0x30058 = some (.vpshufd 6 (.x 6) 147, 0x3005D) := rfl
+@[kcode_at] theorem at_3005D : prog 0x3005D = some (.vpshufd 7 (.x 7) 147, 0x30062) := rfl
 @[kcode_at] theorem at_30062 : prog 0x30062 = some (.mov 8 (.reg .rax) (.imm 0x7), 0x30064) := rfl
 @[kcode_at] theorem at_30064 : prog 0x30064 = some (.vpaddd 0 0 (.x 4), 0x30068) := rfl
 @[kcode_at] theorem at_30068 : prog 0x30068 = some (.vpaddd 0 0 (.x 1), 0x3006C) := rfl
@@ -142,9 +142,9 @@ def prog (pc : Nat) : Option (Instr × Nat) := table.lookup pc
 @[kcode_at] theorem at_3009F : prog 0x3009F = some (.vpaddd 2 2 (.x 3), 0x300A3) := rfl
 @[kcode_at] theorem at_300A3 : prog 0x300A3 = some (.vpxor 1 1 (.x 2), 0x300A9) := rfl
 @[kcode_at] theorem at_300A9 : prog 0x300A9 = some (.vprord 1 (.x 1) 7, 0x300B0) := rfl
-@[kcode_at] theorem at_300B0 : prog 0x300B0 = some (.pshufd 0 (.x 0) 147, 0x300B5) := rfl
-@[kcode_at] theorem at_300B5 : prog 0x300B5 = some (.pshufd 3 (.x 3) 78, 0x300BA) := rfl
-@[kcode_at] theorem at_300BA : prog 0x300BA = some (.pshufd 2 (.x 2) 57, 0x300BF) := rfl
+@[kcode_at] theorem at_300B0 : prog 0x300B0 = some (.vpshufd 0 (.x 0) 147, 0x300B5) := rfl
+@[kcode_at] theorem at_300B5 : prog 0x300B5 = some (.vpshufd 3 (.x 3) 78, 0x300BA) := rfl
+@[kcode_at] theorem at_300BA : prog 0x300BA = some (.vpshufd 2 (.x 2) 57, 0x300BF) := rfl
 @[kcode_at] theorem at_300BF : prog 0x300BF = some (.vpaddd 0 0 (.x 6), 0x300C3) := rfl
 @[kcode_at] theorem at_300C3 : prog 0x300C3 = some (.vpaddd 0 0 (.x 1), 0x300C7) := rfl
 @[kcode_at] theorem at_300C7 : prog 0x300C7 = some (.vpxor 3 3 (.x 0), 0x300CD) := rfl
@@ -159,24 +159,24 @@ def prog (pc : Nat) : Option (Instr × Nat) := table.lookup pc
 @[kcode_at] theorem at_300FA : prog 0x300FA = some (.vpaddd 2 2 (.x 3), 0x300FE) := rfl
 @[kcode_at] theorem at_300FE : prog 0x300FE = some (.vpxor 1 1 (.x 2), 0x30104) := rfl
 @[kcode_at] theorem at_30104 : prog 0x30104 = some (.vprord 1 (.x 1) 7, 0x3010B) := rfl
-@[kcode_at] theorem at_3010B : prog 0x3010B = some (.pshufd 0 (.x 0) 57, 0x30110) := rfl
-@[kcode_at] theorem at_30110 : prog 0x30110 = some (.pshufd 3 (.x 3) 78, 0x30115) := rfl
-@[kcode_at] theorem at_30115 : prog 0x30115 = some (.pshufd 2 (.x 2) 147, 0x3011A) := rfl
+@[kcode_at] theorem at_3010B : prog 0x3010B = some (.vpshufd 0 (.x 0) 57, 0x30110) := rfl
+@[kcode_at] theorem at_30110 : prog 0x30110 = some (.vpshufd 3 (.x 3) 78, 0x30115) := rfl
+@[kcode_at] theorem at_30115 : prog 0x30115 = some (.vpshufd 2 (.x 2) 147, 0x3011A) := rfl
 @[kcode_at] theorem at_3011A : prog 0x3011A = some (.decb .rax, 0x3011C) := rfl
 @[kcode_at] theorem at_3011C : prog 0x3011C = some (.je 0x30163, 0x3011E) := rfl
 @[kcode_at] theorem at_3011E : prog 0x3011E = some (.vshufps 8 4 (.x 5) 214, 0x30123) := rfl
-@[kcode_at] theorem at_30123 : prog 0x30123 = some (.pshufd 9 (.x 4) 15, 0x30128) := rfl
-@[kcode_at] theorem at_30128 : prog 0x30128 = some (.pshufd 4 (.x 8) 57, 0x3012E) := rfl
+@[kcode_at] theorem at_30123 : prog 0x30123 = some (.vpshufd 9 (.x 4) 15, 0x30128) := rfl
+@[kcode_at] theorem at_30128 : prog 0x30128 = some (.vpshufd 4 (.x 8) 57, 0x3012E) := rfl
 @[kcode_at] theorem at_3012E : prog 0x3012E = some (.vshufps 8 6 (.x 7) 250, 0x30133) := rfl
 @[kcode_at] theorem at_30133 : prog 0x30133 = some (.vpblendd 9 9 (.x 8) 170, 0x30139) := rfl
 @[kcode_at] theorem at_30139 : prog 0x30139 = some (.vpunpcklqdq 8 7 (.x 5), 0x3013D) := rfl
 @[kcode_at] theorem at_3013D : prog 0x3013D = some (.vpblendd 8 8 (.x 6) 136, 0x30143) := rfl
-@[kcode_at] theorem at_30143 : prog 0x30143 = some (.pshufd 8 (.x 8) 120, 0x30149) := rfl
+@[kcode_at] theorem at_30143 : prog 0x30143 = some (.vpshufd 8 (.x 8) 120, 0x30149) := rfl
 @[kcode_at] theorem at_30149 : prog 0x30149 = some (.vpunpckhdq 5 5 (.x 7), 0x3014D) := rfl
 @[kcode_at] theorem at_3014D : prog 0x3014D = some (.vpunpckldq 6 6 (.x 5), 0x30151) := rfl
-@[kcode_at] theorem at_30151 : prog 0x30151 = some (.pshufd 7 (.x 6) 30, 0x30156) := rfl
-@[kcode_at] theorem at_30156 : prog 0x30156 = some (.movv false 5 (.x 9), 0x3015A) := rfl
-@[kcode_at] theorem at_3015A : prog 0x3015A = some (.movv false 6 (.x 8), 0x3015E) := rfl
+@[kcode_at] theorem at_30151 : prog 0x30151 = some (.vpshufd 7 (.x 6) 30, 0x30156) := rfl
+@[kcode_at] theorem at_30156 : prog 0x30156 = some (.vmovv false 5 (.x 9), 0x3015A) := rfl
+@[kcode_at] theorem at_3015A : prog 0x3015A = some (.vmovv false 6 (.x 8), 0x3015E) := rfl
 @[kcode_at] theorem at_3015E : prog 0x3015E = some (.jmp 0x30064, 0x30163) := rfl
 @[kcode_at] theorem at_30163 : prog 0x30163 = some (.vpxor 0 0 (.x 2), 0x30167) := rfl
 @[kcode_at] theorem at_30167 : prog 0x30167 = some (.vpxor 1 1 (.x 3), 0x3016B) := rfl

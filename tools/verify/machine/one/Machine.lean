@@ -149,6 +149,11 @@ structure Wide where
   z30 : Z
   z31 : Z
 
+/-- Every wide register zero (for tests). -/
+def Wide.zero : Wide :=
+  { r10 := 0, r11 := 0, u0 := 0, u1 := 0, u2 := 0, u3 := 0, u4 := 0, u5 := 0, u6 := 0, u7 := 0, u8 := 0, u9 := 0, u10 := 0, u11 := 0, u12 := 0, u13 := 0, u14 := 0, u15 := 0,
+    z16 := 0, z17 := 0, z18 := 0, z19 := 0, z20 := 0, z21 := 0, z22 := 0, z23 := 0, z24 := 0, z25 := 0, z26 := 0, z27 := 0, z28 := 0, z29 := 0, z30 := 0, z31 := 0 }
+
 inductive Reg | rax | rcx | rdx | rbx | rsp | rbp | rsi | rdi | r8 | r9 | r12 | r13 | r14 | r15 | r10 | r11
   deriving DecidableEq
 

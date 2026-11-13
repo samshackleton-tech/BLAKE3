@@ -39,7 +39,7 @@ theorem sse41_kernel_shows_only_addresses (rdi rsi rsp ra : BitVec 64) : ∃ L :
   refine ⟨?L, ?_⟩
   rotate_left
   intro s cv0 cv1 b0 b1 b2 b3 hpc hdi hsi hsp hc0 hc1 hb0 hb1 hb2 hb3 hret hapart
-  obtain ⟨rax, rcx, rdx, rbx, rsp_, rbp, rsi_, rdi_, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, pc⟩ := s
+  obtain ⟨rax, rcx, rdx, rbx, rsp_, rbp, rsi_, rdi_, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, pc, w⟩ := s
   simp only at hpc hdi hsi hsp hc0 hc1 hb0 hb1 hb2 hb3 hret hapart
   subst pc rdi_ rsi_ rsp_
   have r0 := read_vec hc0
@@ -78,7 +78,7 @@ theorem avx512_kernel_shows_only_addresses (rdi rsi rsp ra : BitVec 64) : ∃ L 
   refine ⟨?L, ?_⟩
   rotate_left
   intro s cv0 cv1 b0 b1 b2 b3 hpc hdi hsi hsp hc0 hc1 hb0 hb1 hb2 hb3 hret hapart
-  obtain ⟨rax, rcx, rdx, rbx, rsp_, rbp, rsi_, rdi_, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, pc⟩ := s
+  obtain ⟨rax, rcx, rdx, rbx, rsp_, rbp, rsi_, rdi_, r8, r9, r12, r13, r14, r15, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, pc, w⟩ := s
   simp only at hpc hdi hsi hsp hc0 hc1 hb0 hb1 hb2 hb3 hret hapart
   subst pc rdi_ rsi_ rsp_
   have r0 := read_vec hc0

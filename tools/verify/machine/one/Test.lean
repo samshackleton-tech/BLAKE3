@@ -24,7 +24,7 @@ def zeros (n : Nat) : List (BitVec 8) := List.replicate n 0
 def st (pc : Nat) (rdi rsi rdx rcx r8 r9 : BitVec 64) (m : Mem) : State :=
   { rax := 0, rcx, rdx, rbx := 0xB, rsp := 0x7FF8, rbp := 0, rsi, rdi, r8, r9, r12 := 0, r13 := 0, r14 := 0, r15 := 0,
     zf := none, cf := none, x0 := 0, x1 := 0, x2 := 0, x3 := 0, x4 := 0, x5 := 0, x6 := 0, x7 := 0, x8 := 0, x9 := 0,
-    x10 := 0, x11 := 0, x12 := 0, x13 := 0, x14 := 0, x15 := 0, mem := m, pc }
+    x10 := 0, x11 := 0, x12 := 0, x13 := 0, x14 := 0, x15 := 0, mem := m, pc, w := Wide.zero }
 
 def vOf (f : Nat → Nat) : V := mk4 (BitVec.ofNat 32 (f 0)) (BitVec.ofNat 32 (f 1)) (BitVec.ofNat 32 (f 2)) (BitVec.ofNat 32 (f 3))
 def l0 := vOf fun i => 0x11111111 * (i + 1)

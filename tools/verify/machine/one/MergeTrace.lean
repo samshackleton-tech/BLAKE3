@@ -95,7 +95,7 @@ theorem turn_avx_leak (self arr keyp fp len n : BitVec 64) (l0 l1 r0 r1 k0 k1 : 
     (oSelf : ∀ x : BitVec 64, (x - self).toNat < 9 → inF (x - fp) = false)
     -- the length is not in the lower slot
     (hLS : ∀ x : BitVec 64, (x - self).toNat < 8 → 32 ≤ (x - (arr + ((len + 18446744073709551614#64) <<< 5))).toNat) :
-    ∃ S, stepsL Code.prog (52 + (362 + 12)) ⟨⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, m, 0x40094⟩, []⟩ = some S ∧
+    ∃ S, stepsL Code.prog (52 + (362 + 12)) ⟨⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, m, 0x40094, w⟩, []⟩ = some S ∧
       S.leak = turn_avx_shows self arr keyp fp len (decide (n - 1#64 = 0#64)) := by
   -- the checks' flags, from the bounds
   have h1 : len.ult 1#64 = false := by bv_decide
@@ -146,7 +146,7 @@ theorem turn_avx_leak (self arr keyp fp len n : BitVec 64) (l0 l1 r0 r1 k0 k1 : 
     rfl
   -- the last part, on the kernel's memory
   obtain ⟨rax2, rcx2, rdx2, rbx2, rsp2, rbp2, rsi2, rdi2, r82, r92, r122, r132, r142, r152, zf2, cf2,
-    y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, b, pcv⟩ := s2
+    y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, b, pcv, w'⟩ := s2
   simp only at pc2' sp2' mem2' bx2 bp2 d12 d13 d14 d15
   rw [bx1] at bx2; rw [bp1] at bp2; rw [c12] at d12; rw [c13] at d13; rw [c14] at d14; rw [c15] at d15
   subst pcv rsp2 rbx2 rbp2 r122 r132 r142 r152
@@ -248,7 +248,7 @@ theorem turn_sse_leak (self arr keyp fp len n : BitVec 64) (l0 l1 r0 r1 k0 k1 : 
     (oSelf : ∀ x : BitVec 64, (x - self).toNat < 9 → inF (x - fp) = false)
     -- the length is not in the lower slot
     (hLS : ∀ x : BitVec 64, (x - self).toNat < 8 → 32 ≤ (x - (arr + ((len + 18446744073709551614#64) <<< 5))).toNat) :
-    ∃ S, stepsL Code.prog (52 + (467 + 13)) ⟨⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, m, 0x40094⟩, []⟩ = some S ∧
+    ∃ S, stepsL Code.prog (52 + (467 + 13)) ⟨⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, n, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, m, 0x40094, w⟩, []⟩ = some S ∧
       S.leak = turn_sse_shows self arr keyp fp len (decide (n - 1#64 = 0#64)) := by
   -- the checks' flags, from the bounds
   have h1 : len.ult 1#64 = false := by bv_decide
@@ -298,7 +298,7 @@ theorem turn_sse_leak (self arr keyp fp len n : BitVec 64) (l0 l1 r0 r1 k0 k1 : 
     rfl
   -- the last part, on the kernel's memory
   obtain ⟨rax2, rcx2, rdx2, rbx2, rsp2, rbp2, rsi2, rdi2, r82, r92, r122, r132, r142, r152, zf2, cf2,
-    y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, b, pcv⟩ := s2
+    y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15, b, pcv, w'⟩ := s2
   simp only at pc2' sp2' mem2' bx2 bp2 d12 d13 d14 d15
   rw [bx1] at bx2; rw [bp1] at bp2; rw [c12] at d12; rw [c13] at d13; rw [c14] at d14; rw [c15] at d15
   subst pcv rsp2 rbx2 rbp2 r122 r132 r142 r152
