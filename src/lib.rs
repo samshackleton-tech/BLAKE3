@@ -501,13 +501,16 @@ impl Hash {
         // The kernel fills a buffer of its own and the string is made from
         // that. (Filled in place, the string is copied out of this function
         // by loads that straddle the kernel's sixteen-byte stores, which
-        // costs more than the kernel does.)
-        let mut text = [0u8; 2 * OUT_LEN];
+        // costs more than the kernel does.) The buffer is not zeroed first:
+        // the kernel writes every byte of it.
+        let mut text = core::mem::MaybeUninit::<[u8; 2 * OUT_LEN]>::uninit();
         // SAFETY: the kernel reads the 32 bytes at `hash`, writes the 64 at
         // `out` and touches nothing else (its contract, proved of the
         // assembled instructions: tools/verify/hex). It uses SSE2 on x86-64
         // and NEON on AArch64, which every supported CPU has.
-        unsafe { hex(text.as_mut_ptr(), self.0.as_ptr()) };
+        unsafe { hex(text.as_mut_ptr().cast(), self.0.as_ptr()) };
+        // SAFETY: all 64 bytes are written (the same contract).
+        let text = unsafe { text.assume_init() };
         // SAFETY: the 64 bytes are the hexadecimal's characters, `0` to `9`
         // and `a` to `f` (the same contract).
         let text = unsafe { core::str::from_utf8_unchecked(&text) };
