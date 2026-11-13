@@ -709,4 +709,61 @@ fn test_linux_cold_evicted_mixed_batch_and_single_large() {
     evict_all(&files[big_idx..=big_idx]);
     let out_big_1t = cmd!(b3sum_exe(), "--num-threads", "1", &files[big_idx]).read().unwrap();
     assert_eq!(out_big_1t, expected_plain[big_idx]);
+
+    // 5. Cold parallel `--check` over the 72-file manifest
+    let check_path = dir.path().join("manifest.b3");
+    fs::write(&check_path, expected_plain.join("\n") + "\n").unwrap();
+    evict_all(&files);
+    let chk_out = cmd!(b3sum_exe(), "--check", &check_path).read().unwrap();
+    let expected_ok: Vec<String> = files.iter().map(|p| format!("{}: OK", p.to_string_lossy())).collect();
+    assert_eq!(chk_out, expected_ok.join("\n"));
+
+    evict_all(&files);
+    let chk_quiet = cmd!(b3sum_exe(), "--check", "--quiet", &check_path).read().unwrap();
+    assert!(chk_quiet.is_empty());
+}
+
+#[test]
+fn test_parallel_check_preserves_line_order_across_errors_and_failures() {
+    blake3::initialize();
+    let dir = tempfile::tempdir().unwrap();
+    let mut lines = Vec::new();
+    let mut want_stdout = Vec::new();
+    for i in 0..40usize {
+        let p = dir.path().join(format!("item-{i:02}"));
+        let data = vec![i as u8; i * 300 + 5];
+        fs::write(&p, &data).unwrap();
+        let h = blake3::convenience::hash(&data).to_hex();
+        if i == 7 {
+            lines.push("not-a-valid-check-line".to_string());
+        } else if i == 15 {
+            let missing = dir.path().join("does-not-exist");
+            lines.push(format!("{h}  {}", missing.to_string_lossy()));
+            want_stdout.push(format!("{}: FAILED (", missing.to_string_lossy()));
+        } else if i == 23 {
+            let wrong = "0".repeat(64);
+            lines.push(format!("{wrong}  {}", p.to_string_lossy()));
+            want_stdout.push(format!("{}: FAILED", p.to_string_lossy()));
+        } else {
+            lines.push(format!("{h}  {}", p.to_string_lossy()));
+            want_stdout.push(format!("{}: OK", p.to_string_lossy()));
+        }
+    }
+    let cf = dir.path().join("mixed.b3");
+    fs::write(&cf, lines.join("\n") + "\n").unwrap();
+    let out = cmd!(b3sum_exe(), "--check", &cf).stdout_capture().stderr_capture().unchecked().run().unwrap();
+    assert!(!out.status.success());
+    let stdout_str = String::from_utf8_lossy(&out.stdout);
+    let got_lines: Vec<&str> = stdout_str.lines().collect();
+    assert_eq!(got_lines.len(), want_stdout.len());
+    for (got, want) in got_lines.iter().zip(&want_stdout) {
+        if want.ends_with("FAILED (") {
+            assert!(got.starts_with(want), "got={got} want_prefix={want}");
+        } else {
+            assert_eq!(*got, want.as_str());
+        }
+    }
+    let stderr_str = String::from_utf8_lossy(&out.stderr);
+    assert!(stderr_str.contains("Invalid check line format"), "{stderr_str}");
+    assert!(stderr_str.contains("3 computed checksums did NOT match"), "{stderr_str}");
 }

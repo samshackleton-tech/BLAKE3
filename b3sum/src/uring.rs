@@ -1,6 +1,7 @@
 //! Minimal Linux `io_uring` wrapper over `libc` (`SYS_io_uring_setup`,
 //! `SYS_io_uring_enter`, and the ring mappings). Zero external dependencies.
 
+use core::cell::Cell;
 use std::io;
 use std::os::fd::RawFd;
 use std::ptr;
@@ -114,10 +115,34 @@ pub(crate) struct Uring {
     cqes: *const IoUringCqe,
 }
 
-// Each `Uring` is owned by one single-issuer thread at a time.
 unsafe impl Send for Uring {}
 
+thread_local! {
+    /// Per-thread cached `Uring`: `IORING_SETUP_SINGLE_ISSUER` binds each ring
+    /// to the `tid` that created it, so reuse stays strictly thread-local.
+    static LOCAL_URING: Cell<Option<Uring>> = const { Cell::new(None) };
+}
+
 impl Uring {
+    /// Acquire this thread's cached `Uring` with at least `entries` SQEs, or create one.
+    pub(crate) fn acquire(entries: u32) -> io::Result<Self> {
+        if let Some(ring) = LOCAL_URING.with(|c| c.take()) {
+            if ring.sq_entries >= entries {
+                return Ok(ring);
+            }
+            drop(ring);
+        }
+        Self::new(entries)
+    }
+
+    /// Cache an idle `Uring` on the thread that created it so subsequent
+    /// `--check` batches on this thread reuse it without `io_uring_setup`.
+    pub(crate) fn release(self) {
+        LOCAL_URING.with(|c| {
+            c.set(Some(self));
+        });
+    }
+
     pub(crate) fn new(entries: u32) -> io::Result<Self> {
         let try_flags = [
             IORING_SETUP_CQSIZE | IORING_SETUP_COOP_TASKRUN | IORING_SETUP_SINGLE_ISSUER | IORING_SETUP_DEFER_TASKRUN,
@@ -280,7 +305,6 @@ impl Uring {
         let mut to_submit = self.unsubmitted;
         self.unsubmitted = 0;
 
-        // With DEFER_TASKRUN, GETEVENTS runs pending task_work even when min_complete == 0.
         let need_getevents = min_complete > 0 || (self.ring_flags & IORING_SETUP_DEFER_TASKRUN) != 0;
         if to_submit == 0 && min_complete == 0 && !need_getevents {
             return Ok(());
@@ -309,7 +333,6 @@ impl Uring {
             }
             let err = io::Error::last_os_error();
             if err.kind() == io::ErrorKind::Interrupted {
-                // Kernel may have consumed some or all SQEs from sq_head before EINTR.
                 let head = unsafe { (*self.sq_head).load(Ordering::Acquire) };
                 to_submit = self.local_sq_tail.wrapping_sub(head);
                 if min_complete == 0 && to_submit == 0 {
@@ -354,30 +377,58 @@ mod test {
     use std::os::fd::AsRawFd;
 
     #[test]
-    fn uring_reads_multiple_files_and_offsets() {
-        let Ok(mut ring) = Uring::new(16) else { return };
+    fn uring_reads_offsets_saturation_and_error_cqes() {
+        blake3::initialize();
+        let Ok(mut ring) = Uring::new(8) else { return };
+        assert!(ring.pop_cqe().is_none());
+        assert_eq!(ring.unsubmitted(), 0);
+        let cap = ring.sq_space_left();
+        assert!(cap >= 8);
+
         let dir = tempfile::tempdir().unwrap();
-        let mut files = Vec::new();
-        let mut bufs = Vec::new();
-        for i in 0..8usize {
-            let p = dir.path().join(format!("f{i}"));
-            let data: Vec<u8> = (0..(i * 1111 + 17)).map(|k| (k * 13 + i) as u8).collect();
-            std::fs::write(&p, &data).unwrap();
-            files.push((std::fs::File::open(&p).unwrap(), data));
-            bufs.push(vec![0u8; i * 1111 + 32]);
+        let p = dir.path().join("f0");
+        let data: Vec<u8> = (0..10_000usize).map(|k| (k * 13 + 7) as u8).collect();
+        std::fs::write(&p, &data).unwrap();
+        let f = std::fs::File::open(&p).unwrap();
+
+        // 1. Non-zero offset read + saturation up to `cap` (`push_read` returns false when full!)
+        let mut bufs: Vec<Vec<u8>> = (0..cap as usize).map(|_| vec![0u8; 256]).collect();
+        for (i, b) in bufs.iter_mut().enumerate() {
+            let off = (i * 111) as u64;
+            assert!(unsafe { ring.push_read(f.as_raw_fd(), b.as_mut_ptr(), 256, off, 0, i as u64) });
+            assert_eq!(ring.unsubmitted(), (i + 1) as u32);
         }
-        for (i, ((f, _), buf)) in files.iter().zip(bufs.iter_mut()).enumerate() {
-            assert!(unsafe { ring.push_read(f.as_raw_fd(), buf.as_mut_ptr(), buf.len() as u32, 0, 0, i as u64) });
-        }
-        ring.submit_and_wait(8).unwrap();
-        let mut seen = 0usize;
+        assert_eq!(ring.sq_space_left(), 0);
+        let mut extra = [0u8; 16];
+        assert!(!unsafe { ring.push_read(f.as_raw_fd(), extra.as_mut_ptr(), 16, 0, 0, 999) }, "ring must report full");
+
+        ring.submit_and_wait(cap).unwrap();
+        assert_eq!(ring.unsubmitted(), 0);
+        assert_eq!(ring.sq_space_left(), cap);
+
+        let mut seen = vec![false; cap as usize];
         while let Some(cqe) = ring.pop_cqe() {
             let i = cqe.user_data as usize;
-            let want = &files[i].1;
-            assert_eq!(cqe.res as usize, want.len());
-            assert_eq!(&bufs[i][..want.len()], &want[..]);
-            seen += 1;
+            assert_eq!(cqe.res, 256);
+            let off = i * 111;
+            assert_eq!(&bufs[i][..], &data[off..off + 256]);
+            seen[i] = true;
         }
-        assert_eq!(seen, 8);
+        assert!(seen.into_iter().all(|x| x));
+        assert!(ring.pop_cqe().is_none());
+
+        // 2. Fault injection: invalid fd `-1` produces `-EBADF` CQE without corrupting ring state,
+        // and `acquire` / `release` recycles the idle ring cleanly.
+        assert!(unsafe { ring.push_read(-1, extra.as_mut_ptr(), 16, 0, 0, 0xDEAD_BEEF) });
+        ring.submit_and_wait(1).unwrap();
+        let err_cqe = ring.pop_cqe().expect("error CQE");
+        assert_eq!(err_cqe.user_data, 0xDEAD_BEEF);
+        assert_eq!(err_cqe.res, -libc::EBADF);
+        ring.submit_and_wait(0).unwrap();
+
+        let saved_fd = ring.fd;
+        ring.release();
+        let reused = Uring::acquire(8).unwrap();
+        assert_eq!(reused.fd, saved_fd);
     }
 }

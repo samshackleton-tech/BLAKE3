@@ -1,21 +1,18 @@
 //! Linux `io_uring` + `blake3::throughput::Pipeline` file hashing engine.
 //!
-//! - **Small and medium files (`< 512 KiB`)**:
-//!   - Page-cache hits (`preadv2` with `RWF_NOWAIT`) read directly into a
-//!     `Block`-aligned L2-hot arena (`WarmBatch`, 16 slots x 16 KiB) and hash
-//!     together on the reading core via `blake3::throughput::hash_each`
-//!     (multi-buffer SIMD, zero cross-socket cache transfers, zero pool spawn).
-//!   - Page-cache misses stream asynchronously through a per-worker `Uring`
-//!     (`COOP_TASKRUN | SINGLE_ISSUER | DEFER_TASKRUN`, 32-64 reads in flight),
-//!     reaping CQEs out-of-order and batching `<= 16 KiB` completions through
-//!     the same core-local `WarmBatch` (`throughput::hash_each`).
-//! - **Large files (`>= 512 KiB`)**:
-//!   - Cached (`mincore` resident): `< 4 MiB` hashes in place on the core;
-//!     `>= 4 MiB` loans `&map` zero-copy to `Pipeline::lent` across the worker
-//!     pool and holds up to `HOLD_PAGES` until exit.
-//!   - Cold (not resident): streams directly from storage into 64 KiB
-//!     `Pipeline::room()`s via `IORING_OP_READ`, overlapping NVMe DMA with
-//!     multi-core subtree hashing while capping memory to ~4 MiB per stream.
+//! Serves both multi-file hashing (`b3sum files...`) and checkfile verification
+//! (`b3sum --check sums.b3`) through [`hash_paths`]:
+//! - **Warm runs**: starts up to 12 threads; small files (`<= 16 KiB`) read via
+//!   `preadv2(RWF_NOWAIT)` into a core-local `MaybeUninit<Block>` arena and hash
+//!   16-at-a-time via `blake3::throughput::hash_each`; warm files `>= 4 MiB`
+//!   loan `&map` zero-copy to `Pipeline::lent` across the worker pool.
+//! - **Cold runs**: the first `RWF_NOWAIT` miss opens per-worker single-issuer
+//!   `Uring`s (`COOP_TASKRUN | SINGLE_ISSUER | DEFER_TASKRUN`), dynamically
+//!   waking up to 28 cold I/O workers across NUMA sockets on wide servers,
+//!   pushing `< 4 MiB` files straight onto `Uring` (where kernel `io_read`
+//!   serves cached hits inline and dispatches NVMe reads asynchronously), and
+//!   streaming `>= 32 MiB` cold files (`>= 4 MiB` on 1 thread) into 64 KiB
+//!   `Pipeline::room()`s at ~20 MiB RSS.
 
 use crate::Args;
 use crate::uring::{IoUringCqe, Uring};
@@ -28,10 +25,12 @@ use std::collections::VecDeque;
 use std::fs::File;
 use std::io;
 use std::os::fd::{AsRawFd, RawFd};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 const SMALL: u64 = crate::MAP_LEN as u64;
+const COLD_RING_MAX_FILE: u64 = 4 << 20;
+const COLD_ROOM_STREAM_MIN_MT: u64 = 32 << 20;
 const WARM_BATCH_MAX_FILE: usize = 16 * 1024;
 const WARM_SLOT_BLOCKS: usize = (WARM_BATCH_MAX_FILE / 64) + 1;
 const WARM_BATCH_SLOTS: usize = 16;
@@ -43,26 +42,26 @@ const LARGE_WINDOW: usize = 64;
 const MAX_FILE_ROOMS: u64 = 48;
 const USER_LARGE_BIT: u64 = 1 << 63;
 
-pub(crate) fn applies(args: &Args) -> bool {
-    args.is_standard_32() && args.file_args.len() > 1 && args.file_args.iter().all(|p| p != Path::new("-"))
+pub(crate) fn applies_to_paths(args: &Args, paths: &[PathBuf]) -> bool {
+    args.is_standard_32() && paths.len() > 1 && paths.iter().all(|p| p != Path::new("-"))
 }
 
 pub(crate) fn hash_single_cold_large_file_1t(args: &Args, file: &File, hint_size: u64) -> Option<io::Result<blake3::Hash>> {
     if !args.is_standard_32() {
         return None;
     }
-    let mut ring = Uring::new(RING_ENTRIES).ok()?;
+    let mut ring = Uring::acquire(RING_ENTRIES).ok()?;
     crate::init_pool_once(1);
     let mut pipe = Pipeline::<usize, ()>::new(args.mode, Limits { messages: 2, rooms: LARGE_WINDOW });
     let mut deferred_cqes = VecDeque::new();
     let mut msg = block_on(pipe.message(0, Some(hint_size)));
-    match stream_fd_into_rooms(&mut ring, &mut deferred_cqes, &mut pipe, &mut msg, file.as_raw_fd(), hint_size) {
+    let out = match stream_fd_into_rooms(&mut ring, &mut deferred_cqes, &mut pipe, &mut msg, file.as_raw_fd(), hint_size) {
         Ok(()) => {
             pipe.end(msg);
             loop {
                 if let Some(ev) = pipe.next_event() {
                     match ev {
-                        Event::Hashed { hash, .. } => return Some(Ok(hash)),
+                        Event::Hashed { hash, .. } => break Ok(hash),
                         _ => unreachable!(),
                     }
                 }
@@ -74,20 +73,42 @@ pub(crate) fn hash_single_cold_large_file_1t(args: &Args, file: &File, hint_size
             while pipe.next_event().is_none() {
                 block_on(pipe.ready());
             }
-            Some(Err(e))
+            Err(e)
         }
-    }
+    };
+    ring.release();
+    Some(out)
 }
 
+/// Pre-grow the kernel file-descriptor table while single-threaded, raising
+/// `RLIMIT_NOFILE` up to `rlim_max` where needed and clamping to `rlim_cur - 1`
+/// so `dup2` never fails with `EBADF` when `want > 1024` (which previously left
+/// the table at 64 and caused four 10 ms `synchronize_rcu` stalls across threads).
 fn grow_descriptor_table(descriptors: usize) {
-    let target = descriptors.next_power_of_two() as i32 - 1;
+    let want = descriptors.next_power_of_two().max(64) as libc::rlim_t;
     unsafe {
-        let fd = libc::open(c"/dev/null".as_ptr(), libc::O_RDONLY | libc::O_CLOEXEC);
-        if fd >= 0 {
-            if libc::dup2(fd, target) == target {
-                libc::close(target);
+        let mut rlim = libc::rlimit { rlim_cur: 0, rlim_max: 0 };
+        let cap = if libc::getrlimit(libc::RLIMIT_NOFILE, &mut rlim) == 0 {
+            if rlim.rlim_cur < want && rlim.rlim_max > rlim.rlim_cur {
+                let raised = want.min(rlim.rlim_max);
+                let try_rlim = libc::rlimit { rlim_cur: raised, rlim_max: rlim.rlim_max };
+                if libc::setrlimit(libc::RLIMIT_NOFILE, &try_rlim) == 0 {
+                    rlim.rlim_cur = raised;
+                }
             }
-            libc::close(fd);
+            rlim.rlim_cur
+        } else {
+            1024
+        };
+        let target = want.min(cap).saturating_sub(1) as i32;
+        if target >= 63 {
+            let fd = libc::open(c"/dev/null".as_ptr(), libc::O_RDONLY | libc::O_CLOEXEC);
+            if fd >= 0 {
+                if libc::dup2(fd, target) == target {
+                    libc::close(target);
+                }
+                libc::close(fd);
+            }
         }
     }
 }
@@ -298,9 +319,6 @@ fn stream_fd_into_rooms(
     }
 }
 
-/// Core-local uninitialized `MaybeUninit<Block>` L2-hot arena (`16 x 16.06 KiB`):
-/// batches both cached `RWF_NOWAIT` hits and completed `Uring` `<= 16 KiB` reads
-/// through `blake3::throughput::hash_each` on the reading CPU core.
 struct WarmBatch {
     arena: Option<Box<[MaybeUninit<Block>]>>,
     entries: [(usize, usize); WARM_BATCH_SLOTS],
@@ -313,6 +331,11 @@ impl WarmBatch {
     }
 
     #[inline]
+    fn has_arena(&self) -> bool {
+        self.arena.is_some()
+    }
+
+    #[inline]
     fn slot_ptr_and_cap(&mut self, slot: usize) -> (*mut u8, usize) {
         let arena = self.arena.get_or_insert_with(|| Box::new_uninit_slice(WARM_BATCH_SLOTS * WARM_SLOT_BLOCKS));
         let start = slot * WARM_SLOT_BLOCKS;
@@ -321,19 +344,22 @@ impl WarmBatch {
     }
 
     #[inline]
-    fn push_slice(
+    fn push_raw(
         &mut self,
         file_idx: usize,
-        bytes: &[u8],
+        src_ptr: *const u8,
+        byte_len: usize,
         mode: blake3::Mode<'_>,
         done: &mut dyn FnMut(usize, anyhow::Result<blake3::Hash>) -> bool,
         keep_going: &mut bool,
     ) {
-        debug_assert!(bytes.len() <= WARM_BATCH_MAX_FILE);
+        debug_assert!(byte_len <= WARM_BATCH_MAX_FILE);
         let slot = self.len;
         let (dst, _) = self.slot_ptr_and_cap(slot);
-        unsafe { core::ptr::copy_nonoverlapping(bytes.as_ptr(), dst, bytes.len()) };
-        self.entries[slot] = (file_idx, bytes.len());
+        if byte_len > 0 {
+            unsafe { core::ptr::copy_nonoverlapping(src_ptr, dst, byte_len) };
+        }
+        self.entries[slot] = (file_idx, byte_len);
         self.len += 1;
         if self.len == WARM_BATCH_SLOTS {
             self.flush(mode, done, keep_going);
@@ -509,10 +535,6 @@ impl WarmLargePipe {
     }
 }
 
-/// Per-worker `Uring` sliding-window reader for cold files.
-/// Small (`< 512 KiB`) completions hash right on this CPU core (via `WarmBatch`
-/// `throughput::hash_each` for `<= 16 KiB` or `hash_slice_32` for `16..512 KiB`),
-/// spawning zero pool threads unless a cold large file (`>= 512 KiB`) occurs!
 struct ColdRingState {
     ring: Uring,
     cold_large_pipe: Option<Pipeline<usize, ()>>,
@@ -526,7 +548,7 @@ struct ColdRingState {
 
 impl ColdRingState {
     fn new(max_slots: usize) -> Option<Self> {
-        let ring = Uring::new(RING_ENTRIES).ok()?;
+        let ring = Uring::acquire(RING_ENTRIES).ok()?;
         Some(Self {
             ring,
             cold_large_pipe: None,
@@ -539,10 +561,43 @@ impl ColdRingState {
         })
     }
 
+    fn queue_file(
+        &mut self,
+        file_idx: usize,
+        file: File,
+        hint: usize,
+        partial_src: Option<(*const u8, usize)>,
+        args: &Args,
+        warm_batch: &mut WarmBatch,
+        done: &mut dyn FnMut(usize, anyhow::Result<blake3::Hash>) -> bool,
+        keep_going: &mut bool,
+    ) {
+        while self.free_slot_ids.is_empty() || self.ring.sq_space_left() == 0 {
+            self.step_ring(true, args, warm_batch, done, keep_going);
+        }
+        let partial_at = partial_src.map_or(0, |(_, n)| n);
+        let mut buf = self.free_bufs.pop().unwrap_or_default();
+        let cap = (hint + 1).max(partial_at + 4096);
+        ensure_spare_cap(&mut buf, cap);
+        if let Some((src_ptr, n)) = partial_src
+            && n > 0
+        {
+            unsafe { core::ptr::copy_nonoverlapping(src_ptr, buf.as_mut_ptr(), n) };
+        }
+        let sid = self.free_slot_ids.pop().unwrap();
+        let fd = file.as_raw_fd();
+        let ptr = unsafe { buf.as_mut_ptr().add(partial_at) };
+        let rlen = (buf.capacity() - partial_at) as u32;
+        self.slots[sid] = Some(SmallSlot { file_idx, file, buf, at: partial_at, hint });
+        let ok = unsafe { self.ring.push_read(fd, ptr, rlen, partial_at as u64, 0, sid as u64) };
+        debug_assert!(ok);
+        self.ring_in_flight += 1;
+    }
+
     fn step_ring(
         &mut self,
         wait: bool,
-        mode: blake3::Mode<'_>,
+        args: &Args,
         warm_batch: &mut WarmBatch,
         done: &mut dyn FnMut(usize, anyhow::Result<blake3::Hash>) -> bool,
         keep_going: &mut bool,
@@ -553,11 +608,20 @@ impl ColdRingState {
                 return;
             }
             if let Err(e) = self.ring.submit_and_wait(min_wait) {
-                eprintln!("{}: io_uring_enter: {}", crate::NAME, e);
+                let errno = e.raw_os_error().unwrap_or(libc::EIO);
+                for slot in &mut self.slots {
+                    if let Some(st) = slot.take() {
+                        self.ring_in_flight -= 1;
+                        if *keep_going && !done(st.file_idx, Err(io::Error::from_raw_os_error(errno).into())) {
+                            *keep_going = false;
+                        }
+                    }
+                }
                 return;
             }
         }
 
+        let mode = args.mode;
         loop {
             let cqe = match self.deferred_cqes.pop_front() {
                 Some(c) => c,
@@ -592,9 +656,11 @@ impl ColdRingState {
                     match res {
                         Ok(n) => {
                             if n <= WARM_BATCH_MAX_FILE {
-                                warm_batch.push_slice(st.file_idx, &st.buf[..n], mode, done, keep_going);
+                                warm_batch.push_raw(st.file_idx, st.buf.as_ptr(), n, mode, done, keep_going);
                             } else {
-                                warm_batch.flush(mode, done, keep_going);
+                                if n >= SMALL as usize && args.num_threads().is_none() {
+                                    crate::init_pool_once(crate::threads().get());
+                                }
                                 let h = crate::hash_slice_32(mode, &st.buf[..n]);
                                 if *keep_going && !done(st.file_idx, Ok(h)) {
                                     *keep_going = false;
@@ -608,12 +674,14 @@ impl ColdRingState {
                         }
                     }
                     st.buf.clear();
-                    if self.free_bufs.len() < self.max_slots * 2 {
+                    if self.free_bufs.len() < self.max_slots * 2 && st.buf.capacity() <= (256 << 10) {
                         self.free_bufs.push(st.buf);
                     }
                     continue;
                 }
-                self.free_bufs.push(st.buf);
+                if st.buf.capacity() <= (256 << 10) && self.free_bufs.len() < self.max_slots * 2 {
+                    self.free_bufs.push(st.buf);
+                }
                 self.free_slot_ids.push(slot_id);
                 if *keep_going && !done(st.file_idx, Err(io::Error::from_raw_os_error(errno).into())) {
                     *keep_going = false;
@@ -631,8 +699,11 @@ impl ColdRingState {
                 if *keep_going {
                     unsafe { st.buf.set_len(total_len) };
                     if total_len <= WARM_BATCH_MAX_FILE {
-                        warm_batch.push_slice(st.file_idx, &st.buf, mode, done, keep_going);
+                        warm_batch.push_raw(st.file_idx, st.buf.as_ptr(), total_len, mode, done, keep_going);
                     } else {
+                        if total_len >= SMALL as usize && args.num_threads().is_none() {
+                            crate::init_pool_once(crate::threads().get());
+                        }
                         let h = crate::hash_slice_32(mode, &st.buf);
                         if !done(st.file_idx, Ok(h)) {
                             *keep_going = false;
@@ -640,7 +711,7 @@ impl ColdRingState {
                     }
                     st.buf.clear();
                 }
-                if self.free_bufs.len() < self.max_slots * 2 {
+                if st.buf.capacity() <= (256 << 10) && self.free_bufs.len() < self.max_slots * 2 {
                     self.free_bufs.push(st.buf);
                 }
             } else {
@@ -663,28 +734,33 @@ impl ColdRingState {
         }
     }
 
-    fn finish(
-        &mut self,
-        mode: blake3::Mode<'_>,
-        warm_batch: &mut WarmBatch,
-        done: &mut dyn FnMut(usize, anyhow::Result<blake3::Hash>) -> bool,
-        keep_going: &mut bool,
-    ) {
+    fn finish(mut self, args: &Args, warm_batch: &mut WarmBatch, done: &mut dyn FnMut(usize, anyhow::Result<blake3::Hash>) -> bool, keep_going: &mut bool) {
         while self.ring_in_flight > 0 || !self.deferred_cqes.is_empty() {
-            self.step_ring(true, mode, warm_batch, done, keep_going);
+            self.step_ring(true, args, warm_batch, done, keep_going);
         }
+        drop(self.cold_large_pipe);
+        self.ring.release();
     }
 }
 
-pub(crate) fn hash_inputs(args: &Args, out: &mut crate::OutBuf) -> Option<u64> {
-    let nfiles = args.file_args.len();
+/// Hash `paths` in parallel and deliver `(index, result)` in exact `0..paths.len()`
+/// order to `on_ordered` (which returns `false` to stop early).
+pub(crate) fn hash_paths(args: &Args, paths: &[PathBuf], on_ordered: &mut dyn FnMut(usize, anyhow::Result<blake3::Hash>) -> bool) {
+    hash_paths_inner(args, paths, false, on_ordered);
+}
+
+fn hash_paths_inner(args: &Args, paths: &[PathBuf], force_no_uring: bool, on_ordered: &mut dyn FnMut(usize, anyhow::Result<blake3::Hash>) -> bool) {
+    let nfiles = paths.len();
+    if nfiles == 0 {
+        return;
+    }
     let total_threads = crate::threads().get();
     let io_threads = if total_threads == 1 {
         1
     } else if nfiles < 32 {
         total_threads.min(4).min(nfiles)
     } else {
-        total_threads.min(12)
+        total_threads.min(12).min(nfiles)
     };
     let slots_per_ring = if io_threads <= 4 { SLOTS_PER_RING_SINGLE } else { SLOTS_PER_RING_MULTI };
 
@@ -693,26 +769,26 @@ pub(crate) fn hash_inputs(args: &Args, out: &mut crate::OutBuf) -> Option<u64> {
     if io_threads == 1 {
         let next = AtomicUsize::new(0);
         let mut results: Vec<Option<anyhow::Result<blake3::Hash>>> = (0..nfiles).map(|_| None).collect();
-        let mut printed = 0usize;
-        let mut failed = 0u64;
-        run_hybrid_worker(args, slots_per_ring, total_threads, io_threads, &next, &mut |idx, res| {
+        let mut emitted = 0usize;
+        let mut stop = false;
+        run_hybrid_worker(args, paths, slots_per_ring, total_threads, 1, force_no_uring, &next, &mut |idx, res| {
             results[idx] = Some(res);
-            while printed < nfiles {
-                let Some(item) = results[printed].take() else { break };
-                if let Err(e) = item.and_then(|h| crate::print_hash_output(h, &args.file_args[printed], args, out)) {
-                    failed = failed.saturating_add(1);
-                    let _ = out.flush();
-                    eprintln!("{}: {}: {}", crate::NAME, args.file_args[printed].to_string_lossy(), e);
+            while emitted < nfiles {
+                let Some(item) = results[emitted].take() else { break };
+                if !on_ordered(emitted, item) {
+                    stop = true;
+                    return false;
                 }
-                printed += 1;
+                emitted += 1;
             }
-            true
+            !stop
         });
-        return Some(failed);
+        return;
     }
 
     let next = AtomicUsize::new(0);
     let (done_tx, done_rx) = std::sync::mpsc::channel::<(usize, anyhow::Result<blake3::Hash>)>();
+
     std::thread::scope(|scope| {
         for _ in 1..io_threads {
             if next.load(Ordering::Relaxed) >= nfiles {
@@ -720,55 +796,59 @@ pub(crate) fn hash_inputs(args: &Args, out: &mut crate::OutBuf) -> Option<u64> {
             }
             let (next_ref, tx) = (&next, done_tx.clone());
             scope.spawn(move || {
-                run_hybrid_worker(args, slots_per_ring, total_threads, io_threads, next_ref, &mut |i, res| tx.send((i, res)).is_ok());
+                run_hybrid_worker(args, paths, slots_per_ring, total_threads, io_threads, force_no_uring, next_ref, &mut |i, res| tx.send((i, res)).is_ok());
             });
         }
         drop(done_tx);
 
         let mut results: Vec<Option<anyhow::Result<blake3::Hash>>> = (0..nfiles).map(|_| None).collect();
-        let mut printed = 0usize;
-        let mut failed = 0u64;
+        let mut emitted = 0usize;
+        let mut stop = false;
         let mut take = |idx: usize, res: anyhow::Result<blake3::Hash>| -> bool {
             results[idx] = Some(res);
-            while printed < nfiles {
-                let Some(item) = results[printed].take() else { break };
-                if let Err(e) = item.and_then(|h| crate::print_hash_output(h, &args.file_args[printed], args, out)) {
-                    failed = failed.saturating_add(1);
-                    let _ = out.flush();
-                    eprintln!("{}: {}: {}", crate::NAME, args.file_args[printed].to_string_lossy(), e);
+            while emitted < nfiles {
+                let Some(item) = results[emitted].take() else { break };
+                if !on_ordered(emitted, item) {
+                    stop = true;
+                    return false;
                 }
-                printed += 1;
+                emitted += 1;
             }
-            true
+            !stop
         };
 
-        run_hybrid_worker(args, slots_per_ring, total_threads, io_threads, &next, &mut |i, res| {
+        run_hybrid_worker(args, paths, slots_per_ring, total_threads, io_threads, force_no_uring, &next, &mut |i, res| {
             while let Ok((wi, wres)) = done_rx.try_recv() {
-                take(wi, wres);
+                if !take(wi, wres) {
+                    return false;
+                }
             }
             take(i, res)
         });
         for (i, res) in done_rx {
-            take(i, res);
+            if !take(i, res) {
+                break;
+            }
         }
-        Some(failed)
-    })
+    });
 }
 
+#[allow(clippy::too_many_arguments)]
 fn run_hybrid_worker(
     args: &Args,
+    paths: &[PathBuf],
     max_slots: usize,
     total_threads: usize,
     io_threads: usize,
+    mut uring_unavailable: bool,
     next: &AtomicUsize,
     done: &mut dyn FnMut(usize, anyhow::Result<blake3::Hash>) -> bool,
 ) {
-    let paths = &args.file_args;
     let mut warm_batch = WarmBatch::new();
     let mut medium_buf: Vec<u8> = Vec::new();
     let mut warm_pipe: Option<WarmLargePipe> = None;
     let mut cold: Option<ColdRingState> = None;
-    let mut uring_unavailable = false;
+    let mut probe_stack: [MaybeUninit<u8>; WARM_SLOT_BLOCKS * 64] = [MaybeUninit::uninit(); WARM_SLOT_BLOCKS * 64];
     let mut keep_going = true;
 
     while keep_going {
@@ -778,10 +858,10 @@ fn run_hybrid_worker(
         if let Some(ref mut c) = cold {
             let submit_batch = if c.ring_in_flight <= 8 { 4 } else { 16 };
             if c.ring.unsubmitted() >= submit_batch {
-                c.step_ring(false, args.mode, &mut warm_batch, done, &mut keep_going);
+                c.step_ring(false, args, &mut warm_batch, done, &mut keep_going);
             }
             while keep_going && (c.free_slot_ids.is_empty() || c.ring.sq_space_left() == 0) {
-                c.step_ring(true, args.mode, &mut warm_batch, done, &mut keep_going);
+                c.step_ring(true, args, &mut warm_batch, done, &mut keep_going);
             }
             if !keep_going {
                 break;
@@ -813,18 +893,39 @@ fn run_hybrid_worker(
 
         let size = meta.len();
 
-        // 1. Small files `<= 16 KiB`: try 1-syscall `preadv2(RWF_NOWAIT)` into core-local `WarmBatch`!
+        // Fast path once `cold` ring is already active on this worker: push `< 4 MiB`
+        // files straight onto `Uring` without an extra `preadv2(RWF_NOWAIT)` syscall
+        // (kernel `io_read` serves cached hits inline and arms async NVMe reads on misses!).
+        if let Some(ref mut c) = cold
+            && size < COLD_RING_MAX_FILE
+        {
+            c.queue_file(i, file, size as usize, None, args, &mut warm_batch, done, &mut keep_going);
+            continue;
+        }
+
+        // 1. Small files `<= 16 KiB` before `cold` is active:
         if size <= WARM_BATCH_MAX_FILE as u64 {
             let hint = size as usize;
-            let slot_idx = warm_batch.len;
-            let (slot_ptr, slot_cap) = warm_batch.slot_ptr_and_cap(slot_idx);
+            let (slot_ptr, slot_cap, in_arena) = if warm_batch.has_arena() {
+                let s = warm_batch.len;
+                let (p, cap) = warm_batch.slot_ptr_and_cap(s);
+                (p, cap, true)
+            } else {
+                (probe_stack.as_mut_ptr().cast::<u8>(), probe_stack.len(), false)
+            };
+
             match try_pread_cached(file.as_raw_fd(), slot_ptr, slot_cap, 0, hint) {
                 Ok((n, true)) => {
                     drop(file);
-                    warm_batch.entries[slot_idx] = (i, n);
-                    warm_batch.len += 1;
-                    if warm_batch.len == WARM_BATCH_SLOTS {
-                        warm_batch.flush(args.mode, done, &mut keep_going);
+                    if in_arena {
+                        let s = warm_batch.len;
+                        warm_batch.entries[s] = (i, n);
+                        warm_batch.len += 1;
+                        if warm_batch.len == WARM_BATCH_SLOTS {
+                            warm_batch.flush(args.mode, done, &mut keep_going);
+                        }
+                    } else {
+                        warm_batch.push_raw(i, slot_ptr, n, args.mode, done, &mut keep_going);
                     }
                     continue;
                 }
@@ -836,28 +937,11 @@ fn run_hybrid_worker(
                         }
                     }
                     if let Some(ref mut c) = cold {
-                        while c.free_slot_ids.is_empty() || c.ring.sq_space_left() == 0 {
-                            c.step_ring(true, args.mode, &mut warm_batch, done, &mut keep_going);
-                        }
-                        let mut buf = c.free_bufs.pop().unwrap_or_default();
-                        let cap = (hint + 1).max(partial_at + 4096);
-                        ensure_spare_cap(&mut buf, cap);
-                        if partial_at > 0 {
-                            let (src_ptr, _) = warm_batch.slot_ptr_and_cap(slot_idx);
-                            unsafe { core::ptr::copy_nonoverlapping(src_ptr, buf.as_mut_ptr(), partial_at) };
-                        }
-                        let sid = c.free_slot_ids.pop().unwrap();
-                        let fd = file.as_raw_fd();
-                        let ptr = unsafe { buf.as_mut_ptr().add(partial_at) };
-                        let rlen = (buf.capacity() - partial_at) as u32;
-                        c.slots[sid] = Some(SmallSlot { file_idx: i, file, buf, at: partial_at, hint });
-                        unsafe { c.ring.push_read(fd, ptr, rlen, partial_at as u64, 0, sid as u64) };
-                        c.ring_in_flight += 1;
+                        c.queue_file(i, file, hint, Some((slot_ptr, partial_at)), args, &mut warm_batch, done, &mut keep_going);
                     } else {
                         let mut buf = Vec::with_capacity((hint + 1).max(4096));
                         if partial_at > 0 {
-                            let (src_ptr, _) = warm_batch.slot_ptr_and_cap(slot_idx);
-                            unsafe { core::ptr::copy_nonoverlapping(src_ptr, buf.as_mut_ptr(), partial_at) };
+                            unsafe { core::ptr::copy_nonoverlapping(slot_ptr, buf.as_mut_ptr(), partial_at) };
                         }
                         let res = read_rest_sync_uninit(&file, &mut buf, partial_at).map(|n| crate::hash_slice_32(args.mode, &buf[..n])).map_err(Into::into);
                         if !done(i, res) {
@@ -875,7 +959,7 @@ fn run_hybrid_worker(
             }
         }
 
-        // 2. Medium files `16 KiB < size < 512 KiB`: try `RWF_NOWAIT` into core-local `medium_buf`!
+        // 2. Medium files `16 KiB < size < 512 KiB` before `cold` is active:
         if size < SMALL {
             let hint = size as usize;
             ensure_spare_cap(&mut medium_buf, hint + 1);
@@ -898,22 +982,7 @@ fn run_hybrid_worker(
                         }
                     }
                     if let Some(ref mut c) = cold {
-                        while c.free_slot_ids.is_empty() || c.ring.sq_space_left() == 0 {
-                            c.step_ring(true, args.mode, &mut warm_batch, done, &mut keep_going);
-                        }
-                        let mut buf = c.free_bufs.pop().unwrap_or_default();
-                        let cap = (hint + 1).max(partial_at + 8192);
-                        ensure_spare_cap(&mut buf, cap);
-                        if partial_at > 0 {
-                            unsafe { core::ptr::copy_nonoverlapping(medium_buf.as_ptr(), buf.as_mut_ptr(), partial_at) };
-                        }
-                        let sid = c.free_slot_ids.pop().unwrap();
-                        let fd = file.as_raw_fd();
-                        let ptr = unsafe { buf.as_mut_ptr().add(partial_at) };
-                        let rlen = (buf.capacity() - partial_at) as u32;
-                        c.slots[sid] = Some(SmallSlot { file_idx: i, file, buf, at: partial_at, hint });
-                        unsafe { c.ring.push_read(fd, ptr, rlen, partial_at as u64, 0, sid as u64) };
-                        c.ring_in_flight += 1;
+                        c.queue_file(i, file, hint, Some((medium_buf.as_ptr(), partial_at)), args, &mut warm_batch, done, &mut keep_going);
                     } else {
                         let res = read_rest_sync_uninit(&file, &mut medium_buf, partial_at)
                             .map(|n| crate::hash_slice_32(args.mode, &medium_buf[..n]))
@@ -952,9 +1021,38 @@ fn run_hybrid_worker(
                 wp.submit_lent(i, size, map, done, &mut keep_going);
                 continue;
             }
-            drop(map);
+
+            // Cold `512 KiB .. 4 MiB`: queue into `ColdRingState` sliding window if possible!
+            if size < COLD_RING_MAX_FILE {
+                drop(map);
+                if !uring_unavailable && cold.is_none() {
+                    cold = ColdRingState::new(max_slots);
+                    if cold.is_none() {
+                        uring_unavailable = true;
+                    }
+                }
+                if let Some(ref mut c) = cold {
+                    c.queue_file(i, file, size as usize, None, args, &mut warm_batch, done, &mut keep_going);
+                    continue;
+                }
+            } else if total_threads > 1 && size < COLD_ROOM_STREAM_MIN_MT {
+                // Cold `4 MiB .. 32 MiB` on multi-thread (e.g. `4 MiB` and `16 MiB` in `mixed-1000`):
+                // fault `map` across all NUMA cores in parallel without stalling this worker's `Uring`!
+                let pool_workers = if args.num_threads().is_some() { (total_threads - io_threads + 1).max(1) } else { total_threads };
+                crate::init_pool_once(pool_workers);
+                let h = crate::hash_slice_32(args.mode, &map);
+                crate::hold(map);
+                if !done(i, Ok(h)) {
+                    keep_going = false;
+                }
+                continue;
+            } else {
+                drop(map);
+            }
         }
 
+        // Cold `>= 32 MiB` (or `>= 4 MiB` on 1 thread): stream into 64 KiB `Pipeline` rooms
+        // at ~20 MiB RSS, overlapping NVMe DMA with multi-core hashing!
         if !uring_unavailable && cold.is_none() {
             cold = ColdRingState::new(max_slots);
             if cold.is_none() {
@@ -1001,8 +1099,8 @@ fn run_hybrid_worker(
         }
     }
 
-    if let Some(mut c) = cold {
-        c.finish(args.mode, &mut warm_batch, done, &mut keep_going);
+    if let Some(c) = cold {
+        c.finish(args, &mut warm_batch, done, &mut keep_going);
     }
     warm_batch.flush(args.mode, done, &mut keep_going);
     if let Some(mut wp) = warm_pipe {
@@ -1013,11 +1111,12 @@ fn run_hybrid_worker(
 #[cfg(test)]
 mod test {
     use std::os::fd::AsRawFd;
+    use std::path::PathBuf;
 
     #[test]
-    fn sync_fallback_and_uring_agree_across_hints_and_growing_files() {
+    fn sync_fallback_pread_and_uring_disabled_mode_match_reference() {
         blake3::initialize();
-        let dir = tempfile::tempdir().unwrap();
+        let dir = tempfile::tempdir_in(".").unwrap_or_else(|_| tempfile::tempdir().unwrap());
         let p = dir.path().join("grow");
         let content: Vec<u8> = (0..100_000u32).map(|i| (i * 7) as u8).collect();
         std::fs::write(&p, &content).unwrap();
@@ -1031,15 +1130,96 @@ mod test {
         let m = super::pread_fill_rest(f.as_raw_fd(), &mut slice_buf, 123).unwrap();
         assert_eq!(m, 5000);
         assert_eq!(&slice_buf[..], &content[123..5123]);
+
+        // Direct unit coverage of `applies_to_paths`, `WarmBatch` (count=1 and count=16), and `hash_single_cold_large_file_1t`.
+        let a_two = crate::Args::for_test_plain(vec![p.clone(), p.clone()]);
+        assert!(!super::applies_to_paths(&a_two, &[p.clone()]));
+        assert!(!super::applies_to_paths(&a_two, &[p.clone(), PathBuf::from("-")]));
+        assert!(super::applies_to_paths(&a_two, &[p.clone(), p.clone()]));
+        if let Some(res) = super::hash_single_cold_large_file_1t(&a_two, &f, content.len() as u64) {
+            assert_eq!(res.unwrap(), blake3::convenience::hash(&content));
+        }
+
+        let mut wb = super::WarmBatch::new();
+        assert!(!wb.has_arena());
+        let mut keep = true;
+        let mut wb_out = Vec::new();
+        wb.push_raw(
+            0,
+            b"abc".as_ptr(),
+            3,
+            blake3::Mode::Plain,
+            &mut |i, r| {
+                wb_out.push((i, r.unwrap()));
+                true
+            },
+            &mut keep,
+        );
+        assert!(wb.has_arena());
+        wb.flush(
+            blake3::Mode::Plain,
+            &mut |i, r| {
+                wb_out.push((i, r.unwrap()));
+                true
+            },
+            &mut keep,
+        );
+        assert_eq!(wb_out, vec![(0, blake3::convenience::hash(b"abc"))]);
+
+        wb_out.clear();
+        for k in 0..super::WARM_BATCH_SLOTS {
+            let msg = vec![(k + 1) as u8; k * 13 + 1];
+            wb.push_raw(
+                k,
+                msg.as_ptr(),
+                msg.len(),
+                blake3::Mode::Plain,
+                &mut |i, r| {
+                    wb_out.push((i, r.unwrap()));
+                    true
+                },
+                &mut keep,
+            );
+        }
+        assert_eq!(wb_out.len(), super::WARM_BATCH_SLOTS);
+        for (k, &(idx, h)) in wb_out.iter().enumerate() {
+            assert_eq!(idx, k);
+            assert_eq!(h, blake3::convenience::hash(&vec![(k + 1) as u8; k * 13 + 1]));
+        }
+
+        // Fault injection: exercise `force_no_uring = true` across cold evicted files of all size classes!
+        let mut paths: Vec<PathBuf> = Vec::new();
+        let mut want: Vec<blake3::Hash> = Vec::new();
+        for (i, &len) in [0usize, 19, 4096, 16384, 90_000, 600_000].iter().enumerate() {
+            let fp = dir.path().join(format!("nouring-{i}"));
+            let data: Vec<u8> = (0..len).map(|k| (k * 11 + i) as u8).collect();
+            {
+                use std::io::Write;
+                let mut wf = std::fs::File::create(&fp).unwrap();
+                wf.write_all(&data).unwrap();
+                wf.sync_all().unwrap();
+            }
+            let rf = std::fs::File::open(&fp).unwrap();
+            unsafe { libc::posix_fadvise(rf.as_raw_fd(), 0, 0, libc::POSIX_FADV_DONTNEED) };
+            want.push(blake3::convenience::hash(&data));
+            paths.push(fp);
+        }
+        let args = crate::Args::for_test_plain(paths.clone());
+        let mut got = Vec::new();
+        super::hash_paths_inner(&args, &paths, true, &mut |idx, res| {
+            assert_eq!(idx, got.len());
+            got.push(res.unwrap());
+            true
+        });
+        assert_eq!(got, want);
     }
 
     #[test]
-    fn stream_fd_into_rooms_and_evicted_cold_batch_match_reference() {
+    fn stream_fd_into_rooms_handles_boundaries_and_read_errors_cleanly() {
         blake3::initialize();
         let Ok(mut ring) = crate::uring::Uring::new(64) else { return };
         crate::init_pool_once(2);
 
-        // Test `stream_fd_into_rooms` across exact 64 KiB multiples, odd tails, and > 4 MiB!
         let dir = tempfile::tempdir_in(".").unwrap_or_else(|_| tempfile::tempdir().unwrap());
         for &len in &[0usize, 1, 65_535, 65_536, 65_537, 600_000, 4_500_000] {
             let p = dir.path().join(format!("large-{len}"));
@@ -1059,7 +1239,6 @@ mod test {
             );
             let mut deferred = std::collections::VecDeque::new();
             let mut m = blake3::throughput::block_on(pipe.message(0, Some(len as u64)));
-            // Also test wrong smaller hint (`len / 3`) to verify growing-file extension!
             super::stream_fd_into_rooms(&mut ring, &mut deferred, &mut pipe, &mut m, rf.as_raw_fd(), (len / 3) as u64).unwrap();
             pipe.end(m);
             let got = loop {
@@ -1071,6 +1250,20 @@ mod test {
             let mut want_h = blake3::convenience::Hasher::new(blake3::Mode::DeriveKey("b3sum-uring-room-test"), None);
             want_h.update(&data);
             assert_eq!(got, want_h.finalize(), "room stream len={len}");
+        }
+
+        // Fault injection: passing a directory fd (`EISDIR`) or `-1` (`EBADF`) to `stream_fd_into_rooms`
+        // drains all in-flight rooms cleanly and returns `Err` without aborting `Pipeline`!
+        let dir_file = std::fs::File::open(dir.path()).unwrap();
+        let mut pipe =
+            blake3::throughput::Pipeline::<usize, ()>::new(blake3::Mode::Plain, blake3::throughput::Limits { messages: 2, rooms: super::LARGE_WINDOW });
+        let mut deferred = std::collections::VecDeque::new();
+        let mut m = blake3::throughput::block_on(pipe.message(9, Some(1_000_000)));
+        let err = super::stream_fd_into_rooms(&mut ring, &mut deferred, &mut pipe, &mut m, dir_file.as_raw_fd(), 1_000_000).unwrap_err();
+        assert_eq!(err.raw_os_error(), Some(libc::EISDIR));
+        pipe.abort(m);
+        while pipe.next_event().is_none() {
+            blake3::throughput::block_on(pipe.ready());
         }
     }
 }

@@ -148,6 +148,26 @@ impl Args {
         Ok(Self { inner, file_args, mode, base_hasher })
     }
 
+    #[cfg(test)]
+    pub(crate) fn for_test_plain(file_args: Vec<PathBuf>) -> Self {
+        let inner = Inner {
+            file: file_args.clone(),
+            keyed: false,
+            derive_key: None,
+            length: blake3::OUT_LEN as u64,
+            seek: 0,
+            num_threads: None,
+            no_mmap: false,
+            no_names: false,
+            raw: false,
+            sigilcode: false,
+            tag: false,
+            check: false,
+            quiet: false,
+        };
+        Self { inner, file_args, mode: blake3::Mode::Plain, base_hasher: blake3::convenience::Hasher::new(blake3::Mode::Plain, None) }
+    }
+
     #[inline(always)]
     fn is_standard_32(&self) -> bool {
         self.inner.seek == 0 && self.inner.length <= blake3::OUT_LEN as u64
@@ -831,32 +851,93 @@ fn parse_check_line(mut line: &str, sigils: bool) -> anyhow::Result<ParsedCheckL
     Ok(ParsedCheckLine { file_string: file_str.to_string(), is_escaped, file_path: file_path_string.into(), expected_hash })
 }
 
-fn hash_inputs(args: &Args, out: &mut OutBuf) -> u64 {
+/// Hash `paths` in standard 32-byte mode (`seek == 0 && len <= 32`) across
+/// cores (using `linux_pipe` on Linux and worker threads elsewhere), invoking
+/// `on_ordered(idx, result)` in exact `0..paths.len()` order.
+fn hash_paths_32(args: &Args, paths: &[PathBuf], on_ordered: &mut dyn FnMut(usize, anyhow::Result<blake3::Hash>) -> bool) {
+    if paths.is_empty() {
+        return;
+    }
+    if paths.len() == 1 {
+        let _ = on_ordered(0, hash_path_hash(args, &paths[0]));
+        return;
+    }
+
     #[cfg(target_os = "linux")]
-    if linux_pipe::applies(args)
-        && let Some(failed) = linux_pipe::hash_inputs(args, out)
-    {
+    if linux_pipe::applies_to_paths(args, paths) {
+        linux_pipe::hash_paths(args, paths, on_ordered);
+        return;
+    }
+
+    let threads = threads().get().min(paths.len());
+    if args.num_threads().is_some() {
+        FILE_THREADS.store(threads, std::sync::atomic::Ordering::Relaxed);
+    }
+    let next = std::sync::atomic::AtomicUsize::new(0);
+    let (done_tx, done_rx) = std::sync::mpsc::channel();
+    std::thread::scope(|scope| {
+        for _ in 1..threads {
+            if next.load(std::sync::atomic::Ordering::Relaxed) >= paths.len() {
+                break;
+            }
+            let (next, done_tx) = (&next, done_tx.clone());
+            scope.spawn(move || {
+                loop {
+                    let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    if i >= paths.len() || done_tx.send((i, hash_path_hash(args, &paths[i]))).is_err() {
+                        break;
+                    }
+                }
+            });
+        }
+        drop(done_tx);
+
+        let mut emitted = 0usize;
+        let mut stop = false;
+        let mut results: Vec<Option<anyhow::Result<blake3::Hash>>> = (0..paths.len()).map(|_| None).collect();
+        let mut take = |i: usize, output: anyhow::Result<blake3::Hash>| -> bool {
+            results[i] = Some(output);
+            while emitted < paths.len() {
+                let Some(item) = results[emitted].take() else { break };
+                if !on_ordered(emitted, item) {
+                    stop = true;
+                    return false;
+                }
+                emitted += 1;
+            }
+            !stop
+        };
+        loop {
+            let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            if i >= paths.len() || !take(i, hash_path_hash(args, &paths[i])) {
+                break;
+            }
+        }
+        for (i, output) in done_rx {
+            if !take(i, output) {
+                break;
+            }
+        }
+    });
+}
+
+fn hash_inputs(args: &Args, out: &mut OutBuf) -> u64 {
+    if args.is_standard_32() {
+        let mut failed = 0u64;
+        hash_paths_32(args, &args.file_args, &mut |idx, res| {
+            let path = &args.file_args[idx];
+            if let Err(e) = res.and_then(|h| print_hash_output(h, path, args, out)) {
+                failed = failed.saturating_add(1);
+                let _ = out.flush();
+                eprintln!("{}: {}: {}", NAME, path.to_string_lossy(), e);
+            }
+            true
+        });
         return failed;
     }
 
-    if args.file_args.len() == 1 && args.is_standard_32() {
-        let path = &args.file_args[0];
-        match hash_path_hash(args, path).and_then(|h| print_hash_output(h, path, args, out)) {
-            Ok(()) => return 0,
-            Err(e) => {
-                let _ = out.flush();
-                eprintln!("{}: {}: {}", NAME, path.to_string_lossy(), e);
-                return 1;
-            }
-        }
-    }
-
     let threads = if args.file_args.len() == 1 { 1 } else { threads().get().min(args.file_args.len()) };
-    if args.is_standard_32() {
-        hash_inputs_with(args, threads, out, hash_some_32, print_hash_output)
-    } else {
-        hash_inputs_with(args, threads, out, hash_some, print_output)
-    }
+    hash_inputs_with(args, threads, out, hash_some, print_output)
 }
 
 fn hash_inputs_with<O: Send>(
@@ -905,15 +986,6 @@ fn hash_inputs_with<O: Send>(
     })
 }
 
-fn hash_some_32(args: &Args, next: &std::sync::atomic::AtomicUsize, done: &mut dyn FnMut(usize, anyhow::Result<blake3::Hash>) -> bool) {
-    loop {
-        let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        if i >= args.file_args.len() || !done(i, hash_path_hash(args, &args.file_args[i])) {
-            return;
-        }
-    }
-}
-
 fn hash_some(args: &Args, next: &std::sync::atomic::AtomicUsize, done: &mut dyn FnMut(usize, anyhow::Result<blake3::OutputReader>) -> bool) {
     loop {
         let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -923,38 +995,38 @@ fn hash_some(args: &Args, next: &std::sync::atomic::AtomicUsize, done: &mut dyn 
     }
 }
 
-fn check_one_line(line: &str, args: &Args, out: &mut OutBuf) -> bool {
-    let parse_result = parse_check_line(line, args.sigilcode());
-    let ParsedCheckLine { file_string, is_escaped, file_path, expected_hash } = match parse_result {
-        Ok(parsed) => parsed,
-        Err(e) => {
-            let _ = out.flush();
-            eprintln!("{}: {}", NAME, e);
-            return false;
-        }
-    };
-    let file_string = if is_escaped { "\\".to_string() + &file_string } else { file_string };
-    let found_hash = match hash_path_hash(args, &file_path) {
+fn emit_checked_entry(parsed: ParsedCheckLine, res: anyhow::Result<blake3::Hash>, args: &Args, out: &mut OutBuf) -> bool {
+    let ParsedCheckLine { file_string, is_escaped, expected_hash, .. } = parsed;
+    let display = if is_escaped { "\\".to_string() + &file_string } else { file_string };
+    let found_hash = match res {
         Ok(h) => h,
         Err(e) => {
-            let _ = out.write_bytes(format!("{}: FAILED ({})\n", file_string, e).as_bytes());
+            let _ = out.write_bytes(format!("{}: FAILED ({})\n", display, e).as_bytes());
             return false;
         }
     };
+    // Constant-time comparison (`blake3::Hash::eq`).
     if expected_hash == found_hash {
         if !args.quiet() {
-            let _ = out.write_bytes(file_string.as_bytes());
+            let _ = out.write_bytes(display.as_bytes());
             let _ = out.write_bytes(b": OK\n");
         }
         true
     } else {
-        let _ = out.write_bytes(file_string.as_bytes());
+        let _ = out.write_bytes(display.as_bytes());
         let _ = out.write_bytes(b": FAILED\n");
         false
     }
 }
 
 fn check_one_checkfile(path: &Path, args: &Args, files_failed: &mut u64, out: &mut OutBuf) -> anyhow::Result<()> {
+    const CHECK_CHUNK: usize = 4096;
+    enum Entry {
+        ParseErr(anyhow::Error),
+        Stdin(ParsedCheckLine),
+        File { parsed: ParsedCheckLine, batch_idx: usize },
+    }
+
     let mut file;
     let stdin;
     let mut stdin_lock;
@@ -967,17 +1039,64 @@ fn check_one_checkfile(path: &Path, args: &Args, files_failed: &mut u64, out: &m
         file = File::open(path)?;
         bufreader = io::BufReader::new(&mut file);
     }
+
     let mut line = String::new();
-    loop {
-        line.clear();
-        let n = bufreader.read_line(&mut line)?;
-        if n == 0 {
-            return Ok(());
+    let mut entries = Vec::new();
+    let mut batch_paths = Vec::new();
+    let mut eof = false;
+
+    while !eof {
+        entries.clear();
+        batch_paths.clear();
+        while entries.len() < CHECK_CHUNK {
+            line.clear();
+            let n = bufreader.read_line(&mut line)?;
+            if n == 0 {
+                eof = true;
+                break;
+            }
+            match parse_check_line(&line, args.sigilcode()) {
+                Err(e) => entries.push(Entry::ParseErr(e)),
+                Ok(parsed) if parsed.file_path == Path::new("-") => entries.push(Entry::Stdin(parsed)),
+                Ok(parsed) => {
+                    let batch_idx = batch_paths.len();
+                    batch_paths.push(parsed.file_path.clone());
+                    entries.push(Entry::File { parsed, batch_idx });
+                }
+            }
         }
-        if !check_one_line(&line, args, out) {
-            *files_failed = files_failed.saturating_add(1);
+        if entries.is_empty() {
+            break;
+        }
+
+        let mut batch_results: Vec<Option<anyhow::Result<blake3::Hash>>> = (0..batch_paths.len()).map(|_| None).collect();
+        hash_paths_32(args, &batch_paths, &mut |idx, res| {
+            batch_results[idx] = Some(res);
+            true
+        });
+
+        for entry in entries.drain(..) {
+            let ok = match entry {
+                Entry::ParseErr(e) => {
+                    let _ = out.flush();
+                    eprintln!("{}: {}", NAME, e);
+                    false
+                }
+                Entry::Stdin(parsed) => {
+                    let res = hash_path_hash(args, &parsed.file_path);
+                    emit_checked_entry(parsed, res, args, out)
+                }
+                Entry::File { parsed, batch_idx } => {
+                    let res = batch_results[batch_idx].take().expect("every batch path hashed");
+                    emit_checked_entry(parsed, res, args, out)
+                }
+            };
+            if !ok {
+                *files_failed = files_failed.saturating_add(1);
+            }
         }
     }
+    Ok(())
 }
 
 #[cfg(unix)]
