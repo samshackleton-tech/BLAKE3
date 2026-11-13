@@ -492,6 +492,7 @@ impl Hash {
     /// type.
     ///
     /// [`ArrayString`]: https://docs.rs/arrayvec/0.5.1/arrayvec/struct.ArrayString.html
+    #[inline]
     pub fn to_hex(&self) -> ArrayString<{ 2 * OUT_LEN }> {
         unsafe extern "C" {
             #[cfg_attr(target_arch = "x86_64", link_name = "blake3_servil_hex")]
