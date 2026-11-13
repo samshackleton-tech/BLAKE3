@@ -653,3 +653,60 @@ fn test_sigilcode() {
     let f = cmd!(b3sum_exe(), "--sigilcode", "--raw", &empty).stderr_capture().unchecked().run().unwrap();
     assert!(!f.status.success());
 }
+
+#[test]
+#[cfg(target_os = "linux")]
+fn test_linux_cold_evicted_mixed_batch_and_single_large() {
+    use std::os::fd::AsRawFd;
+    blake3::initialize();
+    let dir = tempfile::tempdir_in(".").unwrap_or_else(|_| tempfile::tempdir().unwrap());
+    let sizes = [0usize, 1, 63, 64, 65, 4096, 16384, 16385, 100_000, 600_000, 4_300_000];
+    let mut files = Vec::new();
+    let mut expected_plain = Vec::new();
+    let mut expected_dk = Vec::new();
+    for i in 0..72usize {
+        let len = sizes[i % sizes.len()];
+        let path = dir.path().join(format!("f-{i:03}"));
+        let data: Vec<u8> = (0..len).map(|b| (b.wrapping_mul(17).wrapping_add(i)) as u8).collect();
+        let mut wf = fs::File::create(&path).unwrap();
+        wf.write_all(&data).unwrap();
+        wf.sync_all().unwrap();
+        expected_plain.push(format!("{}  {}", blake3::convenience::hash(&data).to_hex(), path.to_string_lossy()));
+        let mut dk = blake3::convenience::Hasher::new(blake3::Mode::DeriveKey("cli-cold-ctx"), None);
+        dk.update(&data);
+        expected_dk.push(format!("{}  {}", dk.finalize().to_hex(), path.to_string_lossy()));
+        files.push(path);
+    }
+
+    let evict_all = |paths: &[PathBuf]| {
+        for p in paths {
+            let f = fs::File::open(p).unwrap();
+            unsafe { libc::posix_fadvise(f.as_raw_fd(), 0, 0, libc::POSIX_FADV_DONTNEED) };
+        }
+    };
+
+    // 1. Cold multi-threaded mixed batch
+    evict_all(&files);
+    let out_mt = cmd(b3sum_exe(), &files).read().unwrap();
+    assert_eq!(out_mt, expected_plain.join("\n"));
+
+    // 2. Cold `--num-threads 1` mixed batch
+    evict_all(&files);
+    let mut args_1t: Vec<OsString> = vec!["--num-threads".into(), "1".into()];
+    args_1t.extend(files.iter().map(|p| p.as_os_str().to_owned()));
+    let out_1t = cmd(b3sum_exe(), &args_1t).read().unwrap();
+    assert_eq!(out_1t, expected_plain.join("\n"));
+
+    // 3. Cold `--derive-key` mixed batch
+    evict_all(&files);
+    let mut args_dk: Vec<OsString> = vec!["--derive-key".into(), "cli-cold-ctx".into()];
+    args_dk.extend(files.iter().map(|p| p.as_os_str().to_owned()));
+    let out_dk = cmd(b3sum_exe(), &args_dk).read().unwrap();
+    assert_eq!(out_dk, expected_dk.join("\n"));
+
+    // 4. Cold `--num-threads 1` single > 4 MiB file (`hash_single_cold_large_file_1t`)
+    let big_idx = sizes.iter().position(|&s| s > (4 << 20)).unwrap();
+    evict_all(&files[big_idx..=big_idx]);
+    let out_big_1t = cmd!(b3sum_exe(), "--num-threads", "1", &files[big_idx]).read().unwrap();
+    assert_eq!(out_big_1t, expected_plain[big_idx]);
+}

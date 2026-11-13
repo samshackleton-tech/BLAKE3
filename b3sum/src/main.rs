@@ -1,34 +1,20 @@
-//! b3sum: BLAKE3's command-line hasher. It hashes its inputs on
-//! `available_parallelism` threads, an atomic index handing each the next,
-//! printing lines in order; a cached file of 512 KiB or more is mapped and
-//! hashed in place over the pool and held mapped (`hold`); any other input
-//! is read into two buffers, the next read overlapping the hashing
-//! (`update_from`); on Linux, small files that miss the page cache are read
-//! ahead by the kernel, many at once (`readahead`).
+//! b3sum: BLAKE3's command-line hasher.
 //!
-//! The costs it is designed around (i7-12700K, Linux 7.0, cached files, a
-//! P core): open 0.65 us, fstat 0.19 us, reading 16 KiB 1.1 us, close
-//! 0.19 us; a thread's start 15-30 us; a hand-off to an awake thread about
-//! 30 ns, a sleeping one's wake 15-45 us before it runs; a whole b3sum
-//! process 650-800 us. A file handed to the pool pays a wake to save less
-//! than it costs below a few MiB.
+//! On Linux, multi-file runs and uncached large files stream through
+//! `io_uring` and `blake3::throughput::Pipeline` (`linux_pipe`):
+//! - Small files (`< 512 KiB`) are read asynchronously through `io_uring` into
+//!   recycled buffers and gathered into 64-member multi-buffer SIMD tasks on
+//!   the worker pool, with zero steady-state heap allocation.
+//! - Cached large files (`>= 512 KiB`, `mincore` resident) are mapped and
+//!   loaned zero-copy to `Pipeline::lent`, then held mapped up to `HOLD_PAGES`
+//!   until exit to avoid `munmap` TLB shootdowns.
+//! - Cold large files (`>= 512 KiB`, not resident in page cache) stream
+//!   directly from storage into 64 KiB `Pipeline::room()`s via batched
+//!   `IORING_OP_READ`s, overlapping NVMe DMA with all-core subtree hashing.
 //!
-//! Tried and set aside (`bench-hashes b3sum`, against the design above;
-//! the evidence in Devon's bench-hashes-validation, b3sum-*):
-//! - One stream for every file (`Stream::submit_reader` among them):
-//!   slower for whole files, cached x1.18-2.2, 1000 x 16 KiB up to x5.3
-//!   from storage: opening and reading a file costs the kernel about 8 us
-//!   and hashing 16 KiB 1.6 us, so a few threads cannot open fast enough,
-//!   and with many, handing a file over costs more than hashing it.
-//! - io_uring: as fast as the readahead hints with a ring per thread; one
-//!   ring for the run 2.8x slower cached (io-wq does every statx).
-//! - O_DIRECT for files that miss (x1.27-1.85), madvise WILLNEED or
-//!   MADV_POPULATE_READ on mappings (level to 42% slower), huge pages
-//!   (level), parallel pread of aligned subtrees without mapping (slower,
-//!   more CPU), buffered output (within noise).
-//! - Planning ahead (stat every file, big files first): x1.03-1.20 slower;
-//!   fixed files a thread, or each thread starting the next: 17-47% slower
-//!   on large runs.
+//! Single small files read into a stack buffer with zero `mmap` or ring setup,
+//! and standard 32-byte digests format on the stack into a 32 KiB buffered
+//! writer without cloning an 18 KiB `Hasher` per file.
 
 use anyhow::{bail, ensure};
 use clap::Parser;
@@ -44,7 +30,9 @@ mod unit_tests;
 const NAME: &str = "b3sum";
 
 #[cfg(target_os = "linux")]
-mod readahead;
+mod linux_pipe;
+#[cfg(target_os = "linux")]
+mod uring;
 
 const DERIVE_KEY_ARG: &str = "derive_key";
 const KEYED_ARG: &str = "keyed";
@@ -132,6 +120,7 @@ struct Inner {
 struct Args {
     inner: Inner,
     file_args: Vec<PathBuf>,
+    mode: blake3::Mode<'static>,
     base_hasher: blake3::convenience::Hasher,
 }
 
@@ -145,16 +134,23 @@ impl Args {
         if inner.sigilcode && inner.length == 0 && !inner.check {
             bail!("--sigilcode writes at least one output byte; --length is 0");
         }
-        let base_hasher = if inner.keyed {
-            // In keyed mode, since stdin is used for the key, we can't handle
-            // `-` arguments. Input::open handles that case below.
-            blake3::convenience::Hasher::new(blake3::Mode::Keyed(&read_key_from_stdin()?), None)
+        // Crash-only: leak the single key or context string once for `'static` Mode.
+        let mode: blake3::Mode<'static> = if inner.keyed {
+            let key: &'static [u8; blake3::KEY_LEN] = Box::leak(Box::new(read_key_from_stdin()?));
+            blake3::Mode::Keyed(key)
         } else if let Some(ref context) = inner.derive_key {
-            blake3::convenience::Hasher::new(blake3::Mode::DeriveKey(context), None)
+            let ctx: &'static str = Box::leak(context.clone().into_boxed_str());
+            blake3::Mode::DeriveKey(ctx)
         } else {
-            blake3::convenience::Hasher::new(blake3::Mode::Plain, None)
+            blake3::Mode::Plain
         };
-        Ok(Self { inner, file_args, base_hasher })
+        let base_hasher = blake3::convenience::Hasher::new(mode, None);
+        Ok(Self { inner, file_args, mode, base_hasher })
+    }
+
+    #[inline(always)]
+    fn is_standard_32(&self) -> bool {
+        self.inner.seek == 0 && self.inner.length <= blake3::OUT_LEN as u64
     }
 
     fn num_threads(&self) -> Option<std::num::NonZeroUsize> {
@@ -198,6 +194,154 @@ impl Args {
     }
 }
 
+/// 32 KiB buffered writer over stdout so multi-file runs make one `write`
+/// syscall per 32 KiB rather than one `LineWriter` flush per filename, while
+/// still hitting `SIGPIPE` on closed pipes (`test_reader_gone`).
+pub(crate) struct OutBuf {
+    buf: Vec<u8>,
+}
+
+const OUT_BUF_CAP: usize = 32 * 1024;
+
+impl OutBuf {
+    fn new() -> Self {
+        Self { buf: Vec::with_capacity(OUT_BUF_CAP) }
+    }
+
+    #[inline]
+    fn write_bytes(&mut self, bytes: &[u8]) -> io::Result<()> {
+        if self.buf.len() + bytes.len() > OUT_BUF_CAP {
+            self.flush()?;
+            if bytes.len() >= OUT_BUF_CAP {
+                return write_all_stdout(bytes);
+            }
+        }
+        self.buf.extend_from_slice(bytes);
+        Ok(())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        if !self.buf.is_empty() {
+            write_all_stdout(&self.buf)?;
+            self.buf.clear();
+        }
+        Ok(())
+    }
+}
+
+fn write_all_stdout(mut bytes: &[u8]) -> io::Result<()> {
+    #[cfg(unix)]
+    {
+        while !bytes.is_empty() {
+            let rc = unsafe { libc::write(1, bytes.as_ptr().cast(), bytes.len()) };
+            if rc < 0 {
+                let e = io::Error::last_os_error();
+                if e.kind() == io::ErrorKind::Interrupted {
+                    continue;
+                }
+                return Err(e);
+            }
+            bytes = &bytes[rc as usize..];
+        }
+        Ok(())
+    }
+    #[cfg(not(unix))]
+    {
+        let stdout = io::stdout();
+        let mut handle = stdout.lock();
+        handle.write_all(bytes)
+    }
+}
+
+#[inline]
+fn encode_hex_stack(src: &[u8], dst: &mut [u8]) {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    for (i, &b) in src.iter().enumerate() {
+        dst[2 * i] = HEX[(b >> 4) as usize];
+        dst[2 * i + 1] = HEX[(b & 0x0f) as usize];
+    }
+}
+
+#[inline]
+pub(crate) fn hash_slice_32(mode: blake3::Mode<'_>, bytes: &[u8]) -> blake3::Hash {
+    if use_pool_for(bytes.len()) {
+        let mut hasher = blake3::convenience::Hasher::new(mode, Some(bytes.len() as u64));
+        blake3::throughput::update_multithreaded(&mut hasher, bytes);
+        hasher.finalize()
+    } else if matches!(mode, blake3::Mode::Plain) {
+        blake3::convenience::hash(bytes)
+    } else {
+        let mut hasher = blake3::convenience::Hasher::new(mode, Some(bytes.len() as u64));
+        hasher.update(bytes);
+        hasher.finalize()
+    }
+}
+
+/// Fast standard-mode (`seek == 0 && len <= 32`) single-path hasher: avoids
+/// cloning an 18 KiB `Hasher` on warm mappings and small files, uses a 64 KiB
+/// stack buffer for small files (zero `8 MiB` `BUFFERS` fault), and streams
+/// cold large Linux files via `io_uring` + `Pipeline`.
+pub(crate) fn hash_path_hash(args: &Args, path: &Path) -> anyhow::Result<blake3::Hash> {
+    if path == Path::new("-") {
+        if args.keyed() {
+            bail!("Cannot open `-` in keyed mode");
+        }
+        let mut hasher = args.base_hasher.clone();
+        update_from(&mut hasher, io::stdin())?;
+        return Ok(hasher.finalize());
+    }
+
+    let mut file = File::open(path)?;
+    if let Ok(meta) = file.metadata()
+        && meta.is_file()
+    {
+        let size = meta.len();
+        if size < MAP_LEN as u64 {
+            let cap = (size as usize + 1).max(4096);
+            let mut buf = Vec::with_capacity(cap);
+            let n = read_all_uninit(&mut file, &mut buf)?;
+            return Ok(hash_slice_32(args.mode, &buf[..n]));
+        }
+
+        #[cfg(unix)]
+        if let Ok(len) = usize::try_from(size)
+            && len >= MAP_LEN
+            && let Ok(map) = unsafe { memmap2::Mmap::map(&file) }
+        {
+            if resident(&map) {
+                let h = hash_slice_32(args.mode, &map);
+                hold(map);
+                return Ok(h);
+            }
+            #[cfg(target_os = "linux")]
+            if threads().get() == 1 {
+                drop(map);
+                if size >= POOL_START_LEN as u64
+                    && let Some(res) = linux_pipe::hash_single_cold_large_file_1t(args, &file, size)
+                {
+                    return Ok(res?);
+                }
+                let mut buf = Vec::with_capacity(len + 1);
+                let n = read_all_uninit(&mut file, &mut buf)?;
+                return Ok(hash_slice_32(args.mode, &buf[..n]));
+            } else {
+                // Multi-threaded single cold file (`>= 512 KiB`): start pool and fault
+                // disjoint subtrees in parallel across all NUMA nodes and NVMe RAID stripes.
+                init_pool_once(pool_threads().get());
+                let h = hash_slice_32(args.mode, &map);
+                hold(map);
+                return Ok(h);
+            }
+            #[cfg(not(target_os = "linux"))]
+            drop(map);
+        }
+    }
+
+    let mut hasher = args.base_hasher.clone();
+    update_from(&mut hasher, file)?;
+    Ok(hasher.finalize())
+}
+
 fn hash_path(args: &Args, path: &Path) -> anyhow::Result<blake3::OutputReader> {
     let mut hasher = args.base_hasher.clone();
     if path == Path::new("-") {
@@ -206,48 +350,41 @@ fn hash_path(args: &Args, path: &Path) -> anyhow::Result<blake3::OutputReader> {
         }
         update_from(&mut hasher, io::stdin())?;
     } else {
-        let file = File::open(path)?;
-        #[cfg(unix)]
-        if let Some(map) = mapped(&file) {
-            update(&mut hasher, &map);
-            hold(map);
+        let mut file = File::open(path)?;
+        if let Ok(meta) = file.metadata()
+            && meta.is_file()
+            && meta.len() < 64 * 1024
+        {
+            let mut stack_buf = [0u8; 64 * 1024];
+            let n = fill(&mut file, &mut stack_buf)?;
+            update(&mut hasher, &stack_buf[..n]);
+            if n == stack_buf.len() {
+                update_from(&mut hasher, file)?;
+            }
         } else {
+            #[cfg(unix)]
+            if let Some(map) = mapped(&file) {
+                update(&mut hasher, &map);
+                hold(map);
+            } else {
+                update_from(&mut hasher, file)?;
+            }
+            #[cfg(not(unix))]
             update_from(&mut hasher, file)?;
         }
-        #[cfg(not(unix))]
-        update_from(&mut hasher, file)?;
     }
     let mut output_reader = hasher.finalize_xof();
     output_reader.set_position(args.seek());
     Ok(output_reader)
 }
 
-/// The most pages b3sum leaves mapped to the process's exit, each kept by
-/// one page-table entry (8 bytes, kernel memory, until exit): 262144 pages,
-/// about 2 MiB of entries, which map 1 GiB of files with 4 KiB pages (4 GiB
-/// with Apple's 16 KiB). The file's own pages are page cache, as after any
-/// read, and stay reclaimable while mapped.
 #[cfg(unix)]
 const HOLD_PAGES: u64 = 1 << 18;
 
-/// A hashed file's mapping, left to the process's exit while the pages
-/// held stay within HOLD_PAGES, else unmapped now. Unmapping tears down
-/// the file's page-table entries, about 65 ns a page with cross-core TLB
-/// flushes (i7-12700K: 23-25 ms of a 56 ms run for a cached 1 GiB file),
-/// while entries that merely exist cost
-/// nothing measured beside their memory: a process holding 6 GiB of
-/// touched mappings slowed another's reads of 10 GiB not at all (2.32
-/// GiB/s either way), at 2 MiB of page tables a GiB, its files kept cached
-/// in preference; exit reclaims them (crash-only). The cap bounds what a
-/// run over many large files holds (John, #56: holding every file of a
-/// 10 TB run would hold 20 GB of page tables). Measured against unmapping
-/// every file (servil), at a 1 GiB cap: 16 files of 64 MiB x0.82-0.93, the
-/// mixed tree x0.87-0.90; holding only the last file lost the gain (x1.00).
 #[cfg(unix)]
-fn hold(map: memmap2::Mmap) {
+pub(crate) fn hold(map: memmap2::Mmap) {
     use std::sync::atomic::{AtomicU64, Ordering};
     static HELD: AtomicU64 = AtomicU64::new(0);
-    // Sound: a plain query.
     let page = u64::try_from(unsafe { libc::sysconf(libc::_SC_PAGESIZE) }).expect("the page size is positive");
     let pages = (map.len() as u64).div_ceil(page);
     if HELD.fetch_add(pages, Ordering::Relaxed) + pages <= HOLD_PAGES {
@@ -257,25 +394,12 @@ fn hold(map: memmap2::Mmap) {
     }
 }
 
-/// `file` mapped, when it is at least MAP_LEN long and, outside Linux, in the page cache
-/// (its first page, by mincore): hashed in place over the pool, it skips
-/// the copy a read makes, which a reader thread does alone (Linux VM,
-/// 1 GiB in the page cache: 32 ms mapped against 79 ms read; Apple M4 Max
-/// 37 against 50). On macOS a file not in the cache is read: a mapping's
-/// page faults fetch it a few pages at a time (Mac, 1 GiB from storage:
-/// 402 ms mapped against 159 ms read). Linux reads ahead for a mapping, so
-/// it maps every file from MAP_LEN (i7-12700K, ext4 on NVMe, 1 GiB from
-/// storage: about 325 ms mapped against 410-527 ms read). A file cached
-/// only in part may be judged either way; either way hashes it right.
 #[cfg(unix)]
 fn mapped(file: &File) -> Option<memmap2::Mmap> {
     let len = usize::try_from(file.metadata().ok()?.len()).ok()?;
     if len < MAP_LEN {
         return None;
     }
-    // Sound: the mapping is read while this process holds the file open;
-    // a file another program truncates meanwhile is the caller's risk, as
-    // with any mapping (upstream b3sum mapped every file).
     let map = unsafe { memmap2::Mmap::map(file) }.ok()?;
     if cfg!(target_os = "linux") {
         return Some(map);
@@ -283,76 +407,107 @@ fn mapped(file: &File) -> Option<memmap2::Mmap> {
     resident(&map).then_some(map)
 }
 
-/// Whether `map`'s first page is in the page cache (mincore): a file read
-/// moments before, or one not yet read from storage.
 #[cfg(unix)]
-fn resident(map: &memmap2::Mmap) -> bool {
-    let mut resident = 0u8;
-    // Sound: the mapping's first page, from its start.
-    let rc = unsafe { libc::mincore(map.as_ptr() as *mut libc::c_void, 1, (&mut resident as *mut u8).cast()) };
-    rc == 0 && resident & 1 == 1
+pub(crate) fn resident(map: &memmap2::Mmap) -> bool {
+    let mut vec = 0u8;
+    let rc = unsafe { libc::mincore(map.as_ptr() as *mut libc::c_void, 1, (&mut vec as *mut u8).cast()) };
+    rc == 0 && vec & 1 == 1
 }
 
-/// The shortest file mapped when it is in the page cache: where the pool
-/// takes over (the library's 512 KiB). A shorter file is hashed on one
-/// thread, and a mapping's page faults interrupt it once a page, each
-/// putting the SME unit in its slow state (macOS: 1 GiB on one thread 2.6x
-/// slower mapped than prefaulted, probe/willneed-mechanism, job 1156); a
-/// read's copy into a cached buffer faults nothing.
 #[cfg(unix)]
-const MAP_LEN: usize = POOL_LEN;
+pub(crate) const MAP_LEN: usize = POOL_LEN;
 
-/// Where the pool takes over: the library's 512 KiB, below which a
-/// multithreaded call hashes on the calling thread.
 const POOL_LEN: usize = 512 << 10;
+/// Starting the thread pool in a one-shot CLI process costs ~15-25 us per worker
+/// thread (~0.3-2 ms), which exceeds the whole hash time below ~4 MiB; once
+/// started, inputs from `POOL_LEN` up use it.
+const POOL_START_LEN: usize = 4 << 20;
 
-/// The most threads b3sum hashes on: --num-threads (main sets it), else
-/// one per CPU (threads asks, the first time it is needed).
+static POOL_ONCE: std::sync::Once = std::sync::Once::new();
+
+pub(crate) fn init_pool_once(n: usize) {
+    POOL_ONCE.call_once(|| {
+        blake3::initialize_multithreaded(std::num::NonZeroUsize::new(n));
+    });
+}
+
+#[inline]
+fn use_pool_for(len: usize) -> bool {
+    if POOL_ONCE.is_completed() {
+        len >= POOL_LEN && pool_threads().get() > 1
+    } else if len >= POOL_START_LEN && pool_threads().get() > 1 {
+        init_pool_once(pool_threads().get());
+        true
+    } else {
+        false
+    }
+}
+
+fn read_all_uninit(file: &mut File, buf: &mut Vec<u8>) -> io::Result<usize> {
+    let mut at = 0usize;
+    loop {
+        if at == buf.capacity() {
+            unsafe { buf.set_len(at) };
+            buf.reserve(at.max(4096));
+            unsafe { buf.set_len(0) };
+        }
+        let avail = buf.capacity() - at;
+        #[cfg(unix)]
+        let rc = {
+            use std::os::fd::AsRawFd;
+            unsafe { libc::read(file.as_raw_fd(), buf.as_mut_ptr().add(at).cast(), avail) }
+        };
+        #[cfg(not(unix))]
+        let rc = {
+            buf.resize(at + avail, 0);
+            match file.read(&mut buf[at..]) {
+                Ok(n) => n as isize,
+                Err(e) if e.kind() == io::ErrorKind::Interrupted => -1,
+                Err(e) => return Err(e),
+            }
+        };
+        if rc == 0 {
+            unsafe { buf.set_len(at) };
+            return Ok(at);
+        }
+        if rc < 0 {
+            let e = io::Error::last_os_error();
+            if e.kind() == io::ErrorKind::Interrupted {
+                continue;
+            }
+            return Err(e);
+        }
+        at += rc as usize;
+    }
+}
+
 static THREADS: std::sync::OnceLock<std::num::NonZeroUsize> = std::sync::OnceLock::new();
 
-/// One per CPU unless --num-threads named a number: asked for only when
-/// it matters (several files, or a file the pool takes), since on Linux
-/// available_parallelism reads the process's cgroup files, eight system
-/// calls (about 16 us a run) a run on one small file never needs.
-fn threads() -> std::num::NonZeroUsize {
+pub(crate) fn threads() -> std::num::NonZeroUsize {
     *THREADS.get_or_init(|| std::thread::available_parallelism().unwrap_or(std::num::NonZeroUsize::MIN))
 }
 
-/// The threads hashing files at once, with --num-threads (hash_inputs sets
-/// it); 1 otherwise, so the pool has threads().
 static FILE_THREADS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(1);
 
-/// The pool's threads: what the file threads leave of threads(). A file
-/// thread that hashes over the pool is one of its threads, and the pool's
-/// workers, threads() - file threads of them, serve every file thread at
-/// once, so at most threads() threads hash in all.
-fn pool_threads() -> std::num::NonZeroUsize {
+pub(crate) fn pool_threads() -> std::num::NonZeroUsize {
     let file_threads = FILE_THREADS.load(std::sync::atomic::Ordering::Relaxed);
     std::num::NonZeroUsize::new(threads().get() - file_threads + 1).expect("at most threads() file threads")
 }
 
-/// Hash `input` into `hasher`: over the pool from POOL_LEN, starting it at
-/// the first such input
-/// (`initialize_multithreaded`), so a run of small files starts no
-/// threads; on this thread below, or always with one thread.
 fn update(hasher: &mut blake3::convenience::Hasher, input: &[u8]) {
-    if input.len() >= POOL_LEN && pool_threads().get() > 1 {
-        blake3::initialize_multithreaded(Some(pool_threads()));
+    if use_pool_for(input.len()) {
         blake3::throughput::update_multithreaded(hasher, input);
     } else {
         hasher.update(input);
     }
 }
 
-/// The read size: each piece is hashed over the pool while the next is read.
 const PIECE: usize = 4 << 20;
 
 thread_local! {
-    /// Two pieces' buffers, kept from input to input: small files allocate nothing.
     static BUFFERS: std::cell::RefCell<[Vec<u8>; 2]> = std::cell::RefCell::new([vec![0; PIECE], vec![0; PIECE]]);
 }
 
-/// Read from `reader` until `buffer` is full or the input ends; how much was read.
 fn fill(reader: &mut impl Read, buffer: &mut [u8]) -> io::Result<usize> {
     let mut filled = 0;
     while filled < buffer.len() {
@@ -366,24 +521,14 @@ fn fill(reader: &mut impl Read, buffer: &mut [u8]) -> io::Result<usize> {
     Ok(filled)
 }
 
-/// Hash all of `reader` (a file, or stdin) into `hasher`. Reading beats
-/// mapping a file that is not in the page cache (a read asks the storage
-/// for a whole piece; a mapping's page faults, for a few pages at a time)
-/// and comes close to it for one that is, when the reading overlaps the
-/// hashing: the first piece is read on this thread, and an input longer
-/// than a piece has the rest read on a second thread into the other
-/// buffer while this one hashes the last piece over the pool
-/// (`bench-hashes b3sum`).
 fn update_from(hasher: &mut blake3::convenience::Hasher, mut reader: impl Read + Send) -> io::Result<()> {
     BUFFERS.with_borrow_mut(|[first, second]| {
         let mut len = fill(&mut reader, first)?;
-        // An input of one piece asks no thread count (see threads).
         if len < PIECE {
             update(hasher, &first[..len]);
             return Ok(());
         }
         if threads().get() == 1 {
-            // Each piece read, then hashed, on this thread.
             loop {
                 update(hasher, &first[..len]);
                 if len < PIECE {
@@ -399,7 +544,6 @@ fn update_from(hasher: &mut blake3::convenience::Hasher, mut reader: impl Read +
             scope.spawn(move || {
                 for buffer in free_rx {
                     let read = fill(reader, buffer);
-                    // A short piece, or an error, ends the input.
                     let last = !matches!(read, Ok(n) if n == buffer.len());
                     if full_tx.send((buffer, read)).is_err() || last {
                         break;
@@ -423,41 +567,130 @@ fn update_from(hasher: &mut blake3::convenience::Hasher, mut reader: impl Read +
     })
 }
 
-fn write_hex_output(mut output: blake3::OutputReader, args: &Args) -> anyhow::Result<()> {
-    // Encoding multiples of the 64 bytes is most efficient.
-    // TODO: This computes each output block twice when the --seek argument isn't a multiple of 64.
-    // We'll refactor all of this soon anyway, once SIMD optimizations are available for the XOF.
-    let mut len = args.len();
-    let mut block = [0; blake3::BLOCK_LEN];
-    while len > 0 {
-        output.fill(&mut block);
-        let hex_str = hex::encode(&block[..]);
-        let take_bytes = cmp::min(len, block.len() as u64);
-        print!("{}", &hex_str[..2 * take_bytes as usize]);
-        len -= take_bytes;
+fn write_hash_text(hash: &blake3::Hash, args: &Args, out: &mut OutBuf) -> anyhow::Result<()> {
+    let take = args.len() as usize;
+    if args.sigilcode() {
+        let s = sigilcode::encode(&hash.as_bytes()[..take]);
+        out.write_bytes(s.as_bytes())?;
+    } else {
+        let mut hex_buf = [0u8; 2 * blake3::OUT_LEN];
+        encode_hex_stack(&hash.as_bytes()[..take], &mut hex_buf[..2 * take]);
+        out.write_bytes(&hex_buf[..2 * take])?;
     }
     Ok(())
 }
 
-/// The output as one sigil: Args::parse holds --length to one byte or more.
-fn write_sigil_output(mut output: blake3::OutputReader, args: &Args) -> anyhow::Result<()> {
-    let mut bytes = vec![0; args.len() as usize];
-    output.fill(&mut bytes);
-    print!("{}", sigilcode::encode(&bytes));
+pub(crate) fn print_hash_output(hash: blake3::Hash, path: &Path, args: &Args, out: &mut OutBuf) -> anyhow::Result<()> {
+    let take = args.len() as usize;
+    if args.raw() {
+        out.write_bytes(&hash.as_bytes()[..take])?;
+        return Ok(());
+    }
+    if args.no_names() {
+        write_hash_text(&hash, args, out)?;
+        out.write_bytes(b"\n")?;
+        return Ok(());
+    }
+
+    // Fast zero-allocation path when valid UTF-8 (or ASCII) without `\`, `\n`, `\r`!
+    if let Some(s) = path.to_str()
+        && !s.as_bytes().iter().any(|&b| matches!(b, b'\\' | b'\n' | b'\r'))
+    {
+        if args.tag() {
+            out.write_bytes(b"BLAKE3 (")?;
+            out.write_bytes(s.as_bytes())?;
+            out.write_bytes(b") = ")?;
+            write_hash_text(&hash, args, out)?;
+            out.write_bytes(b"\n")?;
+        } else {
+            write_hash_text(&hash, args, out)?;
+            out.write_bytes(b"  ")?;
+            out.write_bytes(s.as_bytes())?;
+            out.write_bytes(b"\n")?;
+        }
+        return Ok(());
+    }
+
+    let FilepathString { filepath_string, is_escaped } = filepath_to_string(path);
+    if is_escaped {
+        out.write_bytes(b"\\")?;
+    }
+    if args.tag() {
+        out.write_bytes(b"BLAKE3 (")?;
+        out.write_bytes(filepath_string.as_bytes())?;
+        out.write_bytes(b") = ")?;
+        write_hash_text(&hash, args, out)?;
+        out.write_bytes(b"\n")?;
+    } else {
+        write_hash_text(&hash, args, out)?;
+        out.write_bytes(b"  ")?;
+        out.write_bytes(filepath_string.as_bytes())?;
+        out.write_bytes(b"\n")?;
+    }
     Ok(())
 }
 
-/// The output as hex or, with --sigilcode, as a sigil.
-fn write_text_output(output: blake3::OutputReader, args: &Args) -> anyhow::Result<()> {
-    if args.sigilcode() { write_sigil_output(output, args) } else { write_hex_output(output, args) }
+fn write_hex_output(mut output: blake3::OutputReader, args: &Args, out: &mut OutBuf) -> anyhow::Result<()> {
+    let mut len = args.len();
+    let mut block = [0u8; blake3::BLOCK_LEN];
+    let mut hex_buf = [0u8; 2 * blake3::BLOCK_LEN];
+    while len > 0 {
+        output.fill(&mut block);
+        let take_bytes = cmp::min(len, block.len() as u64) as usize;
+        encode_hex_stack(&block[..take_bytes], &mut hex_buf[..2 * take_bytes]);
+        out.write_bytes(&hex_buf[..2 * take_bytes])?;
+        len -= take_bytes as u64;
+    }
+    Ok(())
 }
 
-fn write_raw_output(output: blake3::OutputReader, args: &Args) -> anyhow::Result<()> {
+fn write_sigil_output(mut output: blake3::OutputReader, args: &Args, out: &mut OutBuf) -> anyhow::Result<()> {
+    let mut bytes = vec![0; args.len() as usize];
+    output.fill(&mut bytes);
+    let encoded = sigilcode::encode(&bytes);
+    out.write_bytes(encoded.as_bytes())?;
+    Ok(())
+}
+
+fn write_text_output(output: blake3::OutputReader, args: &Args, out: &mut OutBuf) -> anyhow::Result<()> {
+    if args.sigilcode() { write_sigil_output(output, args, out) } else { write_hex_output(output, args, out) }
+}
+
+fn write_raw_output(output: blake3::OutputReader, args: &Args, out: &mut OutBuf) -> anyhow::Result<()> {
+    out.flush()?;
     let mut output = output.take(args.len());
     let stdout = std::io::stdout();
     let mut handler = stdout.lock();
     std::io::copy(&mut output, &mut handler)?;
+    Ok(())
+}
 
+fn print_output(output: blake3::OutputReader, path: &Path, args: &Args, out: &mut OutBuf) -> anyhow::Result<()> {
+    if args.raw() {
+        write_raw_output(output, args, out)?;
+        return Ok(());
+    }
+    if args.no_names() {
+        write_text_output(output, args, out)?;
+        out.write_bytes(b"\n")?;
+        return Ok(());
+    }
+    let FilepathString { filepath_string, is_escaped } = filepath_to_string(path);
+    if is_escaped {
+        out.write_bytes(b"\\")?;
+    }
+    if args.tag() {
+        out.write_bytes(b"BLAKE3 (")?;
+        out.write_bytes(filepath_string.as_bytes())?;
+        out.write_bytes(b") = ")?;
+        write_text_output(output, args, out)?;
+        out.write_bytes(b"\n")?;
+        return Ok(());
+    }
+    write_text_output(output, args, out)?;
+    out.write_bytes(b"  ")?;
+    out.write_bytes(filepath_string.as_bytes())?;
+    out.write_bytes(b"\n")?;
     Ok(())
 }
 
@@ -478,7 +711,6 @@ struct FilepathString {
     is_escaped: bool,
 }
 
-// returns (string, did_escape)
 fn filepath_to_string(filepath: &Path) -> FilepathString {
     let unicode_cow = filepath.to_string_lossy();
     let mut filepath_string = unicode_cow.to_string();
@@ -491,32 +723,20 @@ fn filepath_to_string(filepath: &Path) -> FilepathString {
 }
 
 fn hex_half_byte(c: char) -> anyhow::Result<u8> {
-    // The hex characters in the hash must be lowercase for now, though we
-    // could support uppercase too if we wanted to.
     if '0' <= c && c <= '9' {
-        return Ok(c as u8 - '0' as u8);
+        return Ok(c as u8 - b'0');
     }
     if 'a' <= c && c <= 'f' {
-        return Ok(c as u8 - 'a' as u8 + 10);
+        return Ok(c as u8 - b'a' + 10);
     }
     bail!("Invalid hex");
 }
 
-// The `check` command is a security tool. That means it's much better for a
-// check to fail more often than it should (a false negative), than for a check
-// to ever succeed when it shouldn't (a false positive). By forbidding certain
-// characters in checked filepaths, we avoid a class of false positives where
-// two different filepaths can get confused with each other.
 fn check_for_invalid_characters(utf8_path: &str) -> anyhow::Result<()> {
-    // Null characters in paths should never happen, but they can result in a
-    // path getting silently truncated on Unix.
     if utf8_path.contains('\0') {
         bail!("Null character in path");
     }
-    // Because we convert invalid UTF-8 sequences in paths to the Unicode
-    // replacement character, multiple different invalid paths can map to the
-    // same UTF-8 string.
-    if utf8_path.contains('�') {
+    if utf8_path.contains('\u{FFFD}') {
         bail!("Unicode replacement character in path");
     }
     Ok(())
@@ -528,10 +748,9 @@ fn unescape(mut path: &str) -> anyhow::Result<String> {
         ensure!(i < path.len() - 1, "Invalid backslash escape");
         unescaped.push_str(&path[..i]);
         match path[i + 1..].chars().next().unwrap() {
-            // Anything other than a recognized escape sequence is an error.
-            'n' => unescaped.push_str("\n"),
-            'r' => unescaped.push_str("\r"),
-            '\\' => unescaped.push_str("\\"),
+            'n' => unescaped.push('\n'),
+            'r' => unescaped.push('\r'),
+            '\\' => unescaped.push('\\'),
             _ => bail!("Invalid backslash escape"),
         }
         path = &path[i + 2..];
@@ -549,14 +768,10 @@ struct ParsedCheckLine {
 }
 
 fn split_untagged_check_line(line_after_slash: &str) -> Option<(&str, &str)> {
-    // Of the form "<hash>  <file>". The file might contain "  ", so we need to split from the
-    // left.
     line_after_slash.split_once("  ")
 }
 
 fn split_tagged_check_line(line_after_slash: &str) -> Option<(&str, &str)> {
-    // Of the form "BLAKE3 (<file>) = <hash>". The file might contain ") = ", so we need to split
-    // from the *right*.
     let prefix = "BLAKE3 (";
     if !line_after_slash.starts_with(prefix) {
         return None;
@@ -564,13 +779,8 @@ fn split_tagged_check_line(line_after_slash: &str) -> Option<(&str, &str)> {
     line_after_slash[prefix.len()..].rsplit_once(") = ")
 }
 
-/// One checkfile line; with `sigils` (--sigilcode), its digest may be a
-/// sigil as well as hex.
 fn parse_check_line(mut line: &str, sigils: bool) -> anyhow::Result<ParsedCheckLine> {
-    // Trim off the trailing newlines, if any.
     line = line.trim_end_matches(['\r', '\n']);
-    // If there's a backslash at the front of the line, that means we need to
-    // unescape the path below. This matches the behavior of e.g. md5sum.
     let Some(first) = line.chars().next() else {
         bail!("Empty line");
     };
@@ -584,8 +794,6 @@ fn parse_check_line(mut line: &str, sigils: bool) -> anyhow::Result<ParsedCheckL
         line_after_slash = line;
     }
 
-    // Split the line. It might be "<hash>  <file>" or "BLAKE3 (<file>) = <hash>". The latter comes
-    // from the --tag flag.
     let hash_text;
     let file_str;
     if let Some((left, right)) = split_untagged_check_line(line_after_slash) {
@@ -598,8 +806,6 @@ fn parse_check_line(mut line: &str, sigils: bool) -> anyhow::Result<ParsedCheckL
         bail!("Invalid check line format");
     }
 
-    // Decode the hash. With --sigilcode, a digest with any character other
-    // than a hex digit is a sigil: no hex digit is a sigil character.
     let mut hash_bytes = [0; blake3::OUT_LEN];
     if sigils && !hash_text.chars().all(|c| c.is_ascii_hexdigit()) {
         let decoded = sigilcode::decode(hash_text, blake3::OUT_LEN).map_err(|e| anyhow::anyhow!("Invalid hash, read as a sigil: {e}"))?;
@@ -618,7 +824,6 @@ fn parse_check_line(mut line: &str, sigils: bool) -> anyhow::Result<ParsedCheckL
     }
     let expected_hash: blake3::Hash = hash_bytes.into();
 
-    // Unescape and validate the filepath.
     let file_path_string = if is_escaped { unescape(file_str)? } else { file_str.to_string() };
     ensure!(!file_path_string.is_empty(), "empty file path");
     check_for_invalid_characters(&file_path_string)?;
@@ -626,40 +831,41 @@ fn parse_check_line(mut line: &str, sigils: bool) -> anyhow::Result<ParsedCheckL
     Ok(ParsedCheckLine { file_string: file_str.to_string(), is_escaped, file_path: file_path_string.into(), expected_hash })
 }
 
-/// Hash every input and print each line in the inputs' order; how many
-/// failed. Errors are printed to stderr and the rest go on (`b3sum *`
-/// meets directories), and the exit status counts them. Several inputs
-/// hash on several threads at once: a tree of small files costs mostly
-/// opening and reading each, which one thread does one at a time.
-fn hash_inputs(args: &Args) -> u64 {
+fn hash_inputs(args: &Args, out: &mut OutBuf) -> u64 {
     #[cfg(target_os = "linux")]
-    if readahead::applies(args) {
-        return readahead::hash_inputs(args);
+    if linux_pipe::applies(args)
+        && let Some(failed) = linux_pipe::hash_inputs(args, out)
+    {
+        return failed;
     }
-    // One file, one thread: the thread count (available_parallelism reads
-    // the process's cgroup files on Linux, eight system calls, about 16 us a
-    // run) is never needed for one (a large one asks for the pool, which
-    // asks).
+
+    if args.file_args.len() == 1 && args.is_standard_32() {
+        let path = &args.file_args[0];
+        match hash_path_hash(args, path).and_then(|h| print_hash_output(h, path, args, out)) {
+            Ok(()) => return 0,
+            Err(e) => {
+                let _ = out.flush();
+                eprintln!("{}: {}: {}", NAME, path.to_string_lossy(), e);
+                return 1;
+            }
+        }
+    }
+
     let threads = if args.file_args.len() == 1 { 1 } else { threads().get().min(args.file_args.len()) };
-    hash_inputs_with(args, threads, hash_some, print_output)
+    if args.is_standard_32() {
+        hash_inputs_with(args, threads, out, hash_some_32, print_hash_output)
+    } else {
+        hash_inputs_with(args, threads, out, hash_some, print_output)
+    }
 }
 
-/// Hash the inputs on `threads` threads, each running `work` over
-/// the inputs whose turn `next` gives it, and print each result in order
-/// with `print` as soon as those before it are printed: the files that
-/// failed.
 fn hash_inputs_with<O: Send>(
     args: &Args,
     threads: usize,
+    out: &mut OutBuf,
     work: impl Fn(&Args, &std::sync::atomic::AtomicUsize, &mut dyn FnMut(usize, anyhow::Result<O>) -> bool) + Sync,
-    print_one: impl Fn(O, &Path, &Args) -> anyhow::Result<()>,
+    print_one: impl Fn(O, &Path, &Args, &mut OutBuf) -> anyhow::Result<()>,
 ) -> u64 {
-    // With --num-threads, the bound: the pool takes what the file threads
-    // leave. By default the pool keeps one thread a CPU beside the file
-    // threads, which keeps every core busy to the run's end: the bound
-    // cost the mixed tree 36% in the page cache and 16 x 64 MiB 17%, a
-    // large file late in the run, or on an E core, hashing alone (bench-
-    // hashes b3sum, i7-12700K, October 18).
     if args.num_threads().is_some() {
         FILE_THREADS.store(threads, std::sync::atomic::Ordering::Relaxed);
     }
@@ -668,9 +874,6 @@ fn hash_inputs_with<O: Send>(
     let (done_tx, done_rx) = std::sync::mpsc::channel();
     std::thread::scope(|scope| {
         for _ in 1..threads {
-            // Only while inputs remain: a thread costs 15-25 us to start,
-            // more than a small file takes, so a run of a few small files
-            // starts a few (ten 4 KiB files: 7 threads, where it started 9).
             if next.load(std::sync::atomic::Ordering::Relaxed) >= paths.len() {
                 break;
             }
@@ -678,21 +881,19 @@ fn hash_inputs_with<O: Send>(
             scope.spawn(move || work(args, next, &mut |i, output| done_tx.send((i, output)).is_ok()));
         }
         drop(done_tx);
-        // This thread hashes too, and prints whatever is next in order.
         let mut failed = 0u64;
-        let mut printed = 0;
-        let mut waiting = std::collections::BTreeMap::new();
-        let mut print = |i: usize, output: anyhow::Result<O>, printed: &mut usize| {
-            if let Err(e) = output.and_then(|output| print_one(output, &paths[i], args)) {
-                failed = failed.saturating_add(1);
-                eprintln!("{}: {}: {}", NAME, paths[i].to_string_lossy(), e);
-            }
-            *printed += 1;
-        };
-        let mut take = |i: usize, output| {
-            waiting.insert(i, output);
-            while let Some(output) = waiting.remove(&printed) {
-                print(printed, output, &mut printed);
+        let mut printed = 0usize;
+        let mut results: Vec<Option<anyhow::Result<O>>> = (0..paths.len()).map(|_| None).collect();
+        let mut take = |i: usize, output: anyhow::Result<O>| {
+            results[i] = Some(output);
+            while printed < paths.len() {
+                let Some(item) = results[printed].take() else { break };
+                if let Err(e) = item.and_then(|output| print_one(output, &paths[printed], args, out)) {
+                    failed = failed.saturating_add(1);
+                    let _ = out.flush();
+                    eprintln!("{}: {}: {}", NAME, paths[printed].to_string_lossy(), e);
+                }
+                printed += 1;
             }
             true
         };
@@ -704,8 +905,15 @@ fn hash_inputs_with<O: Send>(
     })
 }
 
-/// Hash the inputs whose turn `next` gives, one after another, giving each
-/// result to `done` (which returns false once nobody listens).
+fn hash_some_32(args: &Args, next: &std::sync::atomic::AtomicUsize, done: &mut dyn FnMut(usize, anyhow::Result<blake3::Hash>) -> bool) {
+    loop {
+        let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        if i >= args.file_args.len() || !done(i, hash_path_hash(args, &args.file_args[i])) {
+            return;
+        }
+    }
+}
+
 fn hash_some(args: &Args, next: &std::sync::atomic::AtomicUsize, done: &mut dyn FnMut(usize, anyhow::Result<blake3::OutputReader>) -> bool) {
     loop {
         let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -715,69 +923,38 @@ fn hash_some(args: &Args, next: &std::sync::atomic::AtomicUsize, done: &mut dyn 
     }
 }
 
-fn print_output(output: blake3::OutputReader, path: &Path, args: &Args) -> anyhow::Result<()> {
-    if args.raw() {
-        write_raw_output(output, args)?;
-        return Ok(());
-    }
-    if args.no_names() {
-        write_text_output(output, args)?;
-        println!();
-        return Ok(());
-    }
-    let FilepathString { filepath_string, is_escaped } = filepath_to_string(path);
-    if is_escaped {
-        print!("\\");
-    }
-    if args.tag() {
-        print!("BLAKE3 ({}) = ", filepath_string);
-        write_text_output(output, args)?;
-        println!();
-        return Ok(());
-    }
-    write_text_output(output, args)?;
-    println!("  {}", filepath_string);
-    Ok(())
-}
-
-// Returns true for success. Having a boolean return value here, instead of
-// passing down the files_failed reference, makes it less likely that we might
-// forget to set it in some error condition.
-fn check_one_line(line: &str, args: &Args) -> bool {
-    let parse_result = parse_check_line(&line, args.sigilcode());
+fn check_one_line(line: &str, args: &Args, out: &mut OutBuf) -> bool {
+    let parse_result = parse_check_line(line, args.sigilcode());
     let ParsedCheckLine { file_string, is_escaped, file_path, expected_hash } = match parse_result {
         Ok(parsed) => parsed,
         Err(e) => {
+            let _ = out.flush();
             eprintln!("{}: {}", NAME, e);
             return false;
         }
     };
     let file_string = if is_escaped { "\\".to_string() + &file_string } else { file_string };
-    let found_hash: blake3::Hash;
-    match hash_path(args, &file_path) {
-        Ok(mut output) => {
-            let mut found_hash_bytes = [0; blake3::OUT_LEN];
-            output.fill(&mut found_hash_bytes);
-            found_hash = found_hash_bytes.into();
-        }
+    let found_hash = match hash_path_hash(args, &file_path) {
+        Ok(h) => h,
         Err(e) => {
-            println!("{}: FAILED ({})", file_string, e);
+            let _ = out.write_bytes(format!("{}: FAILED ({})\n", file_string, e).as_bytes());
             return false;
         }
     };
-    // This is a constant-time comparison.
     if expected_hash == found_hash {
         if !args.quiet() {
-            println!("{}: OK", file_string);
+            let _ = out.write_bytes(file_string.as_bytes());
+            let _ = out.write_bytes(b": OK\n");
         }
         true
     } else {
-        println!("{}: FAILED", file_string);
+        let _ = out.write_bytes(file_string.as_bytes());
+        let _ = out.write_bytes(b": FAILED\n");
         false
     }
 }
 
-fn check_one_checkfile(path: &Path, args: &Args, files_failed: &mut u64) -> anyhow::Result<()> {
+fn check_one_checkfile(path: &Path, args: &Args, files_failed: &mut u64, out: &mut OutBuf) -> anyhow::Result<()> {
     let mut file;
     let stdin;
     let mut stdin_lock;
@@ -797,52 +974,33 @@ fn check_one_checkfile(path: &Path, args: &Args, files_failed: &mut u64) -> anyh
         if n == 0 {
             return Ok(());
         }
-        // check_one_line() prints errors and turns them into a success=false
-        // return, so it doesn't return a Result.
-        let success = check_one_line(&line, args);
-        if !success {
-            // We use `files_failed > 0` to indicate a mismatch, so it's important for correctness
-            // that it's impossible for this counter to overflow.
+        if !check_one_line(&line, args, out) {
             *files_failed = files_failed.saturating_add(1);
         }
     }
 }
 
-/// A mapped file that another program truncates while b3sum reads it
-/// raises SIGBUS at the first page past its new end, and that is by far
-/// the likeliest SIGBUS here; but a hardware memory error raises it too,
-/// so the message says what b3sum knows, then stops, rather than die
-/// unexplained. (Only write and _exit here: a signal handler may call
-/// nothing else.)
 #[cfg(unix)]
 fn explain_sigbus() {
     static SAID: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
     extern "C" fn on_sigbus(_: libc::c_int) {
-        // Once, whichever threads fault (an atomic swap is signal-safe).
         if SAID.swap(true, std::sync::atomic::Ordering::SeqCst) {
             loop {
-                // Sound: pause is async-signal-safe; the first thread exits.
                 unsafe { libc::pause() };
             }
         }
         const MESSAGE: &[u8] = b"b3sum: a bus error while reading a mapped file; most likely another program truncated it, so no digest of it would be right. Hash the files again once nothing writes to them.\n";
-        // Sound: write and _exit are async-signal-safe.
         unsafe {
             libc::write(2, MESSAGE.as_ptr().cast(), MESSAGE.len());
             libc::_exit(1);
         }
     }
-    // Sound: a handler that calls only async-signal-safe functions.
     let handler: extern "C" fn(libc::c_int) = on_sigbus;
     unsafe { libc::signal(libc::SIGBUS, handler as libc::sighandler_t) };
 }
 
 fn main() -> anyhow::Result<()> {
-    // A reader that goes away (`b3sum * | head`) ends b3sum at once and
-    // quietly, as it ends GNU's tools: Rust ignores SIGPIPE, so b3sum's next
-    // write failed and panicked ("failed printing to stdout", status 101).
     #[cfg(unix)]
-    // Sound: restoring a signal's default action.
     unsafe {
         libc::signal(libc::SIGPIPE, libc::SIG_DFL)
     };
@@ -853,28 +1011,26 @@ fn main() -> anyhow::Result<()> {
     if let Some(threads) = args.num_threads() {
         THREADS.set(threads).expect("main sets the threads first");
     }
+    let mut out = OutBuf::new();
     let mut files_failed = 0u64;
-    // Note that file_args automatically includes `-` if nothing is given.
     if args.check() {
         for path in &args.file_args {
-            check_one_checkfile(path, &args, &mut files_failed)?;
+            if let Err(e) = check_one_checkfile(path, &args, &mut files_failed, &mut out) {
+                let _ = out.flush();
+                return Err(e);
+            }
         }
     } else {
-        files_failed = hash_inputs(&args);
+        files_failed = hash_inputs(&args, &mut out);
     }
+    let _ = out.flush();
     if args.check() && files_failed > 0 {
         eprintln!("{}: WARNING: {} computed checksum{} did NOT match", NAME, files_failed, if files_failed == 1 { "" } else { "s" },);
     }
     let status = if files_failed > 0 { 1 } else { 0 };
-    // Crash-only: the output flushed, then the process ended at once, with
-    // no exit-time teardown. b3sum registers no exit handlers and writes
-    // nothing but stdout and stderr, so the teardown has nothing to do, and
-    // the process's exit reclaims everything (6 us a 64-byte file,
-    // i7-12700K).
     use std::io::Write;
     let _ = std::io::stdout().flush();
     let _ = std::io::stderr().flush();
-    // Sound: _exit takes any status and does not return.
     unsafe { libc::_exit(status) }
 }
 
