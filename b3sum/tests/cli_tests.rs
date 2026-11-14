@@ -821,14 +821,28 @@ fn test_hex_xof_multi_file_and_keyed_stdin_refusal() {
     assert!(bad.stdout.is_empty());
     assert!(String::from_utf8_lossy(&bad.stderr).contains("Cannot open `-` in keyed mode"));
 
+    // Multi-file standard-32 including `-` (`hash_some_32` fallback across files).
+    let expected_std_stdin = [
+        format!("{}  {}", blake3::convenience::hash(b"first message").to_hex(), file1.to_string_lossy()),
+        format!("{}  -", blake3::convenience::hash(b"stdin-mid").to_hex()),
+        format!("{}  {}", blake3::convenience::hash(b"second message").to_hex(), file2.to_string_lossy()),
+    ]
+    .join("\n");
+    let out_std_stdin = cmd!(b3sum_exe(), "--num-threads=1", &file1, "-", &file2)
+        .stdin_bytes("stdin-mid")
+        .read()
+        .unwrap();
+    assert_eq!(out_std_stdin, expected_std_stdin);
+
     // Large output exceeding the 32 KiB `OutBuf` capacity in a single `write_bytes`
-    // call (`--sigilcode --length=40000`) and across many files (~50 KiB of hex lines).
-    let mut big_raw = vec![0u8; 40_000];
+    // call (`--sigilcode --length=45000` > 32768 encoded bytes) and across many files.
+    let mut big_raw = vec![0u8; 45_000];
     let mut big_h = blake3::convenience::Hasher::new(blake3::Mode::Plain, None);
     big_h.update(b"outbuf");
     big_h.finalize_xof().fill(&mut big_raw);
     let expected_big_sigil = format!("{}  -", sigilcode::encode(&big_raw));
-    let out_big_sigil = cmd!(b3sum_exe(), "--sigilcode", "--length=40000").stdin_bytes("outbuf").read().unwrap();
+    assert!(expected_big_sigil.len() > 32 * 1024);
+    let out_big_sigil = cmd!(b3sum_exe(), "--sigilcode", "--length=45000").stdin_bytes("outbuf").read().unwrap();
     assert_eq!(out_big_sigil, expected_big_sigil);
 
     let mut many_files = Vec::new();
