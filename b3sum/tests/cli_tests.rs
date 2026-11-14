@@ -856,4 +856,25 @@ fn test_hex_xof_multi_file_and_keyed_stdin_refusal() {
     }
     let out_many = cmd(b3sum_exe(), &many_files).read().unwrap();
     assert_eq!(out_many, expected_many.join("\n"));
+
+    // `--check` with `-` in the checkfile reads stdin cleanly (`Entry::Stdin`).
+    let stdin_hash = blake3::convenience::hash(b"check-stdin").to_hex();
+    let file_hash = blake3::convenience::hash(b"first message").to_hex();
+    let cf_stdin = dir.path().join("with_stdin.b3");
+    fs::write(&cf_stdin, format!("{file_hash}  {}\n{stdin_hash}  -\n", file1.to_string_lossy())).unwrap();
+    let ok_stdin = cmd!(b3sum_exe(), "--check", &cf_stdin).stdin_bytes("check-stdin").read().unwrap();
+    assert_eq!(ok_stdin, format!("{}: OK\n-: OK", file1.to_string_lossy()));
+
+    let bad_stdin = cmd!(b3sum_exe(), "--check", &cf_stdin)
+        .stdin_bytes("wrong-stdin")
+        .stdout_capture()
+        .stderr_capture()
+        .unchecked()
+        .run()
+        .unwrap();
+    assert!(!bad_stdin.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&bad_stdin.stdout),
+        format!("{}: OK\n-: FAILED\n", file1.to_string_lossy())
+    );
 }

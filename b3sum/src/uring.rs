@@ -427,9 +427,17 @@ mod test {
         ring.submit_and_wait(0).unwrap();
 
         let saved_fd = ring.fd;
+        let saved_entries = ring.sq_entries;
         ring.release();
-        let reused = Uring::acquire(8).unwrap();
+        // While cached in `LOCAL_URING`, `saved_fd` must remain open (not closed by Drop).
+        assert!(unsafe { libc::fcntl(saved_fd, libc::F_GETFD) } >= 0, "Uring::release must cache the ring");
+        let reused = Uring::acquire(saved_entries).unwrap();
         assert_eq!(reused.fd, saved_fd);
+        reused.release();
+        // Requesting more SQEs than cached must allocate a larger ring (`>=` vs `<`).
+        let big = Uring::acquire(saved_entries + 16).unwrap();
+        assert!(big.sq_entries >= saved_entries + 16);
+        assert_ne!(big.fd, saved_fd);
     }
 
     #[test]
