@@ -81,10 +81,15 @@ same for every input.
    asked for a block more than its inputs hold it faults; a refused change of a rotation does not run as BLAKE3.)
 
    Where the accepted changes are: in the no-ops an assembler pads with (148), in the operand of a prefetch
-   (2,560), in the four bytes of a field the linker fills (832), and 440 in code that does more than the
-   contract asks: the kernels take 1 to 16 blocks, any start and end flags and either entry, and the contracts
-   fix them, so for instance the jump that P32's entry takes is never taken from K32's and its target may be
-   anything. `kflip.py --detail` lists each with what it became.
+   (2,560), in the four bytes of a field the linker fills (832), and 440 elsewhere, of two kinds
+   (`kflip.py --detail` lists each with what it became; `audit/`):
+   - code the contract never reaches, or whose result it never uses. The kernels take 1 to 16 blocks, any
+     start and end flags and either entry, and the contracts fix them: the jump that P32's entry takes is never
+     taken from K32's and its target may be anything; P16's loop over blocks runs once and its step may be
+     anything.
+   - another instruction with the same effect on the values the contract allows: the 32-bit form of an
+     operation on a small number, a register that holds the same value at that point (`rsi` for `rsp`), a
+     larger frame still within the stack's bound.
 
    For scale, of 400 changes a kernel that were stopped or refused, about 5 to 7% run as BLAKE3 on the same
    inputs all the same: the checker refuses what it cannot show, as it should.
