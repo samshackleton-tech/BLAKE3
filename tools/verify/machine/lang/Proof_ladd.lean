@@ -135,7 +135,7 @@ theorem turn (fb lv key flags plat cv ra : BitVec 64) (sv : Abi.Saved) (k : Blak
     refine runs_then (a := 32) (s1 := ?_) ?_ ?_
     case refine_2 => run_fn [c0, c1]; rfl
     refine Kernels.call_avx_runs Code_ladd.has_kernels (by mem_auto) (by mem_auto) (by mem_auto) (by mem_auto) (by mem_auto) (by mem_auto) (by mem_auto) (by mem_auto) ?_
-    intro rax' rcx' rdx' rsi' rdi' r8' r9' zf' cf' y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 y13 y14 y15
+    intro rax' rcx' rdx' rsi' rdi' r8' r9' zf' cf' y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 y13 y14 y15 w'
     refine runs_then (a := 5) (s1 := ?_) ?_ ?_
     case refine_2 => run_fn [c0, c1]; rfl
     refine runs_done ⟨⟨rfl, rfl, rfl, rfl, rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, ?_⟩
@@ -172,7 +172,7 @@ theorem turn (fb lv key flags plat cv ra : BitVec 64) (sv : Abi.Saved) (k : Blak
     refine runs_then (a := 32) (s1 := ?_) ?_ ?_
     case refine_2 => run_fn [c0, c1]; rfl
     refine Kernels.call_sse_runs Code_ladd.has_kernels (by mem_auto) (by mem_auto) (by mem_auto) (by mem_auto) (by mem_auto) (by mem_auto) (by mem_auto) (by mem_auto) (by mem_auto) (by mem_auto) ?_
-    intro rax' rcx' rdx' rsi' rdi' r8' r9' zf' cf' y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 y13 y14 y15
+    intro rax' rcx' rdx' rsi' rdi' r8' r9' zf' cf' y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 y13 y14 y15 w'
     refine runs_then (a := 4) (s1 := ?_) ?_ ?_
     case refine_2 => run_fn [c0, c1]; rfl
     refine runs_done ⟨⟨rfl, rfl, rfl, rfl, rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, ?_⟩

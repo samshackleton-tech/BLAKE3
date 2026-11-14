@@ -83,11 +83,15 @@ CHAINS = [
     [("finish", "lang", fn("finish", "0x170000", True), False), ("audit-finish", "lang", audit("finish", True), True)],
     [("group", "lang", fn("group", "0x180000", True), False), ("audit-group", "lang", audit("group", True), True)],
     [("groupf", "lang", SLOW + fn("groupf", "0x1B0000", True), False), ("audit-groupf", "lang", SLOW_AUDIT + audit("groupf", True, AJ_SLOW), True)],
+    [("p16-linkage", "lang", "python3 test_p16_linkage.py && python3 ../wide/test_p16_source.py", False),
+     ("p16", "lang", 'lake build Proof_p16 > p16proof.log 2>&1 && ! grep -q -E "error|sorry" p16proof.log && grep -q "p16_meets. depends on axioms" p16proof.log', False),
+     ("audit-p16", "lang", "python3 mutants_p16.py 4 --spec-only", True)],
     [("hashw", "lang", SLOW + fn("hashw", "0x190000", True), False),
      ("hashf", "lang", SLOW + fn("hashf", "0x1A0000", True), False),
      ("hashf-bytes", "lang", 'lake build Meets_hashf_bytes > hashfbytes.log 2>&1 && ! grep -q -E "error|sorry" hashfbytes.log && grep -q "hashf_meets_bytes. depends on axioms" hashfbytes.log', False),
      # (with the two stand-ins at the kernels' addresses: nothing assumed)
      ("hashf-standins", "lang", 'lake build Meets_hashf_standins > standins.log 2>&1 && ! grep -q -E "error|sorry" standins.log && grep -q "hashf_with_standins. depends on axioms" standins.log', False),
+     ("hashf-p16", "lang", 'lake build Meets_hashf_p16 > hashfp16.log 2>&1 && ! grep -q -E "error|sorry" hashfp16.log && grep -q "hashf_with_p16. depends on axioms" hashfp16.log', False),
      # (hashw's audit is left out: each changed copy would be run on examples that take half an hour)
      ("audit-hashf", "lang", SLOW_AUDIT + audit("hashf", True, AJ_SLOW), True)],
     [("adler32", "lang", "SOURCE=../experiments/adler32/adler32.ode ODEMOD=AdlerOde ./prove_fn.sh adler32 0x100000", False)],
@@ -100,9 +104,9 @@ CHAINS = [
     [("audit-spec", "lang", f"python3 mutants_spec.py {AJ}", True)],
     [(None, "lang", "python3 odec.py hasher.ode HasherOde.lean", True), ("audit-hash", "lang", "python3 mutants_hash.py", True)],
 ]
-ORDER = ["hex", "merge", "push", "merge_sse", "add-and-swap", "merge_steps", "levels-model", "ladd", "lroot", "node_out", "pad", "chunk_node", "hashl", "hash-bytes", "fillp", "p16s", "tree32", "k32s", "wide", "addn", "finish", "group", "groupf", "hashw", "hashf", "hashf-bytes", "hashf-standins", "adler32",
+ORDER = ["hex", "merge", "push", "merge_sse", "add-and-swap", "merge_steps", "levels-model", "ladd", "lroot", "node_out", "pad", "chunk_node", "hashl", "hash-bytes", "fillp", "p16s", "tree32", "k32s", "wide", "addn", "finish", "group", "groupf", "p16-linkage", "p16", "hashw", "hashf", "hashf-bytes", "hashf-standins", "hashf-p16", "adler32",
          "any-machine", "direct", "hash-tried", "hex_neon", "push-aarch64",
-         "audit-merge", "audit-push", "audit-add", "audit-steps", "audit-ladd", "audit-lroot", "audit-node_out", "audit-pad", "audit-chunk_node", "audit-hashl", "audit-fillp", "audit-tree32", "audit-p16s", "audit-k32s", "audit-wide", "audit-addn", "audit-finish", "audit-group", "audit-groupf", "audit-hashf",
+         "audit-merge", "audit-push", "audit-add", "audit-steps", "audit-ladd", "audit-lroot", "audit-node_out", "audit-pad", "audit-chunk_node", "audit-hashl", "audit-fillp", "audit-tree32", "audit-p16s", "audit-k32s", "audit-wide", "audit-addn", "audit-finish", "audit-group", "audit-groupf", "audit-p16", "audit-hashf",
          "audit-spec", "audit-hash"]
 GENERATED = re.compile(r"(Code|Proof|Checked)_\w+\.lean$")
 
@@ -172,7 +176,7 @@ def main():
     start = time.time()
     if not SERIAL:
         # what every chain rests on, built once in place, so that each copy starts with it
-        pre = subprocess.run("lake build Kernels AbiCall Checks TrySem StackLemmas BytesLemmas Lang Sem", shell=True, cwd=os.path.join(HERE, "lang"),
+        pre = subprocess.run("lake build Kernels AbiCall Checks TrySem StackLemmas BytesLemmas Lang Sem P16Out", shell=True, cwd=os.path.join(HERE, "lang"),
                              capture_output=True, text=True, stdin=subprocess.DEVNULL)
         if pre.returncode != 0:
             print("the common libraries do not build:\n" + (pre.stdout + pre.stderr)[-2000:]); return 1

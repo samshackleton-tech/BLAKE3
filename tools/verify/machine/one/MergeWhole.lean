@@ -200,7 +200,7 @@ theorem merge_is_mergeN (self p keyp rsp0 fp len target : BitVec 64) (k0 k1 : V)
       (rd _ _ (by decide) s8) (rd _ _ (by decide) sra)
   have es2 : s2 = ⟨s2.rax, s2.rcx, s2.rdx, s2.rbx, s2.rsp, rsp0 + 18446744073709551608#64, s2.rsi, s2.rdi, s2.r8, s2.r9, s2.r12, s2.r13, s2.r14, s2.r15,
       s2.zf, s2.cf, s2.x0, s2.x1, s2.x2, s2.x3, s2.x4, s2.x5, s2.x6, s2.x7, s2.x8, s2.x9, s2.x10, s2.x11, s2.x12, s2.x13, s2.x14, s2.x15,
-      s2.mem, 0x401AB⟩ := by
+      s2.mem, 0x401AB, s2.w⟩ := by
     cases s2; simp only at pc2 bp2; subst pc2 bp2; rfl
   rw [← es2] at e3
   have eT : len - (len - target) = target := by bv_decide

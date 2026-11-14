@@ -96,7 +96,7 @@ set_option maxHeartbeats 0 in
 `mergeN n es` in memory; the tag stays; nothing outside `merge`'s frame, the stack's array and its length
 changes. No panic site is reached. -/
 theorem loop (self arr keyp fp : BitVec 64) (k0 k1 : V) (fl plat : BitVec 8) (P : Places self arr keyp fp) :
-    ∀ (n : Nat) (es : List (V × V)) (len nB : BitVec 64) (m : Mem) (rcx rdx rbp rsi rdi r8 r9 r13 : BitVec 64) (zf cf : Option Bool) (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 : V),
+    ∀ (n : Nat) (es : List (V × V)) (len nB : BitVec 64) (m : Mem) (rcx rdx rbp rsi rdi r8 r9 r13 : BitVec 64) (zf cf : Option Bool) (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 : V) {w : Wide},
       1 ≤ n → n + 1 ≤ es.length → len.toNat = es.length → es.length ≤ 55 → nB.toNat = n →
       Head self arr keyp fp k0 k1 fl plat m len es →
       ∃ K s', steps Code.prog K ⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, nB, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, m, 0x40094, w⟩ = some s' ∧
@@ -108,9 +108,9 @@ theorem loop (self arr keyp fp : BitVec 64) (k0 k1 : V) (fl plat : BitVec 8) (P 
   obtain ⟨harr, hfp, hW, gArr, gKey, gSelf, gKeyArr, gKeySelf⟩ := P
   intro n
   induction n with
-  | zero => intro es len nB m rcx rdx rbp rsi rdi r8 r9 r13 zf cf x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 h1; omega
+  | zero => intro es len nB m rcx rdx rbp rsi rdi r8 r9 r13 zf cf x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 w h1; omega
   | succ k ih =>
-    intro es len nB m rcx rdx rbp rsi rdi r8 r9 r13 zf cf x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 _ hlen2 hlen hmax hnB hH
+    intro es len nB m rcx rdx rbp rsi rdi r8 r9 r13 zf cf x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 w _ hlen2 hlen hmax hnB hH
     obtain ⟨hTag, hLen, hE, hK0, hK1, hOwn, hPlat, hFl, hF0, hF1, hF2, hF3⟩ := hH
     rcases es with _ | ⟨r, _ | ⟨l, rest⟩⟩
     · simp at hlen2
@@ -153,7 +153,7 @@ theorem loop (self arr keyp fp : BitVec 64) (k0 k1 : V) (fl plat : BitVec 8) (P 
         ⟨tag1, qLen1, ⟨by rw [eTop]; exact vM0, by rw [eTop]; exact vM1, by rw [eTop]; exact rest1⟩, key0, key1, own1,
           f58, f59, f60, f61, f62, f63⟩
       obtain ⟨K2, s2, e2, pc2, bx2, sp2, bp2, d12, d14, q2, E2, tag2, out2⟩ :=
-        ih (merged k0 k1 l.1 l.2 r.1 r.2 fl :: rest) (len - 1#64) (nB - 1#64) m1 rcx1 rdx1 rbp rsi1 rdi1 r81 r91 r131 zf1 cf1 y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 y13 y14 y15
+        ih (merged k0 k1 l.1 l.2 r.1 r.2 fl :: rest) (len - 1#64) (nB - 1#64) m1 rcx1 rdx1 rbp rsi1 rdi1 r81 r91 r131 zf1 cf1 y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 y13 y14 y15 (w := w')
           (by omega) (by simp only [List.length_cons]; omega) (by simp only [List.length_cons]; bv_omega)
           (by simp only [List.length_cons]; omega) (by bv_omega) H1
       have eD : len - nB = len - 1#64 - (nB - 1#64) := by bv_decide

@@ -194,7 +194,7 @@ theorem turn_avx_leak (self arr keyp fp len n : BitVec 64) (l0 l1 r0 r1 k0 k1 : 
   have bF63 : b (fp + 63#64) = some 0#8 := by
     rw [mem2', put128_other _ _ _ _ (by bv_omega), put128_other _ _ _ _ (by bv_omega)]; exact f63
   obtain ⟨s3, e3, pc3, ax3, r153, bx3, sp3, bp3, r123, r143, fF, mem3, g58, g59, g60, g61, g62, g63⟩ :=
-    post_avx self arr keyp fp len n ((len + 18446744073709551614#64) <<< 5) (merged k0 k1 l0 l1 r0 r1 fl).1 (merged k0 k1 l0 l1 r0 r1 fl).2 b
+    post_avx (w := w') self arr keyp fp len n ((len + 18446744073709551614#64) <<< 5) (merged k0 k1 l0 l1 r0 r1 fl).1 (merged k0 k1 l0 l1 r0 r1 fl).2 b
       rax2 rcx2 rdx2 rbp rsi2 rdi2 r82 r92 zf2 cf2 y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 y13 y14 y15
       hfp hC0 hC1 b_own
       (fun fF v => over_write128 _ _ _ _ _ _ ownA1 oA1)
@@ -209,7 +209,7 @@ theorem turn_avx_leak (self arr keyp fp len n : BitVec 64) (l0 l1 r0 r1 k0 k1 : 
   obtain ⟨SLk, hSLk, hLk⟩ := avxShows_spec (fp + 64#64) (fp + 128#64) (fp + 18446744073709551608#64) 262235#64 S1 k0 k1 l0 l1 r0 r1
     pc1 di1 si1 sp1 hc0 hc1 hb0 hb1 hb2 hb3 hret hapart
   obtain ⟨SL3, hSL3, hL3⟩ :=
-    post_avx_leak self arr keyp fp len n ((len + 18446744073709551614#64) <<< 5) (merged k0 k1 l0 l1 r0 r1 fl).1 (merged k0 k1 l0 l1 r0 r1 fl).2 b
+    post_avx_leak (w := w') self arr keyp fp len n ((len + 18446744073709551614#64) <<< 5) (merged k0 k1 l0 l1 r0 r1 fl).1 (merged k0 k1 l0 l1 r0 r1 fl).2 b
       rax2 rcx2 rdx2 rbp rsi2 rdi2 r82 r92 zf2 cf2 y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 y13 y14 y15
       hfp hC0 hC1 b_own
       (fun fF v => over_write128 _ _ _ _ _ _ ownA1 oA1)
@@ -346,7 +346,7 @@ theorem turn_sse_leak (self arr keyp fp len n : BitVec 64) (l0 l1 r0 r1 k0 k1 : 
   have bF63 : b (fp + 63#64) = some 0#8 := by
     rw [mem2', put128_other _ _ _ _ (by bv_omega), put128_other _ _ _ _ (by bv_omega)]; exact f63
   obtain ⟨s3, e3, pc3, ax3, r153, bx3, sp3, bp3, r123, r143, fF, mem3, g58, g59, g60, g61, g62, g63⟩ :=
-    post_sse self arr keyp fp len n ((len + 18446744073709551614#64) <<< 5) (merged k0 k1 l0 l1 r0 r1 fl).1 (merged k0 k1 l0 l1 r0 r1 fl).2 b
+    post_sse (w := w') self arr keyp fp len n ((len + 18446744073709551614#64) <<< 5) (merged k0 k1 l0 l1 r0 r1 fl).1 (merged k0 k1 l0 l1 r0 r1 fl).2 b
       rax2 rcx2 rdx2 rbp rsi2 rdi2 r82 r92 zf2 cf2 y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 y13 y14 y15
       hfp hC0 hC1 b_own
       (fun fF v => over_write128 _ _ _ _ _ _ ownA1 oA1)
@@ -361,7 +361,7 @@ theorem turn_sse_leak (self arr keyp fp len n : BitVec 64) (l0 l1 r0 r1 k0 k1 : 
   obtain ⟨SLk, hSLk, hLk⟩ := sseShows_spec (fp + 64#64) (fp + 128#64) (fp + 18446744073709551608#64) 262566#64 S1 k0 k1 l0 l1 r0 r1
     pc1 di1 si1 sp1 hc0 hc1 hb0 hb1 hb2 hb3 hret hapart
   obtain ⟨SL3, hSL3, hL3⟩ :=
-    post_sse_leak self arr keyp fp len n ((len + 18446744073709551614#64) <<< 5) (merged k0 k1 l0 l1 r0 r1 fl).1 (merged k0 k1 l0 l1 r0 r1 fl).2 b
+    post_sse_leak (w := w') self arr keyp fp len n ((len + 18446744073709551614#64) <<< 5) (merged k0 k1 l0 l1 r0 r1 fl).1 (merged k0 k1 l0 l1 r0 r1 fl).2 b
       rax2 rcx2 rdx2 rbp rsi2 rdi2 r82 r92 zf2 cf2 y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 y13 y14 y15
       hfp hC0 hC1 b_own
       (fun fF v => over_write128 _ _ _ _ _ _ ownA1 oA1)

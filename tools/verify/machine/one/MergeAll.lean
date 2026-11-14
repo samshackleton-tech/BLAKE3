@@ -61,7 +61,7 @@ noncomputable def loopShows (plat : BitVec 8) (self arr keyp fp : BitVec 64) : N
 set_option maxRecDepth 1000000 in
 set_option maxHeartbeats 0 in
 theorem loopL (self arr keyp fp : BitVec 64) (k0 k1 : V) (fl plat : BitVec 8) (P : Places self arr keyp fp) :
-    ∀ (n : Nat) (es : List (V × V)) (len nB : BitVec 64) (m : Mem) (rcx rdx rbp rsi rdi r8 r9 r13 : BitVec 64) (zf cf : Option Bool) (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 : V),
+    ∀ (n : Nat) (es : List (V × V)) (len nB : BitVec 64) (m : Mem) (rcx rdx rbp rsi rdi r8 r9 r13 : BitVec 64) (zf cf : Option Bool) (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 : V) {w : Wide},
       1 ≤ n → n + 1 ≤ es.length → len.toNat = es.length → es.length ≤ 55 → nB.toNat = n →
       Head self arr keyp fp k0 k1 fl plat m len es →
       ∃ S, stepsL Code.prog (n * turnK plat) ⟨⟨len, rcx, rdx, self, fp, rbp, rsi, rdi, r8, r9, arr, r13, keyp, nB, zf, cf, x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, m, 0x40094, w⟩, []⟩ = some S ∧
@@ -74,9 +74,9 @@ theorem loopL (self arr keyp fp : BitVec 64) (k0 k1 : V) (fl plat : BitVec 8) (P
   obtain ⟨harr, hfp, hW, gArr, gKey, gSelf, gKeyArr, gKeySelf⟩ := P
   intro n
   induction n with
-  | zero => intro es len nB m rcx rdx rbp rsi rdi r8 r9 r13 zf cf x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 h1; omega
+  | zero => intro es len nB m rcx rdx rbp rsi rdi r8 r9 r13 zf cf x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 w h1; omega
   | succ k ih =>
-    intro es len nB m rcx rdx rbp rsi rdi r8 r9 r13 zf cf x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 _ hlen2 hlen hmax hnB hH
+    intro es len nB m rcx rdx rbp rsi rdi r8 r9 r13 zf cf x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 w _ hlen2 hlen hmax hnB hH
     obtain ⟨hTag, hLen, hE, hK0, hK1, hOwn, hPlat, hFl, hF0, hF1, hF2, hF3⟩ := hH
     rcases es with _ | ⟨r, _ | ⟨l, rest⟩⟩
     · simp at hlen2
@@ -125,7 +125,7 @@ theorem loopL (self arr keyp fp : BitVec 64) (k0 k1 : V) (fl plat : BitVec 8) (P
         ⟨tag1, qLen1, ⟨by rw [eTop]; exact vM0, by rw [eTop]; exact vM1, by rw [eTop]; exact rest1⟩, key0, key1, own1,
           f58, f59, f60, f61, f62, f63⟩
       obtain ⟨S2, e2, hl2, pc2, bx2, sp2, bp2, d12, d14, q2, E2, tag2, out2⟩ :=
-        ih (merged k0 k1 l.1 l.2 r.1 r.2 fl :: rest) (len - 1#64) (nB - 1#64) m1 rcx1 rdx1 rbp rsi1 rdi1 r81 r91 r131 zf1 cf1 y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 y13 y14 y15
+        ih (merged k0 k1 l.1 l.2 r.1 r.2 fl :: rest) (len - 1#64) (nB - 1#64) m1 rcx1 rdx1 rbp rsi1 rdi1 r81 r91 r131 zf1 cf1 y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 y13 y14 y15 (w := w')
           (by omega) (by simp only [List.length_cons]; omega) (by simp only [List.length_cons]; bv_omega)
           (by simp only [List.length_cons]; omega) (by bv_omega) H1
       have eD : len - nB = len - 1#64 - (nB - 1#64) := by bv_decide
@@ -209,7 +209,7 @@ theorem merge_whole (self p keyp rsp0 fp len target : BitVec 64) (k0 k1 : V) (fl
   simp only at hl2 pc2 bx2 sp2 bp2 d12 d14 q2 E2 tag2 out2
   subst lk2
   obtain ⟨a2, b2, d2, bx2v, sp2v, bp2v, si2, di2, r82, r92, r122, r132, r142, r152, zf2, cf2,
-    z0, z1, z2, z3, z4, z5, z6, z7, z8, z9, z10, z11, z12, z13, z14, z15, m2, pc2v⟩ := s2
+    z0, z1, z2, z3, z4, z5, z6, z7, z8, z9, z10, z11, z12, z13, z14, z15, m2, pc2v, w2⟩ := s2
   simp only at pc2 bx2 sp2 bp2 d12 d14 q2 E2 tag2 out2
   subst pc2v bp2v
   have keep : ∀ x : BitVec 64, inP (x - rsp0) = true → m2 x = m1 x := by
@@ -224,11 +224,11 @@ theorem merge_whole (self p keyp rsp0 fp len target : BitVec 64) (k0 k1 : V) (fl
       simp only [inP]; bv_decide))]
     exact hv
   obtain ⟨⟨s3, lk3⟩, e3, hl3, pc3, sp3, bx3, bp3, f12, f13, f14, f15, mem3⟩ :=
-    both (epilogue rsp0 m2 rbx r12 r13 r14 r15 rbp ra a2 b2 d2 bx2v sp2v si2 di2 r82 r92 r122 r132 r142 r152 zf2 cf2
+    both (epilogue (w := w2) rsp0 m2 rbx r12 r13 r14 r15 rbp ra a2 b2 d2 bx2v sp2v si2 di2 r82 r92 r122 r132 r142 r152 zf2 cf2
         z0 z1 z2 z3 z4 z5 z6 z7 z8 z9 z10 z11 z12 z13 z14 z15
         (rd _ _ (by decide) s48) (rd _ _ (by decide) s40) (rd _ _ (by decide) s32) (rd _ _ (by decide) s24) (rd _ _ (by decide) s16)
         (rd _ _ (by decide) s8) (rd _ _ (by decide) sra))
-      (epilogue_leak rsp0 m2 rbx r12 r13 r14 r15 rbp ra a2 b2 d2 bx2v sp2v si2 di2 r82 r92 r122 r132 r142 r152 zf2 cf2
+      (epilogue_leak (w := w2) rsp0 m2 rbx r12 r13 r14 r15 rbp ra a2 b2 d2 bx2v sp2v si2 di2 r82 r92 r122 r132 r142 r152 zf2 cf2
         z0 z1 z2 z3 z4 z5 z6 z7 z8 z9 z10 z11 z12 z13 z14 z15
         (rd _ _ (by decide) s48) (rd _ _ (by decide) s40) (rd _ _ (by decide) s32) (rd _ _ (by decide) s24) (rd _ _ (by decide) s16)
         (rd _ _ (by decide) s8) (rd _ _ (by decide) sra))
