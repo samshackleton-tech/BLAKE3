@@ -10,9 +10,11 @@ OBJDUMP = os.environ.get("OBJDUMP") or (shutil.which("llvm-objdump") or shutil.w
 
 
 def assemble_linux_x86(s_path, o_path):
-    r = subprocess.run(["cc", "-target", "x86_64-unknown-linux-gnu", "-c", "-o", o_path, s_path], capture_output=True)
-    if r.returncode != 0:
-        subprocess.run(["cc", "-c", "-o", o_path, s_path], check=True)
+    """With clang where there is one (the assembler whose bytes Code_*.lean holds), else with `cc`."""
+    for cc in (["clang", "--target=x86_64-unknown-linux-gnu"], ["cc", "-target", "x86_64-unknown-linux-gnu"]):
+        if shutil.which(cc[0]) and subprocess.run(cc + ["-c", "-o", o_path, s_path], capture_output=True).returncode == 0:
+            return
+    subprocess.run(["cc", "-c", "-o", o_path, s_path], check=True)
 
 
 def insn_lines(o_path, symbol):

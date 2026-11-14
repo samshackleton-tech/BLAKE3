@@ -2,8 +2,10 @@ import Machine
 open X86
 
 /-! Written by mk_cross_one.py: every instruction of the proved programs, once, with its bytes; then the
-instructions of the wide kernels P16 (../wide/p16.ode) and K32 (../wide/k32.ode) as the lifter read them
-from their objects. A move written the VEX way is the form that clears the register above bit 127. -/
+instructions of the wide kernels P16 (../wide/p16.ode) and K32 (../wide/k32.ode, the library's kernel as shipped)
+as the lifter read them from their objects. A move written the VEX way is the form that clears the register
+above bit 127 (`vmovv`, `vmovq`, `vpshufd`). K32's `lea` of its schedule table is not here: the model has it
+as the address the lifter places the table at, which no processor run of the instruction alone can check. -/
 
 set_option maxRecDepth 100000 in
 def crossTable : List (Instr × String) := [
@@ -591,7 +593,9 @@ def crossTable : List (Instr × String) := [
   (.zstore false .r15 0x1C0 4, "62d17e487f6707"),
   (.vzeroupper, "c5f877"),
   (.mov 32 (.reg .r10) (.imm 0x1), "41ba01000000"),
-  (.sub 64 (.reg .rsp) (.imm 0xB00), "4881ec000b0000"),
+  (.jmp 0x10013, "eb07"),
+  (.xor 32 (.reg .r10) (.reg .r10), "4531d2"),
+  (.sub 64 (.reg .rsp) (.imm 0x940), "4881ec40090000"),
   (.zbroadcast 0 (.reg .rcx), "62f27d487cc1"),
   (.zbroadcast 1 (.reg .rcx), "62f27d487cc9"),
   (.zmov 2 0, "62f17d486fd0"),
@@ -599,7 +603,7 @@ def crossTable : List (Instr × String) := [
   (.zmov 5 1, "62f17d486fe9"),
   (.zmov 6 1, "62f17d486ff1"),
   (.test 32 (.reg .r10) (.reg .r10), "4585d2"),
-  (.je 0x10096, "7434"),
+  (.je 0x1009F, "7434"),
   (.zpadddc 2 0 0x0000000F0000000E0000000D0000000C0000000B0000000A00000009000000080000000700000006000000050000000400000003000000020000000100000000#512, "62f17d48fe1500000000"),
   (.zpadddc 3 0 0x0000001F0000001E0000001D0000001C0000001B0000001A00000019000000180000001700000016000000150000001400000013000000120000001100000010#512, "62f17d48fe1d00000000"),
   (.zpcmpud 1 2 0 1, "62f36d481ec801"),
@@ -620,14 +624,6 @@ def crossTable : List (Instr × String) := [
   (.zbroadcast 14 (.mem .r14 0x18), "62527d48587606"),
   (.zbroadcast 15 (.mem .r14 0x1C), "62527d48587e07"),
   (.mov 64 (.reg .rsi) (.reg .rsp), "4889e6"),
-  (.zloadc 16 0x000003C0000003800000034000000300000002C0000002800000024000000200000001C0000001800000014000000100000000C0000000800000004000000000#512, "62e17e486f0500000000"),
-  (.zstore true .rsp 0x940 16, "62e17d487f442425"),
-  (.zstore true .rsp 0x980 16, "62e17d487f442426"),
-  (.zstore true .rsp 0x9C0 16, "62e17d487f442427"),
-  (.zstore true .rsp 0xA00 16, "62e17d487f442428"),
-  (.zstore true .rsp 0xA40 16, "62e17d487f442429"),
-  (.zstore true .rsp 0xA80 16, "62e17d487f44242a"),
-  (.zstore true .rsp 0xAC0 16, "62e17d487f44242b"),
   (.zstore true .rsp 0x900 15, "62717d487f7c2424"),
   (.nop, "420f188c30c0000000"),
   (.zunpckldq 15 16 17, "62317d4062f9"),
@@ -688,7 +684,7 @@ def crossTable : List (Instr × String) := [
   (.zload true 15 .rsp 0x900, "62717d486f7c2424"),
   (.movzx8 .rax (.reg .rbx), "0fb6c3"),
   (.test 64 (.reg .r14) (.reg .r14), "4d85f6"),
-  (.jne 0x108BB, "750d"),
+  (.jne 0x10846, "750d"),
   (.mov 32 (.reg .rdx) (.reg .rbx), "89da"),
   (.shr32 .rdx 8, "c1ea08"),
   (.and 32 (.reg .rdx) (.imm 0xFF), "81e2ff000000"),
@@ -714,7 +710,6 @@ def crossTable : List (Instr × String) := [
   (.zload true 29 .rsp 0x8C0, "62617d486f6c2423"),
   (.zbroadcast 30 (.reg .rdx), "62627d487cf2"),
   (.zbroadcast 31 (.reg .rax), "62627d487cf8"),
-  (.lea .rdi .rsp 0x940, "488dbc2440090000"),
   (.nop, "0f1f840000000000"),
   (.mov 32 (.reg .rax) (.mem .rdi 0x0), "8b07"),
   (.mov 32 (.reg .rcx) (.mem .rdi 0x8), "8b4f08"),
@@ -816,7 +811,7 @@ def crossTable : List (Instr × String) := [
   (.mov 32 (.reg .rdx) (.mem .rdi 0x34), "8b5734"),
   (.mov 32 (.reg .r8) (.mem .rdi 0x3C), "448b473c"),
   (.add 64 (.reg .rdi) (.imm 0x40), "4883c740"),
-  (.jne 0x10980, "0f8510faffff"),
+  (.jne 0x10900, "0f8510faffff"),
   (.zpxord 0 0 16, "62b17d48efc0"),
   (.zpxord 1 1 17, "62b17548efc9"),
   (.zpxord 2 2 18, "62b16d48efd2"),
@@ -833,7 +828,7 @@ def crossTable : List (Instr × String) := [
   (.zpxord 13 13 29, "62111548efed"),
   (.zpxord 14 14 30, "62110d48eff6"),
   (.zpxord 15 15 31, "62110548efff"),
-  (.jne 0x101A8, "0f85cbf1ffff"),
+  (.jne 0x10133, "0f85d6f1ffff"),
   (.zunpckldq 16 8 9, "62c13d4862c1"),
   (.zunpckhdq 8 8 9, "62513d486ac1"),
   (.zunpckldq 9 10 11, "62512d4862cb"),
