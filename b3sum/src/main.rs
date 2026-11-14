@@ -288,7 +288,14 @@ pub(crate) fn hash_slice_32(mode: blake3::Mode<'_>, bytes: &[u8]) -> blake3::Has
         let mut hasher = blake3::convenience::Hasher::new(mode, Some(bytes.len() as u64));
         blake3::throughput::update_multithreaded(&mut hasher, bytes);
         hasher.finalize()
-    } else if matches!(mode, blake3::Mode::Plain) {
+    } else {
+        hash_slice_local(mode, bytes)
+    }
+}
+
+/// Hashes on the calling thread, whether or not the pool is running.
+pub(crate) fn hash_slice_local(mode: blake3::Mode<'_>, bytes: &[u8]) -> blake3::Hash {
+    if matches!(mode, blake3::Mode::Plain) {
         blake3::convenience::hash(bytes)
     } else {
         let mut hasher = blake3::convenience::Hasher::new(mode, Some(bytes.len() as u64));

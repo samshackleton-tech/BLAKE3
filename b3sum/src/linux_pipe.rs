@@ -6,13 +6,13 @@
 //!   `preadv2(RWF_NOWAIT)` into a core-local `MaybeUninit<Block>` arena and hash
 //!   16-at-a-time via `blake3::throughput::hash_each`; warm files `>= 4 MiB`
 //!   loan `&map` zero-copy to `Pipeline::lent` across the worker pool.
-//! - **Cold runs**: the first `RWF_NOWAIT` miss opens per-worker single-issuer
-//!   `Uring`s (`COOP_TASKRUN | SINGLE_ISSUER | DEFER_TASKRUN`), dynamically
-//!   waking up to 28 cold I/O workers across NUMA sockets on wide servers,
-//!   pushing `< 4 MiB` files straight onto `Uring` (where kernel `io_read`
-//!   serves cached hits inline and dispatches NVMe reads asynchronously), and
-//!   streaming `>= 32 MiB` cold files (`>= 4 MiB` on 1 thread) into 64 KiB
-//!   `Pipeline::room()`s at ~20 MiB RSS.
+//! - **Cold runs**: the first `RWF_NOWAIT` miss opens that worker's
+//!   single-issuer `Uring` (`COOP_TASKRUN | SINGLE_ISSUER | DEFER_TASKRUN`).
+//!   Files `< 4 MiB` go straight onto it (the kernel's `io_read` serves
+//!   cached hits inline and dispatches NVMe reads asynchronously), and each
+//!   is hashed on the core that read it, whether or not the pool runs.
+//!   Cold files `>= 4 MiB` stream into 64 KiB `Pipeline::room()`s at
+//!   ~20 MiB RSS; they are the only cold files that start the pool.
 
 use crate::Args;
 use crate::uring::{IoUringCqe, Uring};
@@ -30,7 +30,6 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 const SMALL: u64 = crate::MAP_LEN as u64;
 const COLD_RING_MAX_FILE: u64 = 4 << 20;
-const COLD_ROOM_STREAM_MIN_MT: u64 = 32 << 20;
 const WARM_BATCH_MAX_FILE: usize = 16 * 1024;
 const WARM_SLOT_BLOCKS: usize = (WARM_BATCH_MAX_FILE / 64) + 1;
 const WARM_BATCH_SLOTS: usize = 16;
@@ -658,10 +657,7 @@ impl ColdRingState {
                             if n <= WARM_BATCH_MAX_FILE {
                                 warm_batch.push_raw(st.file_idx, st.buf.as_ptr(), n, mode, done, keep_going);
                             } else {
-                                if n >= SMALL as usize && args.num_threads().is_none() {
-                                    crate::init_pool_once(crate::threads().get());
-                                }
-                                let h = crate::hash_slice_32(mode, &st.buf[..n]);
+                                let h = crate::hash_slice_local(mode, &st.buf[..n]);
                                 if *keep_going && !done(st.file_idx, Ok(h)) {
                                     *keep_going = false;
                                 }
@@ -701,10 +697,7 @@ impl ColdRingState {
                     if total_len <= WARM_BATCH_MAX_FILE {
                         warm_batch.push_raw(st.file_idx, st.buf.as_ptr(), total_len, mode, done, keep_going);
                     } else {
-                        if total_len >= SMALL as usize && args.num_threads().is_none() {
-                            crate::init_pool_once(crate::threads().get());
-                        }
-                        let h = crate::hash_slice_32(mode, &st.buf);
+                        let h = crate::hash_slice_local(mode, &st.buf);
                         if !done(st.file_idx, Ok(h)) {
                             *keep_going = false;
                         }
@@ -1035,23 +1028,12 @@ fn run_hybrid_worker(
                     c.queue_file(i, file, size as usize, None, args, &mut warm_batch, done, &mut keep_going);
                     continue;
                 }
-            } else if total_threads > 1 && size < COLD_ROOM_STREAM_MIN_MT {
-                // Cold `4 MiB .. 32 MiB` on multi-thread (e.g. `4 MiB` and `16 MiB` in `mixed-1000`):
-                // fault `map` across all NUMA cores in parallel without stalling this worker's `Uring`!
-                let pool_workers = if args.num_threads().is_some() { (total_threads - io_threads + 1).max(1) } else { total_threads };
-                crate::init_pool_once(pool_workers);
-                let h = crate::hash_slice_32(args.mode, &map);
-                crate::hold(map);
-                if !done(i, Ok(h)) {
-                    keep_going = false;
-                }
-                continue;
             } else {
                 drop(map);
             }
         }
 
-        // Cold `>= 32 MiB` (or `>= 4 MiB` on 1 thread): stream into 64 KiB `Pipeline` rooms
+        // Cold `>= 4 MiB`: stream into 64 KiB `Pipeline` rooms
         // at ~20 MiB RSS, overlapping NVMe DMA with multi-core hashing!
         if !uring_unavailable && cold.is_none() {
             cold = ColdRingState::new(max_slots);
