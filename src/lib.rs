@@ -323,12 +323,15 @@ pub(crate) enum Counted {
     /// One update of a block or less staged as a padded block
     /// (Hasher::update's path for an empty stage).
     PaddedFirstBlock = 6,
+    /// One copy of bytes into a Hasher's stage (Hasher::stage): what an
+    /// update's whole groups skip.
+    Staged = 7,
 }
 
 #[cfg(all(test, feature = "std"))]
 std::thread_local! {
     /// This thread's counts since the test last cleared them, by Counted.
-    pub(crate) static COUNTED: [core::cell::Cell<u64>; 7] = const { [const { core::cell::Cell::new(0) }; 7] };
+    pub(crate) static COUNTED: [core::cell::Cell<u64>; 8] = const { [const { core::cell::Cell::new(0) }; 8] };
 }
 
 /// Count one of `what`: in the tests' record, and nothing in any other

@@ -183,6 +183,7 @@ impl Hasher {
 
     /// Copy `bytes` into the stage after what it holds.
     pub(crate) fn stage(&mut self, bytes: &[u8]) {
+        crate::counted(crate::Counted::Staged);
         self.stage[self.staged..self.staged + bytes.len()].write_copy_of_slice(bytes);
         self.staged += bytes.len();
     }
@@ -214,11 +215,25 @@ impl Hasher {
             // side by side (each.rs), and a longer message's first chunk
             // joins its group of sixteen.
             let first_chunk_to_core = hold && !cfg!(blake3_neon) && self.core.count() + input.len() as u64 <= CHUNK_LEN as u64;
-            if self.staged == 0 && (input.len() >= STAGE_LEN || first_chunk_to_core) {
+            if self.staged == 0 && first_chunk_to_core {
                 self.core.update_pooled(input, pooled);
                 return &[];
             }
             let at = (self.core.initial_chunk_counter * CHUNK_LEN as u64 + self.count()) % STAGE_LEN as u64;
+            // On a 16 KiB boundary with nothing staged, the input's whole
+            // groups go to the core as they lie; what follows them is
+            // staged below, so the next groups start on a boundary too
+            // (BLAKE3 #393: sent whole, an input's ragged end left the
+            // core off the boundary, and every later piece hashed in the
+            // narrow subtrees that fit there, at half the speed).
+            if self.staged == 0 && at == 0 && input.len() >= STAGE_LEN {
+                let groups = input.len() / STAGE_LEN * STAGE_LEN;
+                // The loop's variant on this path: a group or more leaves the input.
+                assert!(groups > 0, "no whole group went to the core");
+                self.core.update_pooled(&input[..groups], pooled);
+                input = &input[groups..];
+                continue;
+            }
             let to_boundary = STAGE_LEN - at as usize;
             let take = cmp::min(to_boundary, input.len());
             // The loop's variant: every pass stages at least one byte of
@@ -957,6 +972,44 @@ mod test {
         assert_eq!(h.staged, 0, "the stage went to the core");
         assert_eq!(padded(&mut h, &input[STAGE_LEN..STAGE_LEN + 64]), 1, "an empty stage again");
         assert_eq!(h.finalize(), crate::convenience::hash(&input[..STAGE_LEN + 64]));
+    }
+
+    /// An update of 16 KiB or more from a boundary gives the core its
+    /// whole groups and stages what follows them, so that later pieces
+    /// start on a boundary again: three pieces of a third of 64 KiB, then
+    /// pieces that end off and on the boundaries. Sent whole, such pieces
+    /// hash to the same digest in narrower subtrees, at half the speed
+    /// (BLAKE3 #393), so only `staged` tells (BLAKE3 #219).
+    #[test]
+    fn test_an_updates_whole_groups_skip_the_stage_and_its_end_is_staged() {
+        let mut input = std::vec![0u8; 65536 + 6 * STAGE_LEN];
+        crate::test::paint_test_input(&mut input);
+        let mut h = Hasher::new(Mode::Plain, None);
+        let third = 65536 / 3;
+        // After each update: the bytes staged, and the copies into the
+        // stage the update made (one for a ragged end; two where it first
+        // fills the stage to the boundary; none for whole groups alone).
+        for (end, staged, copies) in [
+            (third, third - STAGE_LEN, 1),
+            (2 * third, 2 * third - 2 * STAGE_LEN, 2),
+            (65536, 0, 1),
+            (65536 + STAGE_LEN + 5, 5, 1),
+            (65536 + 2 * STAGE_LEN, 0, 1),
+            (65536 + 2 * STAGE_LEN + 100, 100, 1),
+            (65536 + 4 * STAGE_LEN + 100, 100, 2),
+            (65536 + 5 * STAGE_LEN, 0, 1),
+            (65536 + 6 * STAGE_LEN, 0, 0),
+        ] {
+            let from = h.count() as usize;
+            #[cfg(feature = "std")]
+            crate::COUNTED.with(|c| c[crate::Counted::Staged as usize].set(0));
+            h.update(&input[from..end]);
+            #[cfg(feature = "std")]
+            assert_eq!(crate::COUNTED.with(|c| c[crate::Counted::Staged as usize].get()), copies, "copies into the stage, after {end} bytes");
+            let _ = copies;
+            assert_eq!(h.staged, staged, "after {end} bytes");
+            assert_eq!(h.finalize(), crate::convenience::hash(&input[..end]), "after {end} bytes");
+        }
     }
 
     /// A hasher started 8 chunks into the message (the tests' subtrees;
