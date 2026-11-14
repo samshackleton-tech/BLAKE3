@@ -18,6 +18,8 @@ import kcheck, kdecode
 
 BASE, DATA = 0x10000, 0x50000000
 OBJDUMP = os.environ.get("OBJDUMP") or shutil.which("llvm-objdump") or shutil.which("objdump")
+# the lifter reads llvm-objdump's listing (macOS's objdump is LLVM's; GNU's is another format)
+LLVM_OBJDUMP = bool(OBJDUMP) and shutil.which(OBJDUMP) is not None and "LLVM" in subprocess.run([OBJDUMP, "--version"], capture_output=True, text=True).stdout
 
 
 def assemble(s_path, o_path):
@@ -105,7 +107,7 @@ class Kcheck(unittest.TestCase):
             with self.assertRaises(kdecode.Stop, msg=what):
                 kdecode.read(changed(ins, byte, bit), "blake3_servil_avx512_p16", BASE, DATA)
 
-    @unittest.skipUnless(OBJDUMP, "no objdump: the lifter's reading is not made")
+    @unittest.skipUnless(LLVM_OBJDUMP, "no llvm-objdump: the lifter's reading is not made, and the two are not compared")
     def test_the_decoder_reads_what_the_lifter_reads(self):
         listing = os.path.join(self.dir, "k.listing")
         with open(listing, "w") as f:
