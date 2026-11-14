@@ -6,6 +6,20 @@ use crate::{BLOCK_LEN, CVWords, IncrementCounter, OUT_LEN};
 unsafe extern "C" {
     fn blake3_servil_avx512_k32(inputs: *const *const u8, blocks: u64, key: *const u32, counter: u64, packed_flags: u64, out: *mut u8);
     fn blake3_servil_avx512_p32(inputs: *const *const u8, blocks: u64, key: *const u32, counter: u64, packed_flags: u64, out: *mut u8);
+}
+
+// The sixteen-input parent kernel as fixed bytes (c/blake3_avx512_p16_bytes.s, written by
+// tools/fixed_bytes.py from the readable source): the same instructions for every user, whatever
+// assembles the crate. The toolchain copies the bytes; the linker fills in four distances to the IV.
+core::arch::global_asm!(include_str!("../c/blake3_avx512_p16_bytes.s"), options(raw));
+
+unsafe extern "C" {
+    fn blake3_servil_avx512_p16_bytes(inputs: *const *const u8, blocks: u64, key: *const u32, counter: u64, packed_flags: u64, out: *mut u8);
+}
+
+// The same kernel as the C compiler's assembler makes it of the readable source: the tests compare the two.
+#[cfg(test)]
+unsafe extern "C" {
     fn blake3_servil_avx512_p16(inputs: *const *const u8, blocks: u64, key: *const u32, counter: u64, packed_flags: u64, out: *mut u8);
 }
 
@@ -46,10 +60,10 @@ pub(crate) unsafe fn hash16<const N: usize>(inputs: &[&[u8; N]], key: &CVWords, 
     assert_eq!(inputs.len(), 16);
     assert!(out.len() >= 16 * OUT_LEN);
     let packed = flags as u64 | (start as u64) << 8 | (end as u64) << 16 | (BLOCK_LEN as u64) << 24;
-    crate::ran_kernel(blake3_servil_avx512_p16 as *const ());
+    crate::ran_kernel(blake3_servil_avx512_p16_bytes as *const ());
     // Sound: exactly sixteen readable inputs and room for sixteen CVs;
     // the caller supplies the ISA and the key's eight words.
-    unsafe { blake3_servil_avx512_p16(inputs.as_ptr().cast(), (N / BLOCK_LEN) as u64, key.as_ptr(), counter, packed, out.as_mut_ptr()) };
+    unsafe { blake3_servil_avx512_p16_bytes(inputs.as_ptr().cast(), (N / BLOCK_LEN) as u64, key.as_ptr(), counter, packed, out.as_mut_ptr()) };
 }
 
 // Filled from the independent portable compression callback in the
@@ -109,7 +123,7 @@ pub(crate) unsafe fn self_test(previous: &[u8; 32]) -> usize {
 
 #[cfg(all(test, feature = "std"))]
 pub(crate) fn parent_entry() -> *const () {
-    blake3_servil_avx512_p16 as *const ()
+    blake3_servil_avx512_p16_bytes as *const ()
 }
 
 #[cfg(all(test, feature = "std"))]
@@ -117,7 +131,7 @@ pub(crate) fn entries() -> [(&'static str, *const ()); 3] {
     [
         ("AVX-512 k32", blake3_servil_avx512_k32 as *const ()),
         ("AVX-512 p32", blake3_servil_avx512_p32 as *const ()),
-        ("AVX-512 p16", blake3_servil_avx512_p16 as *const ()),
+        ("AVX-512 p16", blake3_servil_avx512_p16_bytes as *const ()),
     ]
 }
 
@@ -228,7 +242,7 @@ mod tests {
             }
             let pointers: [*const u8; 16] = core::array::from_fn(|i| input[1 + i * n..].as_ptr());
             unsafe {
-                blake3_servil_avx512_p16(
+                blake3_servil_avx512_p16_bytes(
                     pointers.as_ptr(),
                     blocks as u64,
                     key.as_ptr(),
@@ -291,6 +305,71 @@ mod tests {
                     assert_eq!(input[0], data[0], "leading canary");
                     assert_eq!(&input[1 + 32 * OUT_LEN..], &data[1 + 32 * OUT_LEN..], "trailing input untouched");
                 }
+            }
+        }
+    }
+
+    /// The bytes file's lines: an instruction's bytes, or four the linker fills in (`None`).
+    fn fixed_bytes() -> Vec<Option<u8>> {
+        let mut bytes = Vec::new();
+        for line in include_str!("../c/blake3_avx512_p16_bytes.s").lines() {
+            let line = line.trim();
+            if let Some(list) = line.strip_prefix(".byte ") {
+                for b in list.split("//").next().unwrap().split(',') {
+                    bytes.push(Some(u8::from_str_radix(b.trim().trim_start_matches("0x"), 16).unwrap()));
+                }
+            } else if line.starts_with(".long .L") {
+                bytes.extend([None; 4]);
+            }
+        }
+        bytes
+    }
+
+    /// What runs is the file: the bytes at the kernel's address in this program are the bytes
+    /// file's, all but the four distances the linker filled in. No instruction is executed.
+    #[test]
+    fn parent16_fixed_bytes_are_the_code() {
+        let want = fixed_bytes();
+        assert_eq!(want.len(), 2768);
+        assert_eq!(want.iter().filter(|b| b.is_none()).count(), 16);
+        // Sound: the kernel's instructions, readable in this program's text.
+        let got = unsafe { core::slice::from_raw_parts(blake3_servil_avx512_p16_bytes as *const u8, want.len()) };
+        for (i, (g, w)) in got.iter().zip(&want).enumerate() {
+            if let Some(w) = w {
+                assert_eq!(g, w, "byte {i} of the kernel");
+            }
+        }
+    }
+
+    /// The fixed bytes and the kernel this machine's assembler makes of the source agree.
+    #[test]
+    fn parent16_fixed_bytes_match_the_assembled_kernel() {
+        if !crate::platform::avx512_detected() {
+            return;
+        }
+        let mut seed = 0x0123456789abcdefu64;
+        let mut next = || {
+            seed ^= seed << 13;
+            seed ^= seed >> 7;
+            seed ^= seed << 17;
+            seed
+        };
+        for blocks in 1..=16usize {
+            let n = blocks * BLOCK_LEN;
+            for round in 0..8 {
+                let input: Vec<u8> = (0..16 * n).map(|_| next() as u8).collect();
+                let key: [u32; 8] = core::array::from_fn(|_| next() as u32);
+                let pointers: [*const u8; 16] = core::array::from_fn(|i| input[i * n..].as_ptr());
+                let counter = if round % 2 == 0 { next() } else { u64::MAX - round as u64 };
+                let packed = (next() & 0xff) | (next() & 0xff) << 8 | (next() & 0xff) << 16 | (64 << 24);
+                let (mut fixed, mut assembled) = ([0x5au8; 16 * OUT_LEN + 1], [0x5au8; 16 * OUT_LEN + 1]);
+                // Sound: sixteen readable inputs of `blocks` blocks, a key of eight words, room for sixteen values.
+                unsafe {
+                    blake3_servil_avx512_p16_bytes(pointers.as_ptr(), blocks as u64, key.as_ptr(), counter, packed, fixed.as_mut_ptr());
+                    blake3_servil_avx512_p16(pointers.as_ptr(), blocks as u64, key.as_ptr(), counter, packed, assembled.as_mut_ptr());
+                }
+                assert_eq!(fixed, assembled, "blocks={blocks} round={round}");
+                assert_eq!(fixed[16 * OUT_LEN], 0x5a, "output canary");
             }
         }
     }

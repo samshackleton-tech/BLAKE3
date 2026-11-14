@@ -113,7 +113,7 @@ fn guarded_kernel_bounds(width: usize) {
                     unsafe {
                         core::ptr::write_bytes(out.ptr(), 0xa5, width * OUT_LEN);
                         let kernel = if width == 16 {
-                            blake3_servil_avx512_p16
+                            blake3_servil_avx512_p16_bytes
                         } else if inc {
                             blake3_servil_avx512_k32
                         } else {
