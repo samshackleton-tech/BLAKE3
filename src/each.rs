@@ -119,7 +119,7 @@ pub fn finalize_each(hashers: &mut [Hasher], which: &[usize], out: &mut [[u8; OU
             }
             for (&i, out) in which.iter().zip(out.iter_mut()) {
                 if !whole_in_stage(&hashers[i]) {
-                    *out = *hashers[i].take_output().root_hash().as_bytes();
+                    *out = *hashers[i].take_root_hash().as_bytes();
                 }
                 hashers[i].reset();
             }
@@ -133,7 +133,7 @@ pub fn finalize_each(hashers: &mut [Hasher], which: &[usize], out: &mut [[u8; OU
 /// `out`: the path every message takes but a sixteen-lane group.
 fn finish_each(hashers: &mut [Hasher], which: &[usize], out: &mut [[u8; OUT_LEN]]) {
     for (&i, out) in which.iter().zip(out) {
-        *out = *hashers[i].take_output().root_hash().as_bytes();
+        *out = *hashers[i].take_root_hash().as_bytes();
         hashers[i].reset();
     }
 }
@@ -1093,7 +1093,7 @@ mod test {
     /// a single `update` everywhere, it goes to the core. The digest is
     /// the same either way, so the stage's length tells.
     #[test]
-    fn a_turn_on_aarch64_stages_a_first_chunk_and_update_never_does() {
+    fn a_turn_stages_a_first_chunk_on_aarch64_and_an_update_everywhere() {
         crate::initialize();
         let bytes = [7u8; 300];
         let mut hashers = vec![Hasher::new(Mode::Plain, None), Hasher::new(Mode::Plain, None)];
@@ -1101,7 +1101,7 @@ mod test {
         hashers[1].update(&bytes);
         let in_turn = if cfg!(blake3_neon) { (300, 0) } else { (0, 300) };
         assert_eq!((hashers[0].staged, hashers[0].core.count()), in_turn, "a turn's first chunk");
-        assert_eq!((hashers[1].staged, hashers[1].core.count()), (0, 300), "an update's first chunk goes to the core");
+        assert_eq!((hashers[1].staged, hashers[1].core.count()), (300, 0), "an update's first chunk waits in the stage");
         for h in hashers {
             assert_eq!(h.finalize(), crate::test::official::hash(Mode::Plain, &bytes));
         }

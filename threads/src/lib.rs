@@ -24,7 +24,7 @@
 //! hasher.update(b"foo");
 //! hasher.update(b"bar");
 //! hasher.update(b"baz");
-//! // finalize takes the Hasher: a new one for the next message.
+//! // finalize leaves the Hasher as it is: more updates may follow it.
 //! let hash2 = hasher.finalize();
 //! assert_eq!(hash1, hash2);
 //!

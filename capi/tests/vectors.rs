@@ -34,11 +34,19 @@ fn every_call_against_the_test_vectors() {
                 assert_eq!(hex(&b3_hasher_finalize(&mut *hasher).bytes), expected[..64], "b3_hasher_finalize, {what}");
                 let full = expected.len() / 2;
                 let mut output = vec![0u8; full - 7];
-                // Finalized: the next message starts with b3_hasher_new.
-                b3_hasher_new(&mut *hasher, mode, 0, 0);
-                b3_hasher_update(&mut *hasher, input.as_ptr() as *const c_void, input.len());
+                // A finalize leaves the hasher as it was: asked again it
+                // answers alike, in either form.
                 b3_hasher_finalize_xof(&mut *hasher, 7, output.as_mut_ptr() as *mut c_void, output.len());
                 assert_eq!(hex(&output), expected[14..], "b3_hasher_finalize_xof from byte 7, {what}");
+                assert_eq!(hex(&b3_hasher_finalize(&mut *hasher).bytes), expected[..64], "b3_hasher_finalize again, {what}");
+                // And updates after a finalize extend the message: the
+                // input in two halves, a finalize between them.
+                b3_hasher_new(&mut *hasher, mode, 0, 0);
+                let (first, second) = input.split_at(len / 2);
+                b3_hasher_update(&mut *hasher, first.as_ptr() as *const c_void, first.len());
+                assert_eq!(b3_hasher_finalize(&mut *hasher).bytes, b3_hash(mode, first.as_ptr() as *const c_void, first.len()).bytes, "the first half, {what}");
+                b3_hasher_update(&mut *hasher, second.as_ptr() as *const c_void, second.len());
+                assert_eq!(hex(&b3_hasher_finalize(&mut *hasher).bytes), expected[..64], "extended after a finalize, {what}");
             }
         }
     }

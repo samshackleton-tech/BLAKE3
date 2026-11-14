@@ -20,7 +20,7 @@
 //! hasher.update(b"foo");
 //! hasher.update(b"bar");
 //! hasher.update(b"baz");
-//! // finalize takes the Hasher: a new one for the next message.
+//! // finalize leaves the Hasher as it is: more updates may follow it.
 //! let hash2 = hasher.finalize();
 //! assert_eq!(hash1, hash2);
 //!
@@ -320,12 +320,15 @@ pub(crate) enum Counted {
     OutputGroupTurn = 4,
     /// One pass of update_each's held groups hashed together.
     HeldPass = 5,
+    /// One update of a block or less staged as a padded block
+    /// (Hasher::update's path for an empty stage).
+    PaddedFirstBlock = 6,
 }
 
 #[cfg(all(test, feature = "std"))]
 std::thread_local! {
     /// This thread's counts since the test last cleared them, by Counted.
-    pub(crate) static COUNTED: [core::cell::Cell<u64>; 6] = const { [const { core::cell::Cell::new(0) }; 6] };
+    pub(crate) static COUNTED: [core::cell::Cell<u64>; 7] = const { [const { core::cell::Cell::new(0) }; 7] };
 }
 
 /// Count one of `what`: in the tests' record, and nothing in any other

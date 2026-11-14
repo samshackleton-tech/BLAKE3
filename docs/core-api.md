@@ -105,8 +105,8 @@ A message's hash, fed in pieces.
 ```rust
 fn new(mode: Mode<'_>, length_hint: Option<u64>) -> Self
 fn update(&mut self, input: &[u8]) -> &mut Self
-fn finalize(self) -> Hash
-fn finalize_xof(self) -> OutputReader
+fn finalize(&self) -> Hash
+fn finalize_xof(&self) -> OutputReader
 fn update_reader(&mut self, reader: impl Read) -> Result<&mut Self>
 ```
 

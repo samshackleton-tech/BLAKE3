@@ -54,16 +54,27 @@ pub(crate) fn lanes(platform: Platform) -> usize {
     }
 }
 
-/// A whole message still in its first chunk, with no staged suffix or
-/// stacked subtree. Its final block is already padded by ChunkState.
+/// A whole message whose root is one compression away: still in its first
+/// chunk, with no staged suffix or stacked subtree, its final block already
+/// padded by ChunkState (a turn's messages, `update_each`); or a block or
+/// less waiting in the stage, padded there (`update`'s, `Hasher::first_block`).
 /// Other states keep Hasher's existing finalization path.
 pub(crate) fn input(hasher: &Hasher) -> Option<Input<'_>> {
     let c = &hasher.core.chunk_state;
-    (hasher.staged == 0 && hasher.core.initial_chunk_counter == 0 && c.chunk_counter == 0 && hasher.core.cv_stack.len() == 0).then(|| Input {
-        block: &c.buf,
+    // Its first chunk, from the message's start: the counter starts at a
+    // subtree's offset and counts every chunk finished since.
+    if c.chunk_counter != 0 {
+        return None;
+    }
+    if hasher.staged == 0 {
+        return Some(Input { block: &c.buf, cv: &c.cv, len: c.buf_len, flags: c.flags | c.start_flag() | CHUNK_END | ROOT });
+    }
+    // Staged bytes behind a chunk state that holds none: the whole message.
+    (hasher.staged <= BLOCK_LEN && hasher.core.count() == 0).then(|| Input {
+        block: hasher.first_block(),
         cv: &c.cv,
-        len: c.buf_len,
-        flags: c.flags | c.start_flag() | CHUNK_END | ROOT,
+        len: hasher.staged as u8,
+        flags: c.flags | CHUNK_START | CHUNK_END | ROOT,
     })
 }
 
@@ -377,14 +388,24 @@ mod tests {
                     1 => crate::Mode::Keyed(&key),
                     _ => crate::Mode::DeriveKey("BLAKE3-Servil bulk-root test"),
                 };
+                // Fed in turns: the message waits in its chunk state. A
+                // block or less fed by `update` waits in the stage; both
+                // reach the kernel.
                 let mut h = Hasher::new(mode, None);
-                for part in data.chunks(17) {
-                    h.update(part);
+                if len <= BLOCK_LEN && i % 2 == 0 {
+                    for part in data.chunks(17) {
+                        h.update(part);
+                    }
+                    hashers.push(h);
+                } else {
+                    hashers.push(h);
+                    for part in data.chunks(17) {
+                        crate::each::update_each(&mut hashers, &[(i, part)]);
+                    }
                 }
                 expected.push(crate::test::official::hash(mode, &data));
                 empty.push(crate::test::official::hash(mode, b""));
                 next.push(crate::test::official::hash(mode, b"next"));
-                hashers.push(h);
             }
             let which: Vec<usize> = (0..count).rev().collect();
             let mut out = vec![[0u8; 32]; count];
@@ -408,6 +429,31 @@ mod tests {
             assert_eq!(out, wanted);
             for (i, h) in hashers.iter().enumerate() {
                 assert_eq!(h.count(), if i % 2 == 0 { 0 } else { 4 }, "only selected states reset");
+            }
+        }
+    }
+
+    /// A message partly in its chunk state (a turn's bytes) and partly in
+    /// the stage (an update's after them) is in neither form the kernel
+    /// takes: sixteen of them finish each alone, to the right digests.
+    #[test]
+    fn a_turn_then_an_update_finishes_outside_the_group() {
+        crate::initialize();
+        let key = [0x19; 32];
+        for mode in [crate::Mode::Plain, crate::Mode::Keyed(&key)] {
+            for (in_turn, updated) in [(100usize, 10usize), (10, 30), (64, 64), (0, 40)] {
+                let data: Vec<Vec<u8>> = (0..32).map(|i| (0..in_turn + updated).map(|j| (i * 29 + j * 7) as u8).collect()).collect();
+                let mut hashers: Vec<_> = (0..32).map(|_| Hasher::new(mode, None)).collect();
+                for (i, d) in data.iter().enumerate() {
+                    crate::each::update_each(&mut hashers, &[(i, &d[..in_turn])]);
+                    hashers[i].update(&d[in_turn..]);
+                }
+                let which: Vec<usize> = (0..32).collect();
+                let mut out = vec![[0u8; 32]; 32];
+                crate::each::finalize_each(&mut hashers, &which, &mut out);
+                for (d, got) in data.iter().zip(&out) {
+                    assert_eq!(*got, crate::test::official::hash(mode, d), "in_turn={in_turn} updated={updated}");
+                }
             }
         }
     }

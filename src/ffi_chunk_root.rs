@@ -35,10 +35,81 @@ unsafe fn chunk_root_partial(avx512: bool, input: &[u8], key: &CVWords, flags: u
     let tail = input.len() % BLOCK_LEN;
     /// The zero-padded final block, 64-byte aligned.
     #[repr(align(64))]
-    struct Padded([u8; BLOCK_LEN]);
-    let mut padded = Padded([0; BLOCK_LEN]);
-    padded.0[..tail].copy_from_slice(&input[blocks * BLOCK_LEN..]);
-    unsafe { call(avx512, input, key, padded.0.as_ptr(), flags as u64 | (tail as u64) << 8 | (blocks as u64) << 16) }
+    struct Padded {
+        _block: [u8; BLOCK_LEN],
+    }
+    let mut padded = MaybeUninit::<Padded>::uninit();
+    // Sound: the input holds `tail` bytes after its whole blocks; `padded`
+    // holds 64 bytes, all written here.
+    unsafe {
+        pad_block(padded.as_mut_ptr().cast(), input.as_ptr().add(blocks * BLOCK_LEN), tail);
+        call(avx512, input, key, padded.as_ptr().cast(), flags as u64 | (tail as u64) << 8 | (blocks as u64) << 16)
+    }
+}
+
+/// `n` bytes at `src` (64 at most) as a zero-padded block at `dst`,
+/// written in four 16-byte stores at the offsets the kernel loads. A store
+/// narrower than the load that reads it back cannot be forwarded to it,
+/// and the kernel's first round waits for the stores to reach the cache:
+/// padded with a byte copy over zeros, `convenience::hash` of 1 to 63 bytes
+/// took 52 ns against 37 ns for 64 bytes (one Zen 4 core, John,
+/// November 14, 2026). Reads stay inside the `n` bytes.
+#[inline(always)]
+pub(crate) unsafe fn pad_block(dst: *mut u8, src: *const u8, n: usize) {
+    use core::arch::x86_64::{__m128i, _mm_loadu_si128, _mm_set_epi64x, _mm_setzero_si128, _mm_storeu_si128};
+    debug_assert!(n <= BLOCK_LEN);
+    let mut piece = 0;
+    while piece < BLOCK_LEN {
+        // Sound: each read is of bytes below `n`; each store is of 16 of the 64 bytes at `dst`.
+        unsafe {
+            let v = if n >= piece + 16 {
+                _mm_loadu_si128(src.add(piece) as *const __m128i)
+            } else if n > piece {
+                let (low, high) = load_under_16(src.add(piece), n - piece);
+                _mm_set_epi64x(high as i64, low as i64)
+            } else {
+                _mm_setzero_si128()
+            };
+            _mm_storeu_si128(dst.add(piece) as *mut __m128i, v);
+        }
+        piece += 16;
+    }
+}
+
+/// The root of a message of a block or less: its `n` bytes start the block
+/// at `block`, zero-padded to 64 bytes there (a Hasher's stage holds it so,
+/// stored by `pad_block`). One kernel call on the block where it lies:
+/// copied to a padded block of this function's own first, the same message
+/// took 53 ns against 40 (one Zen 4 core, November 14, 2026).
+/// Requires `platform`'s instructions.
+#[inline(always)]
+pub(crate) unsafe fn block_root(platform: crate::platform::Platform, block: &[u8; BLOCK_LEN], n: usize, key: &CVWords, flags: u8) -> [u8; OUT_LEN] {
+    debug_assert!(n <= BLOCK_LEN && block[n..].iter().all(|&b| b == 0), "a block zero-padded past its {n} bytes");
+    // Sound: no whole block before the last; `block` is 64 readable bytes.
+    // The AVX-512 kernel where the platform is that; else the SSE4.1 one, which every x86-64 platform has.
+    unsafe { call(matches!(platform, crate::platform::Platform::AVX512), &[], key, block.as_ptr(), flags as u64 | (n as u64) << 8) }
+}
+
+/// The `n` bytes at `p` (1 to 15) as a little-endian 128-bit value, its low
+/// and high halves, read with loads that overlap inside the `n` bytes and
+/// no store.
+#[inline(always)]
+unsafe fn load_under_16(p: *const u8, n: usize) -> (u64, u64) {
+    // Sound: every read lies within the `n` bytes at `p`.
+    unsafe {
+        if n >= 8 {
+            let low = (p as *const u64).read_unaligned();
+            // The last eight bytes: those from byte 8 on, shifted up past the ones `low` holds.
+            let last = (p.add(n - 8) as *const u64).read_unaligned();
+            (u64::from_le(low), if n == 8 { 0 } else { u64::from_le(last) >> (8 * (16 - n)) })
+        } else if n >= 4 {
+            let first = u32::from_le((p as *const u32).read_unaligned()) as u64;
+            let last = u32::from_le((p.add(n - 4) as *const u32).read_unaligned()) as u64;
+            (first | last << (8 * (n - 4)), 0)
+        } else {
+            ((*p as u64) | (*p.add(n / 2) as u64) << (8 * (n / 2)) | (*p.add(n - 1) as u64) << (8 * (n - 1)), 0)
+        }
+    }
 }
 
 /// One kernel call: `packed` is flags | last_len << 8 | whole << 16.

@@ -1130,6 +1130,31 @@ pub(crate) mod guard_pages {
         golden.check(0x5372bd18346a3525);
     }
 
+    /// A final block of every length, and a Hasher's first update of a
+    /// block or less, with the input flush against an inaccessible page,
+    /// after it and before it: the padded block is built from loads that
+    /// overlap inside the input's bytes (chunk_root::pad_block), and one
+    /// that reached a byte outside them would fault here.
+    #[test]
+    #[cfg(all(target_arch = "x86_64", blake3_sse41_ffi))]
+    fn test_a_padded_block_is_read_inside_its_bytes() {
+        crate::initialize();
+        let key = [0x33; 32];
+        for at_end in [true, false] {
+            for len in 0..=200 {
+                let mut g = filled(len, at_end);
+                let input = g.bytes();
+                for mode in [crate::Mode::Plain, crate::Mode::Keyed(&key)] {
+                    let want = crate::test::official::hash(mode, input);
+                    assert_eq!(*crate::convenience::hash_with(mode, input).as_bytes(), want, "one call, len={len} at_end={at_end}");
+                    let mut hasher = crate::convenience::Hasher::new(mode, None);
+                    hasher.update(input);
+                    assert_eq!(*hasher.finalize().as_bytes(), want, "a Hasher, len={len} at_end={at_end}");
+                }
+            }
+        }
+    }
+
     /// Every platform's `hash_many` with each input in its own pages,
     /// flush against an inaccessible page: a kernel that reads past an
     /// input's end (into what, in a contiguous buffer, would be the next
@@ -1637,7 +1662,7 @@ impl SubtreeHasher for crate::Hasher {
 
     fn finalize_non_root(&self) -> CVBytes {
         assert_ne!(self.count(), 0, "empty subtrees are never valid");
-        self.clone().final_output().chaining_value()
+        self.clone().take_output().chaining_value()
     }
 }
 

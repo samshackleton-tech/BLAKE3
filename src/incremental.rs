@@ -56,10 +56,11 @@ impl Clone for Hasher {
 
     #[inline]
     fn clone_from(&mut self, source: &Self) {
-        let prefix = &source.stage[..source.staged];
+        // The staged bytes, and the whole first block (`first_block`); the
+        // rest of the capacity is overwritten before it becomes input.
+        let prefix = &source.stage[..source.staged.max(BLOCK_LEN)];
         self.core.clone_from(&source.core);
         self.staged = source.staged;
-        // The unused capacity is overwritten before it becomes input.
         self.stage[..prefix.len()].copy_from_slice(prefix);
     }
 }
@@ -155,11 +156,26 @@ fn kernels_on<'a>(key: &'a CVWords, chunk_state: &ChunkState, platform: Platform
 
 impl Hasher {
     pub(crate) fn from_core(core: HasherCore) -> Self {
-        Self { core, staged: 0, stage: [core::mem::MaybeUninit::uninit(); STAGE_LEN] }
+        let mut hasher = Self { core, staged: 0, stage: [core::mem::MaybeUninit::uninit(); STAGE_LEN] };
+        // The stage's first block starts as zeros (`first_block`).
+        // Sound: the stage holds BLOCK_LEN bytes and more.
+        unsafe { hasher.stage.as_mut_ptr().write_bytes(0, BLOCK_LEN) };
+        hasher
+    }
+
+    /// The stage's first block. While the message is a block or less and
+    /// whole in the stage, the bytes after it here are zero, so the block
+    /// is the padded one a kernel hashes (`finalize`). Kept so by every
+    /// writer: `from_core` and `reset` zero the block, `update` stores a
+    /// first block or less padded (pad_block), later bytes only follow the
+    /// ones before, and `clone_from` copies the whole block.
+    #[cfg(blake3_sse41_ffi)]
+    pub(crate) fn first_block(&self) -> &[u8; BLOCK_LEN] {
+        // Sound: the first BLOCK_LEN bytes of the stage are always initialized (from_core).
+        unsafe { &*(self.stage.as_ptr() as *const [u8; BLOCK_LEN]) }
     }
 
     /// The bytes gathered in the stage.
-    #[cfg(feature = "std")]
     pub(crate) fn staged_bytes(&self) -> &[u8] {
         // Sound: the first `staged` bytes of the stage were written (gather).
         unsafe { core::slice::from_raw_parts(self.stage.as_ptr() as *const u8, self.staged) }
@@ -173,11 +189,10 @@ impl Hasher {
 
     /// `update`'s gathering: an update of STAGE_LEN or more from a 16 KiB
     /// boundary of the message (or an empty stage) goes to the core whole;
-    /// shorter ones gather in the stage until it reaches the next boundary
-    /// (but a fresh hasher's first chunk goes to the core, outside a turn
-    /// on AArch64: `gather_part`),
+    /// shorter ones gather in the stage until it reaches the next boundary,
     /// and the stage goes to the core as one update, its chunks side by
-    /// side in the lanes.
+    /// side in the lanes. A message of under 16 KiB is therefore whole in
+    /// the stage, where `finalize` hashes it as the one-shot call would.
     fn gather(&mut self, input: &[u8], pooled: Option<Pool>) -> &mut Self {
         self.gather_part(input, pooled, false);
         self
@@ -190,14 +205,15 @@ impl Hasher {
     pub(crate) fn gather_part<'a>(&mut self, mut input: &'a [u8], pooled: Option<Pool>, hold: bool) -> &'a [u8] {
         self.core.assert_room(self.count(), input.len());
         while !input.is_empty() {
-            // Whole groups skip the stage, and so does a fresh hasher's
-            // first chunk, which hashes serially in the core. In a turn of
-            // many hashers on AArch64 (`hold`) the first chunk is staged
-            // too: `finalize_each` then finds the messages of up to a
-            // chunk whole in their stages and hashes them side by side
-            // (each.rs), and a longer message's first chunk joins its
-            // group of sixteen.
-            let first_chunk_to_core = !(cfg!(blake3_neon) && hold) && self.core.count() + input.len() as u64 <= CHUNK_LEN as u64;
+            // Whole groups skip the stage. So does a fresh hasher's first
+            // chunk in a turn of many hashers (`hold`) on x86-64, where
+            // `finalize_each` finishes the messages still in their chunk
+            // states side by side (ffi_output::input). Everywhere else the
+            // first chunk is staged: `finalize` then finds a short message
+            // whole in the stage, on AArch64 `finalize_each` hashes those
+            // side by side (each.rs), and a longer message's first chunk
+            // joins its group of sixteen.
+            let first_chunk_to_core = hold && !cfg!(blake3_neon) && self.core.count() + input.len() as u64 <= CHUNK_LEN as u64;
             if self.staged == 0 && (input.len() >= STAGE_LEN || first_chunk_to_core) {
                 self.core.update_pooled(input, pooled);
                 return &[];
@@ -248,14 +264,48 @@ impl Hasher {
         self.core.push_group(result);
     }
 
-    /// The root's output: the core's, after the stage's bytes, finished in
-    /// place.
-    pub(crate) fn final_output(mut self) -> Output {
-        self.take_output()
+    /// The key of a fresh core, as a kernel reads it: the chunk state's
+    /// chaining value, which is the key until a block is compressed. Not
+    /// `core.key`: `new` has just stored both, and it stores `core.key` in
+    /// 16-byte pieces that straddle the kernel's two 16-byte loads of it,
+    /// which a CPU cannot forward to those loads, so the kernel's first
+    /// round would wait for the stores to reach the cache (14 ns of a
+    /// 64-byte message's 55 ns on a Zen 4 core, November 14, 2026). The
+    /// chaining value is 64-byte aligned (ChunkState), stored as it is
+    /// loaded.
+    #[inline(always)]
+    fn fresh_key(&self) -> &CVWords {
+        debug_assert_eq!(self.core.count(), 0, "a fresh core's chaining value is its key");
+        &self.core.chunk_state.cv
+    }
+
+    /// The root's output with the Hasher left as it is: the core's, when
+    /// nothing is staged; else that of a copy of the core (2 KiB), which
+    /// takes the staged bytes.
+    fn root_output(&self) -> Output {
+        assert_eq!(self.core.initial_chunk_counter, 0, "set_input_offset must be used with finalize_non_root");
+        if self.staged == 0 {
+            return self.core.final_output();
+        }
+        let mut core = self.core.clone();
+        core.update(self.staged_bytes());
+        core.final_output()
+    }
+
+    /// The root hash, for a caller that then resets the Hasher
+    /// (`finalize_each`): a message whole in the stage as `finalize` hashes
+    /// it, any other finished in place, with no copy of the core.
+    #[cfg(feature = "std")]
+    pub(crate) fn take_root_hash(&mut self) -> Hash {
+        if self.core.count() == 0 {
+            return self.finalize();
+        }
+        self.take_output().root_hash()
     }
 
     /// The root's output, the state finished in place: the Hasher is then
-    /// finished, to be reset or dropped.
+    /// finished, to be reset or dropped (`finalize_each`, which resets it).
+    #[cfg(any(feature = "std", test))]
     pub(crate) fn take_output(&mut self) -> Output {
         // Sound: the first `staged` bytes of the stage were written (gather).
         // The stage and the core are distinct fields: the core takes the
@@ -286,6 +336,8 @@ impl Hasher {
     pub(crate) fn reset(&mut self) {
         self.core.reset();
         self.staged = 0;
+        // Sound: the stage holds BLOCK_LEN bytes and more (`first_block`).
+        unsafe { self.stage.as_mut_ptr().write_bytes(0, BLOCK_LEN) };
     }
 
     /// Add the message's next piece, of any length, on the calling thread.
@@ -297,13 +349,35 @@ impl Hasher {
     /// time on an Apple M4). For a whole message in memory, [`hash`](convenience::hash) is a
     /// little faster; for a file or reader, see
     /// [`update_reader`](#method.update_reader).
+    #[inline]
     pub fn update(&mut self, input: &[u8]) -> &mut Self {
+        // A block or less into an empty stage (a Hasher per short message,
+        // above all) is staged here, in line, as one zero-padded block in
+        // the 16-byte pieces `finalize`'s kernel loads (pad_block).
+        #[cfg(blake3_sse41_ffi)]
+        if input.len() <= BLOCK_LEN && self.staged == 0 {
+            crate::counted(crate::Counted::PaddedFirstBlock);
+            // Sound: the stage holds 64 bytes and more; the reads stay inside `input`.
+            unsafe { crate::chunk_root::pad_block(self.stage.as_mut_ptr().cast(), input.as_ptr(), input.len()) };
+            self.staged = input.len();
+            return self;
+        }
+        self.update_longer(input)
+    }
+
+    /// [`update`](Hasher::update) past its path for a block or less into an
+    /// empty stage, out of line.
+    #[inline(never)]
+    fn update_longer(&mut self, input: &[u8]) -> &mut Self {
         // A fresh hasher's first update is a one-shot call's work (a
         // Hasher per message, the digest traits): it prefetches its code,
         // as convenience::hash does. A Hasher fed in pieces pays it once.
+        // Under 16 KiB it waits whole in the stage for `finalize`, which
+        // hashes it with the one-shot call's kernels; from 16 KiB it goes
+        // to the core now.
         #[cfg(all(blake3_neon, feature = "std"))]
         if self.count() == 0 && (CHUNK_LEN + 1..PREFETCH_BELOW).contains(&input.len()) {
-            prefetch_cold(input.len(), self.core.chunk_state.platform, true);
+            prefetch_cold(input.len(), self.core.chunk_state.platform, input.len() >= STAGE_LEN);
         }
         self.gather(input, None)
     }
@@ -316,22 +390,43 @@ impl Hasher {
         self.gather(input, Some(pool))
     }
 
-    /// The [`struct@Hash`] of everything updated: the Hasher is finished, in place,
-    /// and gone. For the next message, make a new one ([`new`](Hasher::new)
-    /// costs what a reset would). A digest of a prefix, with hashing going
-    /// on after it, is `hasher.clone().finalize()`, the copy where it is
-    /// paid.
-    pub fn finalize(self) -> Hash {
-        assert_eq!(self.core.initial_chunk_counter, 0, "set_input_offset must be used with finalize_non_root",);
-        self.final_output().root_hash()
+    /// The [`struct@Hash`] of everything updated so far. The Hasher is left
+    /// as it was: more updates may follow, and a later `finalize` then
+    /// covers them too, as with official BLAKE3's `Hasher`.
+    ///
+    /// **Speed**: a message of under 16 KiB is still whole in the Hasher,
+    /// and is hashed here as [`hash`](convenience::hash) would hash it. A
+    /// longer one costs a copy of 2 KiB of state beside its hashing.
+    #[inline]
+    pub fn finalize(&self) -> Hash {
+        assert_eq!(self.core.initial_chunk_counter, 0, "set_input_offset must be used with finalize_non_root");
+        // A message whole in the stage, the empty one too: the core holds
+        // none of it.
+        if self.core.count() == 0 {
+            // A block or less: one kernel call on the stage's first block.
+            #[cfg(blake3_sse41_ffi)]
+            if self.staged <= BLOCK_LEN {
+                // Sound: the platform's instructions were detected.
+                return Hash(unsafe {
+                    crate::chunk_root::block_root(
+                        self.core.chunk_state.platform,
+                        self.first_block(),
+                        self.staged,
+                        self.fresh_key(),
+                        self.core.chunk_state.flags,
+                    )
+                });
+            }
+            return crate::hash_serial_from(self.core.chunk_state.platform, self.staged_bytes(), self.fresh_key(), self.core.chunk_state.flags, false);
+        }
+        self.root_output().root_hash()
     }
 
-    /// An [`OutputReader`] over everything updated, which supplies any
-    /// number of output bytes; the Hasher is finished and gone, as with
+    /// An [`OutputReader`] over everything updated so far, which supplies
+    /// any number of output bytes; the Hasher is left as it was, as with
     /// [`finalize`](Hasher::finalize).
-    pub fn finalize_xof(self) -> OutputReader {
-        assert_eq!(self.core.initial_chunk_counter, 0, "set_input_offset must be used with finalize_non_root",);
-        OutputReader::new(self.final_output())
+    pub fn finalize_xof(&self) -> OutputReader {
+        OutputReader::new(self.root_output())
     }
 
     /// The number of bytes passed to [`update`](Hasher::update) so far.
@@ -637,8 +732,10 @@ mod test {
                 for part in input[..len].chunks(17) {
                     source.update(part);
                 }
-                let staged = source.staged;
-                source.stage[staged..].fill(core::mem::MaybeUninit::new(0xbb));
+                // The live part of the stage: the staged bytes, and the whole
+                // first block (zero past a message that ends inside it).
+                let live = source.staged.max(BLOCK_LEN);
+                source.stage[live..].fill(core::mem::MaybeUninit::new(0xbb));
                 let mut copy = Hasher::new(Mode::Keyed(&other_key), None);
                 copy.update(&input[..2 * STAGE_LEN]);
                 copy.stage.fill(core::mem::MaybeUninit::new(0xaa));
@@ -649,7 +746,13 @@ mod test {
                 assert_eq!(copy.staged_bytes(), source.staged_bytes());
                 // Sound: every unused byte in both fixtures was explicitly
                 // initialized above, including for the full-copy control.
-                assert!(copy.stage[staged..].iter().all(|b| unsafe { b.assume_init() } == 0xaa), "unused stage copied at len={len}");
+                assert!(copy.stage[live..].iter().all(|b| unsafe { b.assume_init() } == 0xaa), "unused stage copied at len={len}");
+                if source.core.count() == 0 {
+                    assert!(
+                        copy.stage[source.staged..live].iter().all(|b| unsafe { b.assume_init() } == 0),
+                        "the first block is zero past a message whole in the stage, len={len}"
+                    );
+                }
                 copy.update(&input[len..len + 129]);
                 assert_eq!(*copy.clone().finalize().as_bytes(), crate::test::official::hash(mode, &input[..len + 129]));
                 assert_eq!(*source.finalize().as_bytes(), expected, "checkpoint source is untouched");
@@ -660,20 +763,200 @@ mod test {
         }
     }
 
-    /// A fresh hasher's first chunk and a whole group from a 16 KiB
-    /// boundary go to the core unstaged; shorter updates stage up to the
-    /// next boundary, where the stage goes to the core. Staging gives the
-    /// same digest either way, so only `staged` tells (BLAKE3 #219).
+    /// A whole group from a 16 KiB boundary goes to the core unstaged;
+    /// shorter updates, a fresh hasher's first chunk among them, stage up
+    /// to the next boundary, where the stage goes to the core. Staging
+    /// gives the same digest either way, so only `staged` tells (BLAKE3
+    /// #219).
     #[test]
     fn test_update_stages_exactly_what_it_must() {
         let input = painted();
         let mut h = Hasher::new(Mode::Plain, None);
-        for (end, staged) in [(CHUNK_LEN, 0), (CHUNK_LEN + 100, 100), (STAGE_LEN, 0), (2 * STAGE_LEN, 0)] {
+        for (end, staged) in [(CHUNK_LEN, CHUNK_LEN), (CHUNK_LEN + 100, CHUNK_LEN + 100), (STAGE_LEN, 0), (2 * STAGE_LEN, 0)] {
             let from = h.count() as usize;
             h.update(&input[from..end]);
             assert_eq!(h.staged, staged, "after {end} bytes");
         }
         assert_eq!(h.finalize(), crate::convenience::hash(&input[..2 * STAGE_LEN]));
+    }
+
+    /// `finalize` and `finalize_xof` leave the Hasher as it was: asked
+    /// twice they answer alike, and updates after them extend the message,
+    /// as with official BLAKE3's Hasher. At every length class of the
+    /// first part (a block, a chunk, the stage, beyond it), fed whole and
+    /// in pieces of 7 bytes, in every mode.
+    #[test]
+    #[cfg(feature = "std")]
+    fn finalize_leaves_the_hasher_as_it_was_and_later_updates_extend_the_message() {
+        crate::initialize();
+        let input = painted();
+        let key = [0x5a; 32];
+        for mode in [Mode::Plain, Mode::Keyed(&key), Mode::DeriveKey("finalize, then more")] {
+            for first in [0usize, 1, 17, 63, 64, 65, 1000, 1024, 1025, STAGE_LEN - 1, STAGE_LEN, STAGE_LEN + 1, 2 * STAGE_LEN - 300] {
+                for more in [0usize, 1, 64, 1500, STAGE_LEN] {
+                    for piece in [usize::MAX, 7] {
+                        let what = std::format!("first={first} more={more} piece={piece}");
+                        let mut h = Hasher::new(mode, None);
+                        for part in input[..first].chunks(piece.min(first.max(1))) {
+                            h.update(part);
+                        }
+                        let state = (h.staged, h.core.count());
+                        let want = crate::test::official::hash(mode, &input[..first]);
+                        assert_eq!(*h.finalize().as_bytes(), want, "{what}");
+                        let mut out = [0u8; 100];
+                        h.finalize_xof().fill(&mut out);
+                        assert_eq!(out.as_slice(), crate::test::official::xof(mode, &input[..first], 0, out.len()), "{what}");
+                        assert_eq!(*h.finalize().as_bytes(), want, "asked again, {what}");
+                        assert_eq!((h.staged, h.core.count()), state, "untouched, {what}");
+                        h.update(&input[first..first + more]);
+                        assert_eq!(*h.finalize().as_bytes(), crate::test::official::hash(mode, &input[..first + more]), "extended, {what}");
+                        h.finalize_xof().fill(&mut out);
+                        assert_eq!(out.as_slice(), crate::test::official::xof(mode, &input[..first + more], 0, out.len()), "extended, {what}");
+                    }
+                }
+            }
+        }
+    }
+
+    /// A message of a block or less is hashed from the stage's first block
+    /// where it lies, so the block must be zero past the message whatever
+    /// the Hasher held before (`first_block`): after a longer message and a
+    /// reset (`finalize_each`), after `clone_from` over a longer message,
+    /// and when its bytes arrive by the path that skips `update`'s own
+    /// first block (`gather`, as `update_on` calls it).
+    #[test]
+    #[cfg(feature = "std")]
+    fn a_block_or_less_is_padded_whatever_the_hasher_held_before() {
+        crate::initialize();
+        let input = painted();
+        let key = [0x77; 32];
+        for mode in [Mode::Plain, Mode::Keyed(&key)] {
+            for long in [0usize, 30, 64, 100, 5000, STAGE_LEN, STAGE_LEN + 300] {
+                for short in [0usize, 1, 10, 31, 63, 64] {
+                    let what = std::format!("long={long} short={short}");
+                    let message = &input[1000..1000 + short];
+                    let want = crate::test::official::hash(mode, message);
+                    // Reset by finalize_each, then the short message, whole and in two parts.
+                    for split in [0, short / 2] {
+                        let mut hashers = std::vec![Hasher::new(mode, None)];
+                        hashers[0].update(&input[..long]);
+                        let mut out = [[0u8; OUT_LEN]];
+                        crate::each::finalize_each(&mut hashers, &[0], &mut out);
+                        assert_eq!(out[0], crate::test::official::hash(mode, &input[..long]), "{what}");
+                        hashers[0].update(&message[..split]);
+                        hashers[0].update(&message[split..]);
+                        assert_eq!(*hashers[0].finalize().as_bytes(), want, "after a reset, {what} split={split}");
+                        crate::each::finalize_each(&mut hashers, &[0], &mut out);
+                        assert_eq!(out[0], want, "finished with others after a reset, {what} split={split}");
+                    }
+                    // clone_from over a Hasher that held the longer message.
+                    let mut source = Hasher::new(mode, None);
+                    source.update(message);
+                    let mut copy = Hasher::new(mode, None);
+                    copy.update(&input[..long]);
+                    copy.clone_from(&source);
+                    assert_eq!(*copy.finalize().as_bytes(), want, "after clone_from, {what}");
+                    assert_eq!(*source.clone().finalize().as_bytes(), want, "a clone, {what}");
+                    // The bytes by `gather`, in two parts.
+                    let mut gathered = Hasher::new(mode, None);
+                    gathered.gather(&message[..short / 2], None);
+                    gathered.gather(&message[short / 2..], None);
+                    assert_eq!(*gathered.finalize().as_bytes(), want, "gathered, {what}");
+                }
+            }
+        }
+    }
+
+    /// The assembly entry points `f` runs on this thread.
+    #[cfg(feature = "std")]
+    fn entries_run(f: &mut dyn FnMut()) -> std::collections::BTreeSet<usize> {
+        crate::RAN_ENTRIES.with(|r| r.borrow_mut().clear());
+        f();
+        crate::RAN_ENTRIES.with(|r| r.borrow().clone())
+    }
+
+    /// A message whole in the stage is hashed by the kernels the one-shot
+    /// call runs, and no others: by `finalize`, and by `finalize_each` when
+    /// it finishes a hasher alone. Another path gives the same digest with
+    /// more work (a copy of the core, a chunk state's block-by-block
+    /// compression), so the kernels that ran are what tells (BLAKE3 #219).
+    /// The control: a message a turn left in its chunk state on x86-64
+    /// finishes by other kernels, so the record does tell.
+    #[test]
+    #[cfg(feature = "std")]
+    fn a_message_whole_in_the_stage_runs_the_one_shot_calls_kernels() {
+        crate::initialize();
+        let input = painted();
+        let key = [0x21; 32];
+        for mode in [Mode::Plain, Mode::Keyed(&key)] {
+            for len in [0usize, 1, 64, 65, 1000, 1024, 1025, 5000, STAGE_LEN - 1] {
+                let message = &input[..len];
+                let one_shot = entries_run(&mut || {
+                    crate::convenience::hash_with(mode, message);
+                });
+                // The record names the kernels of a chunk or less on every
+                // machine; of longer inputs, only some machines' kernels.
+                assert!(len > CHUNK_LEN || !one_shot.is_empty(), "a kernel ran, len={len}");
+                let mut hashers = std::vec![Hasher::new(mode, None)];
+                assert!(
+                    entries_run(&mut || {
+                        hashers[0].update(message);
+                    })
+                    .is_empty(),
+                    "staging runs no kernel, len={len}"
+                );
+                assert_eq!(
+                    entries_run(&mut || {
+                        hashers[0].finalize();
+                    }),
+                    one_shot,
+                    "finalize, len={len}"
+                );
+                let mut out = [[0u8; OUT_LEN]];
+                assert_eq!(entries_run(&mut || crate::each::finalize_each(&mut hashers, &[0], &mut out)), one_shot, "finalize_each alone, len={len}");
+                #[cfg(not(blake3_neon))]
+                if (65..=CHUNK_LEN).contains(&len) {
+                    let mut turn = Hasher::new(mode, None);
+                    turn.gather_part(message, None, true);
+                    assert_ne!(
+                        entries_run(&mut || {
+                            turn.finalize();
+                        }),
+                        one_shot,
+                        "the control: from a chunk state, len={len}"
+                    );
+                }
+            }
+        }
+    }
+
+    /// A block or less into an empty stage is stored as one padded block
+    /// (`update`'s own path, which the kernel's loads are served from);
+    /// more, or into a stage that holds bytes, takes the longer path. The
+    /// digest is the same either way, so the count tells (BLAKE3 #219).
+    #[test]
+    #[cfg(all(feature = "std", blake3_sse41_ffi))]
+    fn an_update_of_a_block_or_less_into_an_empty_stage_is_stored_padded() {
+        crate::initialize();
+        let input = painted();
+        let padded = |hasher: &mut Hasher, bytes: &[u8]| {
+            crate::COUNTED.with(|c| c[crate::Counted::PaddedFirstBlock as usize].set(0));
+            hasher.update(bytes);
+            crate::COUNTED.with(|c| c[crate::Counted::PaddedFirstBlock as usize].get())
+        };
+        for (len, expected) in [(0usize, 1), (1, 1), (63, 1), (64, 1), (65, 0), (1024, 0), (STAGE_LEN, 0)] {
+            let mut h = Hasher::new(Mode::Plain, None);
+            assert_eq!(padded(&mut h, &input[..len]), expected, "a fresh hasher, {len} bytes");
+        }
+        // Into a stage that holds bytes: the longer path. At the message's
+        // next 16 KiB boundary the stage is empty again.
+        let mut h = Hasher::new(Mode::Plain, None);
+        assert_eq!(padded(&mut h, &input[..10]), 1);
+        assert_eq!(padded(&mut h, &input[10..20]), 0, "the stage holds bytes");
+        assert_eq!(padded(&mut h, &input[20..STAGE_LEN]), 0);
+        assert_eq!(h.staged, 0, "the stage went to the core");
+        assert_eq!(padded(&mut h, &input[STAGE_LEN..STAGE_LEN + 64]), 1, "an empty stage again");
+        assert_eq!(h.finalize(), crate::convenience::hash(&input[..STAGE_LEN + 64]));
     }
 
     /// A hasher started 8 chunks into the message (the tests' subtrees;
