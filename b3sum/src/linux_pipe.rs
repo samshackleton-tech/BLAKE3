@@ -318,6 +318,21 @@ fn stream_fd_into_rooms(
     }
 }
 
+/// Where results go, until the listener says to stop: after `done` returns
+/// false, nothing more is delivered.
+struct Sink<'a> {
+    done: &'a mut dyn FnMut(usize, anyhow::Result<blake3::Hash>) -> bool,
+    open: bool,
+}
+
+impl Sink<'_> {
+    fn put(&mut self, index: usize, result: anyhow::Result<blake3::Hash>) {
+        if self.open && !(self.done)(index, result) {
+            self.open = false;
+        }
+    }
+}
+
 struct WarmBatch {
     arena: Option<Box<[MaybeUninit<Block>]>>,
     entries: [(usize, usize); WARM_BATCH_SLOTS],
@@ -343,15 +358,7 @@ impl WarmBatch {
     }
 
     #[inline]
-    fn push_raw(
-        &mut self,
-        file_idx: usize,
-        src_ptr: *const u8,
-        byte_len: usize,
-        mode: blake3::Mode<'_>,
-        done: &mut dyn FnMut(usize, anyhow::Result<blake3::Hash>) -> bool,
-        keep_going: &mut bool,
-    ) {
+    fn push_raw(&mut self, file_idx: usize, src_ptr: *const u8, byte_len: usize, mode: blake3::Mode<'_>, sink: &mut Sink<'_>) {
         debug_assert!(byte_len <= WARM_BATCH_MAX_FILE);
         let slot = self.len;
         let (dst, _) = self.slot_ptr_and_cap(slot);
@@ -361,17 +368,17 @@ impl WarmBatch {
         self.entries[slot] = (file_idx, byte_len);
         self.len += 1;
         if self.len == WARM_BATCH_SLOTS {
-            self.flush(mode, done, keep_going);
+            self.flush(mode, sink);
         }
     }
 
-    fn flush(&mut self, mode: blake3::Mode<'_>, done: &mut dyn FnMut(usize, anyhow::Result<blake3::Hash>) -> bool, keep_going: &mut bool) {
+    fn flush(&mut self, mode: blake3::Mode<'_>, sink: &mut Sink<'_>) {
         let count = self.len;
         if count == 0 {
             return;
         }
         self.len = 0;
-        if !*keep_going {
+        if !sink.open {
             return;
         }
         let arena = self.arena.as_mut().expect("arena allocated before len > 0");
@@ -380,9 +387,7 @@ impl WarmBatch {
             let ptr = arena.as_ptr().cast::<u8>();
             let bytes = unsafe { core::slice::from_raw_parts(ptr, byte_len) };
             let h = crate::hash_slice_32(mode, bytes);
-            if !done(file_idx, Ok(h)) {
-                *keep_going = false;
-            }
+            sink.put(file_idx, Ok(h));
             return;
         }
         for k in 0..count {
@@ -407,16 +412,32 @@ impl WarmBatch {
         blake3::throughput::hash_each(mode, &items[..count], &mut digests[..count]);
         for k in 0..count {
             let (file_idx, _) = self.entries[k];
-            if !done(file_idx, Ok(blake3::Hash::from(digests[k]))) {
-                *keep_going = false;
-                break;
-            }
+            sink.put(file_idx, Ok(blake3::Hash::from(digests[k])));
         }
     }
 }
 
+/// Set by a test to take every file for one the page cache lacks, so that
+/// the cold paths run whatever the cache holds.
+#[cfg(test)]
+static FORCE_MISS: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+#[cfg(test)]
+fn force_miss() -> bool {
+    FORCE_MISS.load(Ordering::Relaxed)
+}
+
+#[cfg(not(test))]
+#[inline(always)]
+fn force_miss() -> bool {
+    false
+}
+
 #[inline]
 fn try_pread_cached(fd: RawFd, dst_ptr: *mut u8, dst_cap: usize, mut at: usize, hint: usize) -> io::Result<(usize, bool)> {
+    if force_miss() {
+        return Ok((at, false));
+    }
     loop {
         if at == dst_cap {
             return Ok((at, false));
@@ -492,7 +513,7 @@ impl WarmLargePipe {
         Self { pipe: Pipeline::new(mode, Limits { messages: 16, rooms: 0 }), maps: Vec::with_capacity(16), in_flight: 0 }
     }
 
-    fn drain(&mut self, done: &mut dyn FnMut(usize, anyhow::Result<blake3::Hash>) -> bool, keep_going: &mut bool) {
+    fn drain(&mut self, sink: &mut Sink<'_>) {
         while let Some(ev) = self.pipe.next_event() {
             self.in_flight -= 1;
             if let Event::Hashed { tag: idx, hash, .. } = ev {
@@ -501,22 +522,13 @@ impl WarmLargePipe {
                     drop(guard);
                     crate::hold(map);
                 }
-                if *keep_going && !done(idx, Ok(hash)) {
-                    *keep_going = false;
-                }
+                sink.put(idx, Ok(hash));
             }
         }
     }
 
-    fn submit_lent(
-        &mut self,
-        idx: usize,
-        size: u64,
-        map: memmap2::Mmap,
-        done: &mut dyn FnMut(usize, anyhow::Result<blake3::Hash>) -> bool,
-        keep_going: &mut bool,
-    ) {
-        self.drain(done, keep_going);
+    fn submit_lent(&mut self, idx: usize, size: u64, map: memmap2::Mmap, sink: &mut Sink<'_>) {
+        self.drain(sink);
         let m = block_on(self.pipe.message(idx, Some(size)));
         let slice: &'static [u8] = unsafe { core::slice::from_raw_parts(map.as_ptr(), map.len()) };
         let guard = unsafe { self.pipe.lent(m, slice) };
@@ -524,9 +536,9 @@ impl WarmLargePipe {
         self.in_flight += 1;
     }
 
-    fn finish(&mut self, done: &mut dyn FnMut(usize, anyhow::Result<blake3::Hash>) -> bool, keep_going: &mut bool) {
+    fn finish(&mut self, sink: &mut Sink<'_>) {
         while self.in_flight > 0 {
-            self.drain(done, keep_going);
+            self.drain(sink);
             if self.in_flight > 0 {
                 block_on(self.pipe.ready());
             }
@@ -568,11 +580,10 @@ impl ColdRingState {
         partial_src: Option<(*const u8, usize)>,
         args: &Args,
         warm_batch: &mut WarmBatch,
-        done: &mut dyn FnMut(usize, anyhow::Result<blake3::Hash>) -> bool,
-        keep_going: &mut bool,
+        sink: &mut Sink<'_>,
     ) {
         while self.free_slot_ids.is_empty() || self.ring.sq_space_left() == 0 {
-            self.step_ring(true, args, warm_batch, done, keep_going);
+            self.step_ring(true, args, warm_batch, sink);
         }
         let partial_at = partial_src.map_or(0, |(_, n)| n);
         let mut buf = self.free_bufs.pop().unwrap_or_default();
@@ -593,14 +604,7 @@ impl ColdRingState {
         self.ring_in_flight += 1;
     }
 
-    fn step_ring(
-        &mut self,
-        wait: bool,
-        args: &Args,
-        warm_batch: &mut WarmBatch,
-        done: &mut dyn FnMut(usize, anyhow::Result<blake3::Hash>) -> bool,
-        keep_going: &mut bool,
-    ) {
+    fn step_ring(&mut self, wait: bool, args: &Args, warm_batch: &mut WarmBatch, sink: &mut Sink<'_>) {
         if self.deferred_cqes.is_empty() {
             let min_wait = if wait && self.ring_in_flight > 0 { 1 } else { 0 };
             if min_wait == 0 && self.ring.unsubmitted() == 0 {
@@ -611,9 +615,7 @@ impl ColdRingState {
                 for slot in &mut self.slots {
                     if let Some(st) = slot.take() {
                         self.ring_in_flight -= 1;
-                        if *keep_going && !done(st.file_idx, Err(io::Error::from_raw_os_error(errno).into())) {
-                            *keep_going = false;
-                        }
+                        sink.put(st.file_idx, Err(io::Error::from_raw_os_error(errno).into()));
                     }
                 }
                 return;
@@ -655,18 +657,14 @@ impl ColdRingState {
                     match res {
                         Ok(n) => {
                             if n <= WARM_BATCH_MAX_FILE {
-                                warm_batch.push_raw(st.file_idx, st.buf.as_ptr(), n, mode, done, keep_going);
+                                warm_batch.push_raw(st.file_idx, st.buf.as_ptr(), n, mode, sink);
                             } else {
                                 let h = crate::hash_slice_local(mode, &st.buf[..n]);
-                                if *keep_going && !done(st.file_idx, Ok(h)) {
-                                    *keep_going = false;
-                                }
+                                sink.put(st.file_idx, Ok(h));
                             }
                         }
                         Err(e) => {
-                            if *keep_going && !done(st.file_idx, Err(e.into())) {
-                                *keep_going = false;
-                            }
+                            sink.put(st.file_idx, Err(e.into()));
                         }
                     }
                     st.buf.clear();
@@ -679,9 +677,7 @@ impl ColdRingState {
                     self.free_bufs.push(st.buf);
                 }
                 self.free_slot_ids.push(slot_id);
-                if *keep_going && !done(st.file_idx, Err(io::Error::from_raw_os_error(errno).into())) {
-                    *keep_going = false;
-                }
+                sink.put(st.file_idx, Err(io::Error::from_raw_os_error(errno).into()));
                 continue;
             }
 
@@ -692,15 +688,13 @@ impl ColdRingState {
                 let total_len = st.at;
                 drop(st.file);
                 self.free_slot_ids.push(slot_id);
-                if *keep_going {
+                if sink.open {
                     unsafe { st.buf.set_len(total_len) };
                     if total_len <= WARM_BATCH_MAX_FILE {
-                        warm_batch.push_raw(st.file_idx, st.buf.as_ptr(), total_len, mode, done, keep_going);
+                        warm_batch.push_raw(st.file_idx, st.buf.as_ptr(), total_len, mode, sink);
                     } else {
                         let h = crate::hash_slice_local(mode, &st.buf);
-                        if !done(st.file_idx, Ok(h)) {
-                            *keep_going = false;
-                        }
+                        sink.put(st.file_idx, Ok(h));
                     }
                     st.buf.clear();
                 }
@@ -727,9 +721,9 @@ impl ColdRingState {
         }
     }
 
-    fn finish(mut self, args: &Args, warm_batch: &mut WarmBatch, done: &mut dyn FnMut(usize, anyhow::Result<blake3::Hash>) -> bool, keep_going: &mut bool) {
+    fn finish(mut self, args: &Args, warm_batch: &mut WarmBatch, sink: &mut Sink<'_>) {
         while self.ring_in_flight > 0 || !self.deferred_cqes.is_empty() {
-            self.step_ring(true, args, warm_batch, done, keep_going);
+            self.step_ring(true, args, warm_batch, sink);
         }
         drop(self.cold_large_pipe);
         self.ring.release();
@@ -842,21 +836,21 @@ fn run_hybrid_worker(
     let mut warm_pipe: Option<WarmLargePipe> = None;
     let mut cold: Option<ColdRingState> = None;
     let mut probe_stack: [MaybeUninit<u8>; WARM_SLOT_BLOCKS * 64] = [MaybeUninit::uninit(); WARM_SLOT_BLOCKS * 64];
-    let mut keep_going = true;
+    let mut sink = Sink { done, open: true };
 
-    while keep_going {
+    while sink.open {
         if let Some(ref mut wp) = warm_pipe {
-            wp.drain(done, &mut keep_going);
+            wp.drain(&mut sink);
         }
         if let Some(ref mut c) = cold {
             let submit_batch = if c.ring_in_flight <= 8 { 4 } else { 16 };
             if c.ring.unsubmitted() >= submit_batch {
-                c.step_ring(false, args, &mut warm_batch, done, &mut keep_going);
+                c.step_ring(false, args, &mut warm_batch, &mut sink);
             }
-            while keep_going && (c.free_slot_ids.is_empty() || c.ring.sq_space_left() == 0) {
-                c.step_ring(true, args, &mut warm_batch, done, &mut keep_going);
+            while sink.open && (c.free_slot_ids.is_empty() || c.ring.sq_space_left() == 0) {
+                c.step_ring(true, args, &mut warm_batch, &mut sink);
             }
-            if !keep_going {
+            if !sink.open {
                 break;
             }
         }
@@ -870,17 +864,13 @@ fn run_hybrid_worker(
         let (meta, file) = match opened {
             Ok(pair) => pair,
             Err(e) => {
-                if !done(i, Err(e.into())) {
-                    keep_going = false;
-                }
+                sink.put(i, Err(e.into()));
                 continue;
             }
         };
 
         if !meta.is_file() {
-            if !done(i, crate::hash_path_hash(args, &paths[i])) {
-                keep_going = false;
-            }
+            sink.put(i, crate::hash_path_hash(args, &paths[i]));
             continue;
         }
 
@@ -892,7 +882,7 @@ fn run_hybrid_worker(
         if let Some(ref mut c) = cold
             && size < COLD_RING_MAX_FILE
         {
-            c.queue_file(i, file, size as usize, None, args, &mut warm_batch, done, &mut keep_going);
+            c.queue_file(i, file, size as usize, None, args, &mut warm_batch, &mut sink);
             continue;
         }
 
@@ -915,10 +905,10 @@ fn run_hybrid_worker(
                         warm_batch.entries[s] = (i, n);
                         warm_batch.len += 1;
                         if warm_batch.len == WARM_BATCH_SLOTS {
-                            warm_batch.flush(args.mode, done, &mut keep_going);
+                            warm_batch.flush(args.mode, &mut sink);
                         }
                     } else {
-                        warm_batch.push_raw(i, slot_ptr, n, args.mode, done, &mut keep_going);
+                        warm_batch.push_raw(i, slot_ptr, n, args.mode, &mut sink);
                     }
                     continue;
                 }
@@ -930,23 +920,19 @@ fn run_hybrid_worker(
                         }
                     }
                     if let Some(ref mut c) = cold {
-                        c.queue_file(i, file, hint, Some((slot_ptr, partial_at)), args, &mut warm_batch, done, &mut keep_going);
+                        c.queue_file(i, file, hint, Some((slot_ptr, partial_at)), args, &mut warm_batch, &mut sink);
                     } else {
                         let mut buf = Vec::with_capacity((hint + 1).max(4096));
                         if partial_at > 0 {
                             unsafe { core::ptr::copy_nonoverlapping(slot_ptr, buf.as_mut_ptr(), partial_at) };
                         }
                         let res = read_rest_sync_uninit(&file, &mut buf, partial_at).map(|n| crate::hash_slice_32(args.mode, &buf[..n])).map_err(Into::into);
-                        if !done(i, res) {
-                            keep_going = false;
-                        }
+                        sink.put(i, res);
                     }
                     continue;
                 }
                 Err(e) => {
-                    if !done(i, Err(e.into())) {
-                        keep_going = false;
-                    }
+                    sink.put(i, Err(e.into()));
                     continue;
                 }
             }
@@ -962,9 +948,7 @@ fn run_hybrid_worker(
                     unsafe { medium_buf.set_len(n) };
                     let h = crate::hash_slice_32(args.mode, &medium_buf);
                     medium_buf.clear();
-                    if !done(i, Ok(h)) {
-                        keep_going = false;
-                    }
+                    sink.put(i, Ok(h));
                     continue;
                 }
                 Ok((partial_at, false)) => {
@@ -975,43 +959,37 @@ fn run_hybrid_worker(
                         }
                     }
                     if let Some(ref mut c) = cold {
-                        c.queue_file(i, file, hint, Some((medium_buf.as_ptr(), partial_at)), args, &mut warm_batch, done, &mut keep_going);
+                        c.queue_file(i, file, hint, Some((medium_buf.as_ptr(), partial_at)), args, &mut warm_batch, &mut sink);
                     } else {
                         let res = read_rest_sync_uninit(&file, &mut medium_buf, partial_at)
                             .map(|n| crate::hash_slice_32(args.mode, &medium_buf[..n]))
                             .map_err(Into::into);
                         medium_buf.clear();
-                        if !done(i, res) {
-                            keep_going = false;
-                        }
+                        sink.put(i, res);
                     }
                     continue;
                 }
                 Err(e) => {
-                    if !done(i, Err(e.into())) {
-                        keep_going = false;
-                    }
+                    sink.put(i, Err(e.into()));
                     continue;
                 }
             }
         }
 
         // 3. Large files `>= 512 KiB`: check `resident(&map)` BEFORE creating any `Uring`!
-        warm_batch.flush(args.mode, done, &mut keep_going);
+        warm_batch.flush(args.mode, &mut sink);
         if let Ok(map) = unsafe { memmap2::Mmap::map(&file) } {
-            if crate::resident(&map) {
+            if !force_miss() && crate::resident(&map) {
                 if size < (4 << 20) {
                     let h = crate::hash_slice_32(args.mode, &map);
                     crate::hold(map);
-                    if !done(i, Ok(h)) {
-                        keep_going = false;
-                    }
+                    sink.put(i, Ok(h));
                     continue;
                 }
                 let pool_workers = if args.num_threads().is_some() { (total_threads - io_threads + 1).max(1) } else { total_threads };
                 crate::init_pool_once(pool_workers);
                 let wp = warm_pipe.get_or_insert_with(|| WarmLargePipe::new(args.mode));
-                wp.submit_lent(i, size, map, done, &mut keep_going);
+                wp.submit_lent(i, size, map, &mut sink);
                 continue;
             }
 
@@ -1025,7 +1003,7 @@ fn run_hybrid_worker(
                     }
                 }
                 if let Some(ref mut c) = cold {
-                    c.queue_file(i, file, size as usize, None, args, &mut warm_batch, done, &mut keep_going);
+                    c.queue_file(i, file, size as usize, None, args, &mut warm_batch, &mut sink);
                     continue;
                 }
             } else {
@@ -1056,37 +1034,29 @@ fn run_hybrid_worker(
                         }
                         block_on(cpipe.ready());
                     };
-                    if !done(i, Ok(h)) {
-                        keep_going = false;
-                    }
+                    sink.put(i, Ok(h));
                 }
                 Err(e) => {
                     cpipe.abort(m);
                     while cpipe.next_event().is_none() {
                         block_on(cpipe.ready());
                     }
-                    if !done(i, Err(e.into())) {
-                        keep_going = false;
-                    }
+                    sink.put(i, Err(e.into()));
                 }
             }
         } else if let Err(e) = crate::hash_path_hash(args, &paths[i]).map(|h| {
-            if !done(i, Ok(h)) {
-                keep_going = false;
-            }
+            sink.put(i, Ok(h));
         }) {
-            if !done(i, Err(e)) {
-                keep_going = false;
-            }
+            sink.put(i, Err(e));
         }
     }
 
     if let Some(c) = cold {
-        c.finish(args, &mut warm_batch, done, &mut keep_going);
+        c.finish(args, &mut warm_batch, &mut sink);
     }
-    warm_batch.flush(args.mode, done, &mut keep_going);
+    warm_batch.flush(args.mode, &mut sink);
     if let Some(mut wp) = warm_pipe {
-        wp.finish(done, &mut keep_going);
+        wp.finish(&mut sink);
     }
 }
 
@@ -1124,44 +1094,30 @@ mod test {
 
         let mut wb = super::WarmBatch::new();
         assert!(!wb.has_arena());
-        let mut keep = true;
         let mut wb_out = Vec::new();
-        wb.push_raw(
-            0,
-            b"abc".as_ptr(),
-            3,
-            blake3::Mode::Plain,
-            &mut |i, r| {
+        {
+            let mut collect = |i, r: anyhow::Result<blake3::Hash>| {
                 wb_out.push((i, r.unwrap()));
                 true
-            },
-            &mut keep,
-        );
-        assert!(wb.has_arena());
-        wb.flush(
-            blake3::Mode::Plain,
-            &mut |i, r| {
-                wb_out.push((i, r.unwrap()));
-                true
-            },
-            &mut keep,
-        );
+            };
+            let mut sink = super::Sink { done: &mut collect, open: true };
+            wb.push_raw(0, b"abc".as_ptr(), 3, blake3::Mode::Plain, &mut sink);
+            assert!(wb.has_arena());
+            wb.flush(blake3::Mode::Plain, &mut sink);
+        }
         assert_eq!(wb_out, vec![(0, blake3::convenience::hash(b"abc"))]);
 
         wb_out.clear();
-        for k in 0..super::WARM_BATCH_SLOTS {
-            let msg = vec![(k + 1) as u8; k * 13 + 1];
-            wb.push_raw(
-                k,
-                msg.as_ptr(),
-                msg.len(),
-                blake3::Mode::Plain,
-                &mut |i, r| {
-                    wb_out.push((i, r.unwrap()));
-                    true
-                },
-                &mut keep,
-            );
+        {
+            let mut collect = |i, r: anyhow::Result<blake3::Hash>| {
+                wb_out.push((i, r.unwrap()));
+                true
+            };
+            let mut sink = super::Sink { done: &mut collect, open: true };
+            for k in 0..super::WARM_BATCH_SLOTS {
+                let msg = vec![(k + 1) as u8; k * 13 + 1];
+                wb.push_raw(k, msg.as_ptr(), msg.len(), blake3::Mode::Plain, &mut sink);
+            }
         }
         assert_eq!(wb_out.len(), super::WARM_BATCH_SLOTS);
         for (k, &(idx, h)) in wb_out.iter().enumerate() {
@@ -1247,5 +1203,78 @@ mod test {
         while pipe.next_event().is_none() {
             blake3::throughput::block_on(pipe.ready());
         }
+    }
+
+    /// Files of every size class, `count` of them, and their hashes.
+    fn files_of_every_size(dir: &std::path::Path, count: usize) -> (Vec<PathBuf>, Vec<blake3::Hash>) {
+        let sizes = [0usize, 1, 63, 64, 65, 4096, 16_384, 16_385, 100_000, 524_287, 524_288, 600_000, 1_048_579, 4_194_303, 4_194_304, 4_300_000, 9_000_000];
+        let mut paths = Vec::new();
+        let mut want = Vec::new();
+        for i in 0..count {
+            let len = sizes[i % sizes.len()];
+            let path = dir.join(format!("size-{i:03}"));
+            let data: Vec<u8> = (0..len).map(|k| (k.wrapping_mul(29) ^ (k >> 9) ^ i) as u8).collect();
+            std::fs::write(&path, &data).unwrap();
+            want.push(blake3::convenience::hash(&data));
+            paths.push(path);
+        }
+        (paths, want)
+    }
+
+    /// Every result of `hash_paths_inner`, which must arrive in order.
+    fn hashes_in_order(paths: &[PathBuf]) -> Vec<blake3::Hash> {
+        let args = crate::Args::for_test_plain(paths.to_vec());
+        let mut got = Vec::new();
+        super::hash_paths_inner(&args, paths, false, &mut |index, result| {
+            assert_eq!(index, got.len(), "results arrive in order");
+            got.push(result.unwrap());
+            true
+        });
+        got
+    }
+
+    #[test]
+    fn forced_misses_take_the_cold_paths_for_every_size_class() {
+        blake3::initialize();
+        let dir = tempfile::tempdir_in(".").unwrap_or_else(|_| tempfile::tempdir().unwrap());
+        // 34 files: the wide form (32 files and more). Then 5: the narrow one.
+        let (paths, want) = files_of_every_size(dir.path(), 34);
+        assert_eq!(hashes_in_order(&paths), want, "from the page cache");
+        super::FORCE_MISS.store(true, std::sync::atomic::Ordering::Relaxed);
+        assert_eq!(hashes_in_order(&paths), want, "every file taken for a miss");
+        assert_eq!(hashes_in_order(&paths[12..17]), want[12..17], "five files of 1 MiB and more");
+
+        // A listener that stops: it hears nothing after the result it refused.
+        let args = crate::Args::for_test_plain(paths.clone());
+        let mut heard = Vec::new();
+        super::hash_paths_inner(&args, &paths, false, &mut |index, result| {
+            assert_eq!(result.unwrap(), want[index]);
+            heard.push(index);
+            index < 7
+        });
+        assert_eq!(heard, (0..=7).collect::<Vec<_>>());
+
+        // A file that cannot be read is an error at its own index, and the rest hash.
+        let mut with_missing = paths[..6].to_vec();
+        with_missing.insert(3, dir.path().join("no-such-file"));
+        let args = crate::Args::for_test_plain(with_missing.clone());
+        let mut results = Vec::new();
+        super::hash_paths_inner(&args, &with_missing, false, &mut |index, result| {
+            assert_eq!(index, results.len());
+            results.push(result.ok());
+            true
+        });
+        let expected: Vec<Option<blake3::Hash>> = vec![Some(want[0]), Some(want[1]), Some(want[2]), None, Some(want[3]), Some(want[4]), Some(want[5])];
+        assert_eq!(results, expected);
+    }
+
+    #[test]
+    fn forced_misses_with_one_thread_hash_every_size_class() {
+        blake3::initialize();
+        crate::THREADS.set(std::num::NonZeroUsize::MIN).expect("this test's process sets the thread count first");
+        let dir = tempfile::tempdir_in(".").unwrap_or_else(|_| tempfile::tempdir().unwrap());
+        let (paths, want) = files_of_every_size(dir.path(), 34);
+        super::FORCE_MISS.store(true, std::sync::atomic::Ordering::Relaxed);
+        assert_eq!(hashes_in_order(&paths), want);
     }
 }
