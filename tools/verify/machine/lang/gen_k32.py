@@ -392,3 +392,107 @@ for half, first, table, base in (("A", spill + 1, 0, 0), ("B", spill + 129, 16, 
 B += ["end K32", ""]
 write_if_changed(f"{out_dir}/K32Block.lean", "\n".join(B))
 print(f"block: the loads at 0x{at[spill + 1]:X} and 0x{at[spill + 129]:X}; wrote K32Block.lean")
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# A block's set-up (the flags of this block, the sixteen state words of every lane) and its end (the new
+# chaining values, on to the next block or out of the loop).
+reload = ins.index(".zload true 15 .rsp 0x900")
+assert reload == spill + 257 and ins[h - 3] == lea and ins[h - 2] == ".mov 32 (.reg .r11) (.imm 0x7)" and ins[h - 1] == ".nop"
+ff = tail + 2
+assert all(ins[ff + k] == f".zpxord {STATE_A[k]} {STATE_A[k]} {STATE_A[8 + k]}" for k in range(8))
+assert all(ins[ff + 8 + k] == f".zpxord {STATE_B[k]} {STATE_B[k]} {STATE_B[8 + k]}" for k in range(8))
+assert ins[ff + 16:ff + 19] == [".add 64 (.reg .r14) (.imm 0x40)", ".dec64 .r13", f".jne 0x{at[spill]:X}"]
+out_at = at[ff + 19]
+skip_start = int(ins[reload + 3].split()[1], 16); skip_end = int(ins[reload + 10].split()[1], 16)
+n_start = at.index(skip_start) - (reload + 4); n_end = at.index(skip_end) - (reload + 11)
+assert ins[reload + 2] == ".test 64 (.reg .r14) (.reg .r14)" and ins[reload + 3].startswith(".jne") and ins[reload + 9] == ".cmp 64 (.reg .r13) (.imm 0x1)"
+total = h - reload
+KEEP2 = ["rbx", "rsp", "rbp", "rsi", "r9", "r12", "r13", "r14", "r15", "w.r10"]
+kept2 = " ∧ ".join(f"st'.{r} = st.{r}" for r in KEEP2) + " ∧ st'.mem = st.mem"
+V8 = lambda v: " ∧ ".join(f"st.zmm {{r}} = zpack (fun i => ({v} i)[{k}])" for k in range(8))
+def splits_for(pairs):
+    """`pairs`: (register, hypothesis, value) of whole registers the hypotheses name."""
+    out = []
+    for r, name, val in pairs:
+        if r < 16:
+            out += [f"  have e{r} : x{r} = zlo ({val}) := by rw [← {name}, zlo_zjoin]", f"  have f{r} : u{r} = zhi ({val}) := by rw [← {name}, zhi_zjoin]", f"  subst e{r} f{r}"]
+        else:
+            out.append(f"  subst {name}")
+    return out
+H = ["import K32Loop", "open X86 Cells Blake3Generic", "",
+     "/-! # A block of the 32-lane chunk kernel: its set-up and its end",
+     "",
+     "Written by gen_k32.py from the kernel's lifted instructions. Before the rounds: this block's flags (the chunk's",
+     "start flag on the first block, its end flag on the last), and the sixteen state words of every lane (the",
+     "chaining value, the IV, the lane's counter, the block length, the flags). After them: the new chaining value",
+     "(the two halves of the state, xored), the block offset moved on, and back for the next block or out. -/", "",
+     "namespace K32", "",
+     "/-- The chaining values of the first half's lanes: word `k` in ZMM `k`. -/",
+     "def CvA (st : State) (c : Nat → Vector (BitVec 32) 8) : Prop :=",
+     "  " + " ∧ ".join(f"st.zmm {STATE_A[k]} = zpack (fun i => (c i)[{k}])" for k in range(8)), "",
+     "/-- The chaining values of the second half's lanes. -/",
+     "def CvB (st : State) (c : Nat → Vector (BitVec 32) 8) : Prop :=",
+     "  " + " ∧ ".join(f"st.zmm {STATE_B[k]} = zpack (fun i => (c i)[{k}])" for k in range(8)), "",
+     "/-- The second half's chaining values but the last word, whose register the loads borrow (it waits on the stack). -/",
+     "def CvB7 (st : State) (c : Nat → Vector (BitVec 32) 8) : Prop :=",
+     "  " + " ∧ ".join(f"st.zmm {STATE_B[k]} = zpack (fun i => (c i)[{k}])" for k in range(7)), "",
+     "/-- The lanes' counters where the kernel keeps them: low words and high words of each half, at `a + 2048`. -/",
+     "def Counters (mem : Mem) (a : BitVec 64) (tA tB : Nat → BitVec 64) : Prop :=",
+     "  mem.read512 (a + 0x800#64) = some (zpack fun i => (tA i).setWidth 32) ∧",
+     "  mem.read512 (a + 0x840#64) = some (zpack fun i => ((tA i) >>> 32).setWidth 32) ∧",
+     "  mem.read512 (a + 0x880#64) = some (zpack fun i => (tB i).setWidth 32) ∧",
+     "  mem.read512 (a + 0x8C0#64) = some (zpack fun i => ((tB i) >>> 32).setWidth 32)", ""]
+assert STATE_B[7] == 15
+for name, fl, steps, conds, substs, extra, doc in [
+        ("first", "flags.setWidth 32 ||| 1#32", total - n_end, "(hr14 : st.r14 = 0#64) (hz13 : (st.r13 - 1#64 == 0#64) = false)", "hr14", "hz13", "the chunk's first block (the start flag)"),
+        ("mid", "flags.setWidth 32", total - n_start - n_end, "(hz14 : (st.r14 &&& st.r14 == 0#64) = false) (hz13 : (st.r13 - 1#64 == 0#64) = false)", "", "hz14, hz13", "a block that is neither the first nor the last"),
+        ("last", "flags.setWidth 32 ||| 2#32", total - n_start, "(hz14 : (st.r14 &&& st.r14 == 0#64) = false) (hr13 : st.r13 = 1#64)", "hr13", "hz14", "the chunk's last block (the end flag)")]:
+    regs = [(STATE_A[k], f"ha{k}", f"zpack (fun i => (cA i)[{k}])") for k in range(8)] + [(STATE_B[k], f"hb{k}", f"zpack (fun i => (cB i)[{k}])") for k in range(7)]
+    hyps = " ".join(x.strip() for x in extra.split(",")) + (" " + substs if substs else "")
+    H += ["set_option maxRecDepth 1000000 in", "set_option maxHeartbeats 0 in",
+          f"/-- **A block's set-up, for {doc}** (0x{at[reload]:X} to 0x{head:X}, {steps} instructions). -/",
+          f"theorem hdr_{name} (cA cB : Nat → Vector (BitVec 32) 8) (tA tB : Nat → BitVec 64) (flags : BitVec 64) (st : State)",
+          f"    (hpc : st.pc = 0x{at[reload]:X}) (hal : aligned64 st.rsp = true)",
+          "    (hbx : st.rbx = flags ||| 0x40020100#64) (hf : flags < 256#64)",
+          f"    {conds}",
+          "    (ha : CvA st cA) (hb : CvB7 st cB) (hs : st.mem.read512 (st.rsp + 0x900#64) = some (zpack fun i => (cB i)[7]))",
+          "    (ht : Counters st.mem st.rsp tA tB) :",
+          f"    ∃ st', steps Code_k32.prog {steps} st = some st' ∧ st'.pc = 0x{head:X} ∧ st'.w.r11 = 7#64 ∧ st'.rdi = 0x{table_at:X}#64 ∧",
+          f"      RowsAV st' (fun i => initv (cA i) (tA i) 64#32 ({fl})) ∧ RowsBV st' (fun i => initv (cB i) (tB i) 64#32 ({fl})) ∧",
+          f"      {kept2} := by"]
+    H += [f"  have a{c:X} : aligned64 (st.rsp + 0x{c:X}#64) = true := aligned64_add hal (by decide)" for c in (0x800, 0x840, 0x880, 0x8C0, 0x900)]
+    H += ["  obtain ⟨" + ", ".join(f"ha{k}" for k in range(8)) + "⟩ := ha", "  obtain ⟨" + ", ".join(f"hb{k}" for k in range(7)) + "⟩ := hb",
+          "  obtain ⟨ht0, ht1, ht2, ht3⟩ := ht", f"  {ST}",
+          "  simp only [State.zmm] at hpc hal a800 a840 a880 a8C0 a900 hbx hs ht0 ht1 ht2 ht3 " + hyps + " " + " ".join(f"ha{k}" for k in range(8)) + " " + " ".join(f"hb{k}" for k in range(7)),
+          "  subst hpc hbx" + (" " + substs if substs else "")] + splits_for(regs) + [
+          "  run_fn [a800, a840, a880, a8C0, a900, hs, ht0, ht1, ht2, ht3, " + extra + ", zjoin_split, zlo_zjoin, zhi_zjoin]",
+          "  refine ⟨_, rfl, rfl, rfl, ?_, ?_, " + ", ".join(["rfl"] * (len(KEEP2) + 1)) + "⟩",
+          "  · simp only [RowsAV, RowsA, State.zmm, zjoin_split, initv, zbroadcast, Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_succ, List.getElem_cons_zero]",
+          "    refine ⟨" + ", ".join(["?_"] * 16) + "⟩ <;> first | rfl | trivial | (exact congrArg zpack (funext fun _ => by bv_decide))",
+          "  · simp only [RowsBV, RowsB, State.zmm, zjoin_split, initv, zbroadcast, Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_succ, List.getElem_cons_zero]",
+          "    refine ⟨" + ", ".join(["?_"] * 16) + "⟩ <;> first | rfl | trivial | (exact congrArg zpack (funext fun _ => by bv_decide))", ""]
+KEEP3 = ["rbx", "rsp", "rbp", "rsi", "r9", "r12", "r15", "w.r10"]
+kept3 = " ∧ ".join(f"st'.{r} = st.{r}" for r in KEEP3) + " ∧ st'.mem = st.mem"
+for name, cond, subst, extra, pc_out, doc in [
+        ("next", "(hz13 : (st.r13 - 1#64 == 0#64) = false)", "", "hz13, ", at[spill], "with blocks to come: back to the block loop's head"),
+        ("done", "(hr13 : st.r13 = 1#64)", " hr13", "", out_at, "after the last block: out of the loop")]:
+    regs = [(STATE_A[k], f"ha{k}", f"zpack (fun i => (v i)[{k}])") for k in range(16)] + [(STATE_B[k], f"hb{k}", f"zpack (fun i => (w i)[{k}])") for k in range(16)]
+    H += ["set_option maxRecDepth 1000000 in", "set_option maxHeartbeats 0 in",
+          f"/-- **A block's end, {doc}** (0x{at[ff]:X}, 19 instructions): the new chaining value of every lane is",
+          "the two halves of its state, xored; the block offset moves on by 64. -/",
+          f"theorem ff_{name} (v w : Nat → Vector (BitVec 32) 16) (st : State) (hpc : st.pc = 0x{at[ff]:X}) {cond}",
+          "    (ha : RowsAV st v) (hb : RowsBV st w) :",
+          f"    ∃ st', steps Code_k32.prog 19 st = some st' ∧ st'.pc = 0x{pc_out:X} ∧ st'.r13 = st.r13 - 1#64 ∧ st'.r14 = st.r14 + 0x40#64 ∧",
+          "      CvA st' (fun i => low8 (v i)) ∧ CvB st' (fun i => low8 (w i)) ∧",
+          f"      {kept3} := by",
+          "  obtain ⟨" + ", ".join(f"ha{k}" for k in range(16)) + "⟩ := ha", "  obtain ⟨" + ", ".join(f"hb{k}" for k in range(16)) + "⟩ := hb", f"  {ST}",
+          "  simp only [State.zmm] at hpc " + (cond.split(" ")[0].strip("(") + " " if True else "") + " ".join(f"ha{k} hb{k}" for k in range(16)),
+          "  subst hpc" + subst] + splits_for(regs) + [
+          f"  run_fn [{extra}zjoin_split, zlo_zjoin, zhi_zjoin, zxor_pack]",
+          "  refine ⟨_, rfl, rfl, rfl, ?_, ?_, " + ", ".join(["rfl"] * (len(KEEP3) + 1)) + "⟩",
+          "  · simp only [CvA, State.zmm, zjoin_split, low8, Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_succ, List.getElem_cons_zero, and_self]",
+          "  · simp only [CvB, State.zmm, zjoin_split, low8, Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_succ, List.getElem_cons_zero, and_self]", ""]
+H += ["end K32", ""]
+write_if_changed(f"{out_dir}/K32Head.lean", "\n".join(H))
+print(f"head: set-up 0x{at[reload]:X} ({total - n_end}, {total - n_start - n_end}, {total - n_start} instructions), end 0x{at[ff]:X} to 0x{at[spill]:X} or 0x{out_at:X}; wrote K32Head.lean")
