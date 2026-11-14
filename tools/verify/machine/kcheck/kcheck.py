@@ -248,10 +248,15 @@ class Machine:
         nxt, i = self.rows[self.pc]
         op, a = i[0], i[1:]
         self.steps += 1
-        if op == ".nop" or op == ".vzeroupper": pass
+        if op == ".nop": pass
+        elif op == ".vzeroupper":       # ZMM0 to ZMM15 cleared above bit 127
+            for r in range(16):
+                if self.z[r] is not None: self.z[r] = self.z[r][:4] + (T.const(0),) * 12
         elif op == ".mov":
             w = int(a[0]); v = self.val(a[2], w)
-            if a[1][0] == ".reg": self.setreg(a[1][1], v)
+            if a[1][0] == ".reg":
+                if w == 8: raise Fail("a byte moved into a register (the other 56 bits stay: not modelled here)")
+                self.setreg(a[1][1], v)
             else:
                 at = self.addr(a[1][1], num(a[1][2]))
                 if not (w == 8 and at[0] == "frame" and 0 <= at[1] < self.frame_size and v == ("n", 0)): raise Fail(f"a store of {w} bits at {at}")
@@ -278,6 +283,7 @@ class Machine:
             if b[0] != "a": raise Fail("lea from a non-address")
             self.setreg(a[0], ("a", b[1], b[2] + signed(num(a[2]))))
         elif op == ".and":
+            if a[1][0] != ".reg" or a[2][0] != ".imm": raise Fail("and of other than a register and a number")
             w = int(a[0]); d = self.reg(a[1][1]); m = num(a[2][1])
             if w == 64 and a[1][1] == ".rsp" and m == 0xFFFFFFFFFFFFFFC0 and d[0] == "a" and d[1] == "stack":
                 self.frame_at = d[2]; self.setreg("rsp", ("a", "frame", 0)); self.frame_size = 0     # the frame's base: rounded down to 64 bytes
@@ -285,6 +291,7 @@ class Machine:
             else: raise Fail(f"and {a}")
             self.zf = None
         elif op in (".sub", ".add"):
+            if a[1][0] != ".reg" or a[2][0] != ".imm": raise Fail(f"{op} of other than a register and a number")
             d = self.reg(a[1][1]); n = num(a[2][1]) * (1 if op == ".add" else -1)
             if d[0] == "a" and d[1] == "frame" and op == ".sub" and d[2] == 0 and not self.frame:
                 # the frame grows down from its aligned top: its base is the new stack pointer
@@ -297,8 +304,10 @@ class Machine:
             if a[1] != a[2]: raise Fail("xor of two registers")
             self.setreg(a[1][1], ("n", 0)); self.zf = True
         elif op == ".or":
+            if a[0] != "32" or a[1][0] != ".reg": raise Fail("an or that is not of 32 bits into a register")
             x, y = self.val(a[1], 32), self.val(a[2], 32)
-            if x[0] == "p" and y[0] == "p":
+            if x[0] == "n" and y[0] == "n": self.setreg(a[1][1], ("n", x[1] | y[1]))
+            elif x[0] == "p" and y[0] == "p":
                 bx, by = x[1], y[1]
                 if any(bx[1:]) or any(by[1:]): raise Fail(f"or of {x} and {y}")
                 self.setreg(a[1][1], ("p", (or8(bx[0], by[0]),) + (0,) * 7))
@@ -307,7 +316,8 @@ class Machine:
         elif op in (".shr64", ".shr32"):
             v = self.reg(a[0]); n = num(a[1])
             if op == ".shr64" and v == ("q", "counter") and n == 32: self.setreg(a[0], ("hi",))
-            elif op == ".shr64" and v[0] == "n": self.setreg(a[0], ("n", v[1] >> n))
+            elif op == ".shr64" and v[0] == "n": self.setreg(a[0], ("n", v[1] >> (n & 63)))
+            elif op == ".shr32" and v[0] == "n": self.setreg(a[0], ("n", (v[1] & MASK32) >> (n & 31)))
             elif op == ".shr32" and v[0] == "p" and n % 8 == 0: self.setreg(a[0], ("p", v[1][n // 8:4] + (0,) * (4 + n // 8)))
             else: raise Fail(f"{op} {v} {n}")
             self.zf = None
