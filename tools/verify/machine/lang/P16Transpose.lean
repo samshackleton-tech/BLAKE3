@@ -132,7 +132,7 @@ def BlockAt (mem : Mem) (a : BitVec 64) (w : Vector (BitVec 32) 16) : Prop :=
   Vec mem (a + 32#64) (mk4 w[8] w[9] w[10] w[11]) ∧
   Vec mem (a + 48#64) (mk4 w[12] w[13] w[14] w[15])
 
-private theorem read512_blockAt {mem : Mem} {a : BitVec 64} {w : Vector (BitVec 32) 16} (h : BlockAt mem a w) :
+theorem read512_blockAt {mem : Mem} {a : BitVec 64} {w : Vector (BitVec 32) 16} (h : BlockAt mem a w) :
     mem.read512 a = some (z16 w[0] w[1] w[2] w[3] w[4] w[5] w[6] w[7] w[8] w[9] w[10] w[11] w[12] w[13] w[14] w[15]) := by
   obtain ⟨h0, h1, h2, h3⟩ := h
   rw [BitVec.add_zero] at h0

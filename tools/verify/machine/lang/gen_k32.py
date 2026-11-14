@@ -304,3 +304,91 @@ L += ["  refine ⟨s7, ?_, pc7, ?_, ?_, " + ", ".join(["?_"] * (len(KEEP) + 1)) 
       "  all_goals first"] + [f"    | (rw [{chain(q)}])" for q in KEEP] + ["    | (rw [mem7, hmem6])", "", "end K32", ""]
 write_if_changed(f"{out_dir}/K32Loop.lean", "\n".join(L))
 print(f"loop: 0x{head:X} to 0x{exit_at:X}; the schedule at 0x{table_at:X}; wrote K32Loop.lean")
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# The block loop's loads: sixteen inputs' blocks loaded and transposed (112 instructions), then the sixteen
+# message words stored at `rsi` (16 instructions); twice, for the two halves.
+GPRS = ["rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi", "r8", "r9", "r12", "r13", "r14", "r15", "w.r10", "w.r11"]
+ST = f"obtain ⟨{FIELDS}, ⟨{WIDE}⟩⟩ := st"
+spill = next(i for i, x in enumerate(ins) if x == ".zstore true .rsp 0x900 15")
+B = ["import K32Loop", "import K32Mem", "import P16Transpose", "open X86 Cells Blake3Generic", "",
+     "/-! # The block loop's loads: sixteen blocks to sixteen message words, and the words to the stack",
+     "",
+     "Written by gen_k32.py from the kernel's lifted instructions. For each half of the lanes: the sixteen inputs'",
+     "blocks are loaded (through the table of their addresses at `r12`, `r14` bytes into each), transposed into the",
+     "sixteen message words (lane `i` of word `k` is input `i`'s word `k`), and stored at `rsi + 64 k`. -/", "",
+     "namespace K32", ""]
+for half, first, table, base in (("A", spill + 1, 0, 0), ("B", spill + 129, 16, 0x400)):
+    for j in range(16):
+        assert ins[first + 3 * j] == f".mov 64 (.reg .rax) (.mem .r12 0x{8 * (table + j):X})", ins[first + 3 * j]
+        assert ins[first + 3 * j + 1] == f".zloadi {16 + j} .rax .r14 0x0" and ins[first + 3 * j + 2] == ".nop"
+    assert all(x.split()[0] in (".zunpckldq", ".zunpckhdq", ".zunpcklqdq", ".zunpckhqdq", ".zshufi32x4") for x in ins[first + 48:first + 112])
+    REG = []
+    for k in range(16):
+        f = ins[first + 112 + k].split()
+        assert f[:4] == [".zstore", "true", ".rsi", f"0x{base + 64 * k:X}"], f
+        REG.append(int(f[4]))
+    assert sorted(REG) == list(range(15, 32))[:16] or sorted(REG) == sorted(REG) and len(set(REG)) == 16
+    untouched = [r for r in range(32) if r not in REG and r not in range(16, 32)]
+    assert untouched == list(range(15)), untouched
+    A = lambda k: "rsi" if base + 64 * k == 0 else f"rsi + 0x{base + 64 * k:X}#64"
+    idx = (lambda j: f"8 * {j}") if table == 0 else (lambda j: f"8 * ({table} + {j})")
+    keep = [r for r in GPRS if r != "rax"]
+    B += ["set_option maxRecDepth 1000000 in", "set_option maxHeartbeats 0 in",
+          f"/-- **Half {half}: load and transpose** (0x{at[first]:X} to 0x{at[first + 112]:X}, 112 instructions). The sixteen blocks, at `r14`",
+          f"bytes into the inputs whose addresses are at `r12 + {8 * table}`, become the sixteen message words, one register each. -/",
+          f"theorem load_{half} (ptrs : Nat → BitVec 64) (m : Nat → Vector (BitVec 32) 16) (st : State)",
+          f"    (hpc : st.pc = 0x{at[first]:X})",
+          f"    (hp : ∀ j : Nat, j < 16 → Quad st.mem (st.r12 + BitVec.ofNat 64 ({idx('j')})) (ptrs j))",
+          "    (hb : ∀ j : Nat, j < 16 → P16.BlockAt st.mem (ptrs j + st.r14) (m j)) :",
+          f"    ∃ st', steps Code_k32.prog 112 st = some st' ∧ st'.pc = 0x{at[first + 112]:X} ∧",
+          "      (" + " ∧ ".join(f"st'.zmm {REG[k]} = zpack (fun i => (m i)[{k}])" for k in range(16)) + ") ∧",
+          "      (∀ r, r ≤ 14 → st'.zmm r = st.zmm r) ∧",
+          "      " + " ∧ ".join(f"st'.{r} = st.{r}" for r in keep) + " ∧ st'.mem = st.mem := by"]
+    B += [f"  have q{j} := read_quad (hp {j} (by decide))" for j in range(16)]
+    B += [f"  have b{j} := P16.read512_blockAt (hb {j} (by decide))" for j in range(16)]
+    qs, bs = " ".join(f"q{j}" for j in range(16)), " ".join(f"b{j}" for j in range(16))
+    B += [f"  {ST}",
+          f"  simp only [Nat.reduceMul, Nat.reduceAdd, BitVec.add_zero] at hpc {qs} {bs}",
+          "  subst hpc",
+          "  run_fn [BitVec.add_zero, " + ", ".join(f"q{j}" for j in range(16)) + ", " + ", ".join(f"b{j}" for j in range(16)) + ",",
+          "    zjoin_split, zlo_zjoin, zhi_zjoin, P16.z16_ldq, P16.z16_hdq, P16.z16_lqdq, P16.z16_hqdq, P16.z16_shuf_88, P16.z16_shuf_dd]",
+          "  refine ⟨_, rfl, rfl, ?_, ?_, " + ", ".join(["rfl"] * (len(keep) + 1)) + "⟩",
+          "  · simp only [State.zmm, zjoin_split]",
+          "    exact ⟨" + ", ".join(["rfl"] * 16) + "⟩",
+          "  · intro r hr",
+          "    rcases r with " + " | ".join(["_"] * 15) + " | r <;> first | omega | rfl", ""]
+    # the stores
+    M = ["mem"]
+    for k in range(16): M.append(f"({M[k]}).put512 ({A(k)}) (v {k})" if k else f"mem.put512 ({A(0)}) (v 0)")
+    def owned(k):
+        o = f"o{k}"
+        for j in range(k): o = f"owned64_put512 ({M[j]}) ({A(j)}) ({A(k)}) (v {j}) ({o})"
+        return o
+    target = "st.rsi" if base == 0 else f"(st.rsi + 0x{base:X}#64)"
+    B += ["set_option maxRecDepth 1000000 in", "set_option maxHeartbeats 0 in",
+          f"/-- **Half {half}: the sixteen message words to the stack** (0x{at[first + 112]:X} to 0x{at[first + 128]:X}, 16 instructions). -/",
+          f"theorem store_{half} (v : Nat → Z) (st : State) (hpc : st.pc = 0x{at[first + 112]:X}) (hal : aligned64 st.rsi = true)",
+          f"    (ho : ∀ k : Nat, k < 16 → Owned64 st.mem (st.rsi + BitVec.ofNat 64 ({base} + 64 * k)))",
+          "    (hr : " + " ∧ ".join(f"st.zmm {REG[k]} = v {k}" for k in range(16)) + ") :",
+          f"    ∃ st', steps Code_k32.prog 16 st = some st' ∧ st'.pc = 0x{at[first + 128]:X} ∧ st'.mem = puts16 st.mem {target} v ∧",
+          "      (∀ r, st'.zmm r = st.zmm r) ∧ " + " ∧ ".join(f"st'.{r} = st.{r}" for r in GPRS) + " := by"]
+    B += [f"  have a{k} : aligned64 (st.rsi + 0x{base + 64 * k:X}#64) = true := aligned64_add hal (by decide)" for k in range(16) if base + 64 * k]
+    B += [f"  have o{k} := ho {k} (by decide)" for k in range(16)]
+    B += ["  obtain ⟨" + ", ".join(f"hr{k}" for k in range(16)) + "⟩ := hr", f"  {ST}",
+          "  simp only [State.zmm, Nat.reduceMul, Nat.reduceAdd, BitVec.add_zero] at hpc hal " + " ".join(f"a{k}" for k in range(16) if base + 64 * k) + " " + " ".join(f"o{k}" for k in range(16)) + " " + " ".join(f"hr{k}" for k in range(16)),
+          "  subst hpc"]
+    for k, r in enumerate(REG):
+        if r < 16:
+            B += [f"  have e{r} : x{r} = zlo (v {k}) := by rw [← hr{k}, zlo_zjoin]", f"  have f{r} : u{r} = zhi (v {k}) := by rw [← hr{k}, zhi_zjoin]", f"  subst e{r} f{r}"]
+        else:
+            B += [f"  subst hr{k}"]
+    B += [f"  have w{k} := write512_of ({owned(k)}) (v {k})" for k in range(16)]
+    B += ["  run_fn [hal, " + ", ".join(f"a{k}" for k in range(16) if base + 64 * k) + ", " + ", ".join(f"w{k}" for k in range(16)) + ", zjoin_split, zlo_zjoin, zhi_zjoin]",
+          "  refine ⟨_, rfl, rfl, ?_, ?_, " + ", ".join(["rfl"] * len(GPRS)) + "⟩",
+          "  · simp only [puts16, BitVec.add_assoc, BitVec.reduceAdd]",
+          "  · intro r; simp only [State.zmm, zjoin_split]", ""]
+B += ["end K32", ""]
+write_if_changed(f"{out_dir}/K32Block.lean", "\n".join(B))
+print(f"block: the loads at 0x{at[spill + 1]:X} and 0x{at[spill + 129]:X}; wrote K32Block.lean")
