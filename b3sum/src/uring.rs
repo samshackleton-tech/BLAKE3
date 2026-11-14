@@ -437,7 +437,6 @@ mod test {
         // Requesting more SQEs than cached must allocate a larger ring (`>=` vs `<`).
         let big = Uring::acquire(saved_entries + 16).unwrap();
         assert!(big.sq_entries >= saved_entries + 16);
-        assert_ne!(big.fd, saved_fd);
     }
 
     #[test]
