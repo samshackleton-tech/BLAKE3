@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """Write the proofs about the 32-lane chunk kernel K32 from its lifted instructions (BLAKE3 #361).
 
-usage: gen_k32.py ROWS OUT_DIR        (ROWS: Lifted_k32.lean.rows, from try_kernel.sh)
+usage: gen_k32.py ROWS OUT_DIR        (ROWS: Lifted_k32.lean.rows, from try_kernel.sh; ROWS's .data beside it)
 
-So far: K32Round.lean, the theorem that the 240 instructions of the round loop's body are the specification's
-round in each of the 32 lanes (two halves of sixteen), with the message words read through the schedule row
-`rdi` points at. The registers a round reads and writes are found here by following the instructions."""
+So far:
+  K32Round.lean  the 240 instructions of the round loop's body are the specification's round in each of the 32
+                 lanes (two halves of sixteen), with the message words read through the schedule row `rdi` points at;
+  K32Loop.lean   the round loop: seven turns of it are the specification's seven rounds (`rounds7`), given the
+                 kernel's schedule table at `rdi` and the lanes' message words at `rsi`.
+The registers a round reads and writes, and the schedule, are found here by following the instructions and the
+object's read-only data; nothing about them is written by hand."""
 import sys
 
 rows = [l.rstrip("\n").split("\t") for l in open(sys.argv[1])]
@@ -135,3 +139,168 @@ def write_if_changed(path, content):
 
 write_if_changed(f"{out_dir}/K32Round.lean", "\n".join(t))
 print(f"round: head 0x{head:X}; state words of half A in ZMM {STATE_A}, of half B in ZMM {STATE_B}; wrote K32Round.lean")
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# The round loop. The schedule: seven rows of sixteen 32-bit offsets, in the object's read-only data at the
+# address `lea rdi` names (the lifter wrote it as a number).
+lea = next(x for x in ins if x.startswith(".mov 64 (.reg .rdi) (.imm 0x"))
+table_at = int(lea.split("(.imm ")[1].rstrip(")"), 16)
+data_at, data_hex = open(sys.argv[1].replace(".rows", ".data")).read().split()
+data = bytes.fromhex(data_hex)
+base = table_at - int(data_at, 16)
+SCHED = [[int.from_bytes(data[base + 64 * r + 4 * k:][:4], "little") for k in range(16)] for r in range(7)]
+assert all(sorted(row) == [64 * w for w in range(16)] for row in SCHED), "a row of the schedule is the sixteen words' offsets, each once"
+IDX = [[o // 64 for o in row] for row in SCHED]
+PERM = IDX[1]
+assert IDX[0] == list(range(16))
+for r in range(1, 7):
+    assert IDX[r] == [IDX[r - 1][PERM[k]] for k in range(16)], "row r is the specification's permutation of row r - 1"
+exit_at = at[tail + 2]
+tail_at = at[tail - 1]
+lit = lambda n: f"0x{n:X}#64"
+plus = lambda a, n: a if n == 0 else f"{a} + {lit(n)}"
+KEEP = ["rbx", "rsp", "rbp", "rsi", "r9", "r12", "r13", "r14", "r15", "w.r10"]
+kept = lambda a, b: " ∧ ".join(f"{b}.{r} = {a}.{r}" for r in KEEP) + f" ∧ {b}.mem = {a}.mem"
+nm = lambda r: r.replace("w.", "")
+KEPT = kept("st", "st'")
+VA = lambda v: " ".join(f"(fun i => ({v} i)[{k}])" for k in range(16))
+u = lambda n: " ".join(["_"] * n)
+counts = " ∨ ".join(f"c = {n}#64" for n in range(7, 1, -1))
+tail_proof = lambda: ["    obtain ⟨" + FIELDS + ", ⟨" + WIDE + "⟩⟩ := st",
+                      "    simp only at hpc hr11; subst hpc hr11",
+                      "    run_fn []",
+                      "    exact ⟨_, rfl, rfl, rfl, rfl, fun _ => rfl, " + ", ".join(["rfl"] * (len(KEEP) + 1)) + "⟩"]
+L = ["import K32Round", "open X86 Cells Blake3Generic", "",
+     "/-! # The round loop of the 32-lane chunk kernel is the specification's seven rounds",
+     "",
+     "Written by gen_k32.py from the kernel's lifted instructions and the object's read-only data. A turn of the loop",
+     "is a round (K32Round.lean) with the message words at the offsets of one row of the kernel's schedule table,",
+     "then `rdi` moved to the next row. The table's rows are the specification's message permutation, applied",
+     "0 to 6 times: checked here, row by row, when this file is written, and by Lean in `perm1` to `perm6`. -/", "",
+     "namespace K32", "",
+     "/-- The state words of the first half's lanes, as one vector a lane. -/",
+     "abbrev RowsAV (st : State) (v : Nat → Vector (BitVec 32) 16) : Prop :=", f"  RowsA st {VA('v')}", "",
+     "/-- The state words of the second half's lanes, as one vector a lane. -/",
+     "abbrev RowsBV (st : State) (v : Nat → Vector (BitVec 32) 16) : Prop :=", f"  RowsB st {VA('v')}", "",
+     "/-- The lanes' message words where the block loop puts them: word `k` of the first half's lanes (lane `i`'s",
+     "in lane `i`) at `a + 64 k`, of the second half's 1024 bytes on. -/",
+     "def BlocksAt (mem : Mem) (a : BitVec 64) (m n : Nat → Vector (BitVec 32) 16) : Prop :=",
+     "  " + " ∧ ".join(f"mem.read512 ({plus('a', 64 * k)}) = some (zpack fun i => (m i)[{k}])" for k in range(16)) + " ∧",
+     "  " + " ∧ ".join(f"mem.read512 ({plus('a', 1024 + 64 * k)}) = some (zpack fun i => (n i)[{k}])" for k in range(16)), "",
+     "/-- The kernel's schedule table at `a`: seven rows of sixteen offsets, as the object's read-only data has them. -/",
+     "def SchedAt (mem : Mem) (a : BitVec 64) : Prop :=",
+     "  " + " ∧\n  ".join(" ∧ ".join(f"mem.read ({plus('a', 64 * r + 4 * k)}) 32 = some {SCHED[r][k]}#64" for k in range(16)) for r in range(7)), ""]
+# the specification's permutation, r times, as the table's row r
+for r in range(1, 7):
+    lhs = "v"
+    for _ in range(r): lhs = f"PERMUTE ({lhs})" if lhs != "v" else "PERMUTE v"
+    rhs = "#v[" + ", ".join(f"v[{i}]" for i in IDX[r]) + "]"
+    L += [f"theorem perm{r} (v : Vector (BitVec 32) 16) : {lhs} = {rhs} := by"]
+    if r == 1:
+        L += ["  ext i hi; rcases i with _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | i",
+              "  all_goals first", "    | omega", "    | eval_spec", ""]
+    else:
+        L += [f"  rw [perm{r - 1}, perm1]",
+              "  ext i hi; rcases i with _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | i",
+              "  all_goals first", "    | omega",
+              "    | (simp only [Vector.getElem_mk, List.getElem_toArray, List.getElem_cons_succ, List.getElem_cons_zero])", ""]
+L += ["private theorem rowsA_zmm_eq {p q : State} {" + lanes("s") + " : Nat → BitVec 32}",
+      f"    (hz : ∀ r, q.zmm r = p.zmm r) (hv : RowsA p {lanes('s')}) : RowsA q {lanes('s')} := by",
+      "  simp only [RowsA, hz] at hv ⊢; exact hv", "",
+      "private theorem rowsB_zmm_eq {p q : State} {" + lanes("s") + " : Nat → BitVec 32}",
+      f"    (hz : ∀ r, q.zmm r = p.zmm r) (hv : RowsB p {lanes('s')}) : RowsB q {lanes('s')} := by",
+      "  simp only [RowsB, hz] at hv ⊢; exact hv", "",
+      "set_option maxRecDepth 1000000 in",
+      f"/-- The loop's end when rounds remain (0x{tail_at:X}, 3 instructions): `rdi` to the next row, back to the head. -/",
+      f"private theorem tail_next (c : BitVec 64) (st : State) (hpc : st.pc = 0x{tail_at:X}) (hr11 : st.w.r11 = c)",
+      f"    (hc : {counts}) :",
+      f"    ∃ st', steps Code_k32.prog 3 st = some st' ∧ st'.pc = 0x{head:X} ∧ st'.w.r11 = c - 1#64 ∧ st'.rdi = st.rdi + 0x40#64 ∧",
+      f"      (∀ r, st'.zmm r = st.zmm r) ∧ {KEPT} := by",
+      "  rcases hc with h | h | h | h | h | h <;> subst h <;>"] + ["  · " + x.strip() if i == 0 else x for i, x in enumerate(tail_proof())]
+L += ["",
+      "set_option maxRecDepth 1000000 in",
+      f"/-- The loop's end after the seventh round: on to 0x{exit_at:X}. -/",
+      f"private theorem tail_done (st : State) (hpc : st.pc = 0x{tail_at:X}) (hr11 : st.w.r11 = 1#64) :",
+      f"    ∃ st', steps Code_k32.prog 3 st = some st' ∧ st'.pc = 0x{exit_at:X} ∧ st'.w.r11 = 0#64 ∧ st'.rdi = st.rdi + 0x40#64 ∧",
+      f"      (∀ r, st'.zmm r = st.zmm r) ∧ {KEPT} := by"] + [x[2:] for x in tail_proof()] + [""]
+ob1 = "⟨s1, e1, pc1, hA1, hB1, " + ", ".join(f"{nm(r)}1" for r in ["rbx", "rsp", "rbp", "rsi", "rdi", "r9", "r12", "r13", "r14", "r15", "w.r10", "w.r11"]) + ", _, _, mem1⟩"
+ob2 = "⟨s2, e2, pc2, hr11_2, di2, hz2, " + ", ".join(f"{nm(r)}2" for r in KEEP) + ", mem2⟩"
+closing = ["  · rw [show (243 : Nat) = 240 + 3 from rfl, steps_add, e1, Option.bind_some, e2]",
+           "  · rw [di2, rdi1]",
+           "  · simpa only [RowsAV, eta16] using rowsA_zmm_eq hz2 hA1",
+           "  · simpa only [RowsBV, eta16] using rowsB_zmm_eq hz2 hB1",
+           "  all_goals first"] + [f"    | (rw [{nm(r)}2, {nm(r)}1])" for r in KEEP] + ["    | (rw [mem2, mem1])"]
+for name, pc_out, r11_out, hyp, call, doc in [
+        ("turn", head, "c - 1#64", f" (hc : {counts})", "tail_next c s1 pc1 hr11_1 hc", "**A turn of the round loop with rounds to come** (243 instructions)"),
+        ("turn_last", exit_at, "0#64", "", "tail_done s1 pc1 hr11_1", "**The last turn of the round loop** (243 instructions)")]:
+    c = "c" if name == "turn" else "1#64"
+    L += ["set_option maxRecDepth 1000000 in", "set_option maxHeartbeats 0 in",
+          f"/-- {doc}: a round on every lane, with the message words",
+          "at the offsets `rdi` points at, and `rdi` on to the next row. -/",
+          f"theorem {name} (v w : Nat → Vector (BitVec 32) 16) ({lanes('m')} {lanes('n')} : Nat → BitVec 32) ({lanes('o')} : BitVec 64)",
+          ("    (c : BitVec 64) " if name == "turn" else "    ") + f"(st : State) (hpc : st.pc = 0x{head:X}) (hr11 : st.w.r11 = {c}){hyp}",
+          f"    (ha : RowsAV st v) (hb : RowsBV st w) (ho : Row st {lanes('o')}) (hm : Msgs st {lanes('o')} {lanes('m')} {lanes('n')}) :",
+          f"    ∃ st', steps Code_k32.prog 243 st = some st' ∧ st'.pc = 0x{pc_out:X} ∧ st'.w.r11 = {r11_out} ∧ st'.rdi = st.rdi + 0x40#64 ∧",
+          "      RowsAV st' (fun i => rnd (v i) #v[" + ", ".join(f"m{k} i" for k in range(16)) + "]) ∧",
+          "      RowsBV st' (fun i => rnd (w i) #v[" + ", ".join(f"n{k} i" for k in range(16)) + "]) ∧",
+          f"      {KEPT} := by",
+          f"  obtain {ob1} :=",
+          f"    round {u(64)} {u(16)} st hpc ha hb ho hm",
+          f"  have hr11_1 : s1.w.r11 = {c} := by rw [r111]; exact hr11",
+          f"  obtain {ob2} := {call}",
+          "  refine ⟨s2, ?_, pc2, hr11_2, ?_, ?_, ?_, " + ", ".join(["?_"] * (len(KEEP) + 1)) + "⟩"] + closing + [""]
+# seven turns
+L += ["set_option maxRecDepth 1000000 in", "set_option maxHeartbeats 0 in",
+      f"/-- **The round loop** (0x{head:X} to 0x{exit_at:X}, 1701 instructions): the specification's seven rounds on every lane of",
+      "both halves, with that lane's message words. Memory and the registers the kernel keeps are as they were. -/",
+      "theorem seven_rounds (v w m n : Nat → Vector (BitVec 32) 16) (st : State)",
+      f"    (hpc : st.pc = 0x{head:X}) (hr11 : st.w.r11 = 7#64)",
+      "    (ha : RowsAV st v) (hb : RowsBV st w) (hs : SchedAt st.mem st.rdi) (hm : BlocksAt st.mem st.rsi m n) :",
+      f"    ∃ st', steps Code_k32.prog 1701 st = some st' ∧ st'.pc = 0x{exit_at:X} ∧",
+      "      RowsAV st' (fun i => rounds7 (v i) (m i)) ∧ RowsBV st' (fun i => rounds7 (w i) (n i)) ∧",
+      f"      {KEPT} := by",
+      "  obtain ⟨" + ", ".join(f"hs_{r}_{k}" for r in range(7) for k in range(16)) + "⟩ := hs",
+      "  obtain ⟨" + ", ".join(f"hma{k}" for k in range(16)) + ", " + ", ".join(f"hmb{k}" for k in range(16)) + "⟩ := hm"]
+prev = "st"
+for r in range(7):
+    s = f"s{r + 1}"
+    ms = " ".join(f"(fun i => (m i)[{IDX[r][k]}])" for k in range(16))
+    ns = " ".join(f"(fun i => (n i)[{IDX[r][k]}])" for k in range(16))
+    os_ = " ".join(f"{SCHED[r][k]}#64" for k in range(16))
+    rows = "⟨" + ", ".join(f"hs_{r}_{k}" for k in range(16)) + "⟩"
+    msgs = "⟨" + ", ".join(f"hma{IDX[r][k]}" for k in range(16)) + ", " + ", ".join(f"hmb{IDX[r][k]}" for k in range(16)) + "⟩"
+    if r == 0:
+        L += [f"  have ho0 : Row st {os_} := by unfold Row; exact {rows}",
+              f"  have hm0 : Msgs st {os_} {ms} {ns} := by",
+              "    unfold Msgs; simp only [BitVec.reduceAnd, BitVec.reduceAdd, BitVec.add_zero]", f"    exact {msgs}"]
+    else:
+        L += [f"  have ho{r} : Row {prev} {os_} := by",
+              f"    unfold Row; rw [hmem{r}, hrdi{r}]; simp only [BitVec.add_assoc, BitVec.reduceAdd]", f"    exact {rows}",
+              f"  have hm{r} : Msgs {prev} {os_} {ms} {ns} := by",
+              f"    unfold Msgs; rw [hmem{r}, hrsi{r}]; simp only [BitVec.reduceAnd, BitVec.reduceAdd, BitVec.add_zero]", f"    exact {msgs}"]
+    ob = f"⟨{s}, e{r + 1}, pc{r + 1}, r11_{r + 1}, di{r + 1}, hA{r + 1}, hB{r + 1}, " + ", ".join(f"{nm(q)}_{r + 1}" for q in KEEP) + f", mem{r + 1}⟩"
+    count = f"{7 - r}#64"
+    hr = "hr11" if r == 0 else f"r11_{r}'"
+    hA, hB = ("ha", "hb") if r == 0 else (f"hA{r}", f"hB{r}")
+    if r < 6:
+        L += [f"  obtain {ob} :=",
+              f"    turn _ _ {u(32)} {u(16)} {count} {prev} {'hpc' if r == 0 else f'pc{r}'} {hr} (by decide) {hA} {hB} ho{r} hm{r}",
+              f"  have r11_{r + 1}' : {s}.w.r11 = {6 - r}#64 := by rw [r11_{r + 1}]; decide",
+              f"  have hmem{r + 1} : {s}.mem = st.mem := by rw [mem{r + 1}" + (f", hmem{r}" if r else "") + "]",
+              f"  have hrsi{r + 1} : {s}.rsi = st.rsi := by rw [rsi_{r + 1}" + (f", hrsi{r}" if r else "") + "]",
+              f"  have hrdi{r + 1} : {s}.rdi = st.rdi + {lit(64 * (r + 1))} := by " + ("exact di1" if r == 0 else f"simp only [di{r + 1}, hrdi{r}, BitVec.add_assoc, BitVec.reduceAdd]")]
+    else:
+        L += [f"  obtain {ob} :=",
+              f"    turn_last _ _ {u(32)} {u(16)} {prev} pc{r} {hr} {hA} {hB} ho{r} hm{r}"]
+    prev = s
+steps = " ".join("steps_add, e%d, Option.bind_some," % (r + 1) for r in range(6))
+chain = lambda q: ", ".join(f"{nm(q)}_{r}" for r in range(7, 0, -1))
+L += ["  refine ⟨s7, ?_, pc7, ?_, ?_, " + ", ".join(["?_"] * (len(KEEP) + 1)) + "⟩",
+      "  · rw [show (1701 : Nat) = 243 + (243 + (243 + (243 + (243 + (243 + 243))))) from rfl,",
+      f"      {steps} e7]",
+      "  · simpa only [RowsAV, rounds7, eta16, " + ", ".join(f"← perm{r}" for r in range(1, 7)) + "] using hA7",
+      "  · simpa only [RowsBV, rounds7, eta16, " + ", ".join(f"← perm{r}" for r in range(1, 7)) + "] using hB7",
+      "  all_goals first"] + [f"    | (rw [{chain(q)}])" for q in KEEP] + ["    | (rw [mem7, hmem6])", "", "end K32", ""]
+write_if_changed(f"{out_dir}/K32Loop.lean", "\n".join(L))
+print(f"loop: 0x{head:X} to 0x{exit_at:X}; the schedule at 0x{table_at:X}; wrote K32Loop.lean")
