@@ -215,10 +215,27 @@ lands: removing the owed wakes passed the i7 and made the EPYC 4-12%
 slower in 14 pool cells (BLAKE3 #119), and the i7 then found its fix
 16-25% slower.
 
-A regression holds the commit: find its cause and fix it. When the
-slowdown is the price of something worth more (correctness, a simpler
-design), the maintainers decide; an accepted one lands with `--no-verify`
-and its slowed cells, their numbers, and the decision in its message. A
+What a slower cell means for a change is a judgment in the service of
+goals (Zooko, November 12, 2026). bench-hashes' `CONTRIBUTING.md` says
+the same under "When a check reads a cell slower", with the questions
+that find a cause quickly. The goals:
+
+- **A user is never surprised by a slowdown we could have known.** A
+  real one is fixed, or said plainly where users read (the changelog),
+  with an owner.
+- **We do not fool ourselves.** A reading the code did not cause is worth
+  understanding far enough to stop it recurring.
+- **Releases come soon.** An hour spent chasing a cell is weighed against
+  what the chase can buy.
+
+Whoever lands the change decides, and says why in a sentence where the
+others read it (the commit message, the pull request). What bears on the
+call: how large the reading is, whether it repeats by name, how many
+machines agree, whether a user's call can reach the cell, what finding
+out would cost, and what being wrong would cost. We own every slowdown:
+one that lands does so with `--no-verify`, its slowed cells and their
+numbers in its message, and an issue with an owner. When the call is
+hard and the stakes are high, ask. A
 streaming API's cells never slow to speed up another API. A commit in
 `src/`, `threads/` or `c/` that leaves the machine code as it was (code for other
 targets, tests, comments) skips the check with `--no-verify` and a line
