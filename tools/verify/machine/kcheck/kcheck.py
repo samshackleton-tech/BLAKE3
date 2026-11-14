@@ -24,7 +24,7 @@ Not a proof assistant, and nothing here is checked by one: this program is what 
 form: a lane's counter words, low + index and high + carry, which Lean proves equal to the 64-bit counter
 plus the index (K32Lemmas.lean: counter_lo, counter_hi).
 
-usage: kcheck.py ROWS DATA [--anchor test_vectors.json] [--mutants]      (ROWS, DATA: lift_one.py's OUT.rows and OUT.data for k32)
+usage: kcheck.py k32|p32|p16 ROWS DATA [--anchor test_vectors.json] [--mutants]      (ROWS, DATA: lift_one.py's OUT.rows and OUT.data)
 """
 import re, sys, time
 
@@ -111,9 +111,11 @@ def spec_counter(T, lane):
 def spec_flags(T, extra): return T.var("flags") if extra == 0 else T.mk("or", T.var("flags"), extra)
 
 
-def spec_chunk_cv(T, lane, blocks=16):
+def spec_chunk_cv(T, lane, blocks=16, increment=True):
+    """Lane `lane`'s chunk: `blocks` blocks from the key, numbered counter + lane (or counter, for the entry that
+    does not increment)."""
     cv = [T.var("key", w) for w in range(8)]
-    t_lo, t_hi = spec_counter(T, lane)
+    t_lo, t_hi = spec_counter(T, lane) if increment else (T.var("counter low"), T.var("counter high"))
     for j in range(blocks):
         flags = spec_flags(T, (CHUNK_START if j == 0 else 0) | (CHUNK_END if j + 1 == blocks else 0))
         cv = spec_compress(T, cv, [T.var("input", lane, j, w) for w in range(16)], t_lo, t_hi, T.const(64), flags)
@@ -146,13 +148,14 @@ def signed(n): return n - (1 << 64) if n >> 63 else n
 
 
 class Machine:
-    def __init__(self, T, rows, data_at, data, blocks=16, stack_budget=4096):
+    def __init__(self, T, rows, data_at, data, kernel, stack_budget=4096):
         self.T, self.rows, self.data_at, self.data = T, {a: (n, parse(i)) for a, n, i in rows}, data_at, data
-        self.budget = stack_budget
+        self.budget, self.lanes, self.blocks = stack_budget, kernel["lanes"], kernel["blocks"]
+        blocks = self.blocks
         # general registers: ("n", int) | ("a", region, offset) | ("p", bytes) packed flags | ("q", name) a 64-bit unknown
         self.g = {r: ("q", r + " at entry") for r in G64}
-        self.g.update(rdi=("a", "inputs", 0), rsi=("n", blocks), rdx=("a", "key", 0), rcx=("q", "counter"),
-                      r8=("p", ("flags", CHUNK_START, CHUNK_END, 64, 0, 0, 0, 0)), r9=("a", "out", 0), rsp=("a", "stack", 0))
+        self.g.update(rdi=("a", "inputs", 0), rsi=("n", blocks), rdx=("a", "key", 0), rcx=kernel["counter"],
+                      r8=("p", kernel["packed"] + (0, 0, 0, 0)), r9=("a", "out", 0), rsp=("a", "stack", 0))
         self.z = [None] * 32            # sixteen terms each, or None: not yet written (reading it is a fault)
         self.k = {}
         self.zf = None
@@ -198,7 +201,7 @@ class Machine:
     def load(self, at, w):
         region, off = at
         self.trace.append(("read", region, off, w))
-        if region == "inputs" and w == 64 and off % 8 == 0 and 0 <= off < 256: return ("a", ("input", off // 8), 0)
+        if region == "inputs" and w == 64 and off % 8 == 0 and 0 <= off < 8 * self.lanes: return ("a", ("input", off // 8), 0)
         if region == "rodata" and w == 32: return ("n", int.from_bytes(self.data[off:off + 4], "little"))
         if region == "stack" and w == 64 and off in self.saved: return self.saved[off]
         raise Fail(f"a read of {w} bits at {region} + {off}")
@@ -210,7 +213,7 @@ class Machine:
             if off % 64 or off not in self.frame: raise Fail(f"a wide read of the frame at {off}, not written")
             return self.frame[off]
         if aligned: raise Fail(f"an aligned wide read at {region} + {off}")
-        if isinstance(region, tuple) and region[0] == "input" and off % 64 == 0 and 0 <= off < 1024:
+        if isinstance(region, tuple) and region[0] == "input" and off % 64 == 0 and 0 <= off < 64 * self.blocks:
             return tuple(self.T.var("input", region[1], off // 64, w) for w in range(16))
         raise Fail(f"a wide read at {region} + {off}")
 
@@ -219,7 +222,7 @@ class Machine:
         self.trace.append(("write", region, off, 512))
         if v is None: raise Fail("a store of a register never written")
         if region == "frame" and off % 64 == 0 and 0 <= off and off + 64 <= self.frame_size: self.frame[off] = v
-        elif region == "out" and not aligned and off % 64 == 0 and 0 <= off < 1024: self.out[off] = v
+        elif region == "out" and not aligned and off % 64 == 0 and 0 <= off < 32 * self.lanes: self.out[off] = v
         else: raise Fail(f"a wide store at {region} + {off}")
 
     def vec(self, r):
@@ -297,14 +300,14 @@ class Machine:
             x, y = self.val(a[1], 32), self.val(a[2], 32)
             if x[0] == "p" and y[0] == "p":
                 bx, by = x[1], y[1]
-                if any(bx[1:]) or any(by[1:]) or not isinstance(by[0], int): raise Fail(f"or of {x} and {y}")
-                b0 = by[0] | bx[0] if isinstance(bx[0], int) else ("flags|", (bx[0][1] if isinstance(bx[0], tuple) else 0) | by[0])
-                self.setreg(a[1][1], ("p", (b0,) + (0,) * 7))
+                if any(bx[1:]) or any(by[1:]): raise Fail(f"or of {x} and {y}")
+                self.setreg(a[1][1], ("p", (or8(bx[0], by[0]),) + (0,) * 7))
             else: raise Fail(f"or of {x} and {y}")
             self.zf = None
         elif op in (".shr64", ".shr32"):
             v = self.reg(a[0]); n = num(a[1])
             if op == ".shr64" and v == ("q", "counter") and n == 32: self.setreg(a[0], ("hi",))
+            elif op == ".shr64" and v[0] == "n": self.setreg(a[0], ("n", v[1] >> n))
             elif op == ".shr32" and v[0] == "p" and n % 8 == 0: self.setreg(a[0], ("p", v[1][n // 8:4] + (0,) * (4 + n // 8)))
             else: raise Fail(f"{op} {v} {n}")
             self.zf = None
@@ -372,18 +375,41 @@ class Machine:
         if -self.low > self.budget: raise Fail(f"{-self.low} bytes of stack used, the contract gives {self.budget}")
 
 
-def check(rows, data_at, data):
+def check(rows, data_at, data, name="k32"):
+    kernel = KERNELS[name]
     T = Terms()
-    m = Machine(T, rows, data_at, data)
-    m.run(rows[0][0])
-    want = [spec_chunk_cv(T, lane) for lane in range(32)]
-    for lane in range(32):
+    m = Machine(T, rows, data_at, data, kernel)
+    m.run(rows[kernel["entry"]][0])
+    want = [kernel["spec"](T, lane) for lane in range(kernel["lanes"])]
+    for lane in range(kernel["lanes"]):
         for w in range(8):
             word = 8 * lane + w
             cell = m.out.get(64 * (word // 16))
             if cell is None: raise Fail(f"the output at {64 * (word // 16)} is not written")
             if cell[word % 16] != want[lane][w]: raise Fail(f"word {w} of lane {lane}'s chaining value is not the specification's")
     return m, T
+
+
+def spec_parent_cv(T, lane):
+    """Lane `lane`'s parent node (section 2.5): one block, the two children's chaining values, counter 0, PARENT."""
+    return spec_compress(T, [T.var("key", w) for w in range(8)], [T.var("input", lane, 0, w) for w in range(16)],
+                         T.const(0), T.const(0), T.const(64), spec_flags(T, 4))
+
+
+# What each kernel is given (its contract's `accepts`), and what it must leave.
+KERNELS = {
+    "k32": dict(entry=0, lanes=32, blocks=16, counter=("q", "counter"), packed=("flags", CHUNK_START, CHUNK_END, 64), spec=lambda T, lane: spec_chunk_cv(T, lane)),
+    "p32": dict(entry=3, lanes=32, blocks=16, counter=("q", "counter"), packed=("flags", CHUNK_START, CHUNK_END, 64), spec=lambda T, lane: spec_chunk_cv(T, lane, increment=False)),
+    "p16": dict(entry=0, lanes=16, blocks=1, counter=("n", 0), packed=(("flags|", 4), 0, 0, 64), spec=spec_parent_cv),
+}
+
+
+def or8(x, y):
+    """The or of two bytes, each a number, the mode flags, or the mode flags with bits set."""
+    if isinstance(x, int) and isinstance(y, int): return x | y
+    bits = lambda b: b if isinstance(b, int) else (b[1] if isinstance(b, tuple) else 0)
+    c = bits(x) | bits(y)
+    return ("flags|", c) if c else "flags"
 
 
 def evaluate(T, env):
@@ -451,19 +477,21 @@ MUTANTS = [("a rotation 12 -> 13", ".zprord 4 4 12", ".zprord 4 4 13"), ("a rota
 
 
 def main():
-    rows, data_at, data = read(sys.argv[1], sys.argv[2])
+    name = sys.argv[1]
+    rows, data_at, data = read(sys.argv[2], sys.argv[3])
     t0 = time.time()
-    m, T = check(rows, data_at, data)
+    m, T = check(rows, data_at, data, name)
     dt = time.time() - t0
     kinds = {}
     for e in m.trace: kinds[e[0]] = kinds.get(e[0], 0) + 1
-    print(f"k32: the 32 chaining values the code stores are the specification's, for every key, counter, flags and input")
+    print(f"{name}: the {KERNELS[name]['lanes']} chaining values the code stores are the specification's, for every key, flags and input" + ("" if name == "p16" else " and every counter"))
     print(f"     {m.steps} instructions run, {len(T.nodes)} terms, {dt:.2f} s; stack used at most {-m.low} bytes of {m.budget}")
     print(f"     trace: {kinds.get('read', 0)} reads, {kinds.get('write', 0)} writes, {kinds.get('branch', 0)} branches, each a region and a number: the same for every input")
     if "--anchor" in sys.argv:
         t1 = time.time(); got = anchor(sys.argv[sys.argv.index("--anchor") + 1])
         print(f"     the specification's terms, evaluated on the official 2048-byte test vector (two chunks, counters 0 and 1): {got[:16]}... as the vector says ({time.time() - t1:.2f} s)")
     if "--mutants" in sys.argv:
+        assert name == "k32", "the changed kernels are K32's"
         caught = 0
         for name, old, new in MUTANTS:
             hits = [k for k, r in enumerate(rows) if r[2] == old]
@@ -486,4 +514,4 @@ if __name__ == "__main__":
     try:
         main()
     except Fail as e:
-        print(f"k32: NOT shown: {e}"); sys.exit(1)
+        print(f"{sys.argv[1]}: NOT shown: {e}"); sys.exit(1)
