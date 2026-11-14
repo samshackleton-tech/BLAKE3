@@ -8,11 +8,14 @@ program holds in this one. A callee that itself calls functions of ours brings t
 `--ext`: the program is these instructions over any others (`prog ext`: where this table has no instruction,
 `ext`'s): for a function that calls code this model does not hold (a kernel called by a contract its caller
 assumes). A function that calls such a function is such a function (seen in the callee's Code file).
-usage: gen_code.py NAME ROWS OUT.lean [MORE_ROWS ...] [--with OTHER[+k] ...] [--ext]   (more rows: the function's checked entry)"""
+`--data FILE` (the lifter's OUT.data): the read-only data the object holds, at the address it was placed at.
+usage: gen_code.py NAME ROWS OUT.lean [MORE_ROWS ...] [--with OTHER[+k] ...] [--ext] [--data FILE]   (more rows: the function's checked entry)"""
 import sys
 args = sys.argv[1:]
 EXT = "--ext" in args
 args = [a for a in args if a != "--ext"]
+DATA = [args[i + 1] for i, a in enumerate(args) if a == "--data"]
+args = [a for i, a in enumerate(args) if a != "--data" and (i == 0 or args[i - 1] != "--data")]
 withs = [args[i + 1] for i, a in enumerate(args) if a == "--with"]
 args = [a for i, a in enumerate(args) if a != "--with" and (i == 0 or args[i - 1] != "--with")]
 name, rows_path, out = args[:3]
@@ -193,5 +196,11 @@ if calls and not NESTED:
               f"{ind}  rw [lookup_append_or, none]; exact h'",
               f"{ind}exact {lifted(i, 'here')}", ""]
 t += [f"@[ode_at] theorem at_{at} {BIND}: {P_} 0x{at} = some ({ins}, 0x{nxt}) := rfl" for at, nxt, ins in rows]
+for path in DATA:
+    for line in open(path):
+        at, hexs = line.split()
+        bs = ", ".join(f"0x{hexs[i:i + 2]}" for i in range(0, len(hexs), 2))
+        t += ["", f"/-- The read-only data the object holds ({len(hexs) // 2} bytes), at the address it is placed at. -/",
+              f"def data : List (BitVec 64 × List (BitVec 8)) := [(0x{at}#64, [{bs}])]"]
 t += ["", f"end Code_{name}", ""]
 with open(out, "w") as f: f.write("\n".join(t))

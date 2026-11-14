@@ -54,6 +54,8 @@ theorem Mem.write128_dom {m m' : Mem} {a : BitVec 64} {v : V} (h : m.write128 a 
 @[simp] theorem State.setz_mem (s : State) (i : Nat) (v : Z) : (s.setz i v).mem = s.mem := by
   unfold State.setz; split <;> rfl
 @[simp] theorem State.zeroupper_mem (s : State) : s.zeroupper.mem = s.mem := rfl
+@[simp] theorem State.setk_mem (s : State) (i : Nat) (v : BitVec 16) : (s.setk i v).mem = s.mem := by
+  unfold State.setk; split <;> rfl
 
 theorem Mem.write512_dom {m m' : Mem} {a : BitVec 64} {v : Z} (h : m.write512 a v = some m') : m.SameDom m' := by
   unfold Mem.write512 at h
@@ -117,8 +119,8 @@ theorem keeps_mwrite512 {m : Mem} {t : State} {a : BitVec 64} {v : Z} {f : Mem â
 
 macro "dom_leaf" : tactic => `(tactic| (first
   | exact Mem.SameDom.refl _
-  | (simp only [State.set_mem, State.setx_mem, State.setxz_mem, State.setz_mem, State.zeroupper_mem]; exact Mem.SameDom.refl _)
-  | (intro _; simp only [State.set_mem, State.setx_mem, State.setxz_mem, State.setz_mem, State.zeroupper_mem]; exact Mem.SameDom.refl _)
+  | (simp only [State.set_mem, State.setx_mem, State.setxz_mem, State.setz_mem, State.zeroupper_mem, State.setk_mem]; exact Mem.SameDom.refl _)
+  | (intro _; simp only [State.set_mem, State.setx_mem, State.setxz_mem, State.setz_mem, State.zeroupper_mem, State.setk_mem]; exact Mem.SameDom.refl _)
   | (intro _; rfl)
   | (intro _; split <;> exact Mem.SameDom.refl _)))
 

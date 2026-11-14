@@ -12,7 +12,7 @@ lake env lean --run CrossOne.lean 40 > "$work/vectors.txt"
 cc -O1 -o "$work/cross_one" cross_one.c
 "$work/cross_one" "$work/vectors.txt"
 # Controls: a model wrong in one way must be found to differ from the processor.
-for control in write32 vex unpack; do
+for control in write32 vex unpack mask; do
   rm -rf "$work/wrong"; mkdir -p "$work/wrong"; cp Machine.lean CrossOneTable.lean CrossOne.lean lean-toolchain "$work/wrong/"
   printf 'name = "wrong"\n[[lean_lib]]\nname = "Machine"\n[[lean_lib]]\nname = "CrossOneTable"\n' > "$work/wrong/lakefile.toml"
   python3 wrong_model.py "$work/wrong/Machine.lean" "$control"
@@ -23,6 +23,7 @@ for control in write32 vex unpack; do
     write32) what="a 32-bit write that keeps the upper half";;
     vex) what="a VEX write that keeps the bits above the XMM register";;
     unpack) what="VPUNPCKHDQ with its operands the other way round";;
+    mask) what="VPADDD {k} that ignores the mask and writes every lane";;
   esac
   tail -n 1 "$work/wrong.out" | sed "s/^/control ($what): /"
 done

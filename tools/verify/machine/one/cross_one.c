@@ -18,7 +18,9 @@ struct regs {
     uint64_t flags;       /* in, then out */
     uint64_t code;        /* where the instruction is */
     uint64_t realsp;      /* this program's own stack pointer, while the instruction runs */
-    uint64_t pad[5];
+    uint16_t k1, k2;      /* AVX-512 mask registers k1, k2 */
+    uint16_t kpad[2];
+    uint64_t pad[4];
     uint64_t zmm[32][8];  /* lowest quadword first */
 };
 #define SAVED 0x30000000ull
@@ -61,6 +63,8 @@ __asm__(
     "  vmovdqu64 0x30000800, %zmm29\n"
     "  vmovdqu64 0x30000840, %zmm30\n"
     "  vmovdqu64 0x30000880, %zmm31\n"
+    "  kmovw 0x30000098, %k1\n"
+    "  kmovw 0x3000009a, %k2\n"
     "  pushq 0x30000080\n"
     "  popfq\n"
     "  movq %rsp, 0x30000090\n"
@@ -133,12 +137,14 @@ __asm__(
     "  vmovdqu64 %zmm29, 0x30000800\n"
     "  vmovdqu64 %zmm30, 0x30000840\n"
     "  vmovdqu64 %zmm31, 0x30000880\n"
+    "  kmovw %k1, 0x30000098\n"
+    "  kmovw %k2, 0x3000009a\n"
     "  vzeroupper\n"
     "  pop %r15\n  pop %r14\n  pop %r13\n  pop %r12\n  pop %rbp\n  pop %rbx\n  ret\n");
 extern char run_back[];
 
 #define BASE 0x20001000ull
-#define FIELDS 104
+#define FIELDS 108
 static uint64_t hex64(const char *s) { char b[17]; memcpy(b, s, 16); b[16] = 0; return strtoull(b, NULL, 16); }
 /* 128 digits, the highest first, as eight quadwords, the lowest first */
 static void hex512(const char *s, uint64_t out[8]) { for (int k = 0; k < 8; k++) out[7 - k] = hex64(s + 16 * k); }
@@ -172,15 +178,19 @@ int main(int argc, char **argv) {
         for (int i = 0; i < 16; i++) r->gpr[i] = hex64(tok[3 + i]);
         for (int i = 0; i < 32; i++) hex512(tok[19 + i], r->zmm[i]);
         r->flags = 0x2 | (tok[51][0] == '1' ? 0x40 : 0) | (tok[52][0] == '1' ? 0x1 : 0);
+        r->k1 = (uint16_t)strtoul(tok[53], NULL, 16);
+        r->k2 = (uint16_t)strtoul(tok[54], NULL, 16);
         r->code = (uint64_t)code;
         run_one();
         int ok = 1;
-        for (int i = 0; i < 16; i++) ok &= r->gpr[i] == hex64(tok[53 + i]);
+        for (int i = 0; i < 16; i++) ok &= r->gpr[i] == hex64(tok[55 + i]);
         uint64_t e[8];
-        for (int i = 0; i < 32; i++) { hex512(tok[69 + i], e); ok &= !memcmp(r->zmm[i], e, sizeof e); }
-        if (tok[101][0] != '-') { ok &= ((r->flags >> 6) & 1) == (uint64_t)(tok[101][0] - '0'); flagsChecked++; }
-        if (tok[102][0] != '-') { ok &= (r->flags & 1) == (uint64_t)(tok[102][0] - '0'); flagsChecked++; }
-        for (int k = 0; k < 1024; k++) { unsigned v; sscanf(tok[103] + 2 * k, "%2x", &v); ok &= *(unsigned char *)(BASE - 512 + k) == v; }
+        for (int i = 0; i < 32; i++) { hex512(tok[71 + i], e); ok &= !memcmp(r->zmm[i], e, sizeof e); }
+        if (tok[103][0] != '-') { ok &= ((r->flags >> 6) & 1) == (uint64_t)(tok[103][0] - '0'); flagsChecked++; }
+        if (tok[104][0] != '-') { ok &= (r->flags & 1) == (uint64_t)(tok[104][0] - '0'); flagsChecked++; }
+        ok &= r->k1 == (uint16_t)strtoul(tok[105], NULL, 16);
+        ok &= r->k2 == (uint16_t)strtoul(tok[106], NULL, 16);
+        for (int k = 0; k < 1024; k++) { unsigned v; sscanf(tok[107] + 2 * k, "%2x", &v); ok &= *(unsigned char *)(BASE - 512 + k) == v; }
         tests++;
         if (!ok) { if (bad++ < 12) printf("DIFFERS: %s (seed %s)\n", tok[1], tok[2]); }
     }

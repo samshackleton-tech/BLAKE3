@@ -1,22 +1,26 @@
 """llvm-objdump's listing of one function -> a table of instructions for Machine.lean.
 
-usage: lift_one.py LISTING FUNCTION BASE OUT.lean NAMESPACE [--object OBJ] [--call SYMBOL=ADDRESS ...]
+usage: lift_one.py LISTING FUNCTION BASE OUT.lean NAMESPACE [--object OBJ] [--call SYMBOL=ADDRESS ...] [--rodata ADDRESS]
 
 The function is placed at BASE. A RIP-relative vector load is resolved to the 16 bytes its
 relocation names in OBJ's data; a call through the GOT or the PLT goes to the address given
-for its symbol. An instruction or operand form this does not know stops it: nothing is
+for its symbol. `--rodata ADDRESS`: the object's read-only data (its `.rodata` section, whole) is placed at
+ADDRESS; `lea reg, [rip + data]` is then that data's address, a number (written `.mov 64 reg imm`), and the
+section's bytes are written beside the table (OUT.data: the address, then the bytes). An instruction or operand form this does not know stops it: nothing is
 skipped but NOPs after the function's last instruction."""
 import os, re, subprocess, sys
 
 listing, func, base, out, ns = sys.argv[1:6]
 base = int(base, 16)
 obj, calls = None, {}
+rodata_at = None      # where the object's .rodata is placed, if anywhere
 panics_from = None   # the function's panic blocks start here: they are left out, so a jump to one is a fault
 rest = sys.argv[6:]
 while rest:
     if rest[0] == "--object": obj = rest[1]; rest = rest[2:]
     elif rest[0] == "--call": k, v = rest[1].split("=", 1); calls[k] = int(v, 16); rest = rest[2:]
     elif rest[0] == "--panics-from": panics_from = int(rest[1], 16); rest = rest[2:]
+    elif rest[0] == "--rodata": rodata_at = int(rest[1], 16); rest = rest[2:]
     else: raise SystemExit(f"unknown argument {rest[0]}")
 OD = os.environ.get("OBJDUMP", "llvm-objdump")
 symbols, symsec, data, sections = {}, {}, {}, {}     # data: by address (Mach-O); sections: by name, then offset (ELF)
@@ -51,20 +55,35 @@ def is_xmm(t): return re.fullmatch(r"xmm\d+", t.strip()) is not None
 def zmm(t):
     m = re.fullmatch(r"zmm(\d+)", t.strip()); assert m, t; return int(m.group(1))
 def is_zmm(t): return re.fullmatch(r"zmm\d+", t.strip()) is not None
-def const32(sym):
-    """The four bytes a RIP-relative doubleword operand names (ELF), as a number."""
+def kmask(t):
+    m = re.fullmatch(r"k([12])", t.strip()); assert m, t; return int(m.group(1))
+def const_n(sym, n):
+    if sym.startswith("elf:"):
+        m = re.fullmatch(r"(.+?)([+-]0x[0-9a-f]+)?", sym[4:]); name = m.group(1); add = int(m.group(2), 16) if m.group(2) else 0
+        sec, start = (name, 0) if name in sections else (symsec[name], symbols[name])
+        at = start + add + 4
+        return "0x" + "".join(f"{sections[sec][at + i]:02X}" for i in reversed(range(n)))
+    at = symbols[sym]; return "0x" + "".join(f"{data[at + i]:02X}" for i in reversed(range(n)))
+def rodata_offset(sym):
+    """Where in `.rodata` a RIP-relative operand's relocation points (ELF)."""
     assert sym and sym.startswith("elf:"), sym
     m = re.fullmatch(r"(.+?)([+-]0x[0-9a-f]+)?", sym[4:]); name = m.group(1); add = int(m.group(2), 16) if m.group(2) else 0
     sec, start = (name, 0) if name in sections else (symsec[name], symbols[name])
-    at = start + add + 4
-    return "0x" + "".join(f"{sections[sec][at + i]:02X}" for i in reversed(range(4)))
+    assert sec == ".rodata", f"an address of data outside .rodata: {sym}"
+    return start + add + 4
+def const32(sym):
+    """The four bytes a RIP-relative doubleword operand names, as a number."""
+    return const_n(sym, 4)
 def wide(op, a, reloc):
-    """An AVX-512 instruction on whole ZMM registers, without a mask; None if it is not one."""
+    """An AVX-512 instruction on whole ZMM registers; None if it is not one."""
     if op in ("vmovdqu32", "vmovdqa32", "vmovdqu64", "vmovdqa64"):
         al = "true" if op.startswith("vmovdqa") else "false"
         if is_zmm(a[0]) and is_zmm(a[1]): return f".zmov {zmm(a[0])} {zmm(a[1])}"
         if is_zmm(a[0]):
             assert a[1].startswith("zmmword ptr "), a
+            if a[1] == "zmmword ptr [rip]":
+                assert reloc, "a RIP-relative load without a relocation"
+                return f".zloadc {zmm(a[0])} {const_n(reloc, 64)}#512"
             mi = re.fullmatch(r"\[(\w+) \+ (\w+)(?: \+ (0x[0-9a-f]+))?\]", a[1][len("zmmword ptr "):])
             if mi and mi.group(2) in REG:
                 assert al == "false", a
@@ -79,6 +98,21 @@ def wide(op, a, reloc):
         if a[1] == "dword ptr [rip]": return f".zbroadcast {zmm(a[0])} (.imm {const32(reloc)})"
         m = re.fullmatch(r"dword ptr (\[.*\])", a[1]); assert m, a
         r, d = memref(m.group(1)); return f".zbroadcast {zmm(a[0])} (.mem .{r} {bv(d)})"
+    if op == "vpcmpltud" and len(a) == 3 and is_zmm(a[1]) and is_zmm(a[2]):
+        return f".zpcmpud {kmask(a[0])} {zmm(a[1])} {zmm(a[2])} 1"
+    if op == "vpcmpud" and len(a) == 4 and is_zmm(a[1]) and is_zmm(a[2]):
+        return f".zpcmpud {kmask(a[0])} {zmm(a[1])} {zmm(a[2])} {int(a[3], 16)}"
+    if op == "vpaddd" and len(a) == 3 and is_zmm(a[1]):
+        mk = re.fullmatch(r"(zmm\d+)\s*\{(k\d+)\}", a[0])
+        if mk and is_zmm(a[2]):
+            return f".zpaddd_k {zmm(mk.group(1))} {kmask(mk.group(2))} {zmm(a[1])} {zmm(a[2])}"
+        if is_zmm(a[0]) and a[2] == "zmmword ptr [rip]":
+            assert reloc, "a RIP-relative load without a relocation"
+            return f".zpadddc {zmm(a[0])} {zmm(a[1])} {const_n(reloc, 64)}#512"
+        if is_zmm(a[0]) and a[2].startswith("zmmword ptr "):
+            mi = re.fullmatch(r"\[(\w+) \+ (\w+)(?: \+ (0x[0-9a-f]+))?\]", a[2][len("zmmword ptr "):])
+            if mi and mi.group(2) in REG:
+                return f".zpadddm {zmm(a[0])} {zmm(a[1])} .{REG[mi.group(1)][0]} .{REG[mi.group(2)][0]} {bv(int(mi.group(3), 16) if mi.group(3) else 0)}"
     if not (a and all(is_zmm(x) for x in a[:2])): return None
     three = {"vpaddd": "zpaddd", "vpxord": "zpxord", "vpunpckldq": "zunpckldq", "vpunpckhdq": "zunpckhdq",
              "vpunpcklqdq": "zunpcklqdq", "vpunpckhqdq": "zunpckhqdq"}
@@ -93,13 +127,7 @@ def memref(t):
     d = int(m.group(3), 16) if m.group(3) else 0
     return r, (-d if m.group(2) == "-" else d)
 def const(sym):
-    if sym.startswith("elf:"):
-        # ELF: `SECTION+ADDEND` or `SYMBOL+ADDEND`, relative to the end of the instruction's last four bytes
-        m = re.fullmatch(r"(.+?)([+-]0x[0-9a-f]+)?", sym[4:]); name = m.group(1); add = int(m.group(2), 16) if m.group(2) else 0
-        sec, start = (name, 0) if name in sections else (symsec[name], symbols[name])
-        at = start + add + 4
-        return "0x" + "".join(f"{sections[sec][at + i]:02X}" for i in reversed(range(16)))
-    at = symbols[sym]; return "0x" + "".join(f"{data[at + i]:02X}" for i in reversed(range(16)))
+    return const_n(sym, 16)
 def vsrc(t, reloc):
     t = t.strip()
     if is_xmm(t): return f"(.x {xmm(t)})", False
@@ -159,7 +187,7 @@ for at, size, op, args, reloc, raw in insns:
         ins = f".{op.replace('vpxord', 'vpxor')} {xmm(a[0])} {xmm(a[1])} {vsrc(a[2], reloc)[0]}"
     elif op == "vprord": ins = f".vprord {xmm(a[0])} {vsrc(a[1], reloc)[0]} {int(a[2], 16)}"
     elif op in ("vshufps", "vpblendd"): ins = f".{op} {xmm(a[0])} {xmm(a[1])} {vsrc(a[2], reloc)[0]} {int(a[3], 16)}"
-    elif op in ("mov", "or", "add", "sub", "cmp", "and", "xor"):
+    elif op in ("mov", "or", "add", "sub", "cmp", "and", "xor", "test"):
         (d, wd), (s, ws) = opnd(a[0]), opnd(a[1]); w = wd or ws; assert w and (not wd or not ws or wd == ws), args
         ins = f".{op} {w} {d} {s}"
     elif op == "movzx":
@@ -169,9 +197,12 @@ for at, size, op, args, reloc, raw in insns:
         r, w = REG[a[0]]; assert w in (32, 64); ins = f".shr{w} .{r} {int(a[1], 16) if len(a) > 1 else 1}"   # `shr r` alone is by one
     elif op == "dec":
         r, w = REG[a[0]]; assert w in (8, 32, 64); ins = f".decb .{r}" if w == 8 else f".dec{w} .{r}"
+    elif op == "lea" and a[1] == "[rip]":
+        r, w = REG[a[0]]; assert w == 64 and rodata_at is not None, "lea of data: say where .rodata is placed (--rodata)"
+        ins = f".mov 64 (.reg .{r}) (.imm {bv(rodata_at + rodata_offset(reloc))})"
     elif op == "lea":
         r, w = REG[a[0]]; assert w == 64; b, d = memref(a[1]); ins = f".lea .{r} .{b} {bv(d)}"
-    elif op.startswith("nop") or op == "endbr64": ins = ".nop"     # ENDBR64 does nothing where it is reached by a call
+    elif op.startswith("nop") or op in ("endbr64", "prefetcht0"): ins = ".nop"     # ENDBR64 / prefetcht0: architectural no-op
     elif op == "vzeroupper": ins = ".vzeroupper"
     elif op in ("push", "pop"): r, w = REG[a[0]]; assert w == 64; ins = f".{op} .{r}"
     elif op in ("je", "jne", "jmp", "jbe", "jae"):
@@ -189,4 +220,8 @@ text += [f"  (0x{at:X}, {ins}, 0x{nxt:X}){',' if i + 1 < len(rows) else ''}  -- 
 text += ["]", "", f"end {ns}", ""]
 open(out, "w").write("\n".join(text))
 open(out + ".rows", "w").write("\n".join(f"{at:X}\t{nxt:X}\t{ins}" for at, nxt, ins, _ in rows) + "\n")
+if rodata_at is not None:
+    sec = sections[".rodata"]; assert sorted(sec) == list(range(len(sec))), "gaps in .rodata"
+    with open(out + ".data", "w") as f:
+        f.write(f"{rodata_at:X}\t" + "".join(f"{sec[i]:02X}" for i in range(len(sec))) + "\n")
 print(len(rows), "instructions")

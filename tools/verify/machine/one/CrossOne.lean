@@ -28,11 +28,11 @@ def roles : Instr → List (Reg × Option (BitVec 64))
   | .movv _ _ (.m b d) | .paddd _ (.m b d) | .pxor _ (.m b d) | .por _ (.m b d) | .pshufb _ (.m b d) => [(b, some d)]
   | .storev _ b d _ => [(b, some d)]
   | .movvi _ _ b i d => [(b, some d), (i, none)]
-  | .mov _ d x | .or _ d x | .add _ d x | .sub _ d x | .cmp _ d x | .and _ d x | .xor _ d x =>
+  | .mov _ d x | .or _ d x | .add _ d x | .sub _ d x | .cmp _ d x | .and _ d x | .xor _ d x | .test _ d x =>
     (match d with | .mem b e => [(b, some e)] | _ => []) ++ (match x with | .mem b e => [(b, some e)] | _ => [])
   | .movzx8 _ (.mem b d) => [(b, some d)]
   | .vmovv _ _ (.m b d) | .vpshufd _ (.m b d) _ => [(b, some d)]
-  | .vmovvi _ _ b i d | .zloadi _ b i d => [(b, some d), (i, none)]
+  | .vmovvi _ _ b i d | .zloadi _ b i d | .zpadddm _ _ b i d => [(b, some d), (i, none)]
   | .zload _ _ b d | .zstore _ b d _ | .zbroadcast _ (.mem b d) => [(b, some d)]
   | _ => []
 
@@ -52,12 +52,16 @@ def state0 (seed : Nat) : State :=
     x12 := r128 seed 12, x13 := r128 seed 13, x14 := r128 seed 14, x15 := r128 seed 15,
     mem := (fun a => if inWindow a then some (fill seed a) else none), pc := 1,
     w := { r10 := r64 seed 14, r11 := r64 seed 15,
+           k1 := BitVec.ofNat 16 (seed * 257 + 0x5A3C), k2 := BitVec.ofNat 16 (seed * 659 + 0xA5C3),
            u0 := (r512 seed 0).setWidth 384, u1 := (r512 seed 1).setWidth 384, u2 := (r512 seed 2).setWidth 384, u3 := (r512 seed 3).setWidth 384, u4 := (r512 seed 4).setWidth 384, u5 := (r512 seed 5).setWidth 384, u6 := (r512 seed 6).setWidth 384, u7 := (r512 seed 7).setWidth 384, u8 := (r512 seed 8).setWidth 384, u9 := (r512 seed 9).setWidth 384, u10 := (r512 seed 10).setWidth 384, u11 := (r512 seed 11).setWidth 384, u12 := (r512 seed 12).setWidth 384, u13 := (r512 seed 13).setWidth 384, u14 := (r512 seed 14).setWidth 384, u15 := (r512 seed 15).setWidth 384,
            z16 := r512 seed 16, z17 := r512 seed 17, z18 := r512 seed 18, z19 := r512 seed 19, z20 := r512 seed 20, z21 := r512 seed 21, z22 := r512 seed 22, z23 := r512 seed 23, z24 := r512 seed 24, z25 := r512 seed 25, z26 := r512 seed 26, z27 := r512 seed 27, z28 := r512 seed 28, z29 := r512 seed 29, z30 := r512 seed 30, z31 := r512 seed 31 } }
 
 def state (i : Instr) (seed : Nat) : State :=
   (roles i).foldl (fun s (r, d) => s.set r (match d with
-    | some d => base + ((0 - d) &&& boundary i)
+    | some d =>
+      let q := d &&& ~~~(63 : BitVec 64)
+      let rem := d - q
+      base - q + ((0 - rem) &&& boundary i)
     | none => ((r64 seed 20) &&& 0x7) <<< 4)) (state0 seed)
 
 def flag : Option Bool → String
@@ -65,7 +69,7 @@ def flag : Option Bool → String
 
 def render (s : State) : String :=
   " ".intercalate ([s.rax, s.rcx, s.rdx, s.rbx, s.rsp, s.rbp, s.rsi, s.rdi, s.r8, s.r9, s.r12, s.r13, s.r14, s.r15, s.w.r10, s.w.r11].map (fun v => hexs 16 v.toNat) ++
-    (List.range 32).map (fun i => hexs 128 (s.zmm i).toNat) ++ [flag s.zf, flag s.cf])
+    (List.range 32).map (fun i => hexs 128 (s.zmm i).toNat) ++ [flag s.zf, flag s.cf, hexs 4 s.w.k1.toNat, hexs 4 s.w.k2.toNat])
 
 def window (s : State) : String :=
   String.join ((List.range 1024).map fun k => match s.mem (base - 512 + BitVec.ofNat 64 k) with
@@ -77,7 +81,7 @@ def skipped : Instr → Bool
   | .je _ | .jne _ | .jbe _ | .jae _ | .jmp _ | .call _ | .ret | .push _ | .pop _ => true
   | .movv _ _ (.c _) | .paddd _ (.c _) | .pxor _ (.c _) | .por _ (.c _) | .pshufb _ (.c _) => true
   | .vpaddd _ _ (.c _) | .vpxor _ _ (.c _) | .vpblendd _ _ (.c _) _ | .vshufps _ _ (.c _) _ => true
-  | .vmovv _ _ (.c _) | .vpshufd _ (.c _) _ | .zbroadcast _ (.imm _) => true
+  | .vmovv _ _ (.c _) | .vpshufd _ (.c _) _ | .zbroadcast _ (.imm _) | .zloadc _ _ | .zpadddc _ _ _ => true
   | _ => false
 
 def main (args : List String) : IO Unit := do

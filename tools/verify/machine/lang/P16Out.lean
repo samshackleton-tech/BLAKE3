@@ -127,7 +127,7 @@ private theorem feed_forward (v : Nat → Vector (BitVec 32) 16) (st : State)
   obtain ⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf,
     x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, pc,
     ⟨r10, r11, u0, u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15,
-     wz16, z17, z18, z19, z20, z21, z22, z23, z24, z25, z26, z27, z28, z29, z30, z31⟩⟩ := st
+     wz16, z17, z18, z19, z20, z21, z22, z23, z24, z25, z26, z27, z28, z29, z30, z31, _, _⟩⟩ := st
   obtain ⟨hv0, hv1, hv2, hv3, hv4, hv5, hv6, hv7, hv8, hv9, hv10, hv11, hv12, hv13, hv14, hv15⟩ := hv
   simp only [State.zmm] at hpc hr13 hv0 hv1 hv2 hv3 hv4 hv5 hv6 hv7 hv8 hv9 hv10 hv11 hv12 hv13 hv14 hv15
   subst hpc hr13
@@ -200,7 +200,7 @@ private theorem out_shuf (c : Nat → Nat → BitVec 32) (st : State) (hpc : st.
   obtain ⟨rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf,
     x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, mem, pc,
     ⟨r10, r11, u0, u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15,
-     wz16, z17, z18, z19, z20, z21, z22, z23, z24, z25, z26, z27, z28, z29, z30, z31⟩⟩ := st
+     wz16, z17, z18, z19, z20, z21, z22, z23, z24, z25, z26, z27, z28, z29, z30, z31, _, _⟩⟩ := st
   simp only [State.zmm] at hpc hz0 hz1 hz2 hz3 hz4 hz5 hz6 hz7
   subst hpc
   have e0 : x0 = zlo (z16 (c 0 0) (c 1 0) (c 2 0) (c 3 0) (c 4 0) (c 5 0) (c 6 0) (c 7 0) (c 8 0) (c 9 0) (c 10 0) (c 11 0) (c 12 0) (c 13 0) (c 14 0) (c 15 0)) := by rw [← hz0, zlo_zjoin]

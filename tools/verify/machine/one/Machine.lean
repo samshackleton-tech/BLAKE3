@@ -113,6 +113,30 @@ each named by two bits of `imm`. -/
 def zshufi32x4 (a b : Z) (imm : Nat) : Z :=
   zquarter b (imm / 64 % 4) ++ zquarter b (imm / 16 % 4) ++ zquarter a (imm / 4 % 4) ++ zquarter a (imm % 4)
 
+def cmpud1 (imm : Nat) (a b : BitVec 32) : Bool :=
+  match imm % 8 with
+  | 0 => a == b
+  | 1 => a.ult b
+  | 2 => a.ule b
+  | 3 => false
+  | 4 => a != b
+  | 5 => !a.ult b
+  | 6 => !a.ule b
+  | _ => true
+
+def zcmpud (a b : Z) (imm : Nat) : BitVec 16 :=
+  BitVec.ofBool (cmpud1 imm (zdw a 15) (zdw b 15)) ++ BitVec.ofBool (cmpud1 imm (zdw a 14) (zdw b 14)) ++
+    BitVec.ofBool (cmpud1 imm (zdw a 13) (zdw b 13)) ++ BitVec.ofBool (cmpud1 imm (zdw a 12) (zdw b 12)) ++
+    BitVec.ofBool (cmpud1 imm (zdw a 11) (zdw b 11)) ++ BitVec.ofBool (cmpud1 imm (zdw a 10) (zdw b 10)) ++
+    BitVec.ofBool (cmpud1 imm (zdw a 9) (zdw b 9)) ++ BitVec.ofBool (cmpud1 imm (zdw a 8) (zdw b 8)) ++
+    BitVec.ofBool (cmpud1 imm (zdw a 7) (zdw b 7)) ++ BitVec.ofBool (cmpud1 imm (zdw a 6) (zdw b 6)) ++
+    BitVec.ofBool (cmpud1 imm (zdw a 5) (zdw b 5)) ++ BitVec.ofBool (cmpud1 imm (zdw a 4) (zdw b 4)) ++
+    BitVec.ofBool (cmpud1 imm (zdw a 3) (zdw b 3)) ++ BitVec.ofBool (cmpud1 imm (zdw a 2) (zdw b 2)) ++
+    BitVec.ofBool (cmpud1 imm (zdw a 1) (zdw b 1)) ++ BitVec.ofBool (cmpud1 imm (zdw a 0) (zdw b 0))
+
+def zmap2k (f : BitVec 32 → BitVec 32 → BitVec 32) (dst : Z) (k : BitVec 16) (a b : Z) : Z :=
+  zpack fun i => if k.getLsbD i then f (zdw a i) (zdw b i) else zdw dst i
+
 structure Wide where
   r10 : BitVec 64
   r11 : BitVec 64
@@ -148,6 +172,8 @@ structure Wide where
   z29 : Z
   z30 : Z
   z31 : Z
+  k1 : BitVec 16 := 0
+  k2 : BitVec 16 := 0
 
 /-- Every wide register zero (for tests). -/
 def Wide.zero : Wide :=
@@ -316,6 +342,15 @@ def State.setxz (s : State) (i : Nat) (v : V) : State :=
 /-- VZEROUPPER: ZMM0 to ZMM15 cleared above bit 127; the others as they were. -/
 def State.zeroupper (s : State) : State :=
   { s with w := { s.w with u0 := 0, u1 := 0, u2 := 0, u3 := 0, u4 := 0, u5 := 0, u6 := 0, u7 := 0, u8 := 0, u9 := 0, u10 := 0, u11 := 0, u12 := 0, u13 := 0, u14 := 0, u15 := 0 } }
+
+def State.kmask (s : State) : Nat → BitVec 16
+  | 1 => s.w.k1
+  | _ => s.w.k2
+
+def State.setk (s : State) (i : Nat) (v : BitVec 16) : State :=
+  match i with
+  | 1 => { s with w := { s.w with k1 := v } }
+  | _ => { s with w := { s.w with k2 := v } }
 
 def trunc (w : Nat) (v : BitVec 64) : BitVec 64 :=
   match w with
@@ -497,6 +532,13 @@ inductive Instr
   | zunpckhqdq (dst a b : Nat)
   | zshufi32x4 (dst a b : Nat) (imm : Nat)
   | vzeroupper
+  -- added for 32-lane chunk kernel `k32`
+  | test (w : Nat) (a b : Opnd)
+  | zloadc (dst : Nat) (v : Z)
+  | zpadddc (dst a : Nat) (v : Z)
+  | zpadddm (dst a : Nat) (base index : Reg) (disp : BitVec 64)
+  | zpcmpud (k a b : Nat) (imm : Nat)
+  | zpaddd_k (dst k a b : Nat)
 
 def read (s : State) (w : Nat) : Opnd → Option (BitVec 64)
   | .reg r => some (trunc w (s.get r))
@@ -629,6 +671,14 @@ def step (i : Instr) (next : Nat) (s : State) : Option State :=
   | .zunpckhqdq d a b => some (s.setz d (zunpckhqdq (s.zmm a) (s.zmm b)))
   | .zshufi32x4 d a b imm => some (s.setz d (zshufi32x4 (s.zmm a) (s.zmm b) imm))
   | .vzeroupper => some s.zeroupper
+  | .test w a b => do
+    let v := (← read s w a) &&& (← read s w b)
+    some { s with zf := some (trunc w v == 0), cf := some false }
+  | .zloadc d v => some (s.setz d v)
+  | .zpadddc d a v => some (s.setz d (zmap2 (· + ·) (s.zmm a) v))
+  | .zpadddm d a b idx disp => (s.mem.read512 (s.get b + s.get idx + disp)).map fun v => s.setz d (zmap2 (· + ·) (s.zmm a) v)
+  | .zpcmpud k a b imm => some (s.setk k (zcmpud (s.zmm a) (s.zmm b) imm))
+  | .zpaddd_k d k a b => some (s.setz d (zmap2k (· + ·) (s.zmm d) (s.kmask k) (s.zmm a) (s.zmm b)))
 
 /-- Exactly `k` instructions. -/
 def steps (prog : Nat → Option (Instr × Nat)) : Nat → State → Option State

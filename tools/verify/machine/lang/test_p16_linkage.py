@@ -4,8 +4,8 @@ instructions match c/blake3_avx512_32.S's blake3_servil_avx512_p16."""
 import os, re, shutil, subprocess, sys, tempfile, unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-WIDE = os.path.join(os.path.dirname(HERE), "wide")
-ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
+WIDE = os.path.realpath(os.path.join(os.path.dirname(HERE), "wide"))
+ROOT = os.path.abspath(os.path.join(WIDE, "..", "..", "..", ".."))
 OBJDUMP = os.environ.get("OBJDUMP") or (shutil.which("llvm-objdump") or shutil.which("objdump") or "llvm-objdump")
 
 

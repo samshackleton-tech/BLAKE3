@@ -46,7 +46,7 @@ assert len(set(STATE + MSG)) == 32
 V = lambda p: "#v[" + ", ".join(f"{p}{k} i" for k in range(16)) + "]"
 lanes = lambda p: " ".join(f"{p}{k}" for k in range(16))
 FIELDS = "rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r12, r13, r14, r15, zf, cf, " + ", ".join(f"x{i}" for i in range(16)) + ", mem, pc"
-WIDE = "r10, r11, " + ", ".join(f"u{i}" for i in range(16)) + ", " + ", ".join(f"z{i}" for i in range(16, 32))
+WIDE = "r10, r11, " + ", ".join(f"u{i}" for i in range(16)) + ", " + ", ".join(f"z{i}" for i in range(16, 32)) + ", k1, k2"
 
 
 def reg_is(s, r, value):

@@ -15,6 +15,7 @@ def ExampleK.bytes (n : Nat) : List (BitVec 8) := (List.range n).map fun i => Bi
 
 def K32.examples : List (BitVec 64 × BitVec 64 × BitVec 64 × BitVec 64 × BitVec 64 × BitVec 64 × Blake3.CV × BitVec 64 × BitVec 64 × BitVec 64 × List (BitVec 8)) := [
   (0x100000#64, 16#64, 0x200000#64, 0#64, 0x40020100#64, 0x300000#64, ExampleT.cv 1, 0x400000#64, 32#64, 0#64, ExampleK.bytes 32768),
+  (0x100000#64, 16#64, 0x200000#64, 0xFFFFFFF0#64, 0x40020100#64, 0x300000#64, ExampleT.cv 1, 0x400000#64, 32#64, 0#64, ExampleK.bytes 32768),
   (0x100000#64, 16#64, 0x200000#64, 64#64, 0x40020110#64, 0x300000#64, ExampleT.cv 2, 0x400000#64, 3#64, 16#64, ExampleK.bytes 3072),
   -- not examples: one block an input; no chunk
   (0x100000#64, 1#64, 0x200000#64, 0#64, 0x40020100#64, 0x300000#64, ExampleT.cv 1, 0x400000#64, 3#64, 0#64, ExampleK.bytes 3072),

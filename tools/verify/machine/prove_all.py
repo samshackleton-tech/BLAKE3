@@ -117,7 +117,7 @@ def lab_copy(dest):
         big = [n for n in names if re.match(r"(Proof|Direct|Checked|Meets)_", n) and not n.endswith(".lean")]
         return set(big) | set(shutil.ignore_patterns("mut-*", "swap-*", "par-*", "*.o", "prove_all.*.log")(_, names))
     shutil.copytree(os.path.join(HERE, "lang"), os.path.join(dest, "w"), symlinks=True, ignore=unneeded)
-    for dep in ("one", "spec", "levels", "alg", "experiments"):
+    for dep in ("one", "spec", "levels", "alg", "experiments", "wide"):
         os.symlink(os.path.join("..", dep), os.path.join(dest, dep))
 
 

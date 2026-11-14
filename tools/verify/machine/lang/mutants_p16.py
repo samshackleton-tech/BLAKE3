@@ -14,7 +14,8 @@ CODE_MUTANTS = [
     ("round XOR source register 0 -> 1", ".zpxord 13 13 0", ".zpxord 13 13 1", "P16Round"),
     ("input transpose shuffle 136 -> 221", ".zshufi32x4 30 31 18 136", ".zshufi32x4 30 31 18 221", "Proof_p16"),
     ("output store offset 0x1C0 -> 0x180", ".zstore false .r15 0x1C0 4", ".zstore false .r15 0x180 4", "Proof_p16"),
-    ("flag unpack shift 8 -> 16", ".shr32 .r10 8", ".shr32 .r10 16", "Proof_p16"),
+    ("flag unpack shift 8 -> 24", ".shr32 .r10 8", ".shr32 .r10 24", "Proof_p16"),
+    ("block len shift 24 -> 16", ".shr32 .rsi 24", ".shr32 .rsi 16", "Proof_p16"),
     ("epilogue pop r15 -> pop r14", ".pop .r15", ".pop .r14", "Proof_p16"),
 ]
 

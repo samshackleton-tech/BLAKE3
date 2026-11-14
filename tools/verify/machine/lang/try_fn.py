@@ -67,6 +67,12 @@ puts = "".join(f"    let m0 := Try.fill m0 ({a}) (Array.replicate ({l}).size.toN
 # declarations (unchanged, without that CLI) so this executable can have its own entry point.
 # A kernel is its instructions: it has no other meaning to run beside the machine's (no blame to share).
 KERNEL = bool(clauses[name].get("kernel"))
+# read-only data the program holds (Code_NAME.data, from the lifter): in memory when an example starts, and
+# the contract tried is the one `over` it (AbiData.lean): the data apart from what is written, and unchanged
+with open(f"Code_{name}.lean") as f:
+    HAS_DATA = "\ndef data : " in f.read()
+OVER_DATA = f".over Code_{name}.data" if HAS_DATA else ""
+DATA_PUT = f"    let m0 := Code_{name}.data.foldl (fun m x => Try.fill m x.1 x.2.toArray) m0\n" if HAS_DATA else ""
 source_module = os.environ.get('ODEMOD', 'HasherOde')
 if KERNEL:
     source_declarations = ""
@@ -99,7 +105,7 @@ L = f"""import Try
 import TrySem
 import Lang
 import Code_{name}{"".join(chr(10) + "import Code_" + s for s in STANDINS)}
-import Example_{CNAME.split('.')[0].lower()}
+import Example_{CNAME.split('.')[0].lower()}{chr(10) + "import AbiData" if HAS_DATA else ""}
 open X86
 
 /-! Written by try_fn.py from what `#pieces {CNAME}` read in the contract. A test by running, not a proof. -/
@@ -113,9 +119,9 @@ namespace Try_{name}
 {BLAME}
 def one (i_ : Nat) : {types} → String
   | ({names}) =>
-    let c := {CNAME} {' '.join(n for n, _ in params)}
+    let c := ({CNAME} {' '.join(n for n, _ in params)}){OVER_DATA}
     let m0 : Mem := fun _ => none
-{puts}    let s0 := Try.start c 0x{ENTRY:X} m0
+{puts}{DATA_PUT}    let s0 := Try.start c 0x{ENTRY:X} m0
     let pre : List (String × Bool) := [{', '.join(pre)}]
     match Try.firstFailure pre with
     | some f => s!"example {{i_}}: NOT AN EXAMPLE: not so: {{f}}"
