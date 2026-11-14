@@ -1,7 +1,7 @@
 // kflip_native: a kernel object run on this processor against BLAKE3 written out here, on inputs the
 // contract allows. kflip.py links it with each changed object its checker accepted: the processor arbitrates.
 //
-//     cc -O1 -o run kflip_native.c kflip_thunk.S OBJECT && ./run k32|p32|p16 CASES [over]
+//     cc -O1 -o run kflip_native.c kflip_thunk.S OBJECT && ./run k32|p32|p16|o16 CASES [over]
 //
 // Exit 0: on every case the 32 (16) chaining values are the reference's, nothing beside the output was
 // written (the bytes around it, the inputs, the table of their addresses, the key), and the registers a
@@ -15,7 +15,11 @@
 #include <sys/mman.h>
 
 typedef void kernel(const uint8_t *const *inputs, uint64_t blocks, const uint32_t *key, uint64_t counter, uint64_t packed, uint8_t *out);
-kernel blake3_servil_avx512_k32, blake3_servil_avx512_p32, blake3_servil_avx512_p16;
+// weak: an object holds the kernels of one source file, and the others' names stay unresolved
+__attribute__((weak)) kernel blake3_servil_avx512_k32, blake3_servil_avx512_p32, blake3_servil_avx512_p16;
+// c/blake3_output16.S: (descriptors, out), a descriptor a lane
+struct descriptor { const uint8_t *block; const uint32_t *cv; uint8_t length, flags; uint8_t unused[6]; };
+__attribute__((weak)) void blake3_servil_output16(const struct descriptor *inputs, uint8_t *out);
 // kflip_thunk.S: calls f(args[0..5]) with known values in rbx, rbp, r12..r15; leaves what they and rsp were after in after[0..6]
 void call_kernel(kernel *f, const uint64_t *args, uint64_t *after);
 extern const uint64_t call_kernel_values[6];
@@ -62,9 +66,13 @@ static uint8_t *place(uint8_t *pg, size_t n, size_t align) {
 int main(int argc, char **argv) {
     if (argc < 3) return 2;
     int over = argc > 3;        // a control: one block more than the inputs hold is asked for, and a page that faults is read
-    int p16 = !strcmp(argv[1], "p16"), k32 = !strcmp(argv[1], "k32");
-    kernel *f = p16 ? blake3_servil_avx512_p16 : k32 ? blake3_servil_avx512_k32 : blake3_servil_avx512_p32;
-    int lanes = p16 ? 16 : 32, blocks = p16 ? 1 : 16, cases = atoi(argv[2]);
+    int p16 = !strcmp(argv[1], "p16"), k32 = !strcmp(argv[1], "k32"), o16 = !strcmp(argv[1], "o16");
+    kernel *f = o16 ? (kernel *)blake3_servil_output16 : p16 ? blake3_servil_avx512_p16 : k32 ? blake3_servil_avx512_k32 : blake3_servil_avx512_p32;
+    if (!f) { printf("the object does not hold %s's kernel\n", argv[1]); return 2; }
+    if (sizeof(struct descriptor) != 24) return 2;
+    int lanes = p16 || o16 ? 16 : 32, blocks = p16 || o16 ? 1 : 16, cases = atoi(argv[2]);
+    uint8_t *cv_page[16];
+    for (int i = 0; i < 16; i++) cv_page[i] = o16 ? page() : 0;
     size_t len = 64 * (size_t)blocks;
     uint8_t *in_page[32], *key_page = page(), *table_page = page(), *out_page = page(), *shadow = malloc(PAGE);
     for (int i = 0; i < lanes; i++) in_page[i] = page();
@@ -75,12 +83,27 @@ int main(int argc, char **argv) {
         for (int i = 0; i < lanes; i++) for (int j = 0; j < PAGE; j++) in_page[i][j] = (uint8_t)rnd();
         for (int j = 0; j < PAGE; j++) key_page[j] = (uint8_t)rnd();
         for (int j = 0; j < PAGE; j++) table_page[j] = (uint8_t)rnd();
-        const uint8_t **inputs = (const uint8_t **)place(table_page, 8 * (size_t)lanes, 8);
+        if (o16) for (int i = 0; i < 16; i++) for (int j = 0; j < PAGE; j++) cv_page[i][j] = (uint8_t)rnd();
+        size_t table_size = o16 ? 24 * 16 : 8 * (size_t)lanes;
+        const uint8_t **inputs = (const uint8_t **)place(table_page, table_size, 8);
         uint32_t *key = (uint32_t *)place(key_page, 32, 4), key0[8];
         memcpy(key0, key, 32);
-        for (int i = 0; i < lanes; i++) inputs[i] = place(in_page[i], len, 1);        // any alignment
         const uint8_t *in0[32];
-        memcpy(in0, inputs, 8 * (size_t)lanes);
+        struct descriptor d0[16];
+        if (o16) {
+            // a descriptor a lane: its block and chaining value anywhere, a length 0 to 64, any flags byte
+            struct descriptor *d = (struct descriptor *)inputs;
+            for (int i = 0; i < 16; i++) {
+                d[i].block = over ? in_page[i] + PAGE - 63 : place(in_page[i], 64, 1);       // the control: a block one byte short of its page
+                d[i].cv = (const uint32_t *)place(cv_page[i], 32, 1);
+                d[i].length = (uint8_t)(rnd() % 65); d[i].flags = (uint8_t)rnd();
+                in0[i] = d[i].block;
+            }
+            memcpy(d0, d, sizeof d0);
+        } else {
+            for (int i = 0; i < lanes; i++) inputs[i] = place(in_page[i], len, 1);        // any alignment
+            memcpy(in0, inputs, 8 * (size_t)lanes);
+        }
         uint64_t flags = rnd() & 0xFF;
         // the counter: any; one case in four close below a carry out of the low word or of the whole
         uint64_t counter = p16 ? 0 : (c % 4 == 1 ? 0xFFFFFFFFull - rnd() % 40 : c % 4 == 2 ? 0xFFFFFFFFFFFFFFFFull - rnd() % 40 : c % 4 == 3 ? rnd() << 32 | (0xFFFFFFFFull - rnd() % 40) : rnd());
@@ -88,6 +111,7 @@ int main(int argc, char **argv) {
         memset(out_page, 0xA5, PAGE);
         uint8_t *out = place(out_page, 32 * (size_t)lanes, 1);
         uint64_t args[6] = {(uint64_t)inputs, (uint64_t)(blocks + over), (uint64_t)key, counter, packed, (uint64_t)out}, after[7];
+        if (o16) { args[1] = (uint64_t)out; args[2] = args[3] = args[4] = args[5] = rnd(); }       // (descriptors, out); the other registers hold anything
         call_kernel(f, args, after);
         for (int i = 0; i < 6; i++)
             if (after[i] != call_kernel_values[i]) { printf("case %d: a register the callee keeps came back changed (%d)\n", c, i); return 1; }
@@ -95,7 +119,8 @@ int main(int argc, char **argv) {
         for (int lane = 0; lane < lanes; lane++) {
             uint32_t cv[8];
             memcpy(cv, key0, sizeof cv);
-            if (p16) compress(cv, in0[lane], 0, 64, (uint32_t)flags | 4);
+            if (o16) { memcpy(cv, d0[lane].cv, sizeof cv); compress(cv, in0[lane], 0, d0[lane].length, d0[lane].flags); }
+            else if (p16) compress(cv, in0[lane], 0, 64, (uint32_t)flags | 4);
             else
                 for (int b = 0; b < 16; b++)
                     compress(cv, in0[lane] + 64 * b, k32 ? counter + (uint64_t)lane : counter, 64, (uint32_t)flags | (b == 0 ? 1 : 0) | (b == 15 ? 2 : 0));
@@ -115,8 +140,13 @@ int main(int argc, char **argv) {
         for (int j = 0; j < PAGE; j++) shadow[j] = (uint8_t)rnd();
         if (memcmp(shadow, key_page, PAGE)) { printf("case %d: the key's page was written\n", c); return 1; }
         for (int j = 0; j < PAGE; j++) shadow[j] = (uint8_t)rnd();
-        memcpy(shadow + ((uint8_t *)inputs - table_page), in0, 8 * (size_t)lanes);
+        if (o16) memcpy(shadow + ((uint8_t *)inputs - table_page), d0, sizeof d0);
+        else memcpy(shadow + ((uint8_t *)inputs - table_page), in0, 8 * (size_t)lanes);
         if (memcmp(shadow, table_page, PAGE)) { printf("case %d: the table of addresses was written\n", c); return 1; }
+        if (o16) for (int i = 0; i < 16; i++) {
+            for (int j = 0; j < PAGE; j++) shadow[j] = (uint8_t)rnd();
+            if (memcmp(shadow, cv_page[i], PAGE)) { printf("case %d: chaining value %d's page was written\n", c, i); return 1; }
+        }
     }
     printf("%s: %d cases, as BLAKE3\n", argv[1], cases);
     return 0;

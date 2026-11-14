@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """kflip: every single-bit change of a kernel's code, given to the decoder and the checker.
 
-    python3 kflip.py k32|p32|p16 OBJECT [--jobs N] [--every K] [--native CASES] [--refused-sample N] [--detail]
+    python3 kflip.py k32|p32|p16|o16 OBJECT [--jobs N] [--every K] [--native CASES] [--refused-sample N] [--detail]
 
 An audit of kdecode.py and kcheck.py together. Each bit of the kernel's code in the object is flipped in turn
 (--every K: each K-th bit), and the changed object is read and checked as the true one is. Three outcomes:
@@ -39,7 +39,7 @@ BASE, DATA = 0x10000, 0x50000000
 def verdict(obj, name):
     try:
         rows, data = kdecode.read(obj, kcheck.KERNELS[name]["start"], BASE, DATA)
-        entry = BASE + kdecode.address(obj, "blake3_servil_avx512_" + name) - kdecode.address(obj, kcheck.KERNELS[name]["start"])
+        entry = BASE + kdecode.address(obj, kcheck.KERNELS[name]["symbol"]) - kdecode.address(obj, kcheck.KERNELS[name]["start"])
     except kdecode.Stop as e: return "stopped", str(e)
     except (IndexError, ValueError, KeyError, StopIteration) as e: return "stopped", f"the decoder ran off the bytes ({type(e).__name__})"
     try:
@@ -153,7 +153,7 @@ def main():
         subprocess.run([cc, "-c", "-o", f"{folder}/t.o", f"{here}/kflip_thunk.S"], check=True)
         print(f"control: the unchanged object on this processor, {cases} cases: {native((name, obj, None, folder, cases))[1]}")
         rot = next((bit for bit, (v, why) in results if v == "refused" and "chaining value is not the specification's" in why), None)
-        print(f"control: the unchanged object asked for a block more than its inputs hold, on this processor: {native((name, obj, 'over', folder, 20))[1]}")
+        print(f"control: the unchanged object given inputs shorter than it reads (a block too few, or a block a byte short), on this processor: {native((name, obj, 'over', folder, 20))[1]}")
         print(f"control: a change the checker refused ({dict(results)[rot][1]}), on this processor: {native((name, obj, rot, folder, 20))[1] if rot is not None else 'NONE FOUND'}")
         accepted = [bit for bit, (v, why) in results if v == "ACCEPTED"]
         t1 = time.time()

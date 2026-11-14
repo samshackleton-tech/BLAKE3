@@ -127,11 +127,14 @@ def decode(code, at, relocs, rodata, rodata_at, base, start):
         R, X, B, R2 = (~p0 >> 7) & 1, (~p0 >> 6) & 1, (~p0 >> 5) & 1, (~p0 >> 4) & 1
         mm, W, vvvv, pp = p0 & 7, p1 >> 7, (~p1 >> 3) & 15, p1 & 3
         z, LL, bcast, V2, aaa = p2 >> 7, (p2 >> 5) & 3, (p2 >> 4) & 1, (~p2 >> 3) & 1, p2 & 7
-        if z or LL != 2 or bcast: raise Stop("an EVEX form other than 512 bits, merging, no broadcast")
+        if z or bcast: raise Stop("an EVEX form with zeroing or a broadcast operand")
         v = vvvv | (V2 << 4)
         opc = u8()
         scalar = (mm, opc) == (2, 0x58)
-        mod, reg, rm, mem = modrm(R, X, B, 4 if scalar else 64, evex=True)
+        # 512 bits everywhere, but for one form: the unaligned load of 256 bits (eight words) into a register's low half
+        half = LL == 1 and (mm, pp, W, opc) == (1, 2, 0, 0x6F)
+        if LL != 2 and not half: raise Stop("an EVEX form other than 512 bits")
+        mod, reg, rm, mem = modrm(R, X, B, 4 if scalar else 32 if half else 64, evex=True)
         reg |= R2 << 4
         if rm is not None: rm |= X << 4          # a register operand: X is its fifth bit
         key = (mm, pp, W, opc)
@@ -140,6 +143,10 @@ def decode(code, at, relocs, rodata, rodata_at, base, start):
             if aaa: raise Stop("a mask on an instruction read without one")
         def no_v():
             if v: raise Stop("a second source where there is none")
+        if half:
+            no_mask(); no_v()
+            if rm is not None or mem[0] == "rip" or mem[1]: raise Stop("a 256-bit move other than a load from [base + displacement]")
+            return p - at, f".yloadu {reg} .{mem[0]} {bv(mem[2])}"
         if key in ((1, 1, 0, 0x6F), (1, 2, 0, 0x6F), (1, 1, 0, 0x7F), (1, 2, 0, 0x7F)):
             no_mask(); no_v(); al = "true" if pp == 1 else "false"
             if rm is not None:
@@ -226,7 +233,11 @@ def decode(code, at, relocs, rodata, rodata_at, base, start):
         if op2 in (0x84, 0x85): no_rex(); d = sx(imm(4), 32); return p - at, f".{'je' if op2 == 0x84 else 'jne'} {here(p + d)}"
         if op2 == 0xB6:
             mod, reg, rm, mem = modrm(R, X, B)
-            if rm is None or rm > 3 or W: raise Stop("a movzx this does not know")
+            if W: raise Stop("a movzx this does not know")
+            if rm is None:
+                if mem[0] == "rip": raise Stop("a movzx of read-only data")
+                return p - at, f".movzx8 .{G[reg]} {memop(mem)}"
+            if rm > 3: raise Stop("a movzx this does not know")
             return p - at, f".movzx8 .{G[reg]} {r64(rm)}"
         if op2 == 0x18:
             mod, reg, rm, mem = modrm(R, X, B)
@@ -236,7 +247,9 @@ def decode(code, at, relocs, rodata, rodata_at, base, start):
     if op in (0x89, 0x31, 0x09, 0x85):
         mod, reg, rm, mem = modrm(R, X, B)
         name = {0x89: "mov", 0x31: "xor", 0x09: "or", 0x85: "test"}[op]
-        if rm is None: raise Stop(f"{name} to memory")
+        if rm is None:
+            if name != "mov" or mem[0] == "rip": raise Stop(f"{name} to memory")
+            return p - at, f".mov {w} {memop(mem)} {r64(reg)}"
         return p - at, f".{name} {w} {r64(rm)} {r64(reg)}"
     if op == 0x8B:
         mod, reg, rm, mem = modrm(R, X, B)

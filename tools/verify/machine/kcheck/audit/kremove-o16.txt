@@ -1,0 +1,10 @@
+o16: of 580 instructions, 9 can be replaced by a no-op and the kernel still meets its contract (11 s)
+  +0x3B2  .zshufi32x4 30 30 20 221
+  +0x3C0  .zshufi32x4 18 18 26 221
+  +0x3CE  .zshufi32x4 21 21 29 221
+  +0x3DC  .zshufi32x4 19 19 27 221
+  +0x3EA  .zshufi32x4 31 31 22 221
+  +0x3F8  .zshufi32x4 17 17 25 221
+  +0x406  .zshufi32x4 8 8 23 221
+  +0x414  .zshufi32x4 16 16 24 221
+  +0xE4E  .vzeroupper

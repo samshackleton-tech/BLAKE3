@@ -1,10 +1,10 @@
 control: the unchanged object is ACCEPTED 
-control: the unchanged object on this processor, 2000 cases: same
-control: the unchanged object asked for a block more than its inputs hold, on this processor: CRASHES: status -11
+control: the unchanged object on this processor, 1000 cases: same
+control: the unchanged object given inputs shorter than it reads (a block too few, or a block a byte short), on this processor: CRASHES: status -11
 control: a change the checker refused (word 0 of lane 0's chaining value is not the specification's), on this processor: DIFFERS: case 0: lane 0 word 0 is a3b21528, BLAKE3's is 0e1d4f65
-the 342 accepted changes on this processor, 2000 cases each (4 s): 342 same
+the 342 accepted changes on this processor, 1000 cases each (4 s): 342 same
 for scale, 400 of the changes stopped or refused, on this processor (200 cases each): 203 CRASHES, 169 DIFFERS, 28 same ("same": refused or not decoded, yet it works on these inputs)
-p16: 22144 single-bit changes of 2768 bytes of code (12 s, 48 at a time): 14374 stopped by the decoder, 7428 refused by the checker, 342 accepted, 0 with NO VERDICT (the time limit)
+p16: 22144 single-bit changes of 2768 bytes of code (19 s, 20 at a time): 14340 stopped by the decoder, 7462 refused by the checker, 342 accepted, 0 with NO VERDICT (the time limit)
 accepted, by where the change is: contract 142, linker 128, padding 72
 contract: the 25 instructions with a change the contract does not see (changes accepted in each):
   .mov 32 (.reg .rdx) (.imm 0x40) x34; .jne 0x10091 x32; .cmp 64 (.reg .r13) (.imm 0x1) x10; .jne 0x10302 x9; .add 64 (.reg .r14) (.imm 0x40) x9; .mov 32 (.reg .r10) (.reg .r8) x8; .shr64 .rcx 32 x7; .sub 64 (.reg .rsp) (.imm 0x100) x5; .mov 64 (.reg .rcx) (.reg .r9) x5; .shr32 .r10 8 x3; .mov 32 (.reg .rdx) (.reg .rsi) x3; .shr32 .rdi 16 x2; .mov 32 (.reg .rax) (.reg .r10) x2; .dec32 .r11 x2; .mov 64 (.reg .r13) (.reg .rsi) x1; .mov 64 (.reg .rbx) (.reg .r8) x1; .mov 64 (.reg .r9) (.reg .rcx) x1; .xor 32 (.reg .r14) (.reg .r14) x1; .mov 32 (.reg .r10) (.reg .rbx) x1; .or 32 (.reg .r10) (.reg .r8) x1; .zbroadcast 13 (.reg .r9) x1; .zbroadcast 14 (.reg .rcx) x1; .zbroadcast 15 (.reg .rdx) x1; .zbroadcast 24 (.reg .rax) x1; .dec64 .r13 x1

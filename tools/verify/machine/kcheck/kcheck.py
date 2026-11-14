@@ -27,7 +27,7 @@ plus the index (K32Lemmas.lean: counter_lo, counter_hi).
 usage: kcheck.py k32|p32|p16 --object OBJECT [--anchor test_vectors.json] [--mutants]   (the library's object, read by kdecode.py)
        kcheck.py k32|p32|p16 ROWS DATA [--anchor test_vectors.json] [--mutants]      (ROWS, DATA: lift_one.py's OUT.rows and OUT.data)
 """
-import re, sys, time
+import collections, re, sys, time
 
 MASK32 = 0xFFFFFFFF
 IV = [0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A]
@@ -68,6 +68,8 @@ class Terms:
         for x in consts:
             c = (c + self.nodes[x][1]) & MASK32 if op == "add" else c ^ self.nodes[x][1]
         out = sorted(x for x in out if self.nodes[x][0] != "c")
+        if op == "xor":         # a term xored with itself is gone (in pairs)
+            out = [x for x, n in sorted(collections.Counter(out).items()) if n % 2]
         if c: out.append(self.const(c))
         # A changed kernel can double a sum on every turn of a loop (x + x, then that plus itself): stop it
         # here, where it costs nothing, not after the memory is gone.
@@ -162,8 +164,11 @@ class Machine:
         blocks = self.blocks
         # general registers: ("n", int) | ("a", region, offset) | ("p", bytes) packed flags | ("q", name) a 64-bit unknown
         self.g = {r: ("q", r + " at entry") for r in G64}
-        self.g.update(rdi=("a", "inputs", 0), rsi=("n", blocks), rdx=("a", "key", 0), rcx=kernel["counter"],
-                      r8=("p", kernel["packed"] + (0, 0, 0, 0)), r9=("a", "out", 0), rsp=("a", "stack", 0))
+        if kernel.get("table") == "descriptors":       # (descriptors, out): one descriptor a lane
+            self.g.update(rdi=("a", "descriptors", 0), rsi=("a", "out", 0), rsp=("a", "stack", 0))
+        else:                                           # (inputs, blocks, key, counter, packed flags, out)
+            self.g.update(rdi=("a", "inputs", 0), rsi=("n", blocks), rdx=("a", "key", 0), rcx=kernel["counter"],
+                          r8=("p", kernel["packed"] + (0, 0, 0, 0)), r9=("a", "out", 0), rsp=("a", "stack", 0))
         self.z = [None] * 32            # sixteen terms each, or None: not yet written (reading it is a fault)
         self.k = {}
         self.zf = None
@@ -190,6 +195,7 @@ class Machine:
     def trunc(self, v, w):
         if w == 64: return v
         if v[0] == "n": return ("n", v[1] & ((1 << w) - 1))
+        if v[0] == "t": return v                    # a byte of a descriptor, zero-extended: the same at every width
         if v[0] == "p": return ("p", v[1][:w // 8] + (0,) * (8 - w // 8))
         if v[0] == "q" and v[1] == "counter" and w == 32: return ("lo",)
         if v[0] == "hi" and w == 32: return v
@@ -212,13 +218,20 @@ class Machine:
         if region == "inputs" and w == 64 and off % 8 == 0 and 0 <= off < 8 * self.lanes: return ("a", ("input", off // 8), 0)
         if region == "rodata" and w == 32 and 0 <= off and off + 4 <= len(self.data): return ("n", int.from_bytes(self.data[off:off + 4], "little"))
         if region == "stack" and w == 64 and off in self.saved: return self.saved[off]
+        if region == "descriptors" and 0 <= off < 24 * self.lanes:
+            # a descriptor (24 bytes): the block's address, the chaining value's address, a length byte, a flags byte
+            lane, field = divmod(off, 24)
+            if w == 64 and field == 0: return ("a", ("input", lane), 0)
+            if w == 64 and field == 8: return ("a", ("cv", lane), 0)
+            if w == 8 and field == 16: return ("t", self.T.var("length", lane))
+            if w == 8 and field == 17: return ("t", self.T.var("flags of", lane))
         raise Fail(f"a read of {w} bits at {region} + {off}")
 
     def load512(self, at, aligned):
         region, off = at
         self.trace.append(("read", region, off, 512))
         if region == "frame":
-            if off % 64 or off not in self.frame: raise Fail(f"a wide read of the frame at {off}, not written")
+            if off % 64 or off not in self.frame or None in self.frame[off]: raise Fail(f"a wide read of the frame at {off}, not written")
             return self.frame[off]
         if aligned: raise Fail(f"an aligned wide read at {region} + {off}")
         if isinstance(region, tuple) and region[0] == "input" and off % 64 == 0 and 0 <= off < 64 * self.blocks:
@@ -247,6 +260,7 @@ class Machine:
         """A 32-bit general value as a term."""
         T = self.T
         if v[0] == "n": return T.const(v[1])
+        if v[0] == "t": return v[1]
         if v[0] == "lo": return T.var("counter low")
         if v[0] == "hi": return T.var("counter high")
         if v[0] == "p":
@@ -279,9 +293,15 @@ class Machine:
                 self.setreg(a[1][1], v)
             else:
                 at = self.addr(a[1][1], num(a[1][2]))
-                if not (w == 8 and at[0] == "frame" and 0 <= at[1] < self.frame_size and v == ("n", 0)): raise Fail(f"a store of {w} bits at {at}")
-                self.trace.append(("write", at[0], at[1], 8))       # the stack probe: one byte of the frame, before any wide store there
-                if at[1] - at[1] % 64 in self.frame: raise Fail("a byte stored over a wide cell")
+                if w == 32 and at[0] == "frame" and at[1] % 4 == 0 and 0 <= at[1] and at[1] + 4 <= self.frame_size and v[0] in ("t", "n"):
+                    # one word of a frame cell (a descriptor's byte, zero-extended): the cell is whole when all sixteen are written
+                    self.trace.append(("write", at[0], at[1], 32))
+                    base = at[1] - at[1] % 64
+                    cell = list(self.frame.get(base, (None,) * 16)); cell[(at[1] - base) // 4] = self.lane(v); self.frame[base] = tuple(cell)
+                else:
+                    if not (w == 8 and at[0] == "frame" and 0 <= at[1] < self.frame_size and v == ("n", 0)): raise Fail(f"a store of {w} bits at {at}")
+                    self.trace.append(("write", at[0], at[1], 8))       # the stack probe: one byte of the frame, before any wide store there
+                    if at[1] - at[1] % 64 in self.frame: raise Fail("a byte stored over a wide cell")
         elif op == ".movzx8": self.setreg(a[0], self.val(a[1], 8))
         elif op in (".jmp",): nxt = num(a[0]); self.trace.append(("jump", nxt))
         elif op in (".je", ".jne"):
@@ -361,7 +381,14 @@ class Machine:
         elif op == ".zloadi": self.z[int(a[0])] = self.load512(self.addr(a[1], num(a[3]), a[2]), False)
         elif op == ".zstore": self.store512(self.addr(a[1], num(a[2])), self.vec(int(a[3])), a[0] == "true")
         elif op == ".zpaddd": x, y = self.vec(int(a[1])), self.vec(int(a[2])); self.z[int(a[0])] = tuple(T.add(p, q) for p, q in zip(x, y))
-        elif op == ".zpxord": x, y = self.vec(int(a[1])), self.vec(int(a[2])); self.z[int(a[0])] = tuple(T.xor(p, q) for p, q in zip(x, y))
+        elif op == ".zpxord":
+            if a[1] == a[2]: self.z[int(a[0])] = (T.const(0),) * 16         # a register with itself: zero, whatever it held
+            else: x, y = self.vec(int(a[1])), self.vec(int(a[2])); self.z[int(a[0])] = tuple(T.xor(p, q) for p, q in zip(x, y))
+        elif op == ".yloadu":
+            # eight words into a register's low half, the high half cleared: a lane's chaining value
+            region, off = self.addr(a[1], num(a[2])); self.trace.append(("read", region, off, 256))
+            if not (isinstance(region, tuple) and region[0] == "cv" and off == 0): raise Fail(f"a 256-bit read at {region} + {off}")
+            self.z[int(a[0])] = tuple(T.var("cv", region[1], w) for w in range(8)) + (T.const(0),) * 8
         elif op == ".zprord": x = self.vec(int(a[1])); n = int(a[2]); self.z[int(a[0])] = tuple(T.ror(p, n) for p in x)
         elif op == ".zpadddc":
             c = num(a[2]); x = self.vec(int(a[1]))
@@ -373,6 +400,7 @@ class Machine:
             if int(a[3]) != 1: raise Fail("a comparison other than less-than")
             x, y = self.vec(int(a[1])), self.vec(int(a[2])); self.k[int(a[0])] = tuple(T.ult(p, q) for p, q in zip(x, y))
         elif op == ".zpaddd_k":
+            if int(a[1]) not in self.k: raise Fail(f"k{a[1]} read before it is written")
             d, k, x, y = self.vec(int(a[0])), self.k[int(a[1])], self.vec(int(a[2])), self.vec(int(a[3]))
             self.z[int(a[0])] = tuple(T.ite(c, T.add(p, q), old) for c, p, q, old in zip(k, x, y, d))
         elif op in (".zunpckldq", ".zunpckhdq", ".zunpcklqdq", ".zunpckhqdq"):
@@ -419,6 +447,13 @@ def check(rows, data_at, data, name="k32", entry=None):
     return m, T
 
 
+def spec_output_cv(T, lane):
+    """Lane `lane`'s one compression from its descriptor: its own chaining value, block, block length and flags,
+    counter 0 (a root's output block, or any node whose values the caller holds)."""
+    return spec_compress(T, [T.var("cv", lane, w) for w in range(8)], [T.var("input", lane, 0, w) for w in range(16)],
+                         T.const(0), T.const(0), T.var("length", lane), T.var("flags of", lane))
+
+
 def spec_parent_cv(T, lane):
     """Lane `lane`'s parent node (section 2.5): one block, the two children's chaining values, counter 0, PARENT."""
     return spec_compress(T, [T.var("key", w) for w in range(8)], [T.var("input", lane, 0, w) for w in range(16)],
@@ -427,9 +462,12 @@ def spec_parent_cv(T, lane):
 
 # What each kernel is given (its contract's `accepts`), and what it must leave.
 KERNELS = {
-    "k32": dict(entry=0, start="blake3_servil_avx512_k32", lanes=32, blocks=16, counter=("q", "counter"), packed=("flags", CHUNK_START, CHUNK_END, 64), spec=lambda T, lane: spec_chunk_cv(T, lane)),
-    "p32": dict(entry=3, start="blake3_servil_avx512_k32", lanes=32, blocks=16, counter=("q", "counter"), packed=("flags", CHUNK_START, CHUNK_END, 64), spec=lambda T, lane: spec_chunk_cv(T, lane, increment=False)),
-    "p16": dict(entry=0, start="blake3_servil_avx512_p16", lanes=16, blocks=1, counter=("n", 0), packed=(("flags|", 4), 0, 0, 64), spec=spec_parent_cv),
+    # c/blake3_output16.S: sixteen compressions, each lane with its own chaining value, block, length and flags
+    "o16": dict(entry=0, start="blake3_servil_output16", symbol="blake3_servil_output16", given="chaining value, block, length and flags of every lane",
+                lanes=16, blocks=1, table="descriptors", spec=spec_output_cv),
+    "k32": dict(entry=0, start="blake3_servil_avx512_k32", symbol="blake3_servil_avx512_k32", given="key, flags and input and every counter", lanes=32, blocks=16, counter=("q", "counter"), packed=("flags", CHUNK_START, CHUNK_END, 64), spec=lambda T, lane: spec_chunk_cv(T, lane)),
+    "p32": dict(entry=3, start="blake3_servil_avx512_k32", symbol="blake3_servil_avx512_p32", given="key, flags and input and every counter", lanes=32, blocks=16, counter=("q", "counter"), packed=("flags", CHUNK_START, CHUNK_END, 64), spec=lambda T, lane: spec_chunk_cv(T, lane, increment=False)),
+    "p16": dict(entry=0, start="blake3_servil_avx512_p16", symbol="blake3_servil_avx512_p16", given="key, flags and input", lanes=16, blocks=1, counter=("n", 0), packed=(("flags|", 4), 0, 0, 64), spec=spec_parent_cv),
 }
 
 
@@ -515,7 +553,7 @@ def main():
         import kdecode
         try:
             rows, data = kdecode.read(sys.argv[3], KERNELS[name]["start"], 0x10000, 0x50000000)
-            entry = 0x10000 + kdecode.address(sys.argv[3], "blake3_servil_avx512_" + name) - kdecode.address(sys.argv[3], KERNELS[name]["start"])
+            entry = 0x10000 + kdecode.address(sys.argv[3], KERNELS[name]["symbol"]) - kdecode.address(sys.argv[3], KERNELS[name]["start"])
         except kdecode.Stop as e: raise Fail(f"the object is not read: {e}")
         data_at = 0x50000000
     else: rows, data_at, data = read(sys.argv[2], sys.argv[3])
@@ -523,7 +561,7 @@ def main():
     dt = time.time() - t0
     kinds = {}
     for e in m.trace: kinds[e[0]] = kinds.get(e[0], 0) + 1
-    print(f"{name}: the {KERNELS[name]['lanes']} chaining values the code stores are the specification's, for every key, flags and input" + ("" if name == "p16" else " and every counter"))
+    print(f"{name}: the {KERNELS[name]['lanes']} chaining values the code stores are the specification's, for every {KERNELS[name]['given']}")
     print(f"     {m.steps} instructions run, {len(T.nodes)} terms, {dt:.2f} s; stack used at most {-m.low} bytes of {m.budget}")
     print(f"     trace: {kinds.get('read', 0)} reads, {kinds.get('write', 0)} writes, {kinds.get('branch', 0)} branches, each a region and a number: the same for every input")
     if "--anchor" in sys.argv:

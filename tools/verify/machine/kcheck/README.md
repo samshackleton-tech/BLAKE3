@@ -7,29 +7,38 @@ page is what has been done to find where they are wrong, and what that found.
 
 ## What it shows today
 
-From the library's own assembly source (`c/blake3_avx512_32.S`), assembled, the object's bytes read directly:
+From the library's own assembly sources (`c/blake3_avx512_32.S`, `c/blake3_output16.S`), assembled, the
+objects' bytes read directly:
 
 | kernel | instructions run | time | result |
 |---|---|---|---|
 | `blake3_servil_avx512_k32` (32 chunks, counter + lane) | 32,203 | 0.6 s | the 32 chaining values stored are the specification's |
 | `blake3_servil_avx512_p32` (its second entry, counter fixed) | 32,195 | 0.6 s | the same |
 | `blake3_servil_avx512_p16` (16 parent nodes) | 1,070 | 0.02 s | the 16 chaining values stored are the specification's |
+| `blake3_servil_output16` (16 compressions, each lane its own chaining value, block, length and flags) | 1,193 | 0.03 s | the same |
 
-"For every input": the key, the counter, the mode flags and the inputs' bytes are variables. Times on an Apple
-M6. The object as clang 21 assembles it and as GNU as 2.46 does (they pad the loops differently) both pass.
+"For every input": the key, the counter, the mode flags and the inputs' bytes are variables (for `output16`,
+every lane's chaining value, block, length byte and flags byte). Times on an Apple M6. The first three as
+clang 21 assembles them and as GNU as 2.46 does (they pad the loops differently) both pass.
+
+The fourth kernel was added to see what a new one costs: three instruction forms in the decoder (a 256-bit
+load, a byte read, a 32-bit store), four cases in the checker, a five-line specification, and it passed on
+its first run, a few minutes after the start. Its audit (below) then ran clean, and `kremove.py` on it found
+eight instructions whose results nothing reads (BLAKE3 #398).
 
     python3 kcheck.py k32 --object OBJECT [--anchor ../../../../test_vectors/test_vectors.json] [--mutants]
-    python3 test_kcheck.py            # all of it from the source, with the controls: 8 tests, 10 s
+    python3 test_kcheck.py            # all of it from the sources, with the controls: 9 tests, 12 s
 
 ## The parts
 
 | file | lines | what it is |
 |---|---|---|
-| `kdecode.py` | 324 | reads the ELF object (sections, symbol, relocations) and decodes the instruction forms the kernels use, and no others; no disassembler |
-| `kcheck.py` | 556 | runs the instructions on symbolic values, builds the specification with the same term constructors, compares |
+| `kdecode.py` | 337 | reads the ELF object (sections, symbol, relocations) and decodes the instruction forms the kernels use, and no others; no disassembler |
+| `kcheck.py` | 594 | runs the instructions on symbolic values, builds the specification with the same term constructors, compares |
 | `kcheck_cross.py` | 109 | kcheck's reading of each instruction against the Lean model's processor-validated test vectors |
-| `kflip.py`, `kflip_native.c`, `kflip_thunk.S` | 194 + 123 + 63 | the audit below: every single-bit change of a kernel, and the processor's word on each one accepted |
-| `test_kcheck.py` | 123 | the three kernels and the controls, from the source |
+| `kflip.py`, `kflip_native.c`, `kflip_thunk.S` | 194 + 153 + 63 | the audit below: every single-bit change of a kernel, and the processor's word on each one accepted |
+| `kremove.py` | 41 | which instructions can be replaced by a no-op with the contract still met: for a person to read |
+| `test_kcheck.py` | 136 | the four kernels and the controls, from the sources |
 
 ## How
 
@@ -72,16 +81,18 @@ same for every input.
 
    | kernel | changes | stopped by the decoder | refused by the checker | accepted | of those, as BLAKE3 on the processor |
    |---|---|---|---|---|---|
-   | P16 | 22,144 | 14,374 | 7,428 | 342 | 342 (2,000 cases each) |
-   | K32 | 35,824 | 22,378 | 11,691 | 1,755 | 1,755 (1,000 cases each) |
-   | P32 | 35,824 | 22,378 | 11,563 | 1,883 | 1,883 (1,000 cases each) |
+   | P16 | 22,144 | 14,340 | 7,462 | 342 | 342 (1,000 cases each) |
+   | K32 | 35,824 | 22,321 | 11,748 | 1,755 | 1,755 (1,000 cases each) |
+   | P32 | 35,824 | 22,321 | 11,620 | 1,883 | 1,883 (1,000 cases each) |
+   | `output16` | 29,384 | 17,736 | 11,254 | 394 | 394 (2,000 cases each) |
 
-   (Threadripper PRO 7975WX, clang 21.1.8's object; 12 s for P16, 12 minutes each for the others, 30 at a time.
+   (Threadripper PRO 7975WX, clang 21.1.8's objects, the checker and decoder as they are in this commit;
+   19 s for P16, 51 s for `output16`, 17 minutes each for K32 and P32, 20 at a time, the four at once.
    No change ended without a verdict. Controls in each run: the unchanged object is accepted and runs as BLAKE3;
    asked for a block more than its inputs hold it faults; a refused change of a rotation does not run as BLAKE3.)
 
-   Where the accepted changes are: in the no-ops an assembler pads with (148), in the operand of a prefetch
-   (2,560), in the four bytes of a field the linker fills (832), and 440 elsewhere, of two kinds
+   Where the accepted changes of the first three are: in the no-ops an assembler pads with (148), in the
+   operand of a prefetch (2,560), in the four bytes of a field the linker fills (832), and 440 elsewhere, of two kinds
    (`kflip.py --detail` lists each with what it became; `audit/`):
    - code the contract never reaches, or whose result it never uses. The kernels take 1 to 16 blocks, any
      start and end flags and either entry, and the contracts fix them: the jump that P32's entry takes is never
@@ -91,7 +102,10 @@ same for every input.
      operation on a small number, a register that holds the same value at that point (`rsi` for `rsp`), a
      larger frame still within the stack's bound.
 
-   For scale, of 400 changes a kernel that were stopped or refused, about 5 to 7% run as BLAKE3 on the same
+   `output16`'s 394: padding 48, linker fields 128, and 218 elsewhere, 148 of them in the eight shuffles
+   whose results nothing reads.
+
+   For scale, of 400 changes a kernel that were stopped or refused, 1.5 to 7% run as BLAKE3 on the same
    inputs all the same: the checker refuses what it cannot show, as it should.
 
 **What the fifth audit found** (each fixed, each now a test in `test_kcheck.py`):
@@ -112,7 +126,7 @@ an 8-bit `or` read as 32 bits.
 
 ## What it rests on (what a reader must trust or check)
 
-- `kdecode.py` and `kcheck.py`, 880 lines, and Python.
+- `kdecode.py` and `kcheck.py`, 931 lines, and Python.
 - That the regions are apart (the contract's own condition: the stack and the output apart from everything).
 - One arithmetic fact taken as the specification's form of a lane's counter: low word + index, high word + carry.
   Lean proves it equal to the 64-bit counter plus the index (`lang/K32Lemmas.lean`, `counter_lo`, `counter_hi`);
@@ -129,6 +143,7 @@ an 8-bit `or` read as 32 bits.
 | P16 | proved (`Proof_p16.lean`); about 7 hours of work with the model's widening, 175 Lean checks; checking it again takes 4 to 9 minutes on the workhorse | 0.02 s; written for it: one line in `KERNELS` and a 3-line specification function |
 | K32 | the round, the round loop, the counters and the loads proved in 3 hours; an estimated 15 hours more | 0.6 s |
 | P32 | not attempted | 0.6 s; written for it: one line in `KERNELS` |
+| `output16` | not attempted | 0.03 s; a few minutes' additions (above) |
 | what is trusted | Lean's kernel, the model (cross-checked on processors), `bv_decide`'s axioms, the lifter (`llvm-objdump`) | these two programs |
 | usable by a caller's Lean proof | yes | no: a caller's theorem would name the kernel's contract as a hypothesis this checker discharges |
 

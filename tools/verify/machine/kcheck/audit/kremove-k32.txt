@@ -1,0 +1,8 @@
+k32: of 667 instructions, 7 can be replaced by a no-op and the kernel still meets its contract (916 s)
+  +0x10  .xor 32 (.reg .r10) (.reg .r10)
+  +0x2B  .mov 8 (.mem .rsp 0x0) (.imm 0x0)
+  +0x4E  .zmov 2 0
+  +0x54  .zmov 3 0
+  +0x69  .je 0x1009F
+  +0x834  .test 64 (.reg .r14) (.reg .r14)
+  +0x116C  .vzeroupper

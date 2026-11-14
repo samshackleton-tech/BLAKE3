@@ -3,8 +3,8 @@
 
     python3 test_kcheck.py
 
-c/blake3_avx512_32.S is assembled (clang where there is one, else cc), the object's bytes are read by
-kdecode.py, and kcheck.py shows each of the three kernels against the specification. Then the controls:
+c/blake3_avx512_32.S and c/blake3_output16.S are assembled (clang where there is one, else cc), the objects'
+bytes are read by kdecode.py, and kcheck.py shows each of the four kernels against the specification. Then the controls:
 changed kernels are refused; a kernel is refused against another's specification; the specification gives the
 official test vector; and, where there is an objdump, kdecode's reading is the lifter's (one/lift_one.py)
 instruction for instruction. The single-bit audit with a processor's verdict (kflip.py) is not run here: it
@@ -30,7 +30,7 @@ def assemble(s_path, o_path):
 
 def load(obj, name):
     rows, data = kdecode.read(obj, kcheck.KERNELS[name]["start"], BASE, DATA)
-    entry = BASE + kdecode.address(obj, "blake3_servil_avx512_" + name) - kdecode.address(obj, kcheck.KERNELS[name]["start"])
+    entry = BASE + kdecode.address(obj, kcheck.KERNELS[name]["symbol"]) - kdecode.address(obj, kcheck.KERNELS[name]["start"])
     return rows, data, entry
 
 
@@ -40,14 +40,16 @@ class Kcheck(unittest.TestCase):
         cls.dir = tempfile.mkdtemp(prefix="kcheck-")
         cls.obj = os.path.join(cls.dir, "k.o")
         assemble(os.path.join(ROOT, "c", "blake3_avx512_32.S"), cls.obj)
+        cls.obj16 = os.path.join(cls.dir, "o.o")
+        assemble(os.path.join(ROOT, "c", "blake3_output16.S"), cls.obj16)
 
     @classmethod
     def tearDownClass(cls):
         shutil.rmtree(cls.dir)
 
     def test_the_three_kernels_meet_the_specification(self):
-        for name, steps in (("k32", 32203), ("p32", 32195), ("p16", 1070)):
-            rows, data, entry = load(self.obj, name)
+        for name, steps in (("k32", 32203), ("p32", 32195), ("p16", 1070), ("o16", 1193)):
+            rows, data, entry = load(self.obj16 if name == "o16" else self.obj, name)
             m, T = kcheck.check(rows, DATA, data, name, entry)
             self.assertEqual(m.steps, steps, name)
             self.assertLessEqual(-m.low, 4096, name)
@@ -71,6 +73,15 @@ class Kcheck(unittest.TestCase):
             kcheck.check(rows, DATA, data, "k32", p32)          # the fixed-counter entry, the counting specification
         with self.assertRaises(kcheck.Fail):
             kcheck.check(rows, DATA, data, "p32", entry)        # and the other way
+
+    def test_a_changed_output_kernel_is_refused(self):
+        rows, data, entry = load(self.obj16, "o16")
+        for old, new in ((".zprord 4 4 12", ".zprord 4 4 13"), (".movzx8 .rdx (.mem .rdi 0x10)", ".movzx8 .rdx (.mem .rdi 0x11)"),      # lane 0's length read from its flags
+                         (".yloadu 17 .rax 0x0", ".yloadu 16 .rax 0x0"), (".mov 32 (.mem .rsp 0x104) (.reg .rdx)", ".mov 32 (.mem .rsp 0x108) (.reg .rdx)")):
+            k = next(k for k, r in enumerate(rows) if r[2] == old)
+            changed = list(rows); changed[k] = (rows[k][0], rows[k][1], new)
+            with self.assertRaises(kcheck.Fail, msg=old):
+                kcheck.check(changed, DATA, data, "o16", entry)
 
     def test_a_frame_that_is_not_whole_cells_is_refused(self):
         # found by kflip.py: `sub rsp, 0x101` was accepted, and its aligned stores fault on a processor

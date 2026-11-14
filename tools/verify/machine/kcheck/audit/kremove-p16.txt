@@ -1,0 +1,14 @@
+p16: of 457 instructions, 13 can be replaced by a no-op and the kernel still meets its contract (9 s)
+  +0x1C  .mov 8 (.mem .rsp 0x0) (.imm 0x0)
+  +0x73  .shr32 .r10 8
+  +0x83  .shr32 .rdi 16
+  +0x2F3  .mov 32 (.reg .rdx) (.imm 0x40)
+  +0x2FC  .jne 0x10302
+  +0x2FE  .or 32 (.reg .rax) (.reg .rdi)
+  +0x300  .mov 32 (.reg .rdx) (.reg .rsi)
+  +0x330  .mov 64 (.reg .rcx) (.reg .r9)
+  +0x333  .shr64 .rcx 32
+  +0x9A7  .mov 32 (.reg .r10) (.reg .r8)
+  +0x9AA  .add 64 (.reg .r14) (.imm 0x40)
+  +0x9B1  .jne 0x10091
+  +0xABE  .vzeroupper

@@ -7,7 +7,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 JOBS = int(sys.argv[1]) if len(sys.argv) > 1 else 4
-LIMIT = 900
+LIMIT = int(os.environ.get("LIMIT", "900"))        # seconds for one mutant; a mutant that reaches it has NO VERDICT
+ONLY = os.environ.get("ONLY")                     # a part of one mutant's name: that one alone (after the control)
 
 CODE_MUTANTS = [
     ("round1 rotation 16 -> 17", ".zprord 13 13 16", ".zprord 13 13 17", "P16Round"),
@@ -114,9 +115,9 @@ def main():
 
     res = []
     with ThreadPoolExecutor(max_workers=JOBS) as ex:
-        futs = [ex.submit(run_fast, "spec", n, "Spec_p16.lean", o, nw, lp) for n, o, nw in SPEC_MUTANTS]
+        futs = [ex.submit(run_fast, "spec", n, "Spec_p16.lean", o, nw, lp) for n, o, nw in SPEC_MUTANTS if not ONLY or ONLY in n]
         if "--spec-only" not in sys.argv:
-            futs += [ex.submit(run_code, n, o, nw, tgt) for n, o, nw, tgt in CODE_MUTANTS]
+            futs += [ex.submit(run_code, n, o, nw, tgt) for n, o, nw, tgt in CODE_MUTANTS if not ONLY or ONLY in n]
         for fut in futs:
             res.append(fut.result())
 
