@@ -86,6 +86,8 @@ CHAINS = [
     [("p16-linkage", "lang", "python3 test_p16_linkage.py && python3 ../wide/test_p16_source.py", False),
      ("p16", "lang", 'lake build Proof_p16 > p16proof.log 2>&1 && ! grep -q -E "error|sorry" p16proof.log && grep -q "p16_meets. depends on axioms" p16proof.log', False),
      ("audit-p16", "lang", "python3 mutants_p16.py 4 --spec-only", True)],
+    # not a proof: the checker made for the wide kernels (kcheck/README.md), on the library's own assembly
+    [("kcheck", "kcheck", "python3 test_kcheck.py", False)],
     [("hashw", "lang", SLOW + fn("hashw", "0x190000", True), False),
      ("hashf", "lang", SLOW + fn("hashf", "0x1A0000", True), False),
      ("hashf-bytes", "lang", 'lake build Meets_hashf_bytes > hashfbytes.log 2>&1 && ! grep -q -E "error|sorry" hashfbytes.log && grep -q "hashf_meets_bytes. depends on axioms" hashfbytes.log', False),
@@ -104,7 +106,7 @@ CHAINS = [
     [("audit-spec", "lang", f"python3 mutants_spec.py {AJ}", True)],
     [(None, "lang", "python3 odec.py hasher.ode HasherOde.lean", True), ("audit-hash", "lang", "python3 mutants_hash.py", True)],
 ]
-ORDER = ["hex", "merge", "push", "merge_sse", "add-and-swap", "merge_steps", "levels-model", "ladd", "lroot", "node_out", "pad", "chunk_node", "hashl", "hash-bytes", "fillp", "p16s", "tree32", "k32s", "wide", "addn", "finish", "group", "groupf", "p16-linkage", "p16", "hashw", "hashf", "hashf-bytes", "hashf-standins", "hashf-p16", "adler32",
+ORDER = ["hex", "merge", "push", "merge_sse", "add-and-swap", "merge_steps", "levels-model", "ladd", "lroot", "node_out", "pad", "chunk_node", "hashl", "hash-bytes", "fillp", "p16s", "tree32", "k32s", "wide", "addn", "finish", "group", "groupf", "p16-linkage", "p16", "hashw", "hashf", "hashf-bytes", "hashf-standins", "hashf-p16", "kcheck", "adler32",
          "any-machine", "direct", "hash-tried", "hex_neon", "push-aarch64",
          "audit-merge", "audit-push", "audit-add", "audit-steps", "audit-ladd", "audit-lroot", "audit-node_out", "audit-pad", "audit-chunk_node", "audit-hashl", "audit-fillp", "audit-tree32", "audit-p16s", "audit-k32s", "audit-wide", "audit-addn", "audit-finish", "audit-group", "audit-groupf", "audit-p16", "audit-hashf",
          "audit-spec", "audit-hash"]

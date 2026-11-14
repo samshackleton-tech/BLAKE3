@@ -1,0 +1,152 @@
+control: the unchanged object is ACCEPTED 
+control: the unchanged object on this processor, 2000 cases: same
+control: the unchanged object asked for a block more than its inputs hold, on this processor: CRASHES: status -11
+control: a change the checker refused (word 0 of lane 0's chaining value is not the specification's), on this processor: DIFFERS: case 0: lane 0 word 0 is a3b21528, BLAKE3's is 0e1d4f65
+the 342 accepted changes on this processor, 2000 cases each (4 s): 342 same
+for scale, 400 of the changes stopped or refused, on this processor (200 cases each): 203 CRASHES, 169 DIFFERS, 28 same ("same": refused or not decoded, yet it works on these inputs)
+p16: 22144 single-bit changes of 2768 bytes of code (12 s, 48 at a time): 14374 stopped by the decoder, 7428 refused by the checker, 342 accepted, 0 with NO VERDICT (the time limit)
+accepted, by where the change is: contract 142, linker 128, padding 72
+contract: the 25 instructions with a change the contract does not see (changes accepted in each):
+  .mov 32 (.reg .rdx) (.imm 0x40) x34; .jne 0x10091 x32; .cmp 64 (.reg .r13) (.imm 0x1) x10; .jne 0x10302 x9; .add 64 (.reg .r14) (.imm 0x40) x9; .mov 32 (.reg .r10) (.reg .r8) x8; .shr64 .rcx 32 x7; .sub 64 (.reg .rsp) (.imm 0x100) x5; .mov 64 (.reg .rcx) (.reg .r9) x5; .shr32 .r10 8 x3; .mov 32 (.reg .rdx) (.reg .rsi) x3; .shr32 .rdi 16 x2; .mov 32 (.reg .rax) (.reg .r10) x2; .dec32 .r11 x2; .mov 64 (.reg .r13) (.reg .rsi) x1; .mov 64 (.reg .rbx) (.reg .r8) x1; .mov 64 (.reg .r9) (.reg .rcx) x1; .xor 32 (.reg .r14) (.reg .r14) x1; .mov 32 (.reg .r10) (.reg .rbx) x1; .or 32 (.reg .r10) (.reg .r8) x1; .zbroadcast 13 (.reg .r9) x1; .zbroadcast 14 (.reg .rcx) x1; .zbroadcast 15 (.reg .rdx) x1; .zbroadcast 24 (.reg .rax) x1; .dec64 .r13 x1
+  0x10015 `4881ec00010000` byte 3 bit 6: .sub 64 (.reg .rsp) (.imm 0x100)  ->  .sub 64 (.reg .rsp) (.imm 0x140)
+  0x10015 `4881ec00010000` byte 3 bit 7: .sub 64 (.reg .rsp) (.imm 0x100)  ->  .sub 64 (.reg .rsp) (.imm 0x180)
+  0x10015 `4881ec00010000` byte 4 bit 1: .sub 64 (.reg .rsp) (.imm 0x100)  ->  .sub 64 (.reg .rsp) (.imm 0x300)
+  0x10015 `4881ec00010000` byte 4 bit 2: .sub 64 (.reg .rsp) (.imm 0x100)  ->  .sub 64 (.reg .rsp) (.imm 0x500)
+  0x10015 `4881ec00010000` byte 4 bit 3: .sub 64 (.reg .rsp) (.imm 0x100)  ->  .sub 64 (.reg .rsp) (.imm 0x900)
+  0x10023 `4989f5` byte 0 bit 3: .mov 64 (.reg .r13) (.reg .rsi)  ->  .mov 32 (.reg .r13) (.reg .rsi)
+  0x1002C `4c89c3` byte 0 bit 3: .mov 64 (.reg .rbx) (.reg .r8)  ->  .mov 32 (.reg .rbx) (.reg .r8)
+  0x1002F `4989c9` byte 0 bit 3: .mov 64 (.reg .r9) (.reg .rcx)  ->  .mov 32 (.reg .r9) (.reg .rcx)
+  0x10069 `4531f6` byte 0 bit 3: .xor 32 (.reg .r14) (.reg .r14)  ->  .xor 64 (.reg .r14) (.reg .r14)
+  0x10070 `4189da` byte 0 bit 3: .mov 32 (.reg .r10) (.reg .rbx)  ->  .mov 64 (.reg .r10) (.reg .rbx)
+  0x10073 `41c1ea08` byte 2 bit 1: .shr32 .r10 8  ->  .shr32 .r8 8
+  0x10073 `41c1ea08` byte 2 bit 2: .shr32 .r10 8  ->  .shr32 .r14 8
+  0x10073 `41c1ea08` byte 3 bit 3: .shr32 .r10 8  ->  .shr32 .r10 0
+  0x1007E `4509c2` byte 1 bit 7: .or 32 (.reg .r10) (.reg .r8)  ->  .mov 32 (.reg .r10) (.reg .r8)
+  0x10083 `c1ef10` byte 1 bit 0: .shr32 .rdi 16  ->  .shr32 .rsi 16
+  0x10083 `c1ef10` byte 2 bit 4: .shr32 .rdi 16  ->  .shr32 .rdi 0
+  0x102F0 `4489d0` byte 0 bit 3: .mov 32 (.reg .rax) (.reg .r10)  ->  .mov 64 (.reg .rax) (.reg .r10)
+  0x102F0 `4489d0` byte 2 bit 4: .mov 32 (.reg .rax) (.reg .r10)  ->  .mov 32 (.reg .rax) (.reg .r8)
+  0x102F3 `ba40000000` byte 0 bit 0: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rbx) (.imm 0x40)
+  0x102F3 `ba40000000` byte 0 bit 2: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rsi) (.imm 0x40)
+  0x102F3 `ba40000000` byte 1 bit 0: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x41)
+  0x102F3 `ba40000000` byte 1 bit 1: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x42)
+  0x102F3 `ba40000000` byte 1 bit 2: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x44)
+  0x102F3 `ba40000000` byte 1 bit 3: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x48)
+  0x102F3 `ba40000000` byte 1 bit 4: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x50)
+  0x102F3 `ba40000000` byte 1 bit 5: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x60)
+  0x102F3 `ba40000000` byte 1 bit 6: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x0)
+  0x102F3 `ba40000000` byte 1 bit 7: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0xC0)
+  0x102F3 `ba40000000` byte 2 bit 0: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x140)
+  0x102F3 `ba40000000` byte 2 bit 1: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x240)
+  0x102F3 `ba40000000` byte 2 bit 2: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x440)
+  0x102F3 `ba40000000` byte 2 bit 3: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x840)
+  0x102F3 `ba40000000` byte 2 bit 4: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x1040)
+  0x102F3 `ba40000000` byte 2 bit 5: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x2040)
+  0x102F3 `ba40000000` byte 2 bit 6: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x4040)
+  0x102F3 `ba40000000` byte 2 bit 7: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x8040)
+  0x102F3 `ba40000000` byte 3 bit 0: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x10040)
+  0x102F3 `ba40000000` byte 3 bit 1: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x20040)
+  0x102F3 `ba40000000` byte 3 bit 2: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x40040)
+  0x102F3 `ba40000000` byte 3 bit 3: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x80040)
+  0x102F3 `ba40000000` byte 3 bit 4: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x100040)
+  0x102F3 `ba40000000` byte 3 bit 5: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x200040)
+  0x102F3 `ba40000000` byte 3 bit 6: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x400040)
+  0x102F3 `ba40000000` byte 3 bit 7: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x800040)
+  0x102F3 `ba40000000` byte 4 bit 0: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x1000040)
+  0x102F3 `ba40000000` byte 4 bit 1: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x2000040)
+  0x102F3 `ba40000000` byte 4 bit 2: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x4000040)
+  0x102F3 `ba40000000` byte 4 bit 3: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x8000040)
+  0x102F3 `ba40000000` byte 4 bit 4: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x10000040)
+  0x102F3 `ba40000000` byte 4 bit 5: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x20000040)
+  0x102F3 `ba40000000` byte 4 bit 6: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x40000040)
+  0x102F3 `ba40000000` byte 4 bit 7: .mov 32 (.reg .rdx) (.imm 0x40)  ->  .mov 32 (.reg .rdx) (.imm 0x80000040)
+  0x102F8 `4983fd01` byte 0 bit 3: .cmp 64 (.reg .r13) (.imm 0x1)  ->  .cmp 32 (.reg .r13) (.imm 0x1)
+  0x102F8 `4983fd01` byte 2 bit 2: .cmp 64 (.reg .r13) (.imm 0x1)  ->  .cmp 64 (.reg .r9) (.imm 0x1)
+  0x102F8 `4983fd01` byte 3 bit 0: .cmp 64 (.reg .r13) (.imm 0x1)  ->  .cmp 64 (.reg .r13) (.imm 0x0)
+  0x102F8 `4983fd01` byte 3 bit 1: .cmp 64 (.reg .r13) (.imm 0x1)  ->  .cmp 64 (.reg .r13) (.imm 0x3)
+  0x102F8 `4983fd01` byte 3 bit 2: .cmp 64 (.reg .r13) (.imm 0x1)  ->  .cmp 64 (.reg .r13) (.imm 0x5)
+  0x102F8 `4983fd01` byte 3 bit 3: .cmp 64 (.reg .r13) (.imm 0x1)  ->  .cmp 64 (.reg .r13) (.imm 0x9)
+  0x102F8 `4983fd01` byte 3 bit 4: .cmp 64 (.reg .r13) (.imm 0x1)  ->  .cmp 64 (.reg .r13) (.imm 0x11)
+  0x102F8 `4983fd01` byte 3 bit 5: .cmp 64 (.reg .r13) (.imm 0x1)  ->  .cmp 64 (.reg .r13) (.imm 0x21)
+  0x102F8 `4983fd01` byte 3 bit 6: .cmp 64 (.reg .r13) (.imm 0x1)  ->  .cmp 64 (.reg .r13) (.imm 0x41)
+  0x102F8 `4983fd01` byte 3 bit 7: .cmp 64 (.reg .r13) (.imm 0x1)  ->  .cmp 64 (.reg .r13) (.imm 0xFFFFFFFFFFFFFF81)
+  0x102FC `7504` byte 0 bit 0: .jne 0x10302  ->  .je 0x10302
+  0x102FC `7504` byte 1 bit 0: .jne 0x10302  ->  .jne 0x10303
+  0x102FC `7504` byte 1 bit 1: .jne 0x10302  ->  .jne 0x10304
+  0x102FC `7504` byte 1 bit 2: .jne 0x10302  ->  .jne 0x102FE
+  0x102FC `7504` byte 1 bit 3: .jne 0x10302  ->  .jne 0x1030A
+  0x102FC `7504` byte 1 bit 4: .jne 0x10302  ->  .jne 0x10312
+  0x102FC `7504` byte 1 bit 5: .jne 0x10302  ->  .jne 0x10322
+  0x102FC `7504` byte 1 bit 6: .jne 0x10302  ->  .jne 0x10342
+  0x102FC `7504` byte 1 bit 7: .jne 0x10302  ->  .jne 0x10282
+  0x10300 `89f2` byte 1 bit 0: .mov 32 (.reg .rdx) (.reg .rsi)  ->  .mov 32 (.reg .rbx) (.reg .rsi)
+  0x10300 `89f2` byte 1 bit 2: .mov 32 (.reg .rdx) (.reg .rsi)  ->  .mov 32 (.reg .rsi) (.reg .rsi)
+  0x10300 `89f2` byte 1 bit 5: .mov 32 (.reg .rdx) (.reg .rsi)  ->  .mov 32 (.reg .rdx) (.reg .rdx)
+  0x1032A `62527d487ce9` byte 1 bit 5: .zbroadcast 13 (.reg .r9)  ->  .zbroadcast 13 (.reg .rcx)
+  0x10330 `4c89c9` byte 0 bit 0: .mov 64 (.reg .rcx) (.reg .r9)  ->  .mov 64 (.reg .r9) (.reg .r9)
+  0x10330 `4c89c9` byte 0 bit 2: .mov 64 (.reg .rcx) (.reg .r9)  ->  .mov 64 (.reg .rcx) (.reg .rcx)
+  0x10330 `4c89c9` byte 0 bit 3: .mov 64 (.reg .rcx) (.reg .r9)  ->  .mov 32 (.reg .rcx) (.reg .r9)
+  0x10330 `4c89c9` byte 2 bit 1: .mov 64 (.reg .rcx) (.reg .r9)  ->  .mov 64 (.reg .rbx) (.reg .r9)
+  0x10330 `4c89c9` byte 2 bit 5: .mov 64 (.reg .rcx) (.reg .r9)  ->  .mov 64 (.reg .rcx) (.reg .r13)
+  0x10333 `48c1e920` byte 0 bit 0: .shr64 .rcx 32  ->  .shr64 .r9 32
+  0x10333 `48c1e920` byte 3 bit 0: .shr64 .rcx 32  ->  .shr64 .rcx 33
+  0x10333 `48c1e920` byte 3 bit 1: .shr64 .rcx 32  ->  .shr64 .rcx 34
+  0x10333 `48c1e920` byte 3 bit 2: .shr64 .rcx 32  ->  .shr64 .rcx 36
+  0x10333 `48c1e920` byte 3 bit 3: .shr64 .rcx 32  ->  .shr64 .rcx 40
+  0x10333 `48c1e920` byte 3 bit 4: .shr64 .rcx 32  ->  .shr64 .rcx 48
+  0x10333 `48c1e920` byte 3 bit 5: .shr64 .rcx 32  ->  .shr64 .rcx 0
+  0x10337 `62727d487cf1` byte 1 bit 5: .zbroadcast 14 (.reg .rcx)  ->  .zbroadcast 14 (.reg .r9)
+  0x1033D `62727d487cfa` byte 5 bit 2: .zbroadcast 15 (.reg .rdx)  ->  .zbroadcast 15 (.reg .rsi)
+  0x10343 `62627d487cc0` byte 1 bit 5: .zbroadcast 24 (.reg .rax)  ->  .zbroadcast 24 (.reg .r8)
+  0x10620 `41ffcb` byte 0 bit 3: .dec32 .r11  ->  .dec64 .r11
+  0x108E9 `41ffcb` byte 0 bit 3: .dec32 .r11  ->  .dec64 .r11
+  0x109A7 `4589c2` byte 0 bit 0: .mov 32 (.reg .r10) (.reg .r8)  ->  .mov 32 (.reg .rdx) (.reg .r8)
+  0x109A7 `4589c2` byte 0 bit 2: .mov 32 (.reg .r10) (.reg .r8)  ->  .mov 32 (.reg .r10) (.reg .rax)
+  0x109A7 `4589c2` byte 0 bit 3: .mov 32 (.reg .r10) (.reg .r8)  ->  .mov 64 (.reg .r10) (.reg .r8)
+  0x109A7 `4589c2` byte 1 bit 7: .mov 32 (.reg .r10) (.reg .r8)  ->  .or 32 (.reg .r10) (.reg .r8)
+  0x109A7 `4589c2` byte 2 bit 0: .mov 32 (.reg .r10) (.reg .r8)  ->  .mov 32 (.reg .r11) (.reg .r8)
+  0x109A7 `4589c2` byte 2 bit 1: .mov 32 (.reg .r10) (.reg .r8)  ->  .mov 32 (.reg .r8) (.reg .r8)
+  0x109A7 `4589c2` byte 2 bit 3: .mov 32 (.reg .r10) (.reg .r8)  ->  .mov 32 (.reg .r10) (.reg .r9)
+  0x109A7 `4589c2` byte 2 bit 4: .mov 32 (.reg .r10) (.reg .r8)  ->  .mov 32 (.reg .r10) (.reg .r10)
+  0x109AA `4983c640` byte 0 bit 3: .add 64 (.reg .r14) (.imm 0x40)  ->  .add 32 (.reg .r14) (.imm 0x40)
+  0x109AA `4983c640` byte 3 bit 0: .add 64 (.reg .r14) (.imm 0x40)  ->  .add 64 (.reg .r14) (.imm 0x41)
+  0x109AA `4983c640` byte 3 bit 1: .add 64 (.reg .r14) (.imm 0x40)  ->  .add 64 (.reg .r14) (.imm 0x42)
+  0x109AA `4983c640` byte 3 bit 2: .add 64 (.reg .r14) (.imm 0x40)  ->  .add 64 (.reg .r14) (.imm 0x44)
+  0x109AA `4983c640` byte 3 bit 3: .add 64 (.reg .r14) (.imm 0x40)  ->  .add 64 (.reg .r14) (.imm 0x48)
+  0x109AA `4983c640` byte 3 bit 4: .add 64 (.reg .r14) (.imm 0x40)  ->  .add 64 (.reg .r14) (.imm 0x50)
+  0x109AA `4983c640` byte 3 bit 5: .add 64 (.reg .r14) (.imm 0x40)  ->  .add 64 (.reg .r14) (.imm 0x60)
+  0x109AA `4983c640` byte 3 bit 6: .add 64 (.reg .r14) (.imm 0x40)  ->  .add 64 (.reg .r14) (.imm 0x0)
+  0x109AA `4983c640` byte 3 bit 7: .add 64 (.reg .r14) (.imm 0x40)  ->  .add 64 (.reg .r14) (.imm 0xFFFFFFFFFFFFFFC0)
+  0x109AE `49ffcd` byte 0 bit 3: .dec64 .r13  ->  .dec32 .r13
+  0x109B1 `0f85daf6ffff` byte 2 bit 0: .jne 0x10091  ->  .jne 0x10092
+  0x109B1 `0f85daf6ffff` byte 2 bit 1: .jne 0x10091  ->  .jne 0x1008F
+  0x109B1 `0f85daf6ffff` byte 2 bit 2: .jne 0x10091  ->  .jne 0x10095
+  0x109B1 `0f85daf6ffff` byte 2 bit 3: .jne 0x10091  ->  .jne 0x10089
+  0x109B1 `0f85daf6ffff` byte 2 bit 4: .jne 0x10091  ->  .jne 0x10081
+  0x109B1 `0f85daf6ffff` byte 2 bit 5: .jne 0x10091  ->  .jne 0x100B1
+  0x109B1 `0f85daf6ffff` byte 2 bit 6: .jne 0x10091  ->  .jne 0x10051
+  0x109B1 `0f85daf6ffff` byte 2 bit 7: .jne 0x10091  ->  .jne 0x10011
+  0x109B1 `0f85daf6ffff` byte 3 bit 0: .jne 0x10091  ->  .jne 0x10191
+  0x109B1 `0f85daf6ffff` byte 3 bit 1: .jne 0x10091  ->  .jne 0xFE91
+  0x109B1 `0f85daf6ffff` byte 3 bit 2: .jne 0x10091  ->  .jne 0xFC91
+  0x109B1 `0f85daf6ffff` byte 3 bit 3: .jne 0x10091  ->  .jne 0x10891
+  0x109B1 `0f85daf6ffff` byte 3 bit 4: .jne 0x10091  ->  .jne 0xF091
+  0x109B1 `0f85daf6ffff` byte 3 bit 5: .jne 0x10091  ->  .jne 0xE091
+  0x109B1 `0f85daf6ffff` byte 3 bit 6: .jne 0x10091  ->  .jne 0xC091
+  0x109B1 `0f85daf6ffff` byte 3 bit 7: .jne 0x10091  ->  .jne 0x8091
+  0x109B1 `0f85daf6ffff` byte 4 bit 0: .jne 0x10091  ->  .jne 0x91
+  0x109B1 `0f85daf6ffff` byte 4 bit 1: .jne 0x10091  ->  .jne 0x-FF6F
+  0x109B1 `0f85daf6ffff` byte 4 bit 2: .jne 0x10091  ->  .jne 0x-2FF6F
+  0x109B1 `0f85daf6ffff` byte 4 bit 3: .jne 0x10091  ->  .jne 0x-6FF6F
+  0x109B1 `0f85daf6ffff` byte 4 bit 4: .jne 0x10091  ->  .jne 0x-EFF6F
+  0x109B1 `0f85daf6ffff` byte 4 bit 5: .jne 0x10091  ->  .jne 0x-1EFF6F
+  0x109B1 `0f85daf6ffff` byte 4 bit 6: .jne 0x10091  ->  .jne 0x-3EFF6F
+  0x109B1 `0f85daf6ffff` byte 4 bit 7: .jne 0x10091  ->  .jne 0x-7EFF6F
+  0x109B1 `0f85daf6ffff` byte 5 bit 0: .jne 0x10091  ->  .jne 0x-FEFF6F
+  0x109B1 `0f85daf6ffff` byte 5 bit 1: .jne 0x10091  ->  .jne 0x-1FEFF6F
+  0x109B1 `0f85daf6ffff` byte 5 bit 2: .jne 0x10091  ->  .jne 0x-3FEFF6F
+  0x109B1 `0f85daf6ffff` byte 5 bit 3: .jne 0x10091  ->  .jne 0x-7FEFF6F
+  0x109B1 `0f85daf6ffff` byte 5 bit 4: .jne 0x10091  ->  .jne 0x-FFEFF6F
+  0x109B1 `0f85daf6ffff` byte 5 bit 5: .jne 0x10091  ->  .jne 0x-1FFEFF6F
+  0x109B1 `0f85daf6ffff` byte 5 bit 6: .jne 0x10091  ->  .jne 0x-3FFEFF6F
+  0x109B1 `0f85daf6ffff` byte 5 bit 7: .jne 0x10091  ->  .jne 0x80010091

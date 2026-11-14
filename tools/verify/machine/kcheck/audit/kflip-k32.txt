@@ -1,0 +1,95 @@
+control: the unchanged object is ACCEPTED 
+control: the unchanged object on this processor, 1000 cases: same
+control: the unchanged object asked for a block more than its inputs hold, on this processor: CRASHES: status -11
+control: a change the checker refused (word 0 of lane 0's chaining value is not the specification's), on this processor: DIFFERS: case 0: lane 1 word 0 is 3b6b3b2e, BLAKE3's is 06e3144a
+the 1755 accepted changes on this processor, 1000 cases each (37 s): 1755 same
+for scale, 400 of the changes stopped or refused, on this processor (200 cases each): 224 CRASHES, 156 DIFFERS, 20 same ("same": refused or not decoded, yet it works on these inputs)
+k32: 35824 single-bit changes of 4478 bytes of code (730 s, 30 at a time): 22378 stopped by the decoder, 11691 refused by the checker, 1755 accepted, 0 with NO VERDICT (the time limit)
+accepted, by where the change is: contract 85, linker 352, padding 38, prefetch 1280
+contract: the 31 instructions with a change the contract does not see (changes accepted in each):
+  .xor 32 (.reg .r10) (.reg .r10) x10; .je 0x1009F x8; .zmov 2 0 x7; .zmov 3 0 x7; .zpadddm 0 0 .rsi .rax 0x0 x4; .zpadddm 1 1 .rsi .rcx 0x0 x4; .zpadddm 2 2 .rsi .rdx 0x0 x4; .zpadddm 3 3 .rsi .r8 0x0 x4; .zpadddm 8 8 .rsi .rax 0x400 x4; .zpadddm 9 9 .rsi .rcx 0x400 x4; .zpadddm 10 10 .rsi .rdx 0x400 x4; .zpadddm 11 11 .rsi .r8 0x400 x4; .sub 64 (.reg .rsp) (.imm 0x940) x3; .mov 64 (.reg .r13) (.reg .rsi) x1; .mov 64 (.reg .rbx) (.reg .r8) x1; .zmov 6 1 x1; .test 32 (.reg .r10) (.reg .r10) x1; .zpadddc 2 0 0x0000000F0000000E0000000D0000000C0000000B0000000A00000009000000080000000700000006000000050000000400000003000000020000000100000000#512 x1; .zpaddd_k 5 1 1 4 x1; .xor 32 (.reg .r14) (.reg .r14) x1; .zstore true .rsp 0x900 15 x1; .zload true 15 .rsp 0x900 x1; .test 64 (.reg .r14) (.reg .r14) x1; .cmp 64 (.reg .r13) (.imm 0x1) x1; .zload true 20 .rsp 0x800 x1; .zload true 21 .rsp 0x840 x1; .zload true 28 .rsp 0x880 x1; .zload true 29 .rsp 0x8C0 x1; .dec32 .r11 x1; .add 64 (.reg .r14) (.imm 0x40) x1; .dec64 .r13 x1
+  0x10010 `4531d2` byte 0 bit 0: .xor 32 (.reg .r10) (.reg .r10)  ->  .xor 32 (.reg .rdx) (.reg .r10)
+  0x10010 `4531d2` byte 0 bit 2: .xor 32 (.reg .r10) (.reg .r10)  ->  .xor 32 (.reg .r10) (.reg .rdx)
+  0x10010 `4531d2` byte 0 bit 3: .xor 32 (.reg .r10) (.reg .r10)  ->  .xor 64 (.reg .r10) (.reg .r10)
+  0x10010 `4531d2` byte 0 bit 4: .xor 32 (.reg .r10) (.reg .r10)  ->  .push .rbp  (703 instructions, were 702)
+  0x10010 `4531d2` byte 2 bit 0: .xor 32 (.reg .r10) (.reg .r10)  ->  .xor 32 (.reg .r11) (.reg .r10)
+  0x10010 `4531d2` byte 2 bit 1: .xor 32 (.reg .r10) (.reg .r10)  ->  .xor 32 (.reg .r8) (.reg .r10)
+  0x10010 `4531d2` byte 2 bit 2: .xor 32 (.reg .r10) (.reg .r10)  ->  .xor 32 (.reg .r14) (.reg .r10)
+  0x10010 `4531d2` byte 2 bit 3: .xor 32 (.reg .r10) (.reg .r10)  ->  .xor 32 (.reg .r10) (.reg .r11)
+  0x10010 `4531d2` byte 2 bit 4: .xor 32 (.reg .r10) (.reg .r10)  ->  .xor 32 (.reg .r10) (.reg .r8)
+  0x10010 `4531d2` byte 2 bit 5: .xor 32 (.reg .r10) (.reg .r10)  ->  .xor 32 (.reg .r10) (.reg .r14)
+  0x10024 `4881ec40090000` byte 3 bit 7: .sub 64 (.reg .rsp) (.imm 0x940)  ->  .sub 64 (.reg .rsp) (.imm 0x9C0)
+  0x10024 `4881ec40090000` byte 4 bit 1: .sub 64 (.reg .rsp) (.imm 0x940)  ->  .sub 64 (.reg .rsp) (.imm 0xB40)
+  0x10024 `4881ec40090000` byte 4 bit 2: .sub 64 (.reg .rsp) (.imm 0x940)  ->  .sub 64 (.reg .rsp) (.imm 0xD40)
+  0x10032 `4989f5` byte 0 bit 3: .mov 64 (.reg .r13) (.reg .rsi)  ->  .mov 32 (.reg .r13) (.reg .rsi)
+  0x1003B `4c89c3` byte 0 bit 3: .mov 64 (.reg .rbx) (.reg .r8)  ->  .mov 32 (.reg .rbx) (.reg .r8)
+  0x1004E `62f17d486fd0` byte 1 bit 4: .zmov 2 0  ->  .zmov 18 0
+  0x1004E `62f17d486fd0` byte 1 bit 7: .zmov 2 0  ->  .zmov 10 0
+  0x1004E `62f17d486fd0` byte 4 bit 7: .zmov 2 0  ->  .zpxord 2 0 0
+  0x1004E `62f17d486fd0` byte 5 bit 0: .zmov 2 0  ->  .zmov 2 1
+  0x1004E `62f17d486fd0` byte 5 bit 3: .zmov 2 0  ->  .zmov 3 0
+  0x1004E `62f17d486fd0` byte 5 bit 4: .zmov 2 0  ->  .zmov 0 0
+  0x1004E `62f17d486fd0` byte 5 bit 5: .zmov 2 0  ->  .zmov 6 0
+  0x10054 `62f17d486fd8` byte 1 bit 4: .zmov 3 0  ->  .zmov 19 0
+  0x10054 `62f17d486fd8` byte 1 bit 7: .zmov 3 0  ->  .zmov 11 0
+  0x10054 `62f17d486fd8` byte 4 bit 7: .zmov 3 0  ->  .zpxord 3 0 0
+  0x10054 `62f17d486fd8` byte 5 bit 0: .zmov 3 0  ->  .zmov 3 1
+  0x10054 `62f17d486fd8` byte 5 bit 1: .zmov 3 0  ->  .zmov 3 2
+  0x10054 `62f17d486fd8` byte 5 bit 3: .zmov 3 0  ->  .zmov 2 0
+  0x10054 `62f17d486fd8` byte 5 bit 5: .zmov 3 0  ->  .zmov 7 0
+  0x10060 `62f17d486ff1` byte 5 bit 2: .zmov 6 1  ->  .zmov 6 5
+  0x10066 `4585d2` byte 0 bit 3: .test 32 (.reg .r10) (.reg .r10)  ->  .test 64 (.reg .r10) (.reg .r10)
+  0x10069 `7434` byte 1 bit 0: .je 0x1009F  ->  .je 0x100A0
+  0x10069 `7434` byte 1 bit 1: .je 0x1009F  ->  .je 0x100A1
+  0x10069 `7434` byte 1 bit 2: .je 0x1009F  ->  .je 0x1009B
+  0x10069 `7434` byte 1 bit 3: .je 0x1009F  ->  .je 0x100A7
+  0x10069 `7434` byte 1 bit 4: .je 0x1009F  ->  .je 0x1008F
+  0x10069 `7434` byte 1 bit 5: .je 0x1009F  ->  .je 0x1007F
+  0x10069 `7434` byte 1 bit 6: .je 0x1009F  ->  .je 0x100DF
+  0x10069 `7434` byte 1 bit 7: .je 0x1009F  ->  .je 0x1001F
+  0x1006B `62f17d48fe1500000000` byte 2 bit 4: .zpadddc 2 0 0x0000000F0000000E0000000D0000000C0000000B0000000A00000009000000080000000700000006000000050000000400000003000000020000000100000000#512  ->  .zpadddc 2 2 0x0000000F0000000E0000000D0000000C0000000B0000000A00000009000000080000000700000006000000050000000400000003000000020000000100000000#512
+  0x10093 `62f17549feec` byte 2 bit 5: .zpaddd_k 5 1 1 4  ->  .zpaddd_k 5 1 5 4
+  0x1012D `4531f6` byte 0 bit 3: .xor 32 (.reg .r14) (.reg .r14)  ->  .xor 64 (.reg .r14) (.reg .r14)
+  0x10133 `62717d487f7c2424` byte 6 bit 1: .zstore true .rsp 0x900 15  ->  .zstore true .rsi 0x900 15
+  0x10829 `62717d486f7c2424` byte 6 bit 1: .zload true 15 .rsp 0x900  ->  .zload true 15 .rsi 0x900
+  0x10834 `4d85f6` byte 0 bit 3: .test 64 (.reg .r14) (.reg .r14)  ->  .test 32 (.reg .r14) (.reg .r14)
+  0x1084B `4983fd01` byte 0 bit 3: .cmp 64 (.reg .r13) (.imm 0x1)  ->  .cmp 32 (.reg .r13) (.imm 0x1)
+  0x1088B `62e17d486f642420` byte 6 bit 1: .zload true 20 .rsp 0x800  ->  .zload true 20 .rsi 0x800
+  0x10893 `62e17d486f6c2421` byte 6 bit 1: .zload true 21 .rsp 0x840  ->  .zload true 21 .rsi 0x840
+  0x108CF `62617d486f642422` byte 6 bit 1: .zload true 28 .rsp 0x880  ->  .zload true 28 .rsi 0x880
+  0x108D7 `62617d486f6c2423` byte 6 bit 1: .zload true 29 .rsp 0x8C0  ->  .zload true 29 .rsi 0x8C0
+  0x1090C `62f17d48fe0406` byte 6 bit 1: .zpadddm 0 0 .rsi .rax 0x0  ->  .zpadddm 0 0 .rsp .rax 0x0
+  0x10913 `62f17548fe0c0e` byte 6 bit 1: .zpadddm 1 1 .rsi .rcx 0x0  ->  .zpadddm 1 1 .rsp .rcx 0x0
+  0x1091A `62f16d48fe1416` byte 6 bit 1: .zpadddm 2 2 .rsi .rdx 0x0  ->  .zpadddm 2 2 .rsp .rdx 0x0
+  0x10921 `62b16548fe1c06` byte 6 bit 1: .zpadddm 3 3 .rsi .r8 0x0  ->  .zpadddm 3 3 .rsp .r8 0x0
+  0x10928 `62713d48fe440610` byte 6 bit 1: .zpadddm 8 8 .rsi .rax 0x400  ->  .zpadddm 8 8 .rsp .rax 0x400
+  0x10930 `62713548fe4c0e10` byte 6 bit 1: .zpadddm 9 9 .rsi .rcx 0x400  ->  .zpadddm 9 9 .rsp .rcx 0x400
+  0x10938 `62712d48fe541610` byte 6 bit 1: .zpadddm 10 10 .rsi .rdx 0x400  ->  .zpadddm 10 10 .rsp .rdx 0x400
+  0x10940 `62312548fe5c0610` byte 6 bit 1: .zpadddm 11 11 .rsi .r8 0x400  ->  .zpadddm 11 11 .rsp .r8 0x400
+  0x10A85 `62f17d48fe0406` byte 6 bit 1: .zpadddm 0 0 .rsi .rax 0x0  ->  .zpadddm 0 0 .rsp .rax 0x0
+  0x10A8C `62f17548fe0c0e` byte 6 bit 1: .zpadddm 1 1 .rsi .rcx 0x0  ->  .zpadddm 1 1 .rsp .rcx 0x0
+  0x10A93 `62f16d48fe1416` byte 6 bit 1: .zpadddm 2 2 .rsi .rdx 0x0  ->  .zpadddm 2 2 .rsp .rdx 0x0
+  0x10A9A `62b16548fe1c06` byte 6 bit 1: .zpadddm 3 3 .rsi .r8 0x0  ->  .zpadddm 3 3 .rsp .r8 0x0
+  0x10AA1 `62713d48fe440610` byte 6 bit 1: .zpadddm 8 8 .rsi .rax 0x400  ->  .zpadddm 8 8 .rsp .rax 0x400
+  0x10AA9 `62713548fe4c0e10` byte 6 bit 1: .zpadddm 9 9 .rsi .rcx 0x400  ->  .zpadddm 9 9 .rsp .rcx 0x400
+  0x10AB1 `62712d48fe541610` byte 6 bit 1: .zpadddm 10 10 .rsi .rdx 0x400  ->  .zpadddm 10 10 .rsp .rdx 0x400
+  0x10AB9 `62312548fe5c0610` byte 6 bit 1: .zpadddm 11 11 .rsi .r8 0x400  ->  .zpadddm 11 11 .rsp .r8 0x400
+  0x10BFE `62f17d48fe0406` byte 6 bit 1: .zpadddm 0 0 .rsi .rax 0x0  ->  .zpadddm 0 0 .rsp .rax 0x0
+  0x10C05 `62f17548fe0c0e` byte 6 bit 1: .zpadddm 1 1 .rsi .rcx 0x0  ->  .zpadddm 1 1 .rsp .rcx 0x0
+  0x10C0C `62f16d48fe1416` byte 6 bit 1: .zpadddm 2 2 .rsi .rdx 0x0  ->  .zpadddm 2 2 .rsp .rdx 0x0
+  0x10C13 `62b16548fe1c06` byte 6 bit 1: .zpadddm 3 3 .rsi .r8 0x0  ->  .zpadddm 3 3 .rsp .r8 0x0
+  0x10C1A `62713d48fe440610` byte 6 bit 1: .zpadddm 8 8 .rsi .rax 0x400  ->  .zpadddm 8 8 .rsp .rax 0x400
+  0x10C22 `62713548fe4c0e10` byte 6 bit 1: .zpadddm 9 9 .rsi .rcx 0x400  ->  .zpadddm 9 9 .rsp .rcx 0x400
+  0x10C2A `62712d48fe541610` byte 6 bit 1: .zpadddm 10 10 .rsi .rdx 0x400  ->  .zpadddm 10 10 .rsp .rdx 0x400
+  0x10C32 `62312548fe5c0610` byte 6 bit 1: .zpadddm 11 11 .rsi .r8 0x400  ->  .zpadddm 11 11 .rsp .r8 0x400
+  0x10D77 `62f17d48fe0406` byte 6 bit 1: .zpadddm 0 0 .rsi .rax 0x0  ->  .zpadddm 0 0 .rsp .rax 0x0
+  0x10D7E `62f17548fe0c0e` byte 6 bit 1: .zpadddm 1 1 .rsi .rcx 0x0  ->  .zpadddm 1 1 .rsp .rcx 0x0
+  0x10D85 `62f16d48fe1416` byte 6 bit 1: .zpadddm 2 2 .rsi .rdx 0x0  ->  .zpadddm 2 2 .rsp .rdx 0x0
+  0x10D8C `62b16548fe1c06` byte 6 bit 1: .zpadddm 3 3 .rsi .r8 0x0  ->  .zpadddm 3 3 .rsp .r8 0x0
+  0x10D93 `62713d48fe440610` byte 6 bit 1: .zpadddm 8 8 .rsi .rax 0x400  ->  .zpadddm 8 8 .rsp .rax 0x400
+  0x10D9B `62713548fe4c0e10` byte 6 bit 1: .zpadddm 9 9 .rsi .rcx 0x400  ->  .zpadddm 9 9 .rsp .rcx 0x400
+  0x10DA3 `62712d48fe541610` byte 6 bit 1: .zpadddm 10 10 .rsi .rdx 0x400  ->  .zpadddm 10 10 .rsp .rdx 0x400
+  0x10DAB `62312548fe5c0610` byte 6 bit 1: .zpadddm 11 11 .rsi .r8 0x400  ->  .zpadddm 11 11 .rsp .r8 0x400
+  0x10EE7 `41ffcb` byte 0 bit 3: .dec32 .r11  ->  .dec64 .r11
+  0x10F50 `4983c640` byte 0 bit 3: .add 64 (.reg .r14) (.imm 0x40)  ->  .add 32 (.reg .r14) (.imm 0x40)
+  0x10F54 `49ffcd` byte 0 bit 3: .dec64 .r13  ->  .dec32 .r13

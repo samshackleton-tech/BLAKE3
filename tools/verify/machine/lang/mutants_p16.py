@@ -31,6 +31,15 @@ def base_lean_path():
     return subprocess.check_output(["lake", "env", "printenv", "LEAN_PATH"], cwd=HERE, text=True).strip()
 
 
+def verdict(r):
+    """True: Lean accepted it. False: Lean refused it, with an error it printed. None: NO VERDICT (the time
+    limit, or a run that ended otherwise than with Lean's word): never counted as rejected."""
+    text = r.stdout + r.stderr
+    if r.returncode == 0: return "sorryAx" not in text
+    if r.returncode == 124: return None
+    return False if "error" in text else None
+
+
 def run_fast(kind, name, fname, old, new, lean_path):
     """Fast check for control and Spec_p16 mutants using prebuilt .olean dependencies."""
     d = tempfile.mkdtemp(prefix="mut-p16-fast-")
@@ -48,7 +57,7 @@ def run_fast(kind, name, fname, old, new, lean_path):
                 cwd=HERE, env=env, capture_output=True, text=True, stdin=subprocess.DEVNULL,
             )
             if r1.returncode != 0:
-                return (kind, name, False, time.time() - t0, (r1.stdout + r1.stderr)[-300:])
+                return (kind, name, verdict(r1), time.time() - t0, (r1.stdout + r1.stderr)[-300:])
         p_proof = os.path.join(d, "Proof_p16.lean")
         shutil.copy2(os.path.join(HERE, "Proof_p16.lean"), p_proof)
         if kind == "control":
@@ -58,8 +67,7 @@ def run_fast(kind, name, fname, old, new, lean_path):
             ["timeout", str(LIMIT), "lean", p_proof],
             cwd=HERE, env=env, capture_output=True, text=True, stdin=subprocess.DEVNULL,
         )
-        ok = r2.returncode == 0 and "sorryAx" not in (r2.stdout + r2.stderr)
-        return (kind, name, ok, time.time() - t0, (r2.stdout + r2.stderr)[-300:])
+        return (kind, name, verdict(r2), time.time() - t0, (r2.stdout + r2.stderr)[-300:])
     finally:
         shutil.rmtree(d, ignore_errors=True)
 
@@ -91,8 +99,7 @@ def run_code(name, old, new, target):
             ["timeout", str(LIMIT), "lake", "build", target],
             cwd=w, capture_output=True, text=True, stdin=subprocess.DEVNULL,
         )
-        ok = r.returncode == 0 and "sorryAx" not in (r.stdout + r.stderr)
-        return ("code", name, ok, time.time() - t0, (r.stdout + r.stderr)[-300:])
+        return ("code", name, verdict(r), time.time() - t0, (r.stdout + r.stderr)[-300:])
     finally:
         shutil.rmtree(d, ignore_errors=True)
 
@@ -100,7 +107,7 @@ def run_code(name, old, new, target):
 def main():
     lp = base_lean_path()
     kind, name, ok, dt, tail = run_fast("control", "unchanged copy", None, None, None, lp)
-    print(f"{kind:<8} {name:<48} {'ACCEPTED' if ok else 'REJECTED'} ({dt:.1f}s)", flush=True)
+    print(f"{kind:<8} {name:<48} {'ACCEPTED' if ok else 'REJECTED' if ok is False else 'NO VERDICT'} ({dt:.1f}s)", flush=True)
     if not ok:
         print("CONTROL FAILED:\n" + tail)
         return 1
@@ -113,14 +120,14 @@ def main():
         for fut in futs:
             res.append(fut.result())
 
-    bad = 0
+    bad = undecided = 0
     for kind, name, ok, dt, tail in res:
-        status = "SURVIVED (BAD)" if ok else "rejected"
-        if ok:
-            bad += 1
+        status = "SURVIVED (BAD)" if ok else "NO VERDICT (the time limit, or no word from Lean)" if ok is None else "rejected"
+        bad += ok is True
+        undecided += ok is None
         print(f"{kind:<8} {name:<48} {status} ({dt:.1f}s)", flush=True)
-    print(f"p16 audit: {len(res) - bad} of {len(res)} mutants rejected; control accepted")
-    return 0 if bad == 0 else 1
+    print(f"p16 audit: {len(res) - bad - undecided} of {len(res)} mutants rejected, {undecided} with NO VERDICT; control accepted")
+    return 0 if bad == 0 and undecided == 0 else 1
 
 
 if __name__ == "__main__":

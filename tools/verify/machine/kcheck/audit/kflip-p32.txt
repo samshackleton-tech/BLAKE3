@@ -1,0 +1,223 @@
+control: the unchanged object is ACCEPTED 
+control: the unchanged object on this processor, 1000 cases: same
+control: the unchanged object asked for a block more than its inputs hold, on this processor: CRASHES: status -11
+control: a change the checker refused (word 0 of lane 0's chaining value is not the specification's), on this processor: DIFFERS: case 0: lane 0 word 0 is 6378a5b7, BLAKE3's is 4c8ce3ea
+the 1883 accepted changes on this processor, 1000 cases each (39 s): 1883 same
+for scale, 400 of the changes stopped or refused, on this processor (200 cases each): 209 CRASHES, 164 DIFFERS, 27 same ("same": refused or not decoded, yet it works on these inputs)
+p32: 35824 single-bit changes of 4478 bytes of code (727 s, 30 at a time): 22378 stopped by the decoder, 11563 refused by the checker, 1883 accepted, 0 with NO VERDICT (the time limit)
+accepted, by where the change is: contract 213, linker 352, padding 38, prefetch 1280
+contract: the 40 instructions with a change the contract does not see (changes accepted in each):
+  .mov 32 (.reg .r10) (.imm 0x1) x36; .zpcmpud 1 2 0 1 x21; .zpcmpud 2 3 0 1 x21; .zpaddd_k 5 1 1 4 x18; .zpaddd_k 6 2 1 4 x18; .zpadddc 2 0 0x0000000F0000000E0000000D0000000C0000000B0000000A00000009000000080000000700000006000000050000000400000003000000020000000100000000#512 x10; .zpadddc 3 0 0x0000001F0000001E0000001D0000001C0000001B0000001A00000019000000180000001700000016000000150000001400000013000000120000001100000010#512 x10; .zbroadcast 4 (.reg .r10) x9; .jmp 0x10013 x8; .zpadddm 0 0 .rsi .rax 0x0 x4; .zpadddm 1 1 .rsi .rcx 0x0 x4; .zpadddm 2 2 .rsi .rdx 0x0 x4; .zpadddm 3 3 .rsi .r8 0x0 x4; .zpadddm 8 8 .rsi .rax 0x400 x4; .zpadddm 9 9 .rsi .rcx 0x400 x4; .zpadddm 10 10 .rsi .rdx 0x400 x4; .zpadddm 11 11 .rsi .r8 0x400 x4; .sub 64 (.reg .rsp) (.imm 0x940) x3; .zstore true .rsp 0x800 2 x2; .zload true 20 .rsp 0x800 x2; .zload true 21 .rsp 0x840 x2; .zload true 28 .rsp 0x880 x2; .zload true 29 .rsp 0x8C0 x2; .xor 32 (.reg .r10) (.reg .r10) x1; .mov 64 (.reg .r13) (.reg .rsi) x1; .mov 64 (.reg .rbx) (.reg .r8) x1; .zmov 3 0 x1; .zmov 6 1 x1; .test 32 (.reg .r10) (.reg .r10) x1; .je 0x1009F x1; .zstore true .rsp 0x840 5 x1; .zstore true .rsp 0x880 3 x1; .xor 32 (.reg .r14) (.reg .r14) x1; .zstore true .rsp 0x900 15 x1; .zload true 15 .rsp 0x900 x1; .test 64 (.reg .r14) (.reg .r14) x1; .cmp 64 (.reg .r13) (.imm 0x1) x1; .dec32 .r11 x1; .add 64 (.reg .r14) (.imm 0x40) x1; .dec64 .r13 x1
+  0x10004 `41ba01000000` byte 0 bit 4: .mov 32 (.reg .r10) (.imm 0x1)  ->  .push .rcx  (703 instructions, were 702)
+  0x10004 `41ba01000000` byte 1 bit 0: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r11) (.imm 0x1)
+  0x10004 `41ba01000000` byte 1 bit 1: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r8) (.imm 0x1)
+  0x10004 `41ba01000000` byte 1 bit 2: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r14) (.imm 0x1)
+  0x10004 `41ba01000000` byte 2 bit 0: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x0)
+  0x10004 `41ba01000000` byte 2 bit 1: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x3)
+  0x10004 `41ba01000000` byte 2 bit 2: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x5)
+  0x10004 `41ba01000000` byte 2 bit 3: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x9)
+  0x10004 `41ba01000000` byte 2 bit 4: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x11)
+  0x10004 `41ba01000000` byte 2 bit 5: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x21)
+  0x10004 `41ba01000000` byte 2 bit 6: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x41)
+  0x10004 `41ba01000000` byte 2 bit 7: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x81)
+  0x10004 `41ba01000000` byte 3 bit 0: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x101)
+  0x10004 `41ba01000000` byte 3 bit 1: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x201)
+  0x10004 `41ba01000000` byte 3 bit 2: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x401)
+  0x10004 `41ba01000000` byte 3 bit 3: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x801)
+  0x10004 `41ba01000000` byte 3 bit 4: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x1001)
+  0x10004 `41ba01000000` byte 3 bit 5: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x2001)
+  0x10004 `41ba01000000` byte 3 bit 6: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x4001)
+  0x10004 `41ba01000000` byte 3 bit 7: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x8001)
+  0x10004 `41ba01000000` byte 4 bit 0: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x10001)
+  0x10004 `41ba01000000` byte 4 bit 1: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x20001)
+  0x10004 `41ba01000000` byte 4 bit 2: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x40001)
+  0x10004 `41ba01000000` byte 4 bit 3: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x80001)
+  0x10004 `41ba01000000` byte 4 bit 4: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x100001)
+  0x10004 `41ba01000000` byte 4 bit 5: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x200001)
+  0x10004 `41ba01000000` byte 4 bit 6: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x400001)
+  0x10004 `41ba01000000` byte 4 bit 7: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x800001)
+  0x10004 `41ba01000000` byte 5 bit 0: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x1000001)
+  0x10004 `41ba01000000` byte 5 bit 1: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x2000001)
+  0x10004 `41ba01000000` byte 5 bit 2: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x4000001)
+  0x10004 `41ba01000000` byte 5 bit 3: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x8000001)
+  0x10004 `41ba01000000` byte 5 bit 4: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x10000001)
+  0x10004 `41ba01000000` byte 5 bit 5: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x20000001)
+  0x10004 `41ba01000000` byte 5 bit 6: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x40000001)
+  0x10004 `41ba01000000` byte 5 bit 7: .mov 32 (.reg .r10) (.imm 0x1)  ->  .mov 32 (.reg .r10) (.imm 0x80000001)
+  0x1000A `eb07` byte 1 bit 0: .jmp 0x10013  ->  .jmp 0x10012
+  0x1000A `eb07` byte 1 bit 1: .jmp 0x10013  ->  .jmp 0x10011
+  0x1000A `eb07` byte 1 bit 2: .jmp 0x10013  ->  .jmp 0x1000F
+  0x1000A `eb07` byte 1 bit 3: .jmp 0x10013  ->  .jmp 0x1001B
+  0x1000A `eb07` byte 1 bit 4: .jmp 0x10013  ->  .jmp 0x10023
+  0x1000A `eb07` byte 1 bit 5: .jmp 0x10013  ->  .jmp 0x10033
+  0x1000A `eb07` byte 1 bit 6: .jmp 0x10013  ->  .jmp 0x10053
+  0x1000A `eb07` byte 1 bit 7: .jmp 0x10013  ->  .jmp 0xFF93
+  0x10010 `4531d2` byte 0 bit 3: .xor 32 (.reg .r10) (.reg .r10)  ->  .xor 64 (.reg .r10) (.reg .r10)
+  0x10024 `4881ec40090000` byte 3 bit 7: .sub 64 (.reg .rsp) (.imm 0x940)  ->  .sub 64 (.reg .rsp) (.imm 0x9C0)
+  0x10024 `4881ec40090000` byte 4 bit 1: .sub 64 (.reg .rsp) (.imm 0x940)  ->  .sub 64 (.reg .rsp) (.imm 0xB40)
+  0x10024 `4881ec40090000` byte 4 bit 2: .sub 64 (.reg .rsp) (.imm 0x940)  ->  .sub 64 (.reg .rsp) (.imm 0xD40)
+  0x10032 `4989f5` byte 0 bit 3: .mov 64 (.reg .r13) (.reg .rsi)  ->  .mov 32 (.reg .r13) (.reg .rsi)
+  0x1003B `4c89c3` byte 0 bit 3: .mov 64 (.reg .rbx) (.reg .r8)  ->  .mov 32 (.reg .rbx) (.reg .r8)
+  0x10054 `62f17d486fd8` byte 5 bit 1: .zmov 3 0  ->  .zmov 3 2
+  0x10060 `62f17d486ff1` byte 5 bit 2: .zmov 6 1  ->  .zmov 6 5
+  0x10066 `4585d2` byte 0 bit 3: .test 32 (.reg .r10) (.reg .r10)  ->  .test 64 (.reg .r10) (.reg .r10)
+  0x10069 `7434` byte 1 bit 5: .je 0x1009F  ->  .je 0x1007F
+  0x1006B `62f17d48fe1500000000` byte 1 bit 4: .zpadddc 2 0 0x0000000F0000000E0000000D0000000C0000000B0000000A00000009000000080000000700000006000000050000000400000003000000020000000100000000#512  ->  .zpadddc 18 0 0x0000000F0000000E0000000D0000000C0000000B0000000A00000009000000080000000700000006000000050000000400000003000000020000000100000000#512
+  0x1006B `62f17d48fe1500000000` byte 1 bit 7: .zpadddc 2 0 0x0000000F0000000E0000000D0000000C0000000B0000000A00000009000000080000000700000006000000050000000400000003000000020000000100000000#512  ->  .zpadddc 10 0 0x0000000F0000000E0000000D0000000C0000000B0000000A00000009000000080000000700000006000000050000000400000003000000020000000100000000#512
+  0x1006B `62f17d48fe1500000000` byte 2 bit 3: .zpadddc 2 0 0x0000000F0000000E0000000D0000000C0000000B0000000A00000009000000080000000700000006000000050000000400000003000000020000000100000000#512  ->  .zpadddc 2 1 0x0000000F0000000E0000000D0000000C0000000B0000000A00000009000000080000000700000006000000050000000400000003000000020000000100000000#512
+  0x1006B `62f17d48fe1500000000` byte 2 bit 4: .zpadddc 2 0 0x0000000F0000000E0000000D0000000C0000000B0000000A00000009000000080000000700000006000000050000000400000003000000020000000100000000#512  ->  .zpadddc 2 2 0x0000000F0000000E0000000D0000000C0000000B0000000A00000009000000080000000700000006000000050000000400000003000000020000000100000000#512
+  0x1006B `62f17d48fe1500000000` byte 2 bit 5: .zpadddc 2 0 0x0000000F0000000E0000000D0000000C0000000B0000000A00000009000000080000000700000006000000050000000400000003000000020000000100000000#512  ->  .zpadddc 2 4 0x0000000F0000000E0000000D0000000C0000000B0000000A00000009000000080000000700000006000000050000000400000003000000020000000100000000#512
+  0x1006B `62f17d48fe1500000000` byte 2 bit 6: .zpadddc 2 0 0x0000000F0000000E0000000D0000000C0000000B0000000A00000009000000080000000700000006000000050000000400000003000000020000000100000000#512  ->  .zpadddc 2 8 0x0000000F0000000E0000000D0000000C0000000B0000000A00000009000000080000000700000006000000050000000400000003000000020000000100000000#512
+  0x1006B `62f17d48fe1500000000` byte 3 bit 3: .zpadddc 2 0 0x0000000F0000000E0000000D0000000C0000000B0000000A00000009000000080000000700000006000000050000000400000003000000020000000100000000#512  ->  .zpadddc 2 16 0x0000000F0000000E0000000D0000000C0000000B0000000A00000009000000080000000700000006000000050000000400000003000000020000000100000000#512
+  0x1006B `62f17d48fe1500000000` byte 5 bit 3: .zpadddc 2 0 0x0000000F0000000E0000000D0000000C0000000B0000000A00000009000000080000000700000006000000050000000400000003000000020000000100000000#512  ->  .zpadddc 3 0 0x0000000F0000000E0000000D0000000C0000000B0000000A00000009000000080000000700000006000000050000000400000003000000020000000100000000#512
+  0x1006B `62f17d48fe1500000000` byte 5 bit 4: .zpadddc 2 0 0x0000000F0000000E0000000D0000000C0000000B0000000A00000009000000080000000700000006000000050000000400000003000000020000000100000000#512  ->  .zpadddc 0 0 0x0000000F0000000E0000000D0000000C0000000B0000000A00000009000000080000000700000006000000050000000400000003000000020000000100000000#512
+  0x1006B `62f17d48fe1500000000` byte 5 bit 5: .zpadddc 2 0 0x0000000F0000000E0000000D0000000C0000000B0000000A00000009000000080000000700000006000000050000000400000003000000020000000100000000#512  ->  .zpadddc 6 0 0x0000000F0000000E0000000D0000000C0000000B0000000A00000009000000080000000700000006000000050000000400000003000000020000000100000000#512
+  0x10075 `62f17d48fe1d00000000` byte 1 bit 4: .zpadddc 3 0 0x0000001F0000001E0000001D0000001C0000001B0000001A00000019000000180000001700000016000000150000001400000013000000120000001100000010#512  ->  .zpadddc 19 0 0x0000001F0000001E0000001D0000001C0000001B0000001A00000019000000180000001700000016000000150000001400000013000000120000001100000010#512
+  0x10075 `62f17d48fe1d00000000` byte 1 bit 7: .zpadddc 3 0 0x0000001F0000001E0000001D0000001C0000001B0000001A00000019000000180000001700000016000000150000001400000013000000120000001100000010#512  ->  .zpadddc 11 0 0x0000001F0000001E0000001D0000001C0000001B0000001A00000019000000180000001700000016000000150000001400000013000000120000001100000010#512
+  0x10075 `62f17d48fe1d00000000` byte 2 bit 3: .zpadddc 3 0 0x0000001F0000001E0000001D0000001C0000001B0000001A00000019000000180000001700000016000000150000001400000013000000120000001100000010#512  ->  .zpadddc 3 1 0x0000001F0000001E0000001D0000001C0000001B0000001A00000019000000180000001700000016000000150000001400000013000000120000001100000010#512
+  0x10075 `62f17d48fe1d00000000` byte 2 bit 4: .zpadddc 3 0 0x0000001F0000001E0000001D0000001C0000001B0000001A00000019000000180000001700000016000000150000001400000013000000120000001100000010#512  ->  .zpadddc 3 2 0x0000001F0000001E0000001D0000001C0000001B0000001A00000019000000180000001700000016000000150000001400000013000000120000001100000010#512
+  0x10075 `62f17d48fe1d00000000` byte 2 bit 5: .zpadddc 3 0 0x0000001F0000001E0000001D0000001C0000001B0000001A00000019000000180000001700000016000000150000001400000013000000120000001100000010#512  ->  .zpadddc 3 4 0x0000001F0000001E0000001D0000001C0000001B0000001A00000019000000180000001700000016000000150000001400000013000000120000001100000010#512
+  0x10075 `62f17d48fe1d00000000` byte 2 bit 6: .zpadddc 3 0 0x0000001F0000001E0000001D0000001C0000001B0000001A00000019000000180000001700000016000000150000001400000013000000120000001100000010#512  ->  .zpadddc 3 8 0x0000001F0000001E0000001D0000001C0000001B0000001A00000019000000180000001700000016000000150000001400000013000000120000001100000010#512
+  0x10075 `62f17d48fe1d00000000` byte 3 bit 3: .zpadddc 3 0 0x0000001F0000001E0000001D0000001C0000001B0000001A00000019000000180000001700000016000000150000001400000013000000120000001100000010#512  ->  .zpadddc 3 16 0x0000001F0000001E0000001D0000001C0000001B0000001A00000019000000180000001700000016000000150000001400000013000000120000001100000010#512
+  0x10075 `62f17d48fe1d00000000` byte 5 bit 3: .zpadddc 3 0 0x0000001F0000001E0000001D0000001C0000001B0000001A00000019000000180000001700000016000000150000001400000013000000120000001100000010#512  ->  .zpadddc 2 0 0x0000001F0000001E0000001D0000001C0000001B0000001A00000019000000180000001700000016000000150000001400000013000000120000001100000010#512
+  0x10075 `62f17d48fe1d00000000` byte 5 bit 4: .zpadddc 3 0 0x0000001F0000001E0000001D0000001C0000001B0000001A00000019000000180000001700000016000000150000001400000013000000120000001100000010#512  ->  .zpadddc 1 0 0x0000001F0000001E0000001D0000001C0000001B0000001A00000019000000180000001700000016000000150000001400000013000000120000001100000010#512
+  0x10075 `62f17d48fe1d00000000` byte 5 bit 5: .zpadddc 3 0 0x0000001F0000001E0000001D0000001C0000001B0000001A00000019000000180000001700000016000000150000001400000013000000120000001100000010#512  ->  .zpadddc 7 0 0x0000001F0000001E0000001D0000001C0000001B0000001A00000019000000180000001700000016000000150000001400000013000000120000001100000010#512
+  0x1007F `62f36d481ec801` byte 1 bit 5: .zpcmpud 1 2 0 1  ->  .zpcmpud 1 2 8 1
+  0x1007F `62f36d481ec801` byte 1 bit 6: .zpcmpud 1 2 0 1  ->  .zpcmpud 1 2 16 1
+  0x1007F `62f36d481ec801` byte 2 bit 3: .zpcmpud 1 2 0 1  ->  .zpcmpud 1 3 0 1
+  0x1007F `62f36d481ec801` byte 2 bit 4: .zpcmpud 1 2 0 1  ->  .zpcmpud 1 0 0 1
+  0x1007F `62f36d481ec801` byte 2 bit 5: .zpcmpud 1 2 0 1  ->  .zpcmpud 1 6 0 1
+  0x1007F `62f36d481ec801` byte 2 bit 6: .zpcmpud 1 2 0 1  ->  .zpcmpud 1 10 0 1
+  0x1007F `62f36d481ec801` byte 3 bit 3: .zpcmpud 1 2 0 1  ->  .zpcmpud 1 18 0 1
+  0x1007F `62f36d481ec801` byte 5 bit 0: .zpcmpud 1 2 0 1  ->  .zpcmpud 1 2 1 1
+  0x1007F `62f36d481ec801` byte 5 bit 1: .zpcmpud 1 2 0 1  ->  .zpcmpud 1 2 2 1
+  0x1007F `62f36d481ec801` byte 5 bit 2: .zpcmpud 1 2 0 1  ->  .zpcmpud 1 2 4 1
+  0x1007F `62f36d481ec801` byte 5 bit 3: .zpcmpud 1 2 0 1  ->  .zpcmpud 0 2 0 1
+  0x1007F `62f36d481ec801` byte 5 bit 4: .zpcmpud 1 2 0 1  ->  .zpcmpud 3 2 0 1
+  0x1007F `62f36d481ec801` byte 5 bit 5: .zpcmpud 1 2 0 1  ->  .zpcmpud 5 2 0 1
+  0x1007F `62f36d481ec801` byte 6 bit 0: .zpcmpud 1 2 0 1  ->  .zpcmpud 1 2 0 0
+  0x1007F `62f36d481ec801` byte 6 bit 1: .zpcmpud 1 2 0 1  ->  .zpcmpud 1 2 0 3
+  0x1007F `62f36d481ec801` byte 6 bit 2: .zpcmpud 1 2 0 1  ->  .zpcmpud 1 2 0 5
+  0x1007F `62f36d481ec801` byte 6 bit 3: .zpcmpud 1 2 0 1  ->  .zpcmpud 1 2 0 9
+  0x1007F `62f36d481ec801` byte 6 bit 4: .zpcmpud 1 2 0 1  ->  .zpcmpud 1 2 0 17
+  0x1007F `62f36d481ec801` byte 6 bit 5: .zpcmpud 1 2 0 1  ->  .zpcmpud 1 2 0 33
+  0x1007F `62f36d481ec801` byte 6 bit 6: .zpcmpud 1 2 0 1  ->  .zpcmpud 1 2 0 65
+  0x1007F `62f36d481ec801` byte 6 bit 7: .zpcmpud 1 2 0 1  ->  .zpcmpud 1 2 0 129
+  0x10086 `62f365481ed001` byte 1 bit 5: .zpcmpud 2 3 0 1  ->  .zpcmpud 2 3 8 1
+  0x10086 `62f365481ed001` byte 1 bit 6: .zpcmpud 2 3 0 1  ->  .zpcmpud 2 3 16 1
+  0x10086 `62f365481ed001` byte 2 bit 3: .zpcmpud 2 3 0 1  ->  .zpcmpud 2 2 0 1
+  0x10086 `62f365481ed001` byte 2 bit 4: .zpcmpud 2 3 0 1  ->  .zpcmpud 2 1 0 1
+  0x10086 `62f365481ed001` byte 2 bit 5: .zpcmpud 2 3 0 1  ->  .zpcmpud 2 7 0 1
+  0x10086 `62f365481ed001` byte 2 bit 6: .zpcmpud 2 3 0 1  ->  .zpcmpud 2 11 0 1
+  0x10086 `62f365481ed001` byte 3 bit 3: .zpcmpud 2 3 0 1  ->  .zpcmpud 2 19 0 1
+  0x10086 `62f365481ed001` byte 5 bit 0: .zpcmpud 2 3 0 1  ->  .zpcmpud 2 3 1 1
+  0x10086 `62f365481ed001` byte 5 bit 1: .zpcmpud 2 3 0 1  ->  .zpcmpud 2 3 2 1
+  0x10086 `62f365481ed001` byte 5 bit 2: .zpcmpud 2 3 0 1  ->  .zpcmpud 2 3 4 1
+  0x10086 `62f365481ed001` byte 5 bit 3: .zpcmpud 2 3 0 1  ->  .zpcmpud 3 3 0 1
+  0x10086 `62f365481ed001` byte 5 bit 4: .zpcmpud 2 3 0 1  ->  .zpcmpud 0 3 0 1
+  0x10086 `62f365481ed001` byte 5 bit 5: .zpcmpud 2 3 0 1  ->  .zpcmpud 6 3 0 1
+  0x10086 `62f365481ed001` byte 6 bit 0: .zpcmpud 2 3 0 1  ->  .zpcmpud 2 3 0 0
+  0x10086 `62f365481ed001` byte 6 bit 1: .zpcmpud 2 3 0 1  ->  .zpcmpud 2 3 0 3
+  0x10086 `62f365481ed001` byte 6 bit 2: .zpcmpud 2 3 0 1  ->  .zpcmpud 2 3 0 5
+  0x10086 `62f365481ed001` byte 6 bit 3: .zpcmpud 2 3 0 1  ->  .zpcmpud 2 3 0 9
+  0x10086 `62f365481ed001` byte 6 bit 4: .zpcmpud 2 3 0 1  ->  .zpcmpud 2 3 0 17
+  0x10086 `62f365481ed001` byte 6 bit 5: .zpcmpud 2 3 0 1  ->  .zpcmpud 2 3 0 33
+  0x10086 `62f365481ed001` byte 6 bit 6: .zpcmpud 2 3 0 1  ->  .zpcmpud 2 3 0 65
+  0x10086 `62f365481ed001` byte 6 bit 7: .zpcmpud 2 3 0 1  ->  .zpcmpud 2 3 0 129
+  0x1008D `62d27d487ce2` byte 1 bit 4: .zbroadcast 4 (.reg .r10)  ->  .zbroadcast 20 (.reg .r10)
+  0x1008D `62d27d487ce2` byte 1 bit 5: .zbroadcast 4 (.reg .r10)  ->  .zbroadcast 4 (.reg .rdx)
+  0x1008D `62d27d487ce2` byte 1 bit 7: .zbroadcast 4 (.reg .r10)  ->  .zbroadcast 12 (.reg .r10)
+  0x1008D `62d27d487ce2` byte 5 bit 0: .zbroadcast 4 (.reg .r10)  ->  .zbroadcast 4 (.reg .r11)
+  0x1008D `62d27d487ce2` byte 5 bit 1: .zbroadcast 4 (.reg .r10)  ->  .zbroadcast 4 (.reg .r8)
+  0x1008D `62d27d487ce2` byte 5 bit 2: .zbroadcast 4 (.reg .r10)  ->  .zbroadcast 4 (.reg .r14)
+  0x1008D `62d27d487ce2` byte 5 bit 3: .zbroadcast 4 (.reg .r10)  ->  .zbroadcast 5 (.reg .r10)
+  0x1008D `62d27d487ce2` byte 5 bit 4: .zbroadcast 4 (.reg .r10)  ->  .zbroadcast 6 (.reg .r10)
+  0x1008D `62d27d487ce2` byte 5 bit 5: .zbroadcast 4 (.reg .r10)  ->  .zbroadcast 0 (.reg .r10)
+  0x10093 `62f17549feec` byte 1 bit 4: .zpaddd_k 5 1 1 4  ->  .zpaddd_k 21 1 1 4
+  0x10093 `62f17549feec` byte 1 bit 5: .zpaddd_k 5 1 1 4  ->  .zpaddd_k 5 1 1 12
+  0x10093 `62f17549feec` byte 1 bit 6: .zpaddd_k 5 1 1 4  ->  .zpaddd_k 5 1 1 20
+  0x10093 `62f17549feec` byte 1 bit 7: .zpaddd_k 5 1 1 4  ->  .zpaddd_k 13 1 1 4
+  0x10093 `62f17549feec` byte 2 bit 3: .zpaddd_k 5 1 1 4  ->  .zpaddd_k 5 1 0 4
+  0x10093 `62f17549feec` byte 2 bit 4: .zpaddd_k 5 1 1 4  ->  .zpaddd_k 5 1 3 4
+  0x10093 `62f17549feec` byte 2 bit 5: .zpaddd_k 5 1 1 4  ->  .zpaddd_k 5 1 5 4
+  0x10093 `62f17549feec` byte 2 bit 6: .zpaddd_k 5 1 1 4  ->  .zpaddd_k 5 1 9 4
+  0x10093 `62f17549feec` byte 3 bit 0: .zpaddd_k 5 1 1 4  ->  .zpaddd 5 1 4
+  0x10093 `62f17549feec` byte 3 bit 1: .zpaddd_k 5 1 1 4  ->  .zpaddd_k 5 3 1 4
+  0x10093 `62f17549feec` byte 3 bit 2: .zpaddd_k 5 1 1 4  ->  .zpaddd_k 5 5 1 4
+  0x10093 `62f17549feec` byte 3 bit 3: .zpaddd_k 5 1 1 4  ->  .zpaddd_k 5 1 17 4
+  0x10093 `62f17549feec` byte 5 bit 0: .zpaddd_k 5 1 1 4  ->  .zpaddd_k 5 1 1 5
+  0x10093 `62f17549feec` byte 5 bit 1: .zpaddd_k 5 1 1 4  ->  .zpaddd_k 5 1 1 6
+  0x10093 `62f17549feec` byte 5 bit 2: .zpaddd_k 5 1 1 4  ->  .zpaddd_k 5 1 1 0
+  0x10093 `62f17549feec` byte 5 bit 3: .zpaddd_k 5 1 1 4  ->  .zpaddd_k 4 1 1 4
+  0x10093 `62f17549feec` byte 5 bit 4: .zpaddd_k 5 1 1 4  ->  .zpaddd_k 7 1 1 4
+  0x10093 `62f17549feec` byte 5 bit 5: .zpaddd_k 5 1 1 4  ->  .zpaddd_k 1 1 1 4
+  0x10099 `62f1754afef4` byte 1 bit 4: .zpaddd_k 6 2 1 4  ->  .zpaddd_k 22 2 1 4
+  0x10099 `62f1754afef4` byte 1 bit 5: .zpaddd_k 6 2 1 4  ->  .zpaddd_k 6 2 1 12
+  0x10099 `62f1754afef4` byte 1 bit 6: .zpaddd_k 6 2 1 4  ->  .zpaddd_k 6 2 1 20
+  0x10099 `62f1754afef4` byte 1 bit 7: .zpaddd_k 6 2 1 4  ->  .zpaddd_k 14 2 1 4
+  0x10099 `62f1754afef4` byte 2 bit 3: .zpaddd_k 6 2 1 4  ->  .zpaddd_k 6 2 0 4
+  0x10099 `62f1754afef4` byte 2 bit 4: .zpaddd_k 6 2 1 4  ->  .zpaddd_k 6 2 3 4
+  0x10099 `62f1754afef4` byte 2 bit 5: .zpaddd_k 6 2 1 4  ->  .zpaddd_k 6 2 5 4
+  0x10099 `62f1754afef4` byte 2 bit 6: .zpaddd_k 6 2 1 4  ->  .zpaddd_k 6 2 9 4
+  0x10099 `62f1754afef4` byte 3 bit 0: .zpaddd_k 6 2 1 4  ->  .zpaddd_k 6 3 1 4
+  0x10099 `62f1754afef4` byte 3 bit 1: .zpaddd_k 6 2 1 4  ->  .zpaddd 6 1 4
+  0x10099 `62f1754afef4` byte 3 bit 2: .zpaddd_k 6 2 1 4  ->  .zpaddd_k 6 6 1 4
+  0x10099 `62f1754afef4` byte 3 bit 3: .zpaddd_k 6 2 1 4  ->  .zpaddd_k 6 2 17 4
+  0x10099 `62f1754afef4` byte 5 bit 0: .zpaddd_k 6 2 1 4  ->  .zpaddd_k 6 2 1 5
+  0x10099 `62f1754afef4` byte 5 bit 1: .zpaddd_k 6 2 1 4  ->  .zpaddd_k 6 2 1 6
+  0x10099 `62f1754afef4` byte 5 bit 2: .zpaddd_k 6 2 1 4  ->  .zpaddd_k 6 2 1 0
+  0x10099 `62f1754afef4` byte 5 bit 3: .zpaddd_k 6 2 1 4  ->  .zpaddd_k 7 2 1 4
+  0x10099 `62f1754afef4` byte 5 bit 4: .zpaddd_k 6 2 1 4  ->  .zpaddd_k 4 2 1 4
+  0x10099 `62f1754afef4` byte 5 bit 5: .zpaddd_k 6 2 1 4  ->  .zpaddd_k 2 2 1 4
+  0x1009F `62f17d487f542420` byte 5 bit 3: .zstore true .rsp 0x800 2  ->  .zstore true .rsp 0x800 3
+  0x1009F `62f17d487f542420` byte 5 bit 4: .zstore true .rsp 0x800 2  ->  .zstore true .rsp 0x800 0
+  0x100A7 `62f17d487f6c2421` byte 5 bit 5: .zstore true .rsp 0x840 5  ->  .zstore true .rsp 0x840 1
+  0x100AF `62f17d487f5c2422` byte 5 bit 3: .zstore true .rsp 0x880 3  ->  .zstore true .rsp 0x880 2
+  0x1012D `4531f6` byte 0 bit 3: .xor 32 (.reg .r14) (.reg .r14)  ->  .xor 64 (.reg .r14) (.reg .r14)
+  0x10133 `62717d487f7c2424` byte 6 bit 1: .zstore true .rsp 0x900 15  ->  .zstore true .rsi 0x900 15
+  0x10829 `62717d486f7c2424` byte 6 bit 1: .zload true 15 .rsp 0x900  ->  .zload true 15 .rsi 0x900
+  0x10834 `4d85f6` byte 0 bit 3: .test 64 (.reg .r14) (.reg .r14)  ->  .test 32 (.reg .r14) (.reg .r14)
+  0x1084B `4983fd01` byte 0 bit 3: .cmp 64 (.reg .r13) (.imm 0x1)  ->  .cmp 32 (.reg .r13) (.imm 0x1)
+  0x1088B `62e17d486f642420` byte 6 bit 1: .zload true 20 .rsp 0x800  ->  .zload true 20 .rsi 0x800
+  0x1088B `62e17d486f642420` byte 7 bit 1: .zload true 20 .rsp 0x800  ->  .zload true 20 .rsp 0x880
+  0x10893 `62e17d486f6c2421` byte 6 bit 1: .zload true 21 .rsp 0x840  ->  .zload true 21 .rsi 0x840
+  0x10893 `62e17d486f6c2421` byte 7 bit 1: .zload true 21 .rsp 0x840  ->  .zload true 21 .rsp 0x8C0
+  0x108CF `62617d486f642422` byte 6 bit 1: .zload true 28 .rsp 0x880  ->  .zload true 28 .rsi 0x880
+  0x108CF `62617d486f642422` byte 7 bit 1: .zload true 28 .rsp 0x880  ->  .zload true 28 .rsp 0x800
+  0x108D7 `62617d486f6c2423` byte 6 bit 1: .zload true 29 .rsp 0x8C0  ->  .zload true 29 .rsi 0x8C0
+  0x108D7 `62617d486f6c2423` byte 7 bit 1: .zload true 29 .rsp 0x8C0  ->  .zload true 29 .rsp 0x840
+  0x1090C `62f17d48fe0406` byte 6 bit 1: .zpadddm 0 0 .rsi .rax 0x0  ->  .zpadddm 0 0 .rsp .rax 0x0
+  0x10913 `62f17548fe0c0e` byte 6 bit 1: .zpadddm 1 1 .rsi .rcx 0x0  ->  .zpadddm 1 1 .rsp .rcx 0x0
+  0x1091A `62f16d48fe1416` byte 6 bit 1: .zpadddm 2 2 .rsi .rdx 0x0  ->  .zpadddm 2 2 .rsp .rdx 0x0
+  0x10921 `62b16548fe1c06` byte 6 bit 1: .zpadddm 3 3 .rsi .r8 0x0  ->  .zpadddm 3 3 .rsp .r8 0x0
+  0x10928 `62713d48fe440610` byte 6 bit 1: .zpadddm 8 8 .rsi .rax 0x400  ->  .zpadddm 8 8 .rsp .rax 0x400
+  0x10930 `62713548fe4c0e10` byte 6 bit 1: .zpadddm 9 9 .rsi .rcx 0x400  ->  .zpadddm 9 9 .rsp .rcx 0x400
+  0x10938 `62712d48fe541610` byte 6 bit 1: .zpadddm 10 10 .rsi .rdx 0x400  ->  .zpadddm 10 10 .rsp .rdx 0x400
+  0x10940 `62312548fe5c0610` byte 6 bit 1: .zpadddm 11 11 .rsi .r8 0x400  ->  .zpadddm 11 11 .rsp .r8 0x400
+  0x10A85 `62f17d48fe0406` byte 6 bit 1: .zpadddm 0 0 .rsi .rax 0x0  ->  .zpadddm 0 0 .rsp .rax 0x0
+  0x10A8C `62f17548fe0c0e` byte 6 bit 1: .zpadddm 1 1 .rsi .rcx 0x0  ->  .zpadddm 1 1 .rsp .rcx 0x0
+  0x10A93 `62f16d48fe1416` byte 6 bit 1: .zpadddm 2 2 .rsi .rdx 0x0  ->  .zpadddm 2 2 .rsp .rdx 0x0
+  0x10A9A `62b16548fe1c06` byte 6 bit 1: .zpadddm 3 3 .rsi .r8 0x0  ->  .zpadddm 3 3 .rsp .r8 0x0
+  0x10AA1 `62713d48fe440610` byte 6 bit 1: .zpadddm 8 8 .rsi .rax 0x400  ->  .zpadddm 8 8 .rsp .rax 0x400
+  0x10AA9 `62713548fe4c0e10` byte 6 bit 1: .zpadddm 9 9 .rsi .rcx 0x400  ->  .zpadddm 9 9 .rsp .rcx 0x400
+  0x10AB1 `62712d48fe541610` byte 6 bit 1: .zpadddm 10 10 .rsi .rdx 0x400  ->  .zpadddm 10 10 .rsp .rdx 0x400
+  0x10AB9 `62312548fe5c0610` byte 6 bit 1: .zpadddm 11 11 .rsi .r8 0x400  ->  .zpadddm 11 11 .rsp .r8 0x400
+  0x10BFE `62f17d48fe0406` byte 6 bit 1: .zpadddm 0 0 .rsi .rax 0x0  ->  .zpadddm 0 0 .rsp .rax 0x0
+  0x10C05 `62f17548fe0c0e` byte 6 bit 1: .zpadddm 1 1 .rsi .rcx 0x0  ->  .zpadddm 1 1 .rsp .rcx 0x0
+  0x10C0C `62f16d48fe1416` byte 6 bit 1: .zpadddm 2 2 .rsi .rdx 0x0  ->  .zpadddm 2 2 .rsp .rdx 0x0
+  0x10C13 `62b16548fe1c06` byte 6 bit 1: .zpadddm 3 3 .rsi .r8 0x0  ->  .zpadddm 3 3 .rsp .r8 0x0
+  0x10C1A `62713d48fe440610` byte 6 bit 1: .zpadddm 8 8 .rsi .rax 0x400  ->  .zpadddm 8 8 .rsp .rax 0x400
+  0x10C22 `62713548fe4c0e10` byte 6 bit 1: .zpadddm 9 9 .rsi .rcx 0x400  ->  .zpadddm 9 9 .rsp .rcx 0x400
+  0x10C2A `62712d48fe541610` byte 6 bit 1: .zpadddm 10 10 .rsi .rdx 0x400  ->  .zpadddm 10 10 .rsp .rdx 0x400
+  0x10C32 `62312548fe5c0610` byte 6 bit 1: .zpadddm 11 11 .rsi .r8 0x400  ->  .zpadddm 11 11 .rsp .r8 0x400
+  0x10D77 `62f17d48fe0406` byte 6 bit 1: .zpadddm 0 0 .rsi .rax 0x0  ->  .zpadddm 0 0 .rsp .rax 0x0
+  0x10D7E `62f17548fe0c0e` byte 6 bit 1: .zpadddm 1 1 .rsi .rcx 0x0  ->  .zpadddm 1 1 .rsp .rcx 0x0
+  0x10D85 `62f16d48fe1416` byte 6 bit 1: .zpadddm 2 2 .rsi .rdx 0x0  ->  .zpadddm 2 2 .rsp .rdx 0x0
+  0x10D8C `62b16548fe1c06` byte 6 bit 1: .zpadddm 3 3 .rsi .r8 0x0  ->  .zpadddm 3 3 .rsp .r8 0x0
+  0x10D93 `62713d48fe440610` byte 6 bit 1: .zpadddm 8 8 .rsi .rax 0x400  ->  .zpadddm 8 8 .rsp .rax 0x400
+  0x10D9B `62713548fe4c0e10` byte 6 bit 1: .zpadddm 9 9 .rsi .rcx 0x400  ->  .zpadddm 9 9 .rsp .rcx 0x400
+  0x10DA3 `62712d48fe541610` byte 6 bit 1: .zpadddm 10 10 .rsi .rdx 0x400  ->  .zpadddm 10 10 .rsp .rdx 0x400
+  0x10DAB `62312548fe5c0610` byte 6 bit 1: .zpadddm 11 11 .rsi .r8 0x400  ->  .zpadddm 11 11 .rsp .r8 0x400
+  0x10EE7 `41ffcb` byte 0 bit 3: .dec32 .r11  ->  .dec64 .r11
+  0x10F50 `4983c640` byte 0 bit 3: .add 64 (.reg .r14) (.imm 0x40)  ->  .add 32 (.reg .r14) (.imm 0x40)
+  0x10F54 `49ffcd` byte 0 bit 3: .dec64 .r13  ->  .dec32 .r13

@@ -24,7 +24,8 @@ Not a proof assistant, and nothing here is checked by one: this program is what 
 form: a lane's counter words, low + index and high + carry, which Lean proves equal to the 64-bit counter
 plus the index (K32Lemmas.lean: counter_lo, counter_hi).
 
-usage: kcheck.py k32|p32|p16 ROWS DATA [--anchor test_vectors.json] [--mutants]      (ROWS, DATA: lift_one.py's OUT.rows and OUT.data)
+usage: kcheck.py k32|p32|p16 --object OBJECT [--anchor test_vectors.json] [--mutants]   (the library's object, read by kdecode.py)
+       kcheck.py k32|p32|p16 ROWS DATA [--anchor test_vectors.json] [--mutants]      (ROWS, DATA: lift_one.py's OUT.rows and OUT.data)
 """
 import re, sys, time
 
@@ -38,10 +39,13 @@ class Fail(Exception):
     pass
 
 
+WIDEST = 64        # terms in one flat sum or xor. A state word gathers 8 a round: 57 after BLAKE3's 7 rounds
+
+
 class Terms:
     """32-bit terms, interned: equal terms are one number."""
     def __init__(self):
-        self.ids, self.nodes = {}, []
+        self.ids, self.nodes, self.widest = {}, [], 0
 
     def mk(self, *key):
         i = self.ids.get(key)
@@ -65,6 +69,10 @@ class Terms:
             c = (c + self.nodes[x][1]) & MASK32 if op == "add" else c ^ self.nodes[x][1]
         out = sorted(x for x in out if self.nodes[x][0] != "c")
         if c: out.append(self.const(c))
+        # A changed kernel can double a sum on every turn of a loop (x + x, then that plus itself): stop it
+        # here, where it costs nothing, not after the memory is gone.
+        if len(out) > WIDEST: raise Fail(f"a sum or xor of {len(out)} terms: BLAKE3's widest has 57")
+        self.widest = max(self.widest, len(out))
         if not out: return self.const(0)
         return out[0] if len(out) == 1 else self.mk(op, *out)
 
@@ -248,6 +256,12 @@ class Machine:
             return spec_flags(T, b[0][1]) if isinstance(b[0], tuple) else T.var("flags")
         raise Fail(f"a lane from {v}")
 
+    def stack_pointer(self):
+        """The stack pointer for a push, a pop or a return: among the saved registers, not in the frame."""
+        sp = self.reg("rsp")
+        if sp[0] != "a" or sp[1] != "stack": raise Fail(f"a push, pop or return with the stack pointer at {sp}")
+        return sp
+
     # -- one instruction
     def step(self):
         T = self.T
@@ -275,13 +289,13 @@ class Machine:
             if self.zf == (op == ".je"): nxt = num(a[0])
             self.trace.append(("branch", nxt))
         elif op == ".push":
-            sp = self.reg("rsp"); assert sp[1] == "stack"
+            sp = self.stack_pointer()
             self.saved[sp[2] - 8] = self.reg(a[0]); self.setreg("rsp", ("a", "stack", sp[2] - 8)); self.low = min(self.low, sp[2] - 8)
             self.trace.append(("write", "stack", sp[2] - 8, 64))
         elif op == ".pop":
-            sp = self.reg("rsp"); self.setreg(a[0], self.load(("stack", sp[2]), 64)); self.setreg("rsp", ("a", "stack", sp[2] + 8))
+            sp = self.stack_pointer(); self.setreg(a[0], self.load(("stack", sp[2]), 64)); self.setreg("rsp", ("a", "stack", sp[2] + 8))
         elif op == ".ret":
-            sp = self.reg("rsp"); to = self.load(("stack", sp[2]), 64); self.setreg("rsp", ("a", "stack", sp[2] + 8))
+            sp = self.stack_pointer(); to = self.load(("stack", sp[2]), 64); self.setreg("rsp", ("a", "stack", sp[2] + 8))
             if to != ("q", "return address"): raise Fail("a return to somewhere else")
             self.pc = None; return
         elif op == ".lea":
@@ -298,11 +312,15 @@ class Machine:
             self.zf = None
         elif op in (".sub", ".add"):
             if a[1][0] != ".reg" or a[2][0] != ".imm": raise Fail(f"{op} of other than a register and a number")
-            d = self.reg(a[1][1]); n = num(a[2][1]) * (1 if op == ".add" else -1)
-            if d[0] == "a" and d[1] == "frame" and op == ".sub" and d[2] == 0 and not self.frame:
-                # the frame grows down from its aligned top: its base is the new stack pointer
+            w = int(a[0]); d = self.reg(a[1][1]); n = num(a[2][1]) * (1 if op == ".add" else -1)
+            if d[0] == "a" and w != 64: raise Fail(f"{op} of {w} bits on an address")
+            if d[0] == "a" and d[1] == "frame" and op == ".sub" and d[2] == 0 and not self.frame and self.frame_size == 0:
+                # the frame grows down from its aligned top: its base is the new stack pointer, and stays
+                # on a 64-byte boundary only if the frame is whole cells (the aligned stores rest on that:
+                # kflip.py found frames of 0x101 to 0x120 bytes accepted here, which fault on a processor)
+                if n >= 0 or n % 64: raise Fail(f"a frame of {-n} bytes: not whole 64-byte cells")
                 self.frame_size = -n; self.low = min(self.low, self.frame_at - 63 - self.frame_size)
-            elif d[0] == "n": self.setreg(a[1][1], ("n", (d[1] + n) & ((1 << 64) - 1)))
+            elif d[0] == "n": self.setreg(a[1][1], ("n", (d[1] + n) & ((1 << w) - 1)))
             elif d[0] == "a" and d[1] == "rodata": self.setreg(a[1][1], ("a", d[1], d[2] + n))
             else: raise Fail(f"{op} on {d}")
             self.zf = None
@@ -386,11 +404,11 @@ class Machine:
         if -self.low > self.budget: raise Fail(f"{-self.low} bytes of stack used, the contract gives {self.budget}")
 
 
-def check(rows, data_at, data, name="k32"):
+def check(rows, data_at, data, name="k32", entry=None):
     kernel = KERNELS[name]
     T = Terms()
     m = Machine(T, rows, data_at, data, kernel)
-    m.run(rows[kernel["entry"]][0])
+    m.run(rows[kernel["entry"]][0] if entry is None else entry)
     want = [kernel["spec"](T, lane) for lane in range(kernel["lanes"])]
     for lane in range(kernel["lanes"]):
         for w in range(8):
@@ -409,9 +427,9 @@ def spec_parent_cv(T, lane):
 
 # What each kernel is given (its contract's `accepts`), and what it must leave.
 KERNELS = {
-    "k32": dict(entry=0, lanes=32, blocks=16, counter=("q", "counter"), packed=("flags", CHUNK_START, CHUNK_END, 64), spec=lambda T, lane: spec_chunk_cv(T, lane)),
-    "p32": dict(entry=3, lanes=32, blocks=16, counter=("q", "counter"), packed=("flags", CHUNK_START, CHUNK_END, 64), spec=lambda T, lane: spec_chunk_cv(T, lane, increment=False)),
-    "p16": dict(entry=0, lanes=16, blocks=1, counter=("n", 0), packed=(("flags|", 4), 0, 0, 64), spec=spec_parent_cv),
+    "k32": dict(entry=0, start="blake3_servil_avx512_k32", lanes=32, blocks=16, counter=("q", "counter"), packed=("flags", CHUNK_START, CHUNK_END, 64), spec=lambda T, lane: spec_chunk_cv(T, lane)),
+    "p32": dict(entry=3, start="blake3_servil_avx512_k32", lanes=32, blocks=16, counter=("q", "counter"), packed=("flags", CHUNK_START, CHUNK_END, 64), spec=lambda T, lane: spec_chunk_cv(T, lane, increment=False)),
+    "p16": dict(entry=0, start="blake3_servil_avx512_p16", lanes=16, blocks=1, counter=("n", 0), packed=(("flags|", 4), 0, 0, 64), spec=spec_parent_cv),
 }
 
 
@@ -450,7 +468,7 @@ def anchor(vectors_path):
     with), given that input's two chunks, the IV as key, counter 0 and no mode flags, must give the two
     chaining values whose parent's root output is that hash. Lane 1's counter is 1: the lane index is in it."""
     import json
-    cases = {c["input_len"]: c["hash"] for c in json.load(open(vectors_path))["cases"]}
+    with open(vectors_path) as f: cases = {c["input_len"]: c["hash"] for c in json.load(f)["cases"]}
     data = bytes(i % 251 for i in range(2048))
     T = Terms()
     cvs = [spec_chunk_cv(T, lane) for lane in (0, 1)]
@@ -473,8 +491,8 @@ IV_FULL = IV + [0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19]
 
 
 def read(rows_path, data_path):
-    rows = [(int(a, 16), int(n, 16), i) for a, n, i in (l.rstrip("\n").split("\t") for l in open(rows_path))]
-    at, hexs = open(data_path).read().split()
+    with open(rows_path) as f: rows = [(int(a, 16), int(n, 16), i) for a, n, i in (l.rstrip("\n").split("\t") for l in f)]
+    with open(data_path) as f: at, hexs = f.read().split()
     return rows, int(at, 16), bytes.fromhex(hexs)
 
 
@@ -489,9 +507,19 @@ MUTANTS = [("a rotation 12 -> 13", ".zprord 4 4 12", ".zprord 4 4 13"), ("a rota
 
 def main():
     name = sys.argv[1]
-    rows, data_at, data = read(sys.argv[2], sys.argv[3])
+    entry = None
     t0 = time.time()
-    m, T = check(rows, data_at, data, name)
+    if sys.argv[2] == "--object":
+        # the object's bytes themselves, decoded by kdecode.py: no disassembler. The code is read from the symbol
+        # the kernel's body begins at (P32 enters K32's), and run from the kernel's own symbol.
+        import kdecode
+        try:
+            rows, data = kdecode.read(sys.argv[3], KERNELS[name]["start"], 0x10000, 0x50000000)
+            entry = 0x10000 + kdecode.address(sys.argv[3], "blake3_servil_avx512_" + name) - kdecode.address(sys.argv[3], KERNELS[name]["start"])
+        except kdecode.Stop as e: raise Fail(f"the object is not read: {e}")
+        data_at = 0x50000000
+    else: rows, data_at, data = read(sys.argv[2], sys.argv[3])
+    m, T = check(rows, data_at, data, name, entry)
     dt = time.time() - t0
     kinds = {}
     for e in m.trace: kinds[e[0]] = kinds.get(e[0], 0) + 1
@@ -510,12 +538,12 @@ def main():
             changed = list(rows); a, n, _ = changed[hits[0]]; changed[hits[0]] = (a, n, new)
             t1 = time.time()
             try:
-                check(changed, data_at, data); print(f"  mutant ({name}): ACCEPTED (bad)")
+                check(changed, data_at, data, "k32", entry); print(f"  mutant ({name}): ACCEPTED (bad)")
             except Fail as e:
                 caught += 1; print(f"  mutant ({name}): refused in {time.time() - t1:.2f} s: {e}")
         bad = bytearray(data); bad[0xC0 + 64 + 4] ^= 0x40
         try:
-            check(rows, data_at, bytes(bad)); print("  mutant (one entry of the schedule table): ACCEPTED (bad)")
+            check(rows, data_at, bytes(bad), "k32", entry); print("  mutant (one entry of the schedule table): ACCEPTED (bad)")
         except Fail as e:
             caught += 1; print(f"  mutant (one entry of the schedule table): refused: {e}")
         print(f"mutants: {caught} of {len(MUTANTS) + 1} refused")
