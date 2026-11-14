@@ -45,6 +45,8 @@ class Cross(kcheck.Machine):
 
     def load(self, at, w): return ("n", int.from_bytes(self.bytes_at(at[1], w // 8), "little"))
 
+    def word(self, at): return self.T.const(int.from_bytes(self.bytes_at(at[1], 4), "little"))
+
     def load512(self, at, aligned):
         if aligned and at[1] % 64: raise Fail("an aligned read of an unaligned address")
         b = self.bytes_at(at[1], 64)

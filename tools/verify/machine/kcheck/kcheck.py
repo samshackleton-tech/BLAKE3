@@ -202,7 +202,7 @@ class Machine:
         region, off = at
         self.trace.append(("read", region, off, w))
         if region == "inputs" and w == 64 and off % 8 == 0 and 0 <= off < 8 * self.lanes: return ("a", ("input", off // 8), 0)
-        if region == "rodata" and w == 32: return ("n", int.from_bytes(self.data[off:off + 4], "little"))
+        if region == "rodata" and w == 32 and 0 <= off and off + 4 <= len(self.data): return ("n", int.from_bytes(self.data[off:off + 4], "little"))
         if region == "stack" and w == 64 and off in self.saved: return self.saved[off]
         raise Fail(f"a read of {w} bits at {region} + {off}")
 
@@ -224,6 +224,12 @@ class Machine:
         if region == "frame" and off % 64 == 0 and 0 <= off and off + 64 <= self.frame_size: self.frame[off] = v
         elif region == "out" and not aligned and off % 64 == 0 and 0 <= off < 32 * self.lanes: self.out[off] = v
         else: raise Fail(f"a wide store at {region} + {off}")
+
+    def word(self, at):
+        """A 32-bit word of memory as a term: a word of the key."""
+        self.trace.append(("read", at[0], at[1], 32))
+        if at[0] != "key" or at[1] % 4 or not 0 <= at[1] < 32: raise Fail(f"a word read at {at}")
+        return self.T.var("key", at[1] // 4)
 
     def vec(self, r):
         if self.z[r] is None: raise Fail(f"zmm{r} read before it is written")
@@ -330,12 +336,7 @@ class Machine:
             if v[0] != "n": raise Fail("dec of a non-number")
             n = (v[1] - 1) & (MASK32 if op == ".dec32" else (1 << 64) - 1); self.setreg(a[0], ("n", n)); self.zf = n == 0
         elif op == ".zbroadcast":
-            v = self.val(a[1], 32) if a[1][0] != ".mem" else None
-            if a[1][0] == ".mem":
-                at = self.addr(a[1][1], num(a[1][2])); self.trace.append(("read", at[0], at[1], 32))
-                if at[0] != "key" or at[1] % 4 or not 0 <= at[1] < 32: raise Fail(f"a word read at {at}")
-                t = T.var("key", at[1] // 4)
-            else: t = self.lane(v)
+            t = self.word(self.addr(a[1][1], num(a[1][2]))) if a[1][0] == ".mem" else self.lane(self.val(a[1], 32))
             self.z[int(a[0])] = (t,) * 16
         elif op == ".zmov": self.z[int(a[0])] = self.vec(int(a[1]))
         elif op == ".zload": self.z[int(a[1])] = self.load512(self.addr(a[2], num(a[3])), a[0] == "true")
