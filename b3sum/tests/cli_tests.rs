@@ -767,3 +767,79 @@ fn test_parallel_check_preserves_line_order_across_errors_and_failures() {
     assert!(stderr_str.contains("Invalid check line format"), "{stderr_str}");
     assert!(stderr_str.contains("3 computed checksums did NOT match"), "{stderr_str}");
 }
+
+#[test]
+fn test_hex_xof_multi_file_and_keyed_stdin_refusal() {
+    blake3::initialize();
+    let dir = tempfile::tempdir().unwrap();
+    let file1 = dir.path().join("alpha");
+    let file2 = dir.path().join("beta");
+    let file3 = dir.path().join("gamma");
+    fs::write(&file1, b"first message").unwrap();
+    fs::write(&file2, b"second message").unwrap();
+    fs::write(&file3, b"").unwrap();
+
+    // Multi-block XOF hex output (`write_hex_output`, > 64 bytes) across multiple files
+    // and single-threaded worker iteration (`hash_some`).
+    let mut expected_hex = Vec::new();
+    for (name, data) in [(&file1, &b"first message"[..]), (&file2, &b"second message"[..]), (&file3, &b""[..])] {
+        let mut h = blake3::convenience::Hasher::new(blake3::Mode::Plain, None);
+        h.update(data);
+        let mut xof = h.finalize_xof();
+        xof.seek(std::io::SeekFrom::Start(5)).unwrap();
+        let mut out = [0u8; 130];
+        xof.fill(&mut out);
+        expected_hex.push(format!("{}  {}", hex::encode(out), name.to_string_lossy()));
+    }
+    let out_xof = cmd!(b3sum_exe(), "--num-threads=1", "--length=130", "--seek=5", &file1, &file2, &file3).read().unwrap();
+    assert_eq!(out_xof, expected_hex.join("\n"));
+
+    // Multi-file `--keyed` with `--num-threads=1` (`hash_some_32` loop across files).
+    let key = [7u8; blake3::KEY_LEN];
+    let expected_keyed = [(&file1, &b"first message"[..]), (&file2, &b"second message"[..]), (&file3, &b""[..])]
+        .into_iter()
+        .map(|(name, data)| {
+            format!("{}  {}", blake3::convenience::hash_with(blake3::Mode::Keyed(&key), data).to_hex(), name.to_string_lossy())
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    let out_keyed = cmd!(b3sum_exe(), "--num-threads=1", "--keyed", &file1, &file2, &file3)
+        .stdin_bytes(&key[..])
+        .read()
+        .unwrap();
+    assert_eq!(out_keyed, expected_keyed);
+
+    // `--keyed -` must fail cleanly: stdin carries the key, not a hashed input.
+    let bad = cmd!(b3sum_exe(), "--keyed", "-")
+        .stdin_bytes(&key[..])
+        .stdout_capture()
+        .stderr_capture()
+        .unchecked()
+        .run()
+        .unwrap();
+    assert!(!bad.status.success());
+    assert!(bad.stdout.is_empty());
+    assert!(String::from_utf8_lossy(&bad.stderr).contains("Cannot open `-` in keyed mode"));
+
+    // Large output exceeding the 32 KiB `OutBuf` capacity in a single `write_bytes`
+    // call (`--sigilcode --length=40000`) and across many files (~50 KiB of hex lines).
+    let mut big_raw = vec![0u8; 40_000];
+    let mut big_h = blake3::convenience::Hasher::new(blake3::Mode::Plain, None);
+    big_h.update(b"outbuf");
+    big_h.finalize_xof().fill(&mut big_raw);
+    let expected_big_sigil = format!("{}  -", sigilcode::encode(&big_raw));
+    let out_big_sigil = cmd!(b3sum_exe(), "--sigilcode", "--length=40000").stdin_bytes("outbuf").read().unwrap();
+    assert_eq!(out_big_sigil, expected_big_sigil);
+
+    let mut many_files = Vec::new();
+    let mut expected_many = Vec::new();
+    let d_hash = blake3::convenience::hash(b"x").to_hex();
+    for i in 0..700usize {
+        let p = dir.path().join(format!("outbuf-flush-file-{i:04}"));
+        fs::write(&p, b"x").unwrap();
+        expected_many.push(format!("{d_hash}  {}", p.to_string_lossy()));
+        many_files.push(p);
+    }
+    let out_many = cmd(b3sum_exe(), &many_files).read().unwrap();
+    assert_eq!(out_many, expected_many.join("\n"));
+}

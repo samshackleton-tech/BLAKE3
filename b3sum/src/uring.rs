@@ -431,4 +431,14 @@ mod test {
         let reused = Uring::acquire(8).unwrap();
         assert_eq!(reused.fd, saved_fd);
     }
+
+    #[test]
+    fn uring_drop_closes_fd() {
+        let Ok(ring) = Uring::new(8) else { return };
+        let fd = ring.fd;
+        drop(ring);
+        let rc = unsafe { libc::fcntl(fd, libc::F_GETFD) };
+        assert_eq!(rc, -1, "Uring::drop must close the io_uring fd");
+        assert_eq!(std::io::Error::last_os_error().raw_os_error(), Some(libc::EBADF));
+    }
 }
