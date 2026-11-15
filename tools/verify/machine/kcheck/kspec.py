@@ -94,6 +94,13 @@ class Stack:
         return (self.base, self.count, tuple(sorted(below)))
 
 
+class Count(Counter):
+    """A counter that is a number (a chunk's number): its two words, and the number."""
+    __slots__ = ("n",)
+    def __init__(self, lo, hi, n):
+        super().__init__(lo, hi); self.n = n
+
+
 class Blocks:
     """A lane's input: its blocks by number, sixteen words each."""
     def __init__(self, lane): self.lane = lane
@@ -188,9 +195,14 @@ class Symbols:
         return Word(byte_term(self.T, byte_or(x, y)))
     def counter(self, n):
         n = plain(n)
-        if isinstance(n, int): return Counter(Word(self.T.const(n & 0xFFFFFFFF)), Word(self.T.const(n >> 32)))
-        return Counter(Word(self.T.mk("lo", n)), Word(self.T.mk("hi", n)))
+        if isinstance(n, int): return Count(Word(self.T.const(n & 0xFFFFFFFF)), Word(self.T.const(n >> 32)), n)
+        return Count(Word(self.T.mk("lo", n)), Word(self.T.mk("hi", n)), n)
     def counter_add(self, t, n):
+        if isinstance(t, Count):
+            # a counter that is a number, plus a number: the sum's counter, where the sum is shown to stay within 64 bits
+            total = Lin.of(t.n) + n
+            if not self.facts.ge0((1 << 64) - 1 - total): raise Err(f"the counter {total} is not shown to stay within 64 bits")
+            return self.counter(total)
         # 64 bits in two words: the low word plus n, and a carry into the high word when the sum is below the low word
         T = self.T
         low = T.add(t.lo.v, T.const(n))
@@ -341,6 +353,20 @@ class Symbols:
         self.memo[instance] = result
         return result
 
+    def known(self, instance):
+        """What was named or evaluated on this path for this application: by what it was given, as the path's
+        facts now have the numbers in it (a length the path has since fixed is that number)."""
+        if instance in self.memo: return self.memo[instance]
+        want = self.settled(instance)
+        for k, v in self.memo.items():
+            if isinstance(k, tuple) and k and k[0] == instance[0] and self.settled(k) == want: return v
+        return None
+
+    def settled(self, k):
+        if isinstance(k, Lin): return self.facts.subst(k)
+        if isinstance(k, tuple): return tuple(self.settled(x) for x in k)
+        return k
+
     def like(self, v, name):
         """A value of the shape of v, of which only its name is known."""
         if isinstance(v, (int, Lin)) and not isinstance(v, bool):
@@ -355,7 +381,8 @@ class Symbols:
     def named(self, spec, name, kind, args, body):
         """A function with a kind: evaluated if it can be, else a value of the kind named by what it was given."""
         instance = (name, tuple(self.key(a) for a in args))
-        if instance in self.memo: return self.memo[instance]
+        known = self.known(instance)
+        if known is not None: return known
         if self.fold and self.depth == 0:
             # a call is taken by the callee's contract as it is written: what it leaves is not opened here.
             # (The caller's own specification, opened later on the same path, finds this name for the same

@@ -4,7 +4,7 @@ contract and a changed specification are refused.
 
     python3 test_kfn.py
 
-glue/pad.S, chunk_node.S, node_out.S, subtree.S and hashr.S are hash.ode as the Ode compiler prints it
+glue/pad.S, chunk_node.S, node_out.S, wide32.S, subtree.S and hashr.S are hash.ode as the Ode compiler prints it
 (copies: the compiler needs Lean); they are assembled here (clang where there is one, else cc)."""
 import json, os, shutil, sys, tempfile, unittest
 
@@ -13,7 +13,7 @@ sys.path.insert(0, HERE)
 import kcheck, kfn, kspec, ode
 from test_kcheck import assemble
 
-NAMES = ["pad", "chunk_node", "node_out", "subtree", "hashr"]
+NAMES = ["pad", "chunk_node", "node_out", "wide32", "subtree", "hashr"]
 FLIP = {".jae": ".jb", ".jb": ".jae", ".je": ".jne", ".jne": ".je"}
 
 # (function, the text of blake3.spec, what it becomes): the function that met the text does not meet the change
@@ -29,9 +29,18 @@ TEXT = [
     ("node_out", "leaves out = node_value(nd, root)", "leaves out = node_value(nd, 0)"),
     ("node_out", "counter(node.counter), node.length, node.flags | root)", "counter(node.counter), 64, node.flags | root)"),
     ("node_out", "counter: number at 96, length: number at 104", "counter: number at 104, length: number at 96"),
-    ("subtree", "leaves out = subtree(kf.key, kf.flags, t, input)", "leaves out = subtree(kf.key, kf.flags, t + 1, input)"),
+    ("subtree", "leaves out = subtree(kf.key, kf.flags, t, input)\n    stack 8704", "leaves out = subtree(kf.key, kf.flags, t + 1, input)\n    stack 8704"),
     ("subtree", "asks 1024 * t + len <= 18446744073709551615", "asks t <= 18446744073709551615"),         # the chunks' numbers may then pass 64 bits
-    ("subtree", "stack 640 + 384 * bits((len - 1) / 1024)", "stack 640 + 320 * bits((len - 1) / 1024)"),
+    ("subtree", "stack 8704 + 384 * bits((len - 1) / 1024)", "stack 8704 + 320 * bits((len - 1) / 1024)"),
+    ("subtree", "stack 8704 + 384 * bits((len - 1) / 1024)\n    needs sse41\n    needs avx512 if plat == 5", "stack 8704 + 384 * bits((len - 1) / 1024)\n    needs sse41\n    needs avx512 if plat == 4"),
+    ("subtree", "stack 8704 + 384 * bits((len - 1) / 1024)\n    needs sse41\n", "stack 8704 + 384 * bits((len - 1) / 1024)\n"),
+    ("wide32", "leaves out = subtree(kf.key, kf.flags, t, input)\n    stack 8192", "leaves out = subtree(kf.key, kf.flags, t + 1, input)\n    stack 8192"),
+    ("wide32", "stack 8192\n    needs avx512\n", "stack 8192\n"),
+    ("wide32", "stack 8192\n", "stack 4096\n"),
+    ("wide32", "contract b3l_wide32(out: cv, input: 32768 bytes,", "contract b3l_wide32(out: cv, input: 32767 bytes,"),
+    ("wide32", "asks 1024 * t + 32768 <= 18446744073709551615", "asks t <= 18446744073709551615"),
+    ("wide32", "leaves out[i] = chunk(key, t + i, flags, start, end, length, n, inputs[i]) for i in 0..32", "leaves out[i] = chunk(key, t, flags, start, end, length, n, inputs[i]) for i in 0..32"),
+    ("wide32", "def left_chunks(bytes) { the greatest power of two k with 1024 * k < len(bytes) }", "def left_chunks(bytes) { the least power of two k with 1024 * k < len(bytes) }"),
     ("subtree", "the greatest power of two k with 1024 * k < len(bytes)", "the least power of two k with 1024 * k < len(bytes)"),
     ("subtree", "compress(key, children(key, flags, t, bytes), counter(0), 64, flags | PARENT)", "compress(key, children(key, flags, t, bytes), counter(0), 64, flags)"),
     ("subtree", "subtree(key, flags, t + k, bytes[1024 * k", "subtree(key, flags, t, bytes[1024 * k"),
@@ -39,7 +48,8 @@ TEXT = [
     ("hashr", "leaves out = hash_words(key, flags, input)", "leaves out = hash_words(key, 0, input)"),
     ("hashr", "counter(0), 64, flags | PARENT | ROOT)", "counter(0), 64, flags | PARENT)"),
     ("hashr", "node_value(chunk_node(key, 0, flags, message), ROOT)", "node_value(chunk_node(key, 0, flags, message), 0)"),
-    ("hashr", "stack 1024 + 384 * bits(len / 1024)\n    calls blake3_servil_compress_in_place_avx512 if plat == 5", "stack 1024 + 384 * bits(len / 1024)"),
+    ("hashr", "stack 9216 + 384 * bits(len / 1024)\n    needs sse41\n    needs avx512 if plat == 5", "stack 9216 + 384 * bits(len / 1024)\n    needs sse41"),
+    ("hashr", "stack 9216 + 384 * bits(len / 1024)\n    needs sse41\n", "stack 9216 + 384 * bits(len / 1024)\n"),
 ]
 
 

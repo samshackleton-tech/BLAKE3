@@ -151,8 +151,9 @@ def bytes_of(ws) { [word_bytes(ws[i / 4])[i % 4] for i in 0..4 * len(ws)] }
 // Its arguments, in the order the machine's calling convention passes them: the address of 32 bytes the hash
 // goes to; the address of the message's bytes, and their count; the address of the 32 bytes of the key (the
 // IV, for the plain hash); the mode's flags (a number below 256); a word that says what the processor has.
-// `leaves`: what the 32 bytes hold afterwards, as the eight words lie in memory; everything else is as it
-// was. `stack`: the bytes of stack it may use (`bits(n)`: the length of n in bits). `calls`: it runs
+// The things at the three addresses are apart from one another and from the stack. `leaves`: what the 32
+// bytes hold afterwards, as the eight words lie in memory; everything else is as it was. `stack`: the bytes
+// of stack it may use (`bits(n)`: the length of n in bits). `needs`: it runs SSE4.1 instructions, and
 // AVX-512 instructions only where `plat` is 5 (its caller answers for the processor having them).
 //
 // The checker (check_all.py) shows the claim from the binary's bytes. What it needs beside them is in proofs/:
@@ -161,6 +162,7 @@ def bytes_of(ws) { [word_bytes(ws[i / 4])[i % 4] for i in 0..4 * len(ws)] }
 // or the function that relies on it.
 contract b3l_hashr(out: cv, input: len bytes, len: number, key: cv, flags: byte, plat: any) {
     leaves out = hash_words(key, flags, input)
-    stack 1024 + 384 * bits(len / 1024)
-    calls blake3_servil_compress_in_place_avx512 if plat == 5
+    stack 9216 + 384 * bits(len / 1024)
+    needs sse41
+    needs avx512 if plat == 5
 }

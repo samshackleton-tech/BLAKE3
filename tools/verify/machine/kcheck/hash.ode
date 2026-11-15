@@ -17,6 +17,8 @@ const AVX512      = 5
 
 extern compress_avx512/5  = "blake3_servil_compress_in_place_avx512"
 extern compress_sse41/5   = "blake3_servil_compress_in_place_sse41"
+extern chunks32/6         = "blake3_servil_avx512_k32"
+extern parents16/6        = "blake3_servil_avx512_p16"
 
 // The one-block kernel the platform has.
 def compress(cv, block, block_len, counter, flags) {
@@ -80,8 +82,49 @@ def left_chunks() {
   }
 }
 
+// The table of addresses a wide kernel is given: lane j of the first m gets base + (j << shift), every lane
+// past them base again (it hashes the first input once more; its result is not used).
+def fill(base, shift, m, lanes) {
+  i = 0
+  while i < lanes {
+    if i < m { u64[ptrs + (i << 3)] = base + (i << shift) }
+    else     { u64[ptrs + (i << 3)] = base }
+    i = i + 1
+  }
+}
+
+// The chaining value of the tree over 32 whole chunks (32768 bytes), numbered from t, on a machine with
+// AVX-512: the 32 chunks' values by the 32-lane chunk kernel, then their parents, 16, 8, 4, 2 and 1 of them,
+// by the 16-lane parent kernel.
+fn wide32(out, input, kf, t)
+  reg out, input, kf, t
+{
+  buf ptrs[256]
+  buf cvs[1024]
+  buf a[512]
+  buf b[512]
+  var flags = u64[kf + 32]
+  var kp = flags | 0x40020100           // the chunk's start and end flags and a last block of 64 bytes, packed above the mode's
+  var pp = flags | 0x40000004           // PARENT, and a block of 64 bytes
+  var i = 0
+  fill(input, 10, 32, 32)
+  chunks32(ptrs, 16, kf, t, kp, cvs)
+  fill(cvs, 6, 16, 16)
+  parents16(ptrs, 1, kf, 0, pp, a)
+  fill(a, 6, 8, 16)
+  parents16(ptrs, 1, kf, 0, pp, b)
+  fill(b, 6, 4, 16)
+  parents16(ptrs, 1, kf, 0, pp, a)
+  fill(a, 6, 2, 16)
+  parents16(ptrs, 1, kf, 0, pp, b)
+  fill(b, 6, 1, 16)
+  parents16(ptrs, 1, kf, 0, pp, a)
+  copy 32 out <- a
+}
+
 // The chaining value of the tree over the len bytes at input (1 or more), whose chunks are numbered from t.
-// kf: the key (32 bytes) and the flags (8 bytes).
+// kf: the key (32 bytes) and the flags (8 bytes). A whole tree of 32 chunks goes to the wide kernels, where
+// the machine has them.
 fn subtree(out, input, len, kf, t, plat)
   reg out, input, len, kf, t, plat
 {
@@ -91,6 +134,11 @@ fn subtree(out, input, len, kf, t, plat)
   var c = 0
   var k = 0
   var k2 = 0
+  var wide = 0
+  if plat == AVX512 { if len == 32768 { wide = 1 } }
+  if wide == 1 {
+    wide32(out, input, kf, t)
+  } else {
   if len > 1024 {
     left_chunks()
     var n = k << 10
@@ -107,6 +155,7 @@ fn subtree(out, input, len, kf, t, plat)
     copy 32 nd <- kf
     chunk_node(nd, input, len, t, flags, plat)
     node_out(out, nd, 0, plat)
+  }
   }
 }
 

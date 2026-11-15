@@ -2,11 +2,11 @@
 // written out here another way (the reference's stack of subtrees, not the specification's recursion).
 // kfn_flip.py links it with each changed object the checker accepts: the processor arbitrates.
 //
-//     cc -O1 -o run khash_native.c kflip_thunk.S pad.o chunk_node.o node_out.o subtree.o hashr.o KERNELS.o...
+//     cc -O1 -o run khash_native.c kflip_thunk.S pad.o chunk_node.o node_out.o wide32.o subtree.o hashr.o KERNELS.o...
 //     ./run CASES
 //
 // The lengths: every one from 0 to 200, then every seventh to 2200, the three around each multiple of 1024
-// up to 70 chunks, and CASES random ones up to 300,000 bytes; each with no flags and with a mode's flag, on
+// up to 70 chunks and of 32768 up to 12, and CASES random ones up to 300,000 bytes; each with no flags and with a mode's flag, on
 // the SSE4.1 kernel and (where the processor has AVX-512) the AVX-512 one. The message ends where a page
 // that faults begins; the 32 bytes of the hash and the key lie between two such pages.
 // Exit 0: every hash is the reference's, nothing beside the 32 bytes was written, the registers a callee
@@ -133,6 +133,8 @@ int main(int argc, char **argv) {
         for (size_t len = 201; len <= 2200; len += 7) { if (one(len, MODES[rnd() % 4], plat, id++)) return 1; }
         for (size_t k = 1; k <= 70; k++)
             for (int d = -1; d <= 1; d++) { if (one(1024 * k + d, MODES[rnd() % 4], plat, id++)) return 1; }
+        for (size_t k = 1; k <= 12; k++)        // whole trees of 32 chunks: the wide kernels' leaves
+            for (int d = -1; d <= 1; d++) { if (one(32768 * k + d, MODES[rnd() % 4], plat, id++)) return 1; }
         for (long i = 0; i < cases; i++) { if (one(rnd() % 300001, MODES[rnd() % 4], plat, id++)) return 1; }
     }
     if (argc > 2) printf("%ld hashes as BLAKE3's (%s)\n", id, wide ? "both kernels" : "the SSE4.1 kernel");

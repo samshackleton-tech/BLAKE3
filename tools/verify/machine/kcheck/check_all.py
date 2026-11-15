@@ -59,8 +59,8 @@ def hash_function(folder, name):
 CHECKS = [("the wide kernels", [lambda f: kernel_any_count(f, "k32"), lambda f: kernel_any_count(f, "p32"), lambda f: kernel_any_count(f, "p16"),
                                 lambda f: kernel_fixed(f, "o16", "out16.o")]),
           ("the one-block kernels", [lambda f: one_block(f, "avx512"), lambda f: one_block(f, "sse41")]),
-          ("the hash of a message, written to be proved (hash.ode; calls the one-block kernels)",
-           [lambda f: hash_function(f, "pad"), lambda f: hash_function(f, "chunk_node"), lambda f: hash_function(f, "node_out"), lambda f: hash_function(f, "subtree"),
+          ("the hash of a message, written to be proved (hash.ode; calls the kernels above)",
+           [lambda f: hash_function(f, "pad"), lambda f: hash_function(f, "chunk_node"), lambda f: hash_function(f, "node_out"), lambda f: hash_function(f, "wide32"), lambda f: hash_function(f, "subtree"),
             lambda f: hash_function(f, "hashr")]),
           ("a stack of subtrees, against an algorithm that is not the specification (an earlier trial; calls the one-block kernels)",
            [lambda f: stack_function(f, "push"), lambda f: stack_function(f, "merge"), lambda f: stack_function(f, "add")])]
@@ -71,7 +71,7 @@ def main():
     if made:
         for obj, src in (("lib32.o", "c/blake3_avx512_32.S"), ("out16.o", "c/blake3_output16.S"), ("avx512.o", "c/blake3_avx512_x86-64_unix.S"), ("sse41.o", "c/blake3_sse41_x86-64_unix.S")):
             assemble(os.path.join(ROOT, src), os.path.join(folder, obj))
-        for name in ("push", "merge", "add", "pad", "chunk_node", "node_out", "subtree", "hashr"): assemble(os.path.join(HERE, "glue", name + ".S"), os.path.join(folder, name + ".o"))
+        for name in ("push", "merge", "add", "pad", "chunk_node", "node_out", "wide32", "subtree", "hashr"): assemble(os.path.join(HERE, "glue", name + ".S"), os.path.join(folder, name + ".o"))
     bodies, count, failed, t_all = {}, 0, 0, time.time()
     try:
         for title, checks in CHECKS:

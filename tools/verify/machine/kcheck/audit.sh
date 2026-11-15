@@ -20,8 +20,8 @@ work=$(mktemp -d); mkdir -p "$work/glue" "$work/hash" audit
 clang -c -o "$work/lib32.o" "$root/c/blake3_avx512_32.S" && clang -c -o "$work/out16.o" "$root/c/blake3_output16.S" || exit 2
 for f in push merge add; do clang -c -o "$work/glue/$f.o" "glue/$f.S" || exit 2; done
 cc -c -o "$work/glue/avx512.o" "$root/c/blake3_avx512_x86-64_unix.S" && cc -c -o "$work/glue/sse41.o" "$root/c/blake3_sse41_x86-64_unix.S" || exit 2
-for f in pad chunk_node node_out subtree hashr; do clang -c -o "$work/hash/$f.o" "glue/$f.S" || exit 2; done
-cp "$work/glue/avx512.o" "$work/glue/sse41.o" "$work/hash/"
+for f in pad chunk_node node_out wide32 subtree hashr; do clang -c -o "$work/hash/$f.o" "glue/$f.S" || exit 2; done
+cp "$work/glue/avx512.o" "$work/glue/sse41.o" "$work/lib32.o" "$work/hash/"
 bad=0
 run() {     # OUTPUT COMMAND...
     out=$1; shift
@@ -34,7 +34,7 @@ done
 run "kflip-o16.txt" python3 kflip.py o16 "$work/out16.o" --jobs "$jobs" --native 2000 --refused-sample 400 --detail
 for f in push merge add; do run "kglue-flip-$f.txt" python3 kglue_flip.py $f "$work/glue" --jobs "$jobs" --native 3000; done
 for f in avx512 sse41; do run "kone-flip-$f.txt" python3 kglue_flip.py $f "$work/glue" --jobs "$jobs" --native 20000; done
-for f in pad chunk_node node_out subtree hashr; do run "kfn-flip-$f.txt" python3 kfn_flip.py $f "$work/hash" --jobs "$jobs" --native 200; done
+for f in pad chunk_node node_out wide32 subtree hashr; do run "kfn-flip-$f.txt" python3 kfn_flip.py $f "$work/hash" --jobs "$jobs" --native 200; done
 rm -rf "$work"
 grep -H "single-bit changes" audit/kflip-*.txt audit/kglue-flip-*.txt audit/kone-flip-*.txt audit/kfn-flip-*.txt | sed "s|^audit/||" | cut -c1-250
 grep -h "accepted changes on this processor" audit/*.txt | sort | uniq -c | cut -c1-160

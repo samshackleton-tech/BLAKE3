@@ -37,34 +37,40 @@ contract blake3_servil_avx512_k32(inputs: 32 inputs, n: number, key: cv, t: coun
     asks n >= 1
     leaves out[i] = chunk(key, t + i, flags, start, end, length, n, inputs[i]) for i in 0..32
     stack 4096
+    needs avx512
 }
 
 contract blake3_servil_avx512_p32(inputs: 32 inputs, n: number, key: cv, t: counter, packed: bytes flags start end length, out: 32 cvs) {
     asks n >= 1
     leaves out[i] = chunk(key, t, flags, start, end, length, n, inputs[i]) for i in 0..32
     stack 4096
+    needs avx512
 }
 
 contract blake3_servil_avx512_p16(inputs: 16 inputs, n: number, key: cv, t: counter, packed: bytes flags start end length, out: 16 cvs) {
     asks n >= 1
     leaves out[i] = chunk(key, t, flags, start, end, length, n, inputs[i]) for i in 0..16
     stack 4096
+    needs avx512
 }
 
 // Sixteen compressions, each node with its own chaining value, block, length and flags, counter 0.
 contract blake3_servil_output16(nodes: 16 descriptors, out: 16 cvs) {
     leaves out[i] = compress(nodes[i].cv, nodes[i].block, counter(0), nodes[i].length, nodes[i].flags) for i in 0..16
     stack 4096
+    needs avx512
 }
 
 contract blake3_servil_compress_in_place_avx512(h: cv, m: block, length: low byte, t: counter, flags: low byte) {
     leaves h = compress(h, m, t, length, flags)
     stack 0
+    needs avx512
 }
 
 contract blake3_servil_compress_in_place_sse41(h: cv, m: block, length: word, t: counter, flags: low word) {
     leaves h = compress(h, m, t, length, flags)
     stack 0
+    needs sse41
 }
 
 // The hash of a message, written to be proved (hash.ode): a chunk's node and its value, and the tree by the
@@ -79,21 +85,31 @@ contract b3l_chunk_node(nd: node, input: len bytes, len: number, t: number, flag
     asks len <= 1024
     leaves nd = chunk_node(nd.h, t, flags, input)
     stack 256
-    calls blake3_servil_compress_in_place_avx512 if plat == 5
+    needs sse41
+    needs avx512 if plat == 5
 }
 
 contract b3l_node_out(out: cv, nd: node, root: byte, plat: any) {
     leaves out = node_value(nd, root)
     stack 128
-    calls blake3_servil_compress_in_place_avx512 if plat == 5
+    needs sse41
+    needs avx512 if plat == 5
+}
+
+contract b3l_wide32(out: cv, input: 32768 bytes, kf: keyed, t: number) {
+    asks 1024 * t + 32768 <= 18446744073709551615
+    leaves out = subtree(kf.key, kf.flags, t, input)
+    stack 8192
+    needs avx512
 }
 
 contract b3l_subtree(out: cv, input: len bytes, len: number, kf: keyed, t: number, plat: any) {
     asks len >= 1
     asks 1024 * t + len <= 18446744073709551615
     leaves out = subtree(kf.key, kf.flags, t, input)
-    stack 640 + 384 * bits((len - 1) / 1024)
-    calls blake3_servil_compress_in_place_avx512 if plat == 5
+    stack 8704 + 384 * bits((len - 1) / 1024)
+    needs sse41
+    needs avx512 if plat == 5
 }
 
 // =========================================================================================================

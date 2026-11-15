@@ -20,9 +20,9 @@ writes the code so that it can be proved, as he writes it so that it is fast).
 |---|---|---|---|
 | the specification | what the result IS: definitions by equations, in a language made for specifications | the auditor | `blake3.spec`, 147 lines |
 | the claim | the contract of each function a user calls | the auditor | 18 lines, one function |
-| the code | written in the specification's shape, in Ode | nobody has to | `hash.ode`, 141 lines |
+| the code | written in the specification's shape, in Ode | nobody has to | `hash.ode`, 190 lines |
 | the proof | what the checker needs beside the binary: what the functions inside do; a place for a loop of unfixed count | nobody has to | `proofs/inner.spec`; for the hash, no place |
-| the checker | runs the binary on symbols and compares with the specification; does not search | the auditor, once, for every program | 3,222 lines of Python, unverified |
+| the checker | runs the binary on symbols and compares with the specification; does not search | the auditor, once, for every program | 3,772 lines of Python, unverified |
 
 The auditor reads the specification and the claim, and runs the checker on the binary. If a contract of a
 function inside were wrong, the checker would refuse that function, or one that calls it: the contracts
@@ -99,11 +99,11 @@ checked in about 3 seconds; audits with a processor as judge (README.md).
 
 Not done, in the order I would take them:
 
-1. **Speed.** `hashr` compresses one block at a time. The wide kernels are checked (every number of blocks)
-   but not yet called by it. A subtree of exactly 32 chunks is the kernel's 32 chunks and five rounds of the
-   16-lane parent kernel, and the definition opened to 32 chunks is the same term: no new idea is needed, some
-   kinds in the checker are.
-2. **The checker's own worth.** It is 3,222 lines of Python, tested and audited, not proved. Smaller; a
+1. **Speed.** A whole tree of 32 chunks now goes to the wide kernels (`wide32`: the definition opened to 32
+   chunks is the term the kernels' contracts give; no new idea was needed). Smaller parts, and so every
+   message of 32 KiB or less and up to the last 31 chunks of every message, still go one block at a time.
+   Next: parts of 2 to 31 chunks through the same kernels.
+2. **The checker's own worth.** It is 3,772 lines of Python, tested and audited, not proved. Smaller; a
    second one written apart; or proved once. Undecided.
 3. **The source's checker** (above), and the compiler printing bytes, not assembly (BLAKE3 #396).
 4. **What is shown is what holds if the function returns.** Each loop is bounded and each call of itself is on

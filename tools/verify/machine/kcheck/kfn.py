@@ -66,8 +66,21 @@ def bytes_kind(kind):
     return (int(p[0]) if p[0].isdigit() else p[0]) if len(p) == 2 and p[1] == "bytes" else None
 
 
+def lanes_kind(kind, what):
+    """`32 inputs`, `16 cvs`: the count; None for other kinds."""
+    p = kind.split()
+    return int(p[0]) if len(p) == 2 and p[1] == what and p[0].isdigit() else None
+
+
+def packed_kind(kind):
+    """`bytes a b c d`: the names of a word's four low bytes; None for other kinds."""
+    p = kind.split()
+    return p[1:] if len(p) == 5 and p[0] == "bytes" else None
+
+
 def size_of(kind):
     if kind == "cv": return 32
+    if lanes_kind(kind, "cvs") is not None: return 32 * lanes_kind(kind, "cvs")
     if kind == "block": return 64
     if kind in ("number", "byte"): return 8
     n = bytes_kind(kind)
@@ -114,11 +127,20 @@ class Contract:
         self.args = [(reg, kind, name) for reg, (name, kind) in zip(ARGS, c["args"])]
         self.kind = {name: kind for _, kind, name in self.args}
         for _, kind, name in self.args:
-            if kind not in ("number", "byte", "any", "cv", "block") and kind not in kspec.SPEC.layouts and bytes_kind(kind) is None: raise Fail(f"{symbol}: {name} is of a kind this checker does not know: {kind}")
+            if (kind not in ("number", "byte", "any", "cv", "block", "counter", "low byte", "word", "low word") and kind not in kspec.SPEC.layouts and bytes_kind(kind) is None
+                    and lanes_kind(kind, "inputs") is None and lanes_kind(kind, "cvs") is None and packed_kind(kind) is None): raise Fail(f"{symbol}: {name} is of a kind this checker does not know: {kind}")
             n = bytes_kind(kind)
             if isinstance(n, str) and self.kind.get(n) != "number": raise Fail(f"{symbol}: {name} is {kind}, and {n} is not a number among the arguments")
-        if any(leaf["index"] is not None for leaf in c["leaves"]): raise Fail(f"{symbol}: a contract of lanes: not this checker's")
+            if lanes_kind(kind, "inputs") is not None and self.kind.get("n") != "number": raise Fail(f"{symbol}: {name} is {kind}, and no number n says how many blocks each input has")
+        for leaf in c["leaves"]:
+            if leaf["index"] is not None and (lanes_kind(self.kind.get(leaf["name"], ""), "cvs") is None or leaf["each"] != (("num", 0), ("num", lanes_kind(self.kind[leaf["name"]], "cvs")))):
+                raise Fail(f"{symbol}: it leaves each of some values that are not all the chaining values at an address")
         self.writes = {leaf["name"] for leaf in c["leaves"]} | set(c["spoils"])
+        # `needs F`: it runs instructions of the kind F; `needs F if NAME == NUMBER`: only where that holds
+        self.needs = {}
+        for feature, cond in c["needs"]:
+            if cond is not None and not (cond[0] == "bin" and cond[1] == "==" and cond[2][0] == "name" and cond[3][0] == "num"): raise Fail(f"{symbol}: a condition on what it needs that is not NAME == NUMBER")
+            self.needs[feature] = None if cond is None else (cond[2][1], cond[3][1])
         if any(self.kind.get(name) in (None, "number", "byte", "any") for name in self.writes): raise Fail(f"{symbol}: it leaves something that is not at an address among its arguments")
         self.calls = {}
         for callee, cond in c["calls"]:
@@ -178,6 +200,8 @@ class Machine:
             elif kind == "any": self.g[reg] = ("q", name)
         for reg, kind, name in c.args:
             if kind in ("number", "byte", "any"): continue
+            if kind in ("counter", "low byte", "word", "low word") or packed_kind(kind) is not None or lanes_kind(kind, "inputs") is not None or lanes_kind(kind, "cvs") is not None:
+                raise Fail(f"{c.name}: {name} is {kind}: a kernel's argument, and kernels are checked by kloop.py")
             self.g[reg] = ("a", name, 0)
             n = bytes_kind(kind)
             if kind == "block": v = [Word(T.mk("part", name, w)) for w in range(16)]
@@ -228,6 +252,8 @@ class Machine:
                 if off == 0 and size == (8 if kind == "q" else 16): return v
             elif kind in ("cv", "block"):
                 if size == 16 and isinstance(off, int) and off % 16 == 0 and 0 <= off < 4 * len(v): return tuple(w.v for w in v[off // 4:off // 4 + 4])
+            elif lanes_kind(kind, "cvs") is not None:
+                if size == 16 and isinstance(off, int) and off % 16 == 0 and 0 <= off < 32 * len(v): return tuple(w.v for w in v[off // 32][off % 32 // 4:off % 32 // 4 + 4])
             elif kind == "number":
                 if off == 0 and size == 8: return value(v)
             elif kind == "byte":
@@ -327,6 +353,10 @@ class Machine:
                 if isinstance(v, Slice): return A.slice(v, sub, Lin.of(sub) + count)
                 if isinstance(sub, int) and sub == 0 and A.facts.zero(Lin.of(A.length(v)) - count) is True: return v
                 return MISSING
+        elif lanes_kind(okind, "cvs") is not None:
+            if kind == okind and isinstance(sub, int) and sub == 0: return v
+            if kind == "cv" and isinstance(sub, int) and sub % 32 == 0 and 0 <= sub < 32 * len(v): return v[sub // 32]
+            return MISSING
         elif isinstance(sub, int) and sub == 0:
             if okind == kind: return v
             if kind == "block" and bytes_kind(okind) == 64: return A.words(v)
@@ -476,19 +506,46 @@ class Machine:
         if only is not None and self.conds.get(only) is not True: raise Fail(f"{name} is called on a path that does not say {only[0]} is {only[1]}")
         A = self.A()
         try:
+            c = contract(name)
+            self.needed(name, c)
             if name in kernels(): used = self.call_kernel(A, name, kernels()[name])
-            else: used = self.call_contract(A, name, contract(name))
+            else: used = self.call_contract(A, name, c)
         except Err as e: raise Fail(f"a call of {name}: {e}")
         self.low = min(self.low, sp - used)
         for r in G64:
             if r not in KEPT and r not in ("rsp", "rax"): self.g[r] = ("q", "left by a call")
         self.x, self.flags = {}, None
 
+    def needed(self, name, c):
+        """What the callee needs of the processor, this function's contract says it needs too: always, or on a
+        condition that holds on this path. Where the callee's need is itself on a condition (of an argument),
+        what it is given for that argument is this function's own (with the same number), or a plain number
+        that is not the callee's, or anything on a path where this function's own condition holds."""
+        for feature, cond in c.needs.items():
+            if feature not in self.contract.needs: raise Fail(f"{name} needs {feature}, and this function's contract does not say that it does")
+            mine = self.contract.needs[feature]
+            if mine is None or self.conds.get(mine) is True: continue
+            if cond is None: raise Fail(f"{name} needs {feature}, and is called on a path that does not say {mine[0]} is {mine[1]}")
+            passed = self.g[next(reg for reg, _, a in c.args if a == cond[0])]
+            if not ((passed == ("q", mine[0]) and cond[1] == mine[1]) or (passed[0] == "n" and passed[1] != cond[1])):
+                raise Fail(f"{name} needs {feature} if its {cond[0]} is {cond[1]}: what it is given for {cond[0]} is not shown to be so only where {mine[0]} is {mine[1]}")
+
+    def apart(self, name, written, others):
+        """What a callee writes is apart from everything else it is given the address of: its own check took
+        them to be. (region, offset, bytes); things of different regions are apart."""
+        for region, off, size in written:
+            for r, o, n in others:
+                if r != region: continue
+                if isinstance(off, Lin) or isinstance(o, Lin) or isinstance(size, Lin) or isinstance(n, Lin) or size is None or n is None:
+                    raise Fail(f"{name}: what it writes and something else it is given are both in {region}, and are not shown to be apart")
+                if off < o + n and o < off + size: raise Fail(f"{name}: what it writes at {region} + {off} lies across something else it is given, at {region} + {o}")
+
     def call_kernel(self, A, name, k):
         """(cv, block, length, counter, flags): the 32 bytes at cv become compress(cv, the 64 bytes at block,
         counter, length, flags). Where the kernel reads the length and the flags from is its contract's."""
         cv, block, length, counter, flags = (self.g[r] for r in ARGS[:5])
         if cv[0] != "a" or block[0] != "a": raise Fail(f"{name} called with something that is not an address")
+        self.apart(name, [(cv[1], cv[2], 32)], [(block[1], block[2], 64)])
         h, m = self.view(cv[1], cv[2], "cv"), self.view(block[1], block[2], "block")
         if lin(length) is None or lin(counter) is None: raise Fail(f"{name} called with a length or a counter that is not a number: {length}, {counter}")
         top = 255 if k["length"] == "low byte" else (1 << 32) - 1
@@ -511,30 +568,55 @@ class Machine:
             passed = self.g[next(reg for reg, _, a in c.args if a == arg)]
             if not (self.conds.get(only) is True or (passed == ("q", only[0]) and number == only[1]) or (passed[0] == "n" and passed[1] != number)):
                 raise Fail(f"{name} calls {f} if its {arg} is {number}: what it is given for {arg} is not shown to be so only where {only[0]} is {only[1]}")
+        number = lambda b: b if isinstance(b, int) else Word(byte_term(self.T, b))      # a byte that is a plain number is that number, as the specification writes it
         for reg, kind, arg in c.args:
             a = self.g[reg]
             if kind == "number":
                 if lin(a) is None: raise Fail(f"{name}: {arg} is not a number")
                 v[arg] = plain(lin(a))
-            elif kind == "byte":
-                b = one_byte(a)
-                v[arg] = b if isinstance(b, int) else Word(byte_term(self.T, b))       # a byte that is a plain number is that number, as the specification writes it
+            elif kind == "counter":
+                if lin(a) is None: raise Fail(f"{name}: {arg} is not a number")
+                v[arg] = A.counter(lin(a))
+            elif kind == "byte": v[arg] = number(one_byte(a))
+            elif packed_kind(kind) is not None:
+                # a word whose four low bytes are named; what is above them the callee does not read
+                if a[0] == "n": a = ("p", tuple((a[1] >> 8 * i) & 0xFF for i in range(8)))
+                if a[0] != "p": raise Fail(f"{name}: {arg} is not a word of flag bytes")
+                for nm, b in zip(packed_kind(kind), a[1]): v[nm] = number(b)
+        spans = {}
         for reg, kind, arg in c.args:
-            if kind in ("number", "byte", "any"): continue
+            if kind in ("number", "byte", "any", "counter") or packed_kind(kind) is not None: continue
             a = self.g[reg]
             if a[0] != "a": raise Fail(f"{name}: {arg} is not an address")
             n = bytes_kind(kind)
             count = v[n] if isinstance(n, str) else n
             where[arg] = (a[1], a[2], kind)
+            lanes = lanes_kind(kind, "inputs")
+            if lanes is not None:
+                # a table of addresses, each of an input of n blocks of 64 bytes
+                blocks = A.plain(v["n"])
+                table = [self.load(a[1], plain(Lin.of(a[2]) + 8 * i), 8) for i in range(lanes)]
+                if any(e[0] != "a" for e in table): raise Fail(f"{name}: {arg} is not a table of addresses")
+                v[arg] = [[self.view(e[1], plain(Lin.of(e[2]) + 64 * b), "block") for b in range(blocks)] for e in table]
+                spans[arg] = [(a[1], a[2], 8 * lanes)] + [(e[1], e[2], 64 * blocks) for e in table]
+                continue
+            spans[arg] = [(a[1], a[2], count if n is not None else size_of(kind))]
             later[arg] = (lambda a=a, kind=kind, count=count: self.view(a[1], a[2], kind, count))
             if arg not in c.writes and n is not None: later[arg]()             # bytes given to read are there to be read
+        for arg in c.writes: self.apart(name, spans[arg], [s for other, ss in spans.items() if other != arg for s in ss])
         env = Env(v, later)
         for f in kspec.asked(c.text, A, env):
             if not self.facts.ge0(f): raise Fail(f"{name}: the caller does not show what it asks ({f} >= 0)")
         left = {}
         A.fold = True
         try:
-            for leaf in c.text["leaves"]: left[leaf["name"]] = kspec.SPEC.eval(A, leaf["expr"], env)
+            for leaf in c.text["leaves"]:
+                if leaf["index"] is None: left[leaf["name"]] = kspec.SPEC.eval(A, leaf["expr"], env)
+                else:
+                    # each of the chaining values at the address: `out[i] = E for i in 0..N`
+                    for k in later:
+                        if k not in c.writes: env[k]                    # what is read at an address: read now, for each lane
+                    left[leaf["name"]] = [kspec.SPEC.eval(A, leaf["expr"], dict(env, **{leaf["index"]: i})) for i in range(lanes_kind(c.kind[leaf["name"]], "cvs"))]
         finally: A.fold = False
         for arg, new in left.items(): self.put(*where[arg], new)
         for arg in c.text["spoils"]: self.put(*where[arg], A.of_kind(kspec.SPEC, c.kind[arg], f"{arg} as {name} leaves it, #{next(FRESH)}"))
