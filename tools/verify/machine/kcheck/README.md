@@ -203,7 +203,8 @@ processor the caller's contract allows there.
 - *Every single-bit change of each function's code, with a processor as the judge* (`kfn_flip.py`,
   `khash_native.c`). A change for which a proof is found is linked with the other four functions and the
   kernels, and the whole hash is run on an AVX-512 processor against BLAKE3 written out in C another way (the
-  reference's stack of subtrees): every length from 0 to 200, every seventh to 2,200, the three around each
+  reference's stack of subtrees; it and `hashr` first give six of the official vectors, plain and keyed):
+  every length from 0 to 200, every seventh to 2,200, the three around each
   multiple of 1,024 up to 70 chunks, 200 random lengths to 300,000; the three modes' flags; both kernels; the
   message ending where a page that faults begins.
 
@@ -423,7 +424,7 @@ specification. (The hash above does not use them: it has no stack.)
 | `ode.py`, `kspec.py`, `klin.py` | 605 + 522 + 211 | the specification's reader; its algebra on symbols; numbers that depend on counts and the facts about them |
 | `kdecode.py` | 479 | reads the ELF object (sections, symbol, relocations) and decodes the instruction forms the code uses, and no others; no disassembler |
 | `kfn.py`, `test_kfn.py` | 882 + 122 | the checker of functions; its tests |
-| `kfn_flip.py`, `khash_native.c` | 133 + 142 | its single-bit audit; the whole hash on a processor against BLAKE3 in C |
+| `kfn_flip.py`, `khash_native.c` | 133 + 176 | its single-bit audit; the whole hash on a processor against BLAKE3 in C |
 | `khash_bench.c`, `earlier/*.S` | 37 | the speed of `hashr`, of the library, and of the earlier `hashf` (its assembly), in one harness |
 | `kloop.py`, `test_kloop.py` | 439 + 115 | the wide kernels for every number of blocks: the prover, the proof's form, the checker by induction; its tests |
 | `kone.py`, `kone_native.c`, `test_kone.py` | 218 + 86 + 112 | the one-block kernels: the checker (XMM registers as four terms), the processor run, the tests |

@@ -9,6 +9,7 @@
 // up to 70 chunks and of 32768 up to 12, and CASES random ones up to 300,000 bytes; each with no flags and with a mode's flag, on
 // the SSE4.1 kernel and (where the processor has AVX-512) the AVX-512 one. The message ends where a page
 // that faults begins; the 32 bytes of the hash and the key lie between two such pages.
+// First of all, six of the official test vectors, plain and keyed: the reference here gives them, and hashr.
 // Exit 0: every hash is the reference's, nothing beside the 32 bytes was written, the registers a callee
 // keeps and the stack pointer came back. Exit 1 and one line otherwise. A crash is the caller's to see.
 #include <stdint.h>
@@ -87,6 +88,38 @@ static void reference(uint8_t out[32], const uint8_t *input, size_t len, const u
     for (int i = 0; i < 8; i++) { out[4 * i] = (uint8_t)h[i]; out[4 * i + 1] = (uint8_t)(h[i] >> 8); out[4 * i + 2] = (uint8_t)(h[i] >> 16); out[4 * i + 3] = (uint8_t)(h[i] >> 24); }
 }
 
+// Six of the official test vectors (test_vectors/test_vectors.json: byte i of the input is i % 251; the key of
+// the keyed hash is "whats the Elvish word for friend"): the reference here, and hashr, must give them.
+static const struct { size_t len; const char *hash, *keyed; } OFFICIAL[] = {
+    {0, "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262", "92b2b75604ed3c761f9d6f62392c8a9227ad0ea3f09573e783f1498a4ed60d26"},
+    {1, "2d3adedff11b61f14c886e35afa036736dcd87a74d27b5c1510225d0f592e213", "6d7878dfff2f485635d39013278ae14f1454b8c0a3a2d34bc1ab38228a80c95b"},
+    {1024, "42214739f095a406f3fc83deb889744ac00df831c10daa55189b5d121c855af7", "75c46f6f3d9eb4f55ecaaee480db732e6c2105546f1e675003687c31719c7ba4"},
+    {1025, "d00278ae47eb27b34faecf67b4fe263f82d5412916c1ffd97c8cb7fb814b8444", "357dc55de0c7e382c900fd6e320acc04146be01db6a8ce7210b7189bd664ea69"},
+    {31744, "62b6960e1a44bcc1eb1a611a8d6235b6b4b78f32e7abc4fb4c6cdcce94895c47", "efa53b389ab67c593dba624d898d0f7353ab99e4ac9d42302ee64cbf9939a419"},
+    {102400, "bc3e3d41a1146b069abffad3c0d44860cf664390afce4d9661f7902e7943e085", "1c35d1a5811083fd7119f5d5d1ba027b4d01c0c6c49fb6ff2cf75393ea5db4a7"},
+};
+static int official(int wide) {
+    static uint8_t input[102400], iv[32];
+    static const char KEY[] = "whats the Elvish word for friend";
+    char hex[65];
+    uint8_t out[32];
+    for (size_t i = 0; i < sizeof input; i++) input[i] = (uint8_t)(i % 251);
+    for (int i = 0; i < 8; i++) { iv[4 * i] = (uint8_t)IV[i]; iv[4 * i + 1] = (uint8_t)(IV[i] >> 8); iv[4 * i + 2] = (uint8_t)(IV[i] >> 16); iv[4 * i + 3] = (uint8_t)(IV[i] >> 24); }
+    for (unsigned c = 0; c < sizeof OFFICIAL / sizeof *OFFICIAL; c++)
+        for (int mode = 0; mode < 2; mode++)
+            for (int which = 0; which < (wide ? 3 : 2); which++) {         // the reference; hashr on the SSE4.1 kernel; on the AVX-512 ones
+                const uint8_t *key = mode ? (const uint8_t *)KEY : iv;
+                if (which == 0) reference(out, input, OFFICIAL[c].len, key, mode ? 16 : 0);
+                else b3l_hashr(out, input, OFFICIAL[c].len, key, mode ? 16 : 0, which == 2 ? 5 : 0);
+                for (int i = 0; i < 32; i++) sprintf(hex + 2 * i, "%02x", out[i]);
+                if (strcmp(hex, mode ? OFFICIAL[c].keyed : OFFICIAL[c].hash)) {
+                    printf("an official vector (%zu bytes, %s) is not what %s gives\n", OFFICIAL[c].len, mode ? "keyed" : "plain", which ? "hashr" : "the reference here");
+                    return 1;
+                }
+            }
+    return 0;
+}
+
 static uint64_t seed = 0x9E3779B97F4A7C15ull;
 static uint64_t rnd(void) { seed ^= seed << 13; seed ^= seed >> 7; seed ^= seed << 17; return seed; }
 
@@ -127,6 +160,7 @@ int main(int argc, char **argv) {
     __builtin_cpu_init();
     int wide = __builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512vl");
     static const uint32_t MODES[4] = {0, 16, 32, 64};
+    if (official(wide)) return 1;
     for (int pass = 0; pass < (wide ? 2 : 1); pass++) {
         uint64_t plat = pass ? 5 : (id % 2 ? 0 : 3);
         for (size_t len = 0; len <= 200; len++) { if (one(len, len % 3 ? 0 : MODES[1 + len % 3], plat, id++)) return 1; }
