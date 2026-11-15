@@ -1,0 +1,9 @@
+// The loop of ode_adler32: whenever the code comes to it, with i bytes taken, the two sums are those of
+// the specification's two sequences at place i.
+place +0x2c {
+    name i = r14
+    fact i <= len
+    r12 = s1(input)[i]
+    r13 = s2(input)[i]
+    decreases len - i
+}

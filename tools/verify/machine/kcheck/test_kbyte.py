@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+"""Tests of kbyte.py on the programs of programs/: the function as compiled meets its contract, and a changed
+specification, contract, proof or instruction does not (but for instructions that do nothing).
+
+    python3 test_kbyte.py"""
+import os, shutil, sys, tempfile, unittest
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import kbyte, kcheck, kdecode, ode
+from test_kcheck import assemble
+
+
+def text(*path):
+    with open(os.path.join(HERE, "programs", *path)) as f: return f.read()
+
+
+class Program:
+    def __init__(self, folder, name, symbol):
+        self.dir = tempfile.mkdtemp(prefix="kbyte-")
+        assemble(os.path.join(HERE, "programs", folder, name + ".S"), os.path.join(self.dir, name + ".o"))
+        self.rows = kbyte.load(os.path.join(self.dir, name + ".o"), symbol)
+        self.spec, self.proof, self.symbol = text(folder, folder + ".spec"), text(folder, name + ".proof"), symbol
+        shutil.rmtree(self.dir)
+    def verdict(self, spec=None, proof=None, rows=None):
+        try: kbyte.check(rows or self.rows, ode.Spec(spec or self.spec), self.symbol, self.proof if proof is None else proof); return "accepted"
+        except (kcheck.Fail, ode.Err) as e: return f"refused: {e}"
+    def changed(self, test, what, changes):
+        whole = self.spec if what == "spec" else self.proof
+        for old, new in changes:
+            test.assertEqual(whole.count(old), 1, old)
+            v = self.verdict(**{what: whole.replace(old, new)})
+            test.assertTrue(v.startswith("refused"), f"{old!r} -> {new!r}: {v}")
+
+
+class Adler32(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls): cls.p = Program("adler32", "adler32", "ode_adler32")
+
+    def test_it_meets_its_contract(self):
+        self.assertEqual(self.p.verdict(), "accepted")
+
+    def test_a_branch_on_the_bytes_must_be_said(self):
+        v = self.p.verdict(spec=self.p.spec.replace("    trace depends on input\n", ""))
+        self.assertTrue(v.startswith("refused: a branch that depends on bytes in memory"), v)
+
+    def test_a_changed_specification_or_contract_is_refused(self):
+        self.p.changed(self, "spec", [("s[0] = 1 ", "s[0] = 0 "), ("s[0] = 0 ", "s[0] = 1 "), ("(s[i] + bytes[i]) % 65521", "(s[i] + bytes[i]) % 65520"),
+                                      ("(s[i] + bytes[i]) % 65521", "(s[i] + bytes[i] + 1) % 65521"), ("s1(bytes)[i + 1]) % 65521", "s1(bytes)[i]) % 65521"),
+                                      ("65536 * s2(bytes)[len(bytes)] + s1(bytes)[len(bytes)]", "65536 * s1(bytes)[len(bytes)] + s2(bytes)[len(bytes)]"), ("65536 * s2", "65535 * s2"),
+                                      ("s2(bytes)[len(bytes)] + s1(bytes)[len(bytes)]", "s2(bytes)[len(bytes)] + s1(bytes)[len(bytes) - 1]"), ("stack 40", "stack 39"),
+                                      ("returns adler32(input)", "returns adler32(input) + 1")])
+
+    def test_a_changed_proof_is_refused(self):
+        self.p.changed(self, "proof", [("    fact i <= len\n", ""), ("fact i <= len", "fact i <= len + 1"), ("r12 = s1(input)[i]", "r12 = s2(input)[i]"), ("r13 = s2(input)[i]", "r13 = s2(input)[i + 1]"),
+                                       ("    r13 = s2(input)[i]\n", ""), ("    decreases len - i\n", ""), ("decreases len - i", "decreases len + i"), ("name i = r14", "name i = r13"),
+                                       ("place +0x2c", "place +0x2f")])
+        self.assertTrue(self.p.verdict(proof="").startswith("refused"), self.p.verdict(proof="")[:80])        # no place: the loop cannot be run for every count
+
+    def test_a_changed_instruction_is_refused_unless_it_did_nothing(self):
+        accepted = []
+        for k, (a, z, i) in enumerate(self.p.rows):
+            changes = [".nop"]
+            if not (i.startswith(".push") or i.startswith(".pop") or i == ".ret"):
+                changes += [c for c in (i.replace(".jae", ".jb"), i.replace("0xFFF1", "0xFFF0"), i.replace(".add", ".sub") if i.startswith(".add") else i.replace(".sub", ".add"),
+                                        i.replace(".r12", ".r13"), i.replace(".shl64 .rax 16", ".shl64 .rax 15"), i.replace(".r14", ".r13")) if c != i]
+            for c in dict.fromkeys(changes):
+                rows = list(self.p.rows); rows[k] = (a, z, c)
+                if self.p.verdict(rows=rows) == "accepted": accepted.append((a - kbyte.BASE, i, c))
+        # the six that are accepted put into a register what it holds already
+        self.assertEqual(sorted(a for a, _, _ in accepted), [0x22, 0x49, 0x5a, 0x6f, 0x72, 0x80], accepted)
+        self.assertTrue(all(c == ".nop" and i.startswith(".mov 64 (.reg .r") for _, i, c in accepted), accepted)
+
+
+if __name__ == "__main__":
+    unittest.main()

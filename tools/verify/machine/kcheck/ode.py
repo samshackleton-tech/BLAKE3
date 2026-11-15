@@ -72,7 +72,7 @@ class Parser:
         return False
 
     def file(self):
-        consts, fns, machines, self.contracts, self.layouts, self.kinds = {}, {}, {}, {}, {}, {}
+        consts, fns, machines, self.contracts, self.layouts, self.kinds, self.seqs = {}, {}, {}, {}, {}, {}, {}
         while not self.peek(kind="end"):
             if self.maybe("const"):
                 name = self.take(kind="name"); self.take("="); consts[name] = self.expr()
@@ -92,6 +92,9 @@ class Parser:
                 self.take("["); b = self.take(kind="name"); self.take("+")
                 if self.take(kind="num") != 1: raise Err(f"sequence {name}: its second equation is of {h}[{b} + 1]")
                 self.take("]"); self.take("="); nxt = self.expr()
+                if self.maybe("}"):
+                    # with no `for`: the whole sequence; NAME(args)[k] is its value at place k
+                    self.seqs[name] = (params, h, b, first, nxt); continue
                 self.take("for")
                 if self.take(kind="name") != b: raise Err(f"sequence {name}: `for {b} in 0..n` expected")
                 self.take("in"); a = self.expr(); self.take(".."); n = self.expr(); self.take("}")
@@ -381,8 +384,9 @@ class Fails(Exception):
 
 
 class Seq:
-    """A sequence inside a definition: its first value, and each next from the one before."""
-    def __init__(self): self.first, self.var, self.next, self.env, self.memo = None, None, None, None, {}
+    """A sequence: its first value, and each next from the one before. `id`: for one that has a name of its own,
+    the name and what it was given."""
+    def __init__(self): self.first, self.var, self.next, self.env, self.memo, self.id = None, None, None, None, {}, None
     def at(self, spec, A, i):
         if i not in self.memo:
             if self.first is None or self.next is None or i < 0: raise Err("a sequence without its two equations, or a place before its first")
@@ -400,6 +404,7 @@ class Spec:
         parser = Parser(text)
         self.consts, self.fns, self.machines = parser.file()
         self.contracts, self.layouts, self.kinds, self.turns = parser.contracts, parser.layouts, parser.kinds, 0
+        self.seqs, self.seq_cache = parser.seqs, {}
         self.fuel = None        # on symbols: the applications that may still be followed before a result is given a name instead
         self.deep = 0
         numbers = Numbers()
@@ -448,6 +453,15 @@ class Spec:
                 if hasattr(A, "kept"): return A.kept(name, args, lambda: self.body(A, body, env))
                 return self.body(A, body, env)
             finally: self.deep -= 1
+        if name in self.seqs:
+            params, h, var, first, nxt = self.seqs[name]
+            if len(params) != len(args): raise Err(f"{name}: {len(params)} arguments expected")
+            key = (name, tuple(id(a) if isinstance(a, list) else a if isinstance(a, int) else None for a in args))
+            if None not in key[1] and key in self.seq_cache: return self.seq_cache[key][1]       # the same sequence of the same things
+            s = Seq(); s.first, s.var, s.next, s.id = first, var, nxt, (name, list(args))
+            s.env = dict(zip(params, args)); s.env[h] = s
+            if None not in key[1]: self.seq_cache[key] = (args, s)
+            return s
         if name in self.machines:
             m = self.machines[name]
             names = m["params"] + ([] if m["inits"] is not None else m["states"])
@@ -530,7 +544,9 @@ class Spec:
         if kind == "call": return self.apply(A, e[1], [self.eval(A, a, env) for a in e[2]])
         if kind == "index":
             x = self.eval(A, e[1], env)
-            if isinstance(x, Seq): return x.at(self, A, A.plain(self.eval(A, e[2], env)))
+            if isinstance(x, Seq):
+                i = self.eval(A, e[2], env)
+                return A.element(self, x, i) if hasattr(A, "element") else x.at(self, A, A.plain(i))
             return A.index(x, self.eval(A, e[2], env))
         if kind == "the":
             # the least (or greatest) of some numbers for which a condition holds: each is asked in turn

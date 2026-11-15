@@ -1,0 +1,17 @@
+// Adler-32, written to be proved against adler32.spec: the two sums, a byte at a time, each kept below
+// 65521 by taking 65521 from it when it reaches it.
+fn adler32(input, len)
+  reg input, len, a, b, i
+{
+  var a = 1
+  var b = 0
+  var i = 0
+  while i < len {
+    a = a + u8[input + i]
+    if a >= 65521 { a = a - 65521 }
+    b = b + a
+    if b >= 65521 { b = b - 65521 }
+    i = i + 1
+  }
+  return (b << 16) + a
+}
