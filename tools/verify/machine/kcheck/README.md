@@ -62,7 +62,7 @@ encoder's):
 | first difference of two runs of bytes | `returns common(a, b)` | 45 | 1 place, 8 lines | 3 ms |
 | UTF-8: is it well-formed, and how many code points | `returns if failed(utf8(input)) then NO else utf8(input)` | 300 | 1 place, 11 lines | 0.17 s |
 | Base 64 encoder | `requires cap >= 4 * ((n + 2) / 3)`; `returns 4 * ((n + 2) / 3)`; `ensures out[0 .. 4 * ((n + 2) / 3)] = base64(input)` | 197 | 1 place, 12 lines | 13 s |
-| the Internet checksum (RFC 1071) | `requires n < 562949953421312`; `returns checksum(input)`; and no `trace` line: its timing does not depend on the bytes | 76 | 1 place, 7 lines | 0.13 s |
+| the Internet checksum (RFC 1071) | `requires n < 562949953421312`; `returns checksum(input)`; and no `trace` line: its timing does not depend on the bytes | 76 | 1 place, 8 lines | 0.13 s |
 
 What is shown of BLAKE3, from the bytes (`python3 check_all.py`, of the objects an assembler makes of the
 sources: 18 functions, 3,831 instructions, 19 s):
