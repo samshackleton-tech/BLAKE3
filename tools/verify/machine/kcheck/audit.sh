@@ -48,7 +48,7 @@ flip() {    # PROGRAM FUNCTION HARNESS ARGS...
 }
 LIBS=-lz flip adler32 adler32 native.c 200
 flip lz4 lz4_decode native.c 3000 full
-flip lz4 lz4_store native_store.c 3000 sound
+flip lz4 lz4_store native_store.c 3000 room
 flip lz4 lz4_pack native_pack.c 2000 sound
 flip varint varint native.c 3000
 flip common common native.c 3000

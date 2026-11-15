@@ -143,7 +143,8 @@ class Env(dict):
 class Contract:
     """A function's contract, as blake3.spec states it. The arguments are in the calling convention's order."""
     def __init__(self, symbol):
-        c = kspec.SPEC.contracts.get(symbol)
+        try: c = kspec.as_words(kspec.SPEC.contracts.get(symbol), kspec.SPEC)
+        except Err as e: raise Fail(f"{symbol}: {e}")
         if c is None: raise Fail(f"{symbol}: no contract")
         self.name, self.text, self.stack = symbol, c, c["stack"]
         if len(c["args"]) > len(ARGS): raise Fail(f"{symbol}: more arguments than the registers that carry them")

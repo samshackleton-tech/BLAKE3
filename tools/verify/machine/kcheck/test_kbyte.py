@@ -111,7 +111,7 @@ class Lz4Decode(unittest.TestCase):
             ("ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap) if !failed(lz4(input, cap))", "ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap) ++ [0] if !failed(lz4(input, cap))"),
             ("ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap) if !failed(lz4(input, cap))", "ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap)"),
             ("lz4(input, cap) if !failed(lz4(input, cap))", "lz4(input, cap + 1) if !failed(lz4(input, cap))"),
-            ("    requires n < 72057594037927936\n", ""), ("    trace depends on input\n", ""), ("stack 104", "stack 96"), ("    requires apart(out, input)\n    requires n <", "    requires n <"),
+            ("    requires n < 72057594037927936\n", ""), ("    trace depends on input\n    stack 104", "    stack 104"), ("stack 104", "stack 96"), ("    requires apart(out, input)\n    requires n <", "    requires n <"),
             ("ode_lz4_decode(out: cap bytes, cap: number, input: n bytes", "ode_lz4_decode(out: cap bytes, cap: number, input: cap bytes"), ("ode_lz4_decode(out: cap bytes, cap: number, input: n bytes", "ode_lz4_decode(out: n bytes, cap: number, input: n bytes")])
 
     def test_a_proof_without_one_of_its_lines_is_refused(self):
@@ -161,6 +161,7 @@ class Lz4Store(unittest.TestCase):
         self.assertEqual(self.p.verdict(), "accepted")
 
     def test_a_changed_specification_or_contract_is_refused(self):
+        room = "\n    ensures r != NO if cap >= n + n / 255 + 16"
         self.p.changed(self, "spec", [
             ("{value: sum + bytes[at], next: at + 1}", "{value: sum + bytes[at] + 1, next: at + 1}"), ("{value: sum + bytes[at], next: at + 1}", "{value: sum + bytes[at], next: at + 2}"),
             ("counted(bytes, at + 1, sum + 255)", "counted(bytes, at + 1, sum + 254)"), ("if bytes[at] < 255 then", "if bytes[at] < 254 then"),
@@ -171,9 +172,12 @@ class Lz4Store(unittest.TestCase):
             ("if end == len(bytes) then with_literals else", "if end == len(bytes) then out else"),
             ("def lz4(bytes, cap) { sequences(bytes, 0, [], cap) }", "def lz4(bytes, cap) { sequences(bytes, 0, [0], cap) }"), ("def lz4(bytes, cap) { sequences(bytes, 0, [], cap) }", "def lz4(bytes, cap) { sequences(bytes, 1, [], cap) }"),
             ("fails ROOM if len(out) + literals.value > cap", "fails ROOM if len(out) + literals.value >= cap"),
-            ("ensures lz4(out[0 .. r], n) == input if r != NO", "ensures lz4(out[0 .. r], n) == input ++ [0] if r != NO"),
-            ("ensures lz4(out[0 .. r], n) == input if r != NO", "ensures lz4(out[0 .. r], n) == input"),
-            ("ensures lz4(out[0 .. r], n) == input if r != NO", "ensures lz4(out[0 .. r + 1], n) == input if r != NO"),
+            ("ensures lz4(out[0 .. r], n) == input if r != NO" + room, "ensures lz4(out[0 .. r], n) == input ++ [0] if r != NO" + room),
+            ("ensures lz4(out[0 .. r], n) == input if r != NO" + room, "ensures lz4(out[0 .. r], n) == input" + room),
+            ("ensures lz4(out[0 .. r], n) == input if r != NO" + room, "ensures lz4(out[0 .. r + 1], n) == input if r != NO" + room),
+            # when it does not give NO: no less room than it needs will do (15 bytes need 17), and not the other answer
+            (room, "\n    ensures r != NO if cap >= n + n / 255 + 1"), (room, "\n    ensures r != NO if cap >= n + 16"), (room, "\n    ensures r != NO if cap >= n + n / 256 + 2"),
+            (room, "\n    ensures r != NO"), (room, "\n    ensures r == NO if cap >= n + n / 255 + 16"),
             ("    writes out\n    stack 88", "    stack 88"), ("stack 88", "stack 80")])
 
     def test_a_proof_without_one_of_its_lines_is_refused(self):
@@ -184,11 +188,12 @@ class Lz4Store(unittest.TestCase):
         self.assertEqual(needless, [])
 
     def test_a_changed_instruction_is_refused_unless_it_keeps_the_contract(self):
-        # Of 142, 17 accepted: moves left out that change nothing, and a jump and a compare left out on the way to
-        # NO (the contract is of the counts it gives).
+        # Of 142, 14 accepted: moves left out that change nothing, and a compare after which the flags are those of
+        # the same comparison made before. (Before the contract said when NO is not given, 17: a jump and a compare
+        # left out on the way to NO were accepted too.)
         n, accepted = instructions_changed(self.p)
-        self.assertEqual((n, len(accepted)), (142, 17))
-        self.assertEqual(sorted(c for i, c in accepted if not i.startswith(".mov")), [".nop"] * 2)
+        self.assertEqual((n, len(accepted)), (142, 14))
+        self.assertEqual(sorted(c for i, c in accepted if not i.startswith(".mov")), [".nop"])
 
 
 class Lz4Pack(unittest.TestCase):
@@ -219,7 +224,7 @@ class Lz4Pack(unittest.TestCase):
             ("ensures lz4(out[0 .. r], n) == input if r != NO" + tail, "ensures lz4(out[0 .. r], n) == input" + tail),
             ("ensures lz4(out[0 .. r], n) == input if r != NO" + tail, "ensures lz4(out[0 .. r + 1], n) == input if r != NO" + tail),
             ("    requires d >= 1\n", ""), ("    requires d <= 65535\n", ""), ("requires d <= 65535", "requires d <= 65536"),
-            ("    trace depends on input\n    stack 120", "    stack 120"), ("stack 120", "stack 112"), ("    requires cap < NO\n    requires d", "    requires d")])
+            ("    trace depends on input\n    stack 120", "    stack 120"), ("stack 120", "stack 112")])
 
     def test_a_proof_without_one_of_its_lines_is_refused(self):
         lines, needless = self.p.proof.split("\n"), []

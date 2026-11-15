@@ -81,24 +81,26 @@ contract ode_lz4_decode(out: cap bytes, cap: number, input: n bytes, n: number) 
 // An encoder's public contract: what it writes is a block that decodes to the input.
 //
 // This says nothing of how the block is made, and it is not a way to make one: it is true of every encoder
-// that is right. `ode_lz4_store` is the plainest: it holds the n bytes as they are, in one sequence. It
-// returns the count of bytes written at `out`, or NO where the room is too small (and that it gives NO only
-// then is not said, so not shown).
+// that is right, and of one that always gives NO. So a second line says when it does not: where the room
+// is the bound every user of LZ4 knows (LZ4_compressBound). `ode_lz4_store` is the plainest encoder: it
+// holds the n bytes as they are, in one sequence. It returns the count of bytes written at `out`, or NO.
 contract ode_lz4_store(out: cap bytes, cap: number, input: n bytes, n: number) {
     requires apart(out, input)
     requires cap < NO
     returns r
     ensures lz4(out[0 .. r], n) == input if r != NO
+    ensures r != NO if cap >= n + n / 255 + 16
     writes out
     stack 88
 }
 
 // An encoder that packs: `ode_lz4_pack` writes a match where the bytes ahead are the bytes `d` before (the
 // caller chooses the distance), and literals elsewhere. The same contract: what it writes decodes to the
-// input. (The `requires` on d: a distance is 1 to 65535, as the format's two bytes hold it.)
+// input. (The `requires` on d: a distance is 1 to 65535, as the format's two bytes hold it.) When it does
+// not give NO is NOT said here, so not shown: it is so with the same room as above (tried on the processor,
+// programs/lz4/native_pack.c `full`), and the checker's arithmetic did not reach it (README.md).
 contract ode_lz4_pack(out: cap bytes, cap: number, input: n bytes, n: number, d: number) {
     requires apart(out, input)
-    requires cap < NO
     requires d >= 1
     requires d <= 65535
     returns r

@@ -518,5 +518,48 @@ def asked(contract, A, env):
     return out
 
 
+def as_words(c, spec):
+    """A contract that speaks of the 32 bytes at an address as words, read as one of eight words there.
+
+    `words(X)` is every four bytes a word, the lowest byte first; `ensures X = bytes_of(E)` says the bytes at X are
+    those of the words E, each word's lowest byte first. That is how this machine reads and writes a word in
+    memory, and it is all the kind `cv` is: eight words at an address. So where X is `32 bytes` and the contract
+    uses it in those two ways only, X is taken as a `cv`, `words(X)` as its words, and what it ensures as the
+    words E. Used any other way (a byte of it, its length), it stays bytes, and a contract that mixes the two is
+    refused. `words` and `bytes_of` must be the language's own: a specification that defines either is refused."""
+    if c is None: return c
+    wide = [name for name, kind in c["args"] if kind == "32 bytes"]
+    if not wide: return c
+    as_word = lambda e, x: isinstance(e, tuple) and e == ("call", "words", [("name", x)])
+    def count(e, x):
+        """(times x is used as words(x), times it is used otherwise)"""
+        if as_word(e, x): return 1, 0
+        if e == ("name", x): return 0, 1
+        w = b = 0
+        for part in (e.values() if isinstance(e, dict) else e if isinstance(e, (tuple, list)) else ()):
+            dw, db = count(part, x); w, b = w + dw, b + db
+        return w, b
+    def rewrite(e, x):
+        if as_word(e, x): return ("name", x)
+        if isinstance(e, tuple): return tuple(rewrite(p, x) for p in e)
+        if isinstance(e, list): return [rewrite(p, x) for p in e]
+        if isinstance(e, dict): return {k: rewrite(v, x) for k, v in e.items()}
+        return e
+    for x in wide:
+        rest = {k: v for k, v in c.items() if k not in ("args", "leaves")}
+        ensured = [leaf for leaf in c["leaves"] if leaf["name"] == x]
+        others = [leaf for leaf in c["leaves"] if leaf["name"] != x]
+        of_words = [leaf for leaf in ensured if leaf["expr"][0] == "call" and leaf["expr"][1] == "bytes_of" and len(leaf["expr"][2]) == 1
+                    and leaf.get("part") is None and leaf.get("index") is None]
+        w, b = count([rest, others, [leaf["expr"] for leaf in ensured]], x)
+        if not w and not of_words: continue                                       # bytes, as written
+        if b or len(of_words) != len(ensured): raise Err(f"the contract speaks of {x} both as bytes and as words: not this checker's")
+        if "words" in spec.fns or "bytes_of" in spec.fns: raise Err("the specification defines `words` or `bytes_of`: they are the language's own, and a contract's bytes are read by them")
+        c = rewrite(c, x)
+        c["args"] = [(name, "cv" if name == x else kind) for name, kind in c["args"]]
+        c["leaves"] = [dict(leaf, expr=leaf["expr"][2][0]) if leaf["name"] == x else leaf for leaf in c["leaves"]]
+    return c
+
+
 def words(terms): return [Word(t) for t in terms]
 def terms(ws): return tuple(w.v for w in ws)

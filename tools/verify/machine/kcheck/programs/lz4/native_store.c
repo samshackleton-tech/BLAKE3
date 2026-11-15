@@ -1,11 +1,12 @@
 // ode_lz4_store on this machine's processor: what it writes is decoded by a decoder written here (and by
 // ode_lz4_decode, if that is linked: -DBOTH), and must be the input.
 //
-//   cc -O1 -o run native_store.c lz4_store.o && ./run CASES sound|full
+//   cc -O1 -o run native_store.c lz4_store.o && ./run CASES sound|room|full
 //   cc -O1 -DBOTH -o run native_store.c lz4_store.o lz4_decode.o && ./run CASES full
 //
 // The input ends where a page that faults begins, and so does the room; the bytes before the room are looked
 // at afterwards. `sound`: what the contract says: a count it gives is of bytes that decode to the input.
+// `room`: and what the contract says of NO: none where the room is n + n/255 + 16 or more.
 // `full`: and it gives NO only where the room is less than the block needs. Exit 0: so in every case.
 #include <stdint.h>
 #include <stdio.h>
@@ -41,7 +42,7 @@ static uint64_t reference(const uint8_t *src, uint64_t n, uint8_t *dst, uint64_t
 
 int main(int argc, char **argv) {
     long cases = argc > 1 ? atol(argv[1]) : 3000, stored = 0, refused = 0;
-    int full = argc > 2 && !strcmp(argv[2], "full");
+    int full = argc > 2 && !strcmp(argv[2], "full"), room_mode = argc > 2 && !strcmp(argv[2], "room");
     size_t room = 1 << 17;
     uint8_t *in = mmap(0, room + 4096, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     uint8_t *outs = mmap(0, room + 4096, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
@@ -50,7 +51,7 @@ int main(int argc, char **argv) {
     for (long c = 0; c < cases + 600; c++) {
         uint64_t n = c < 600 ? (uint64_t)c : rnd() % 60000;
         uint64_t need = n + 1 + (n >= 15 ? (n - 15) / 255 + 1 : 0);
-        uint64_t cap = c % 4 == 0 ? need : c % 4 == 1 ? need + rnd() % 50 : c % 4 == 2 ? need - 1 : rnd() % (need + 1);
+        uint64_t cap = c % 8 == 7 ? n + n / 255 + 16 : c % 4 == 0 ? need : c % 4 == 1 ? need + rnd() % 50 : c % 4 == 2 ? need - 1 : rnd() % (need + 1);
         uint8_t *src = in + room - n, *dst = outs + room - cap;
         for (uint64_t i = 0; i < n; i++) src[i] = (uint8_t)rnd();
         memset(outs, 0xA5, room);
@@ -66,7 +67,7 @@ int main(int argc, char **argv) {
 #endif
             stored++;
         } else {
-            if (full && cap >= need) { printf("case %ld: %llu bytes, room for %llu: NO, where there is room\n", c, (unsigned long long)n, (unsigned long long)cap); return 1; }
+            if ((full && cap >= need) || (room_mode && cap >= n + n / 255 + 16)) { printf("case %ld: %llu bytes, room for %llu: NO, where there is room\n", c, (unsigned long long)n, (unsigned long long)cap); return 1; }
             refused++;
         }
     }

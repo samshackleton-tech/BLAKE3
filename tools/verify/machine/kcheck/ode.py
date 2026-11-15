@@ -184,10 +184,14 @@ class Parser:
             arg = self.take(kind="name"); self.take(":"); args.append((arg, self.kind())); self.maybe(",")
         c = dict(args=args, asks=[], given=[], leaves=[], spoils=[], returns=None, stack=None, calls=[], needs=[], decreases=None, apart=None, trace=[], conditions=[])
         self.take("{")
+        def once(what, key):
+            # said twice, the second would silently be the one meant
+            if c[key] is not None: raise Err(f"line {self.t[self.i - 1][2]}: a contract says `{what}` once")
         while not self.maybe("}"):
             clause = self.take(kind="name")
             if clause == "requires" and self.t[self.i][:2] == ("name", "apart") and self.t[self.i + 1][1] == "(":
                 # requires apart(a, b, ...): the things at those addresses do not overlap one another
+                once("requires apart(...)", "apart")
                 self.take(); self.take("("); c["apart"] = []
                 while not self.maybe(")"): c["apart"].append(self.take(kind="name")); self.maybe(",")
             elif clause == "requires":
@@ -220,7 +224,7 @@ class Parser:
                     self.take("in"); a = self.expr(); self.take(".."); each = (a, self.expr())
                 cond = self.expr() if self.maybe("if") else None
                 c["leaves"].append(dict(name=name, index=index, expr=e, each=each, part=part, cond=cond))
-            elif clause == "returns": c["returns"] = self.expr()
+            elif clause == "returns": once("returns", "returns"); c["returns"] = self.expr()
             elif clause == "writes": c["spoils"].append(self.take(kind="name"))         # written, and nothing said of what
             elif clause == "trace":
                 # trace depends on NAME, ...: which instructions run and which addresses are touched may depend on those bytes
@@ -228,11 +232,11 @@ class Parser:
                 self.take("on"); c["trace"].append(self.take(kind="name"))
                 while self.maybe(","): c["trace"].append(self.take(kind="name"))
             elif clause == "stack":
-                e = self.expr()
+                once("stack", "stack"); e = self.expr()
                 c["stack"] = e[1] if e[0] == "num" else ("grows", e)
             elif clause == "calls":
                 name = self.take(kind="name"); self.take("if"); c["calls"].append((name, self.expr(1)))
-            elif clause == "decreases": c["decreases"] = self.expr()            # a number that is less at every call of itself
+            elif clause == "decreases": once("decreases", "decreases"); c["decreases"] = self.expr()            # a number that is less at every call of itself
             elif clause == "needs":
                 # needs FEATURE [if E]: it runs instructions of that kind (only where E holds)
                 name = self.take(kind="name"); c["needs"].append((name, self.expr(1) if self.maybe("if") else None))
@@ -364,6 +368,9 @@ class Numbers:
     def words(self, bs):
         if len(bs) % 4 or any(not isinstance(b, int) or not 0 <= b < 256 for b in bs): raise Err("words of something that is not bytes, four to a word")
         return [Word(bs[i] | bs[i + 1] << 8 | bs[i + 2] << 16 | bs[i + 3] << 24) for i in range(0, len(bs), 4)]
+    def bytes_of(self, ws):
+        if any(not isinstance(w, Word) for w in ws): raise Err("bytes of something that is not words")
+        return [(w.v >> (8 * i)) & 0xFF for w in ws for i in range(4)]
     def nothing(self, n): return [None] * n
     def bits(self, x): return Spec.number(x).bit_length()
     def div(self, x, y): return Spec.number(x) // Spec.number(y)
@@ -519,6 +526,7 @@ class Spec:
         if name == "ones": return bin(self.number(args[0])).count("1")
         if name == "pow": return self.number(args[0]) ** self.number(args[1])
         if name == "word_bytes": return [(args[0].v >> (8 * i)) & 0xFF for i in range(4)]
+        if name == "bytes_of": return A.bytes_of(args[0])
         raise Err(f"no function {name}")
 
     @staticmethod

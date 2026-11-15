@@ -29,7 +29,15 @@ and nothing an argument addresses lies in it.
 
 - `ensures X = E`: the bytes at X are E, a value of the specification. `ensures X[a .. b] = E`: those of its
   bytes. `ensures ... if C`: where C holds.
-- `returns E`: the number it gives back. With no such line, nothing is said of that number.
+- `returns E`: the number it gives back. With no such line, nothing is said of that number. `returns r`,
+  where r is no name of the specification's, gives the number that name, and other lines speak of it:
+  `ensures lz4(out[0 .. r], n) == input if r != NO` (what it wrote decodes to the input, unless it said NO),
+  `ensures r != NO if cap >= n + n / 255 + 16` (and with that much room it does not say NO).
+- `ensures CONDITION`: something true or false of the result and of what is in memory.
+
+Memory holds bytes and nothing else. Where a specification speaks of words, the contract says how bytes are
+read as words: `words(X)` is every four bytes one word, the lowest byte first; `bytes_of(W)` is the other
+way. Both are the language's own (LANGUAGE.md) and a specification may not define them otherwise.
 
 **And it has done nothing else.**
 
@@ -53,7 +61,9 @@ failing input through it: `returns if failed(lz4(input)) then NO else ...`.
 binary's bytes, for everything the `requires` lines allow, or it refuses. The contracts of the functions
 inside (proofs/inner.spec) are steps of that showing, in the same form; a reader need not read them.
 
-**Not yet so** (November 15): BLAKE3's public contract still gives `out` and `key` as eight words, lowest
-byte first (`cv`), where it should give bytes. The checker of functions does not yet know `ensures X[a .. b]`,
-`ensures ... if C` or `trace depends on`, and refuses a contract that has them. That a function returns is
-shown as far as the kernels it calls (README.md).
+**Not yet so** (November 15). There are two checkers of functions: `kfn.py` for the hash (words, vectors,
+calls by contract) and `kbyte.py` for the programs of `programs/` (bytes, numbers, loops with places). The
+first does not yet know `ensures X[a .. b]`, `ensures ... if C`, `ensures CONDITION` or `trace depends on`, and
+refuses a contract that has them; the second does not follow calls. The inner contracts of the hash
+(`proofs/inner.spec`) still name kinds of memory (`cv`: eight words); the public contract does not. That a
+function returns is shown as far as the kernels it calls (README.md).

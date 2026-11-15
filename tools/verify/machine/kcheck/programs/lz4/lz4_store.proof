@@ -5,7 +5,8 @@
 // has been written.
 
 // the count's bytes are written: a block that begins with what is written (H) has, from here with n - rest
-// read so far, the count it has from its second byte with 15
+// read so far, the count it has from its second byte with 15. Each byte written before this one took 255 from
+// rest (255 * e + rest == n + 240): so e stays small enough for the room the contract names.
 place +0xdc {
     name e = r14
     name rest = r15
@@ -14,7 +15,7 @@ place +0xdc {
     future R = out
     fact more == 1
     fact e >= 1
-    fact rest + 15 <= n
+    fact 255 * e + rest == n + 240
     fact H[0] == 240
     fact counted(H ++ R, e, n - rest) == counted(H ++ R, 1, 15)
     decreases 2, rest

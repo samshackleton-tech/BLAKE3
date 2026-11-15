@@ -110,6 +110,11 @@ class Contract:
             if self.kind.get(name) in (None, "number"): raise Fail(f"{symbol}: {name} is not something at an address among its arguments")
 
 
+class Undecided(Err):
+    """Two numbers the path does not say how to compare: x is zero or not (`zero`), x is at least 0 or not (`ge`)."""
+    def __init__(self, text, kind, x): super().__init__(text); self.kind, self.x = kind, x
+
+
 # ---------------------------------------------------------------------------------------------------------
 # The specification read on a path: numbers that depend on counts, bytes with names, sequences.
 class Algebra:
@@ -130,11 +135,11 @@ class Algebra:
         if not d.c: return {"==": d.k == 0, "!=": d.k != 0, "<": d.k < 0, "<=": d.k <= 0, ">": d.k > 0, ">=": d.k >= 0}[op]
         if op in ("==", "!="):
             z = self.facts.zero(d)
-            if z is None: raise Err(f"the specification asks whether {Lin.of(a)} is {Lin.of(b)}, and the code's path does not say")
+            if z is None: raise Undecided(f"the specification asks whether {Lin.of(a)} is {Lin.of(b)}, and the code's path does not say", "zero", d)
             return z == (op == "==")
         if op in (">=", "<"): yes = True if self.facts.ge0(d) else False if self.facts.ge0(-d - 1) else None
-        else: yes = True if self.facts.ge0(d - 1) else False if self.facts.ge0(-d) else None
-        if yes is None: raise Err(f"the specification asks how {Lin.of(a)} and {Lin.of(b)} compare, and the code's path does not say")
+        else: d = d - 1; yes = True if self.facts.ge0(d) else False if self.facts.ge0(-d - 1) else None
+        if yes is None: raise Undecided(f"the specification asks how {Lin.of(a)} and {Lin.of(b)} compare, and the code's path does not say", "ge", d)
         return yes if op in (">=", ">") else not yes
     def minus(self, x, y):
         d = Lin.of(self.num(x)) - Lin.of(self.num(y))
@@ -786,6 +791,25 @@ def run(m, places, budget):
     return ends
 
 
+def where_holds(e, spec, guard, env):
+    """`ensures ... if GUARD`: the cases of this path's end in which the guard holds. Where the path does not say how
+    two numbers of the guard compare, it is taken both ways: so what is ensured is shown wherever the guard holds,
+    and nothing is asked where it does not. (A guard that cannot be read at all is an Err, as before.)"""
+    if guard is None: return [e]
+    holds, work = [], [e]
+    while work:
+        m = work.pop()
+        try:
+            if spec.eval(Algebra(m), guard, env) is True: holds.append(m)
+        except Undecided as u:
+            yes, no = m.clone(), m.clone()
+            if u.kind == "zero": yes.facts.assume_zero(u.x); no.facts.assume_nonzero(u.x)
+            else: yes.facts.add(u.x); no.facts.add(-u.x - 1)
+            work += [side for side in (yes, no) if side.facts.consistent()]
+            if len(work) + len(holds) > 64: raise Fail("a guard of the contract with more cases than this checker takes")
+    return holds
+
+
 def returned(e, c, where):
     A, env, spec = Algebra(e), dict(e.given), c.spec
     for region, rope in e.held.items():
@@ -799,19 +823,20 @@ def returned(e, c, where):
             want = numb(spec.eval(A, c.text["returns"], env))
             if lin(e.g["rax"]) is None or e.facts.zero(lin(e.g["rax"]) - want) is not True: raise Fail(f"{where}: the result is {e.g['rax']}, the contract says {want}")
         for leaf in c.text["leaves"]:
-            if leaf["cond"] is not None and spec.eval(A, leaf["cond"], env) is not True: continue        # (a condition the path does not decide is an Err)
-            want = spec.eval(A, leaf["expr"], env)
-            if leaf["name"] == c.result:
-                if not A.same(env[c.result], want): raise Fail(f"{where}: the result is {env[c.result]}, the contract says {want}")
-                continue
-            rope, (a, b) = e.held.get(leaf["name"]), leaf["part"] or (("num", 0), ("num", None))
-            n = e.len[leaf["name"]] if b == ("num", None) else numb(spec.eval(A, b, env))
-            if spec.eval(A, a, env) != 0: raise Fail(f"{where}: `ensures {leaf['name']}[a .. b]` with a that is not 0: not this checker's")
-            if rope is None or e.facts.zero(Lin.of(A.length(rope)) - n) is not True or not A.same(rope, want):
-                raise Fail(f"{where}: the bytes at {leaf['name']} are not what the contract says: they are {rope}, it says {want}")
+            for m in where_holds(e, spec, leaf["cond"], env):
+                A = Algebra(m)
+                want = spec.eval(A, leaf["expr"], env)
+                if leaf["name"] == c.result:
+                    if not A.same(env[c.result], want): raise Fail(f"{where}: the result is {env[c.result]}, the contract says {want}")
+                    continue
+                rope, (a, b) = e.held.get(leaf["name"]), leaf["part"] or (("num", 0), ("num", None))
+                n = e.len[leaf["name"]] if b == ("num", None) else numb(spec.eval(A, b, env))
+                if spec.eval(A, a, env) != 0: raise Fail(f"{where}: `ensures {leaf['name']}[a .. b]` with a that is not 0: not this checker's")
+                if rope is None or m.facts.zero(Lin.of(A.length(rope)) - n) is not True or not A.same(rope, want):
+                    raise Fail(f"{where}: the bytes at {leaf['name']} are not what the contract says: they are {rope}, it says {want}")
         for cond, guard in c.conditions:
-            if guard is not None and spec.eval(A, guard, env) is not True: continue
-            if spec.eval(A, cond, env) is not True: raise Fail(f"{where}: something the contract ensures is not so")
+            for m in where_holds(e, spec, guard, env):
+                if spec.eval(Algebra(m), cond, env) is not True: raise Fail(f"{where}: something the contract ensures is not so")
     except ode.Fails as err: raise Fail(f"{where}: the contract speaks of something the specification gives no value (it fails with {err.reason})")
     except Err as err: raise Fail(f"{where}: the specification cannot be followed on this path: {err}")
     for r in KEPT:

@@ -143,7 +143,6 @@ def blake3_derive_key(context, material) {
     bytes_of(hash_words(hash_words(iv_words(), DERIVE_KEY_CONTEXT, context), DERIVE_KEY_MATERIAL, material))
 }
 def iv_words() { [word(IV[i]) for i in 0..8] }
-def bytes_of(ws) { [word_bytes(ws[i / 4])[i % 4] for i in 0..4 * len(ws)] }
 
 // =========================================================================================================
 // The public contract: what the function in the binary does (hash.ode's `hashr`).
@@ -167,17 +166,19 @@ def bytes_of(ws) { [word_bytes(ws[i / 4])[i % 4] for i in 0..4 * len(ws)] }
 //
 //   A function that does more, or promises less, says so in its contract. Nothing is left to be understood.
 //
-// Here: `out` and `key` are each the address of 32 bytes, read as eight words, each word's lowest byte first
-// (`cv`); `input` is the address of `len` bytes; `flags` is a number below 256 (the mode's); `plat` is any
-// word (5 where the caller answers for the processor having AVX-512). `bits(n)`: the length of n in bits.
+// Here: `out` and `key` are each the address of 32 bytes; `input` is the address of `len` bytes; `flags` is
+// a number below 256 (the mode's); `plat` is any word (5 where the caller answers for the processor having
+// AVX-512). `words(bytes)`: every four bytes a word, the lowest byte first; `bytes_of(words)`: the other
+// way. `bits(n)`: the length of n in bits. So with the key's bytes those of IV and flags 0 the 32 bytes at
+// `out` are blake3(input) as defined above; with KEYED_HASH, blake3_keyed(key, input).
 //
 // The checker shows the contract from the binary's bytes (check_binary.py b3hashr.o). What it needs beside
 // them is in proofs/: the inner contracts, of the functions this one calls, and for a few loops a place. A
 // reader of this contract need not read those: if one were wrong, the checker would refuse the function it
 // is of, or the function that relies on it.
-contract b3l_hashr(out: cv, input: len bytes, len: number, key: cv, flags: byte, plat: any) {
+contract b3l_hashr(out: 32 bytes, input: len bytes, len: number, key: 32 bytes, flags: byte, plat: any) {
     requires apart(out, input, key)
-    ensures out = hash_words(key, flags, input)
+    ensures out = bytes_of(hash_words(words(key), flags, input))
     stack 18688 + 384 * bits(len / 1024)
     needs sse41
     needs avx512 if plat == 5
