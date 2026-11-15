@@ -32,8 +32,9 @@ Apple M6):
   through the eight functions of `hash.ode` and the library's kernels: the two one-block ones, the 32-lane
   chunk kernel for every part of more than one chunk, and the 16-lane parent kernel for a whole tree of 32
   chunks. Nothing is assumed of a callee: each is checked against its own bytes. On the same kernels it is
-  as fast as the earlier code that was written for speed alone, or faster: 14.3 GiB/s at 1 MiB on a Ryzen 7
-  9700X, one thread (below).
+  as fast as the earlier Ode code that was written for speed alone, or faster, and at 1 MiB and above it
+  runs at 87% to 89% of the library's own speed: 14.3 GiB/s against 16.0 on a Ryzen 7 9700X, one thread
+  (below; about 60% at 16 and 32 KiB).
 - The library's wide kernels by themselves (K32, P32 and P16 for every number of blocks; `output16`).
 - An earlier trial (`push`, `merge`, `add` of a stack of subtrees) against an algorithm, not the
   specification.
@@ -225,28 +226,32 @@ carried: what a callee is given for `plat` must be the caller's own, or a plain 
 anything on a path where the caller's own condition holds.
 
 **Speed.** One thread, under the bench lock, on two machines with AVX-512 (pinned runs
-`hashr-speed-9700x-…-cd10a392` and `hashr-speed-epyc9255-…-733ace9a` at commit `28e1c94b`; GNU as 2.46's
-objects). `khash_bench.c`: GiB a second, the best of 7 passes; the median of three rounds (the three were
-within 4% of one another in every cell). `hashf` is the earlier code (`levels/levels.ode`: levels over groups
-of 32 chunks, written for speed, proved in Lean with a stand-in), on the same kernels:
+`hashr-speed2-9700x-…-e2270d95` and `hashr-speed2-epyc9255-…-30c5450b`; `hash.ode` at commit `1cf60f0e`, GNU
+as 2.46's objects; the library at `next` `3ec37f0e`, rustc 1.99.1). `khash_bench.c`: GiB a second, the best
+of 7 passes; the median of three rounds (the three were within 2% of one another in every cell). "library":
+BLAKE3-Servil's own one-shot hash on the calling thread (`b3_hash` of `capi/b3.h`). `hashf`: the earlier Ode
+code (`levels/levels.ode`: levels over groups of 32 chunks, written for speed, proved in Lean with a
+stand-in). The three give the same hashes.
 
-| bytes | `hashr`, Ryzen 7 9700X | `hashf` | `hashr`, EPYC 9255 | `hashf` |
-|---|---|---|---|---|
-| 1,024 | 0.94 | 0.94 | 0.74 | 0.74 |
-| 16,384 | 6.38 | 4.45 | 5.14 | 3.57 |
-| 32,768 | 9.30 | 7.14 | 7.47 | 5.71 |
-| 65,536 | 14.96 | 9.51 | 12.14 | 7.64 |
-| 100,000 | 10.78 | 10.62 | 8.79 | 8.62 |
-| 1,048,576 | 14.29 | 13.54 | 11.70 | 10.88 |
-| 1,048,577 | 14.19 | 13.95 | 11.73 | 11.21 |
-| 16,777,216 | 13.93 | 13.62 | 11.37 | 11.08 |
+| bytes | `hashr`, Ryzen 7 9700X | library | `hashf` | `hashr`, EPYC 9255 | library | `hashf` |
+|---|---|---|---|---|---|---|
+| 1,024 | 0.94 | 0.98 | 0.94 | 0.74 | 0.77 | 0.74 |
+| 16,384 | 6.37 | 10.54 | 4.46 | 5.12 | 8.45 | 3.57 |
+| 32,768 | 9.29 | 14.57 | 7.14 | 7.46 | 12.33 | 5.71 |
+| 65,536 | 14.98 | 15.46 | 9.50 | 12.19 | 13.07 | 7.64 |
+| 100,000 | 10.80 | 13.15 | 10.61 | 8.79 | 10.98 | 8.63 |
+| 1,048,576 | 14.29 | 15.99 | 13.44 | 11.59 | 13.20 | 10.85 |
+| 1,048,577 | 14.19 | 16.04 | 13.82 | 11.50 | 13.30 | 11.18 |
+| 16,777,216 | 13.94 | 15.77 | 13.60 | 11.38 | 13.13 | 11.11 |
 
-The code written to be proved is no slower than the code written for speed at any size tried, and between
-16 and 64 KiB it is 30% to 59% faster (it makes one call of the chunk kernel where the earlier code went
-through levels). On the SSE4.1 kernel the two are alike (0.74 and 0.58 GiB/s: one block at a time). Not
-measured: against the library itself, in the library's benchmark; that is the comparison that matters next.
-(Before `take` and `part32`, parts under 32 chunks went one block at a time: about 1 GiB/s at 16 and 32
-KiB.)
+So the code written to be proved, on the library's own kernels, runs at 87% to 89% of the library's speed
+from 1 MiB up, 93% to 97% at 64 KiB, and about 60% at 16 and 32 KiB; and it is no slower than the earlier Ode
+code anywhere (30% to 59% faster between 16 and 64 KiB). What the library does that `hash.ode` does not yet:
+it has a 16-lane path for 16 chunks or fewer (here the 32-lane kernel runs half empty), and it makes parents
+many to a call of the parent kernel all the way up (here a whole tree of 32 chunks spends five calls on 31
+parents, and the parents over smaller parts and above the 32-chunk trees are compressed one at a time).
+Neither is something the way of proving forbids: they are code not yet written. On the SSE4.1 kernel `hashr`
+and `hashf` are alike (0.74 and 0.58 GiB/s: one block at a time).
 
 **The checker refused my first form of the wide leaf.** I had written `wide32(...)` and then `return 0`
 inside an `if`; Ode's `return` gives the result and does not leave the function, so the code went on, hashed
