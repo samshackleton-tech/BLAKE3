@@ -1,7 +1,10 @@
 // kflip_native: a kernel object run on this processor against BLAKE3 written out here, on inputs the
 // contract allows. kflip.py links it with each changed object its checker accepted: the processor arbitrates.
 //
-//     cc -O1 -o run kflip_native.c kflip_thunk.S OBJECT && ./run k32|p32|p16|o16 CASES [over]
+//     cc -O1 -o run kflip_native.c kflip_thunk.S OBJECT && ./run k32|p32|p16|o16 CASES [over|any]
+//
+// `any` (k32, p32, p16): the kernel's whole interface, as kloop.py shows it: 1 to 20 blocks an input, any
+// flags, start, end and last-length bytes, any counter, and anything in the packed word's upper half.
 //
 // Exit 0: on every case the 32 (16) chaining values are the reference's, nothing beside the output was
 // written (the bytes around it, the inputs, the table of their addresses, the key), and the registers a
@@ -65,7 +68,8 @@ static uint8_t *place(uint8_t *pg, size_t n, size_t align) {
 
 int main(int argc, char **argv) {
     if (argc < 3) return 2;
-    int over = argc > 3;        // a control: one block more than the inputs hold is asked for, and a page that faults is read
+    int over = argc > 3 && !strcmp(argv[3], "over");        // a control: one block more than the inputs hold is asked for, and a page that faults is read
+    int any = argc > 3 && !strcmp(argv[3], "any");
     int p16 = !strcmp(argv[1], "p16"), k32 = !strcmp(argv[1], "k32"), o16 = !strcmp(argv[1], "o16");
     kernel *f = o16 ? (kernel *)blake3_servil_output16 : p16 ? blake3_servil_avx512_p16 : k32 ? blake3_servil_avx512_k32 : blake3_servil_avx512_p32;
     if (!f) { printf("the object does not hold %s's kernel\n", argv[1]); return 2; }
@@ -73,7 +77,6 @@ int main(int argc, char **argv) {
     int lanes = p16 || o16 ? 16 : 32, blocks = p16 || o16 ? 1 : 16, cases = atoi(argv[2]);
     uint8_t *cv_page[16];
     for (int i = 0; i < 16; i++) cv_page[i] = o16 ? page() : 0;
-    size_t len = 64 * (size_t)blocks;
     uint8_t *in_page[32], *key_page = page(), *table_page = page(), *out_page = page(), *shadow = malloc(PAGE);
     for (int i = 0; i < lanes; i++) in_page[i] = page();
     for (int c = 0; c < cases; c++) {
@@ -84,6 +87,8 @@ int main(int argc, char **argv) {
         for (int j = 0; j < PAGE; j++) key_page[j] = (uint8_t)rnd();
         for (int j = 0; j < PAGE; j++) table_page[j] = (uint8_t)rnd();
         if (o16) for (int i = 0; i < 16; i++) for (int j = 0; j < PAGE; j++) cv_page[i][j] = (uint8_t)rnd();
+        int nb = any && !o16 ? 1 + (int)(rnd() % 20) : blocks;
+        size_t len = 64 * (size_t)nb;
         size_t table_size = o16 ? 24 * 16 : 8 * (size_t)lanes;
         const uint8_t **inputs = (const uint8_t **)place(table_page, table_size, 8);
         uint32_t *key = (uint32_t *)place(key_page, 32, 4), key0[8];
@@ -106,11 +111,13 @@ int main(int argc, char **argv) {
         }
         uint64_t flags = rnd() & 0xFF;
         // the counter: any; one case in four close below a carry out of the low word or of the whole
-        uint64_t counter = p16 ? 0 : (c % 4 == 1 ? 0xFFFFFFFFull - rnd() % 40 : c % 4 == 2 ? 0xFFFFFFFFFFFFFFFFull - rnd() % 40 : c % 4 == 3 ? rnd() << 32 | (0xFFFFFFFFull - rnd() % 40) : rnd());
-        uint64_t packed = p16 ? flags | 0x40000004 : flags | 0x40020100;
+        uint64_t counter = p16 && !any ? 0 : (c % 4 == 1 ? 0xFFFFFFFFull - rnd() % 40 : c % 4 == 2 ? 0xFFFFFFFFFFFFFFFFull - rnd() % 40 : c % 4 == 3 ? rnd() << 32 | (0xFFFFFFFFull - rnd() % 40) : rnd());
+        uint64_t mode = p16 && !any ? flags | 4 : flags;         // the parents' kernel is given the PARENT flag by its caller
+        uint64_t start_byte = any ? rnd() & 0xFF : p16 ? 0 : 1, end_byte = any ? rnd() & 0xFF : p16 ? 0 : 2, last_length = any ? rnd() & 0xFF : 64;
+        uint64_t packed = mode | start_byte << 8 | end_byte << 16 | last_length << 24 | (any ? rnd() << 32 : 0);
         memset(out_page, 0xA5, PAGE);
         uint8_t *out = place(out_page, 32 * (size_t)lanes, 1);
-        uint64_t args[6] = {(uint64_t)inputs, (uint64_t)(blocks + over), (uint64_t)key, counter, packed, (uint64_t)out}, after[7];
+        uint64_t args[6] = {(uint64_t)inputs, (uint64_t)(nb + over), (uint64_t)key, counter, packed, (uint64_t)out}, after[7];
         if (o16) { args[1] = (uint64_t)out; args[2] = args[3] = args[4] = args[5] = rnd(); }       // (descriptors, out); the other registers hold anything
         call_kernel(f, args, after);
         for (int i = 0; i < 6; i++)
@@ -120,10 +127,10 @@ int main(int argc, char **argv) {
             uint32_t cv[8];
             memcpy(cv, key0, sizeof cv);
             if (o16) { memcpy(cv, d0[lane].cv, sizeof cv); compress(cv, in0[lane], 0, d0[lane].length, d0[lane].flags); }
-            else if (p16) compress(cv, in0[lane], 0, 64, (uint32_t)flags | 4);
             else
-                for (int b = 0; b < 16; b++)
-                    compress(cv, in0[lane] + 64 * b, k32 ? counter + (uint64_t)lane : counter, 64, (uint32_t)flags | (b == 0 ? 1 : 0) | (b == 15 ? 2 : 0));
+                for (int b = 0; b < nb; b++)
+                    compress(cv, in0[lane] + 64 * b, k32 ? counter + (uint64_t)lane : counter, b == nb - 1 ? (uint32_t)last_length : 64,
+                             (uint32_t)(mode | (b == 0 ? start_byte : 0) | (b == nb - 1 ? end_byte : 0)));
             for (int w = 0; w < 8; w++) {
                 const uint8_t *q = out + 32 * lane + 4 * w;
                 uint32_t got = q[0] | q[1] << 8 | q[2] << 16 | (uint32_t)q[3] << 24;

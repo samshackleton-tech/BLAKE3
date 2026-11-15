@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """kflip: every single-bit change of a kernel's code, given to the decoder and the checker.
 
-    python3 kflip.py k32|p32|p16|o16 OBJECT [--jobs N] [--every K] [--native CASES] [--refused-sample N] [--detail]
+    python3 kflip.py k32|p32|p16|o16 OBJECT [--jobs N] [--every K] [--native CASES] [--refused-sample N] [--detail] [--general]
+
+--general (k32, p32, p16): the kernel for every number of blocks and every flag byte. "Accepted" is then:
+kloop.py's prover finds a proof of the changed kernel and its checker takes it; and the processor runs the
+changed kernel on 1 to 20 blocks with any flag bytes.
 
 An audit of kdecode.py and kcheck.py together. Each bit of the kernel's code in the object is flipped in turn
 (--every K: each K-th bit), and the changed object is read and checked as the true one is. Three outcomes:
@@ -36,6 +40,9 @@ import kcheck, kdecode
 BASE, DATA = 0x10000, 0x50000000
 
 
+GENERAL = "--general" in sys.argv        # every block count and every flag byte: kloop.py's prover and checker, and the processor run to match
+
+
 def verdict(obj, name):
     try:
         rows, data = kdecode.read(obj, kcheck.KERNELS[name]["start"], BASE, DATA)
@@ -43,7 +50,10 @@ def verdict(obj, name):
     except kdecode.Stop as e: return "stopped", str(e)
     except (IndexError, ValueError, KeyError, StopIteration) as e: return "stopped", f"the decoder ran off the bytes ({type(e).__name__})"
     try:
-        kcheck.check(rows, DATA, data, name, entry)
+        if GENERAL:
+            import kloop
+            kloop.find(rows, data, name, entry)         # accepted: a proof is found, and the checker takes it
+        else: kcheck.check(rows, DATA, data, name, entry)
     except kcheck.Fail as e: return "refused", str(e)
     except (KeyError, IndexError, ValueError, TypeError, AssertionError, RecursionError) as e: return "refused", f"the checker cannot run it ({type(e).__name__}: {e})"
     return "ACCEPTED", ""
@@ -87,7 +97,7 @@ def native(job):
     """The changed object on this processor: "same", "DIFFERS: ...", "CRASHES: ..." or "not linked"."""
     name, obj, bit, folder, cases = job
     b = bytearray(obj)
-    extra = ["over"] if bit == "over" else []
+    extra = ["over"] if bit == "over" else ["any"] if GENERAL else []
     if bit not in (None, "over"): b[bit // 8] ^= 1 << (bit % 8)
     o, exe = f"{folder}/m{bit}.o", f"{folder}/m{bit}"
     with open(o, "wb") as f: f.write(b)

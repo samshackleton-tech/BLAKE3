@@ -126,7 +126,7 @@ class Kcheck(unittest.TestCase):
         lift = os.path.join(HERE, "..", "one", "lift_one.py")
         for symbol, base in (("blake3_servil_avx512_p16", "0x18000"), ("blake3_servil_avx512_p32", "0x1000C")):
             out = os.path.join(self.dir, symbol)
-            subprocess.run([sys.executable, lift, listing, symbol, base, out + ".lean", "L", "--object", self.obj, "--rodata", "0x50000000"], check=True, capture_output=True)
+            subprocess.run([sys.executable, lift, listing, symbol, base, out + ".lean", "L", "--object", self.obj, "--rodata", "0x50000000"], check=True, capture_output=True, env=dict(os.environ, OBJDUMP=OBJDUMP))
             r = subprocess.run([sys.executable, os.path.join(HERE, "kdecode.py"), "--compare", self.obj, symbol, base, "0x50000000", out + ".lean.rows", out + ".lean.data"], capture_output=True, text=True)
             self.assertEqual(r.returncode, 0, r.stdout)
             self.assertIn("the same, every one", r.stdout)
