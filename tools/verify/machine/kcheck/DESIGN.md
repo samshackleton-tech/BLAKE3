@@ -156,10 +156,20 @@ Not done, in the order I would take them:
    is no slower than the earlier `hashf` anywhere (README.md). The rest is code not yet written: a 16-lane
    path for 16 chunks or fewer (a kernel to check); parents many to a call over small parts; AVX2 and
    narrower machines.
-2. **The checker's own worth.** It is Python, tested and audited, not proved, and since November 15 it is
-   two checkers of functions that should be one (`kfn.py`: words, calls by contract; `kbyte.py`: bytes,
-   places). How a reader comes to trust it is put off (Sam, November 15): for now it is taken that he does.
-   Its arithmetic was its weakest part and is still its least principled (README.md, "What that found").
+2. **The checker's own worth: the goal (Sam, November 15).** Soundness of the verifier is a hard
+   requirement, and so is that a reader can verify it without believing the whole verifier. The way: shrink
+   the core he relies on, and make it more provable as well as smaller. The verifier writes out its steps
+   as a proof; a tiny kernel checks them; everything clever (running code on symbols, arithmetic, lemmas)
+   moves to the side that needs no trust. What is at the bottom need not be one thing: the kernel is right
+   if any one of these is, and each reader takes the one he trusts: he reads the small kernel himself; a
+   second kernel, written apart, checks the same proof; the kernel is proved in something he already relies
+   on, such as Lean (never required); or the kernel is written in Ode, specified in Ode's specification
+   language, and shown by Ode's own verifier to meet it (circular alone; strong once any one outside check
+   breaks the circle). So the kernel is to be designed so that it could be written in Ode. No technique
+   removes what he must always read: the account of the machine, and what a contract and a specification
+   mean. First step, not started: three functions already checked, their steps written out for a kernel of
+   a few hundred lines; kernel size, proof size and check time measured. Today it is Python, tested and
+   audited, not proved, and two checkers of functions that should be one (`kfn.py`, `kbyte.py`).
 3. **The source's checker** (above), and the compiler printing bytes, not assembly (BLAKE3 #396). (The
    binary is already one file of settled bytes, made of an assembler's objects by `klink.py`; the checker
    reads it as a loader maps it.)
