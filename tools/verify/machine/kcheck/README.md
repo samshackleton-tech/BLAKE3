@@ -468,6 +468,29 @@ carried from place to place by the specification's own equations, opened one ste
 trusted: a wrong place is refused where it does not hold. Finding the places is the prover's work: here
 the model that wrote the code wrote them, from the checker's refusals. Nothing searches for them.
 
+**Shipped as files, as the hash is.** `programs/kpack.py` (trusted for nothing) makes one file of a
+program: its functions' bytes, their names, and the proof in a section that is not loaded
+(`programs/NAME/odeNAME.o`). `python3 programs/check_file.py FILE SPEC` reads a file as a loader maps it,
+finds each function the specification has a contract for (by its name, or in a stripped file by the code's
+bytes and the proof's offsets), takes the proof from the file, and checks:
+
+| file | bytes | functions | checked in |
+|---|---|---|---|
+| `adler32/odeadler32.o` | 1,376 | 1 | 0.01 s |
+| `lz4/odelz4.o` | 14,808 (3,088 of code, 11,002 of proof) | 3 | 2.5 s |
+| `varint/odevarint.o` | 1,032 | 1 | 0.2 s |
+| `common/odecommon.o` | 1,320 | 1 | 0.01 s |
+| `programs/lz4-rust/main.rs` linked with `odelz4.o` (rustc 1.99.1) | 4,568,904 | 3 | 4.4 s on the Threadripper |
+| the same after `strip` | 364,504 | 3, found by their bytes | 4.4 s |
+
+The Rust program packs with `ode_lz4_pack` at distances 1 to 8, keeps the smallest, unpacks with
+`ode_lz4_decode`, and relies on nothing but the contracts: with `n + n / 255 + 16` bytes of room the packer
+does not say NO; the decoder, given a block with a byte changed, says NO or gives something that fits (3 MB
+of zeros: 500,011 bytes; this page: 65,904 of 66,086). `programs/test_files.py`: the proof each file
+carries is the folder's and was made with the folder's specification; with one fact left out of one place
+the function it is of is refused and the others are not; a reader with another specification is told so,
+and with a wrong one the check fails.
+
 **What was done to find it wrong** (`test_kbyte.py`, `kbyte_flip.py`, `kbyte_nop.py`, `audit.sh`):
 
 - **Changed texts** (`test_kbyte.py`, 25 tests, about ten minutes). Each program's specification and
@@ -693,6 +716,7 @@ specification. (The hash above does not use them: it has no stack.)
 | `programs/` | | five other programs: each its specification and public contract, its Ode source, the compiler's assembly, its proof, a harness for the processor; `check_programs.py`, `test_specs.py`, `bench.c`; `blake3-rust/` |
 | `kbyte.py`, `test_kbyte.py` | 910 + 326 | the checker of those programs (bytes, numbers, places); its tests |
 | `kbyte_flip.py`, `kbyte_nop.py` | 117 + 37 | their single-bit audit and every instruction left out, the processor judging |
+| `programs/kpack.py`, `programs/check_file.py`, `programs/test_files.py` | 55 + 63 + 82 | a program as one file with its proof (untrusted); what a reader runs on it, or on what a linker made of it; tests |
 | `klink.py`, `klink_flip.py`, `test_kbinary.py` | 134 + 72 + 182 | makes the binary of the assembler's objects (untrusted); every single-bit change of what a linker would have written; tests of the reading of a linked file |
 | `check_all.py` | 120 | every function from an assembler's objects, and that the hash's functions end |
 | `ode.py`, `kspec.py`, `klin.py` | 694 + 565 + 256 | the specification's reader; its algebra on symbols; numbers that depend on counts and the facts about them |
