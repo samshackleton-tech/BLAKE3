@@ -18,7 +18,8 @@ PROGRAMS = [("adler32", "adler32", "Adler-32 of any bytes"),
             ("lz4", "lz4_store", "an LZ4 block written that decodes to the input (all literals)"),
             ("lz4", "lz4_pack", "an LZ4 block written that decodes to the input (with matches)"),
             ("varint", "varint", "a number's varint"),
-            ("common", "common", "how many bytes two runs have alike at their start")]
+            ("common", "common", "how many bytes two runs have alike at their start"),
+            ("utf8", "utf8", "the count of code points of well-formed UTF-8, or NO")]
 
 
 def main():

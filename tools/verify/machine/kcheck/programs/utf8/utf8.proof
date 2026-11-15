@@ -1,0 +1,14 @@
+// The loop of ode_utf8, at the first instruction of its body: i bytes are looked at and hold `count` code
+// points, and what the bytes from i on add to that count is the whole count (or fails as the whole does).
+// In the stack: [0] c, [8] need, [16] state.
+place +0x74 {
+    name i = r12
+    name count = r13
+    name state = stack[16]
+    fact state == 0
+    fact i <= n
+    fact count <= i
+    fact points(input, i, count) == utf8(input)
+    any r14, r15, stack[0], stack[8]
+    decreases n - i
+}

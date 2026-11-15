@@ -49,7 +49,7 @@ assembler and no linker is relied on.
 
 **Programs other than the hash** (`programs/`, November 15: to find what the two languages lack). Each has
 its own specification and public contract, code in Ode, and is checked from its bytes
-(`python3 programs/check_programs.py`: six functions, 894 instructions, 3 s):
+(`python3 programs/check_programs.py`: seven functions, 1,194 instructions, 3.4 s):
 
 | | the public contract's `ensures` and `returns` | instructions | proof | checked in |
 |---|---|---|---|---|
@@ -59,6 +59,7 @@ its own specification and public contract, code in Ode, and is checked from its 
 | LZ4 encoder with matches | the same two lines | 360 | 6 places, 133 lines | 2.1 s |
 | a number's varint | `returns r`; `ensures out[0 .. r] = varint(v)` | 35 | none | 0.1 s |
 | first difference of two runs of bytes | `returns common(a, b)` | 45 | 1 place, 8 lines | 3 ms |
+| UTF-8: is it well-formed, and how many code points | `returns if failed(utf8(input)) then NO else utf8(input)` | 300 | 1 place, 11 lines | 0.17 s |
 
 What is shown of BLAKE3, from the bytes (`python3 check_all.py`, of the objects an assembler makes of the
 sources: 18 functions, 3,831 instructions, 19 s):
@@ -418,7 +419,7 @@ something BLAKE3 does not have: a result that is a number, a loop whose count is
 that may be malformed, output that depends on earlier output, an answer that may be "no", and a contract
 that is no way to compute anything.
 
-    python3 programs/check_programs.py          # the six functions from their bytes: 894 instructions, 3 s
+    python3 programs/check_programs.py          # the seven functions from their bytes: 1,194 instructions, 3.4 s
     python3 programs/test_specs.py              # each specification against someone else's answers
     python3 test_kbyte.py                       # changed specifications, contracts, proofs and instructions
 
@@ -428,6 +429,7 @@ that is no way to compute anything.
 | `lz4/` | 111: the block format, its two ways to fail, three contracts | a decoder written in the test as decoders are (a loop over the block), on blocks an encoder of the test's made and on damaged ones | `ode_lz4_decode`, `ode_lz4_store`, `ode_lz4_pack` |
 | `varint/` | 12 | LEB128 written another way | `ode_varint` |
 | `common/` | 15 | the same in Python | `ode_common` |
+| `utf8/` | 61: a code point is 0 to 0x10FFFF and no surrogate, written in the fewest of one to four bytes | Python's strict decoder | `ode_utf8` |
 | `sigil/` | 175: John's Sigil 0.1 (the data with two marker bits, times a check prime, written in base 2,048 as letters) | the 220 good vectors of its repository | none: it multiplies a number of 258 bits by a prime and looks letters up in a table of 2,048; Ode has no multiplication yet, and `kbyte.py` reads no table of constants |
 
 **What each made the languages gain.**
@@ -447,6 +449,17 @@ that is no way to compute anything.
   (`ensures r != NO if cap >= n + n / 255 + 16`: the room LZ4's users know as its bound).
 - *Varint, first difference*: nothing. They were written after the others and needed no change to either
   language or to the checker.
+- *UTF-8*: nothing again, and it was written while the checker was frozen for the audit: specification,
+  code, proof (one place, four facts), tests and the run against the C library's converter took seven
+  minutes by the clock (a model wrote them). The specification is the standard's definition (the fewest bytes, no surrogate, at most 0x10FFFF),
+  not its table of byte ranges; the code tells the same from the first two bytes, and the checker's
+  arithmetic shows that the two agree. One thing it taught: **the code has to decide things in the order
+  the specification does.** The first form looked at the byte after the first before it had settled how
+  many bytes the sequence has; the specification settles that first, and the checker, reading the
+  specification along the code's path, could not go on ("the specification asks how input[i] and 224
+  compare, and the code's path does not say"). The answer would have been the same either way. The code
+  was changed. The checker could instead take such a question both ways, as it does for a contract's
+  `if`; it does not yet.
 
 **`kbyte.py`** (910 lines) is the checker for these: `kfn.py`'s machine, with memory as bytes and lists of
 bytes in parts, numbers that depend on counts, and places. A proof (`programs/NAME/FUNCTION.proof`) is a
@@ -479,6 +492,7 @@ bytes and the proof's offsets), takes the proof from the file, and checks:
 | `adler32/odeadler32.o` | 1,376 | 1 | 0.01 s |
 | `lz4/odelz4.o` | 14,808 (3,088 of code, 11,002 of proof) | 3 | 2.5 s |
 | `varint/odevarint.o` | 1,032 | 1 | 0.2 s |
+| `utf8/odeutf8.o` | 2,624 | 1 | 0.17 s |
 | `common/odecommon.o` | 1,320 | 1 | 0.01 s |
 | `programs/lz4-rust/main.rs` linked with `odelz4.o` (rustc 1.99.1) | 4,568,904 | 3 | 4.4 s on the Threadripper |
 | the same after `strip` | 364,504 | 3, found by their bytes | 4.4 s |
@@ -713,7 +727,7 @@ specification. (The hash above does not use them: it has no stack.)
 | `hash.ode`, `glue/*.S` | 332 | the hash written to be proved; the assembly the Ode compiler prints of it (and of the stack's three functions) |
 | `b3hashr.o` | | the binary: 30,888 bytes, the proof in it |
 | `check_binary.py` | 140 | what a reader runs on the binary, or on what a linker made of it |
-| `programs/` | | five other programs: each its specification and public contract, its Ode source, the compiler's assembly, its proof, a harness for the processor; `check_programs.py`, `test_specs.py`, `bench.c`; `blake3-rust/` |
+| `programs/` | | six other programs (Sigil a specification only): each its specification and public contract, its Ode source, the compiler's assembly, its proof, a harness for the processor; `check_programs.py`, `test_specs.py`, `bench.c`; `blake3-rust/` |
 | `kbyte.py`, `test_kbyte.py` | 910 + 326 | the checker of those programs (bytes, numbers, places); its tests |
 | `kbyte_flip.py`, `kbyte_nop.py` | 117 + 37 | their single-bit audit and every instruction left out, the processor judging |
 | `programs/kpack.py`, `programs/check_file.py`, `programs/test_files.py` | 55 + 63 + 82 | a program as one file with its proof (untrusted); what a reader runs on it, or on what a linker made of it; tests |

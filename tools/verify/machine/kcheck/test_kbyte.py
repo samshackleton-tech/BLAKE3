@@ -248,6 +248,58 @@ class Lz4Pack(unittest.TestCase):
         self.assertEqual({c for i, c in accepted}, {".nop"})
 
 
+class Utf8(unittest.TestCase):
+    """A validator: the count of code points, or NO where the bytes are not well-formed UTF-8. Written after
+    the checker was frozen for an audit: it needed no change to the checker or to either language."""
+    @classmethod
+    def setUpClass(cls): cls.p = Program("utf8", "utf8", "ode_utf8")
+
+    def test_it_meets_its_contract(self):
+        self.assertEqual(self.p.verdict(), "accepted")
+
+    def test_a_changed_specification_or_contract_is_refused(self):
+        length = "if b < 128 then 1 else if b < 224 then 2 else if b < 240 then 3 else 4"
+        least = "if n == 1 then 0 else if n == 2 then 128 else if n == 3 then 2048 else 65536"
+        three = "else if n == 3 then 4096 * (bytes[at] - 224) + 64 * six(bytes, at, 1) + six(bytes, at, 2)"
+        four = "else 262144 * (bytes[at] - 240) + 4096 * six(bytes, at, 1) + 64 * six(bytes, at, 2) + six(bytes, at, 3)"
+        rest = "if at == len(bytes) then count else points(bytes, point(bytes, at).next, count + 1)"
+        result = "returns if failed(utf8(input)) then NO else utf8(input)"
+        self.p.changed(self, "spec", [
+            ("fails MALFORMED if b >= 128 && b < 192", "fails MALFORMED if b >= 128 && b < 191"), ("fails MALFORMED if b >= 248", "fails MALFORMED if b >= 249"), ("fails MALFORMED if b >= 248", "fails MALFORMED if b >= 247"),
+            (length, length.replace("b < 224", "b < 225")), (length, length.replace("b < 240", "b < 239")), (length, length.replace("b < 128", "b < 127")),
+            ("fails MALFORMED if at + k >= len(bytes)", "fails MALFORMED if at + k > len(bytes)"),
+            ("fails MALFORMED if bytes[at + k] < 128 || bytes[at + k] >= 192", "fails MALFORMED if bytes[at + k] < 127 || bytes[at + k] >= 192"),
+            ("fails MALFORMED if bytes[at + k] < 128 || bytes[at + k] >= 192", "fails MALFORMED if bytes[at + k] < 128 || bytes[at + k] >= 193"),
+            ("else if n == 2 then 64 * (bytes[at] - 192) + six(bytes, at, 1)", "else if n == 2 then 64 * (bytes[at] - 192) + six(bytes, at, 0)"),
+            (three, three.replace("+ six(bytes, at, 2)", "+ six(bytes, at, 1)")), (three, three.replace("64 * six", "32 * six")),
+            (four, four.replace("+ six(bytes, at, 3)", "+ six(bytes, at, 2)")), (four, four.replace("262144", "131072")),
+            (least, least.replace("128", "127")), (least, least.replace("2048", "2049")), (least, least.replace("65536", "65537")), (least, least.replace("65536", "4096")),
+            # the three things that make a sequence no code point: each left out, and each off by one
+            ("    fails MALFORMED if p < least(n)                 // written in more bytes than it needs\n", ""),
+            ("fails MALFORMED if p >= 55296 && p < 57344", "fails MALFORMED if p >= 55297 && p < 57344"), ("fails MALFORMED if p >= 55296 && p < 57344", "fails MALFORMED if p >= 55296 && p < 57343"),
+            ("    fails MALFORMED if p >= 55296 && p < 57344      // a surrogate\n", ""),
+            ("fails MALFORMED if p > 1114111", "fails MALFORMED if p > 1114112"), ("fails MALFORMED if p > 1114111", "fails MALFORMED if p > 1114110"), ("    fails MALFORMED if p > 1114111\n", ""),
+            ("{value: p, next: at + n}", "{value: p, next: at + 1}"),
+            (rest, rest.replace("count + 1)", "count + 2)")), (rest, rest.replace("then count else", "then count + 1 else")),
+            ("def utf8(bytes) { points(bytes, 0, 0) }", "def utf8(bytes) { points(bytes, 0, 1) }"),
+            (result, "returns utf8(input)"), (result, result + " + 1"), (result, result.replace("then NO", "then 0")),
+            ("    trace depends on input\n", ""), ("stack 88", "stack 80")])
+
+    def test_a_proof_without_one_of_its_lines_is_refused(self):
+        lines, needless = self.p.proof.split("\n"), []
+        for k, line in enumerate(lines):
+            if not line.strip() or line.strip().startswith(("//", "place", "}", "any ")): continue
+            if self.p.verdict(proof="\n".join(lines[:k] + lines[k + 1:])) == "accepted": needless.append(line.strip())
+        self.assertEqual(needless, [])
+
+    def test_a_changed_instruction_is_refused_unless_it_keeps_the_contract(self):
+        # Of 344, 47 accepted, each an instruction left out: moves of what is already there, and jumps over code
+        # that then does the same again. (Each such object is run on the processor by kbyte_nop.py.)
+        n, accepted = instructions_changed(self.p)
+        self.assertEqual((n, len(accepted)), (344, 47))
+        self.assertEqual({c for i, c in accepted}, {".nop"})
+
+
 class Arithmetic(unittest.TestCase):
     """klin.py asked again (kbyte.py's facts are `thorough`): by bounds, and by elimination with more room."""
     def test_a_quotient_gets_its_value_from_bounds_whatever_else_is_known(self):

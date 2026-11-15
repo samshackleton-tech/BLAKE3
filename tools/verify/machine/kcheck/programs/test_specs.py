@@ -128,6 +128,28 @@ class Specs(unittest.TestCase):
             want = next((k for k in range(n) if a[k] != b[k]), n)
             self.assertEqual(value(s, "common", a, b), ("ok", want))
 
+    def test_utf8_is_pythons(self):
+        # the strict decoder of Python: text of every length of sequence, the same with a byte changed or left out,
+        # random bytes, and the boundaries of table 3-7 with every first byte
+        s, r = spec("utf8"), random.Random(7)
+        pick = lambda: chr(r.choice([r.randrange(0x80), r.randrange(0x80, 0x800), r.randrange(0x800, 0xD800), r.randrange(0xE000, 0x10000), r.randrange(0x10000, 0x110000)]))
+        cases = [b"", b"a", b"\xc0\x80", b"\xc1\xbf", b"\xe0\x9f\xbf", b"\xe0\xa0\x80", b"\xed\x9f\xbf", b"\xed\xa0\x80", b"\xf0\x8f\xbf\xbf", b"\xf0\x90\x80\x80", b"\xf4\x8f\xbf\xbf", b"\xf4\x90\x80\x80",
+                 b"\xf5\x80\x80\x80", b"\xf8\x88\x80\x80\x80", b"\xff", b"\x80", b"\xc2", b"\xe1\x80", b"\xf1\x80\x80", b"\xef\xbf\xbf"]
+        for k in range(1500):
+            text = bytearray("".join(pick() for _ in range(r.randrange(0, 12))).encode())
+            if k % 4 == 1 and text: text[r.randrange(len(text))] = r.randrange(256)
+            if k % 4 == 2 and text: del text[r.randrange(len(text))]
+            if k % 4 == 3: text = bytearray(r.randrange(256) for _ in range(r.randrange(0, 12)))
+            cases.append(bytes(text))
+        for a in range(256):
+            for b in (0x7F, 0x80, 0x8F, 0x90, 0x9F, 0xA0, 0xBF, 0xC0): cases += [bytes([a, b]), bytes([a, b, 0x80]), bytes([a, b, 0x80, 0x80]), bytes([a, b, 0xBF, 0xBF])]
+        good = 0
+        for data in cases:
+            try: want = ("ok", len(data.decode("utf-8", "strict"))); good += 1
+            except UnicodeDecodeError: want = ("fails", 1)
+            self.assertEqual(value(s, "utf8", list(data)), want, data.hex())
+        self.assertGreater(good, 500)
+
     def test_sigil_is_the_repositorys(self):
         path = os.path.join(sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/tmp/night/sigil"), "vectors.tsv")
         if not os.path.exists(path): self.skipTest("no vectors.tsv: give the sigil checkout")
