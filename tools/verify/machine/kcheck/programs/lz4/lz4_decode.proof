@@ -1,0 +1,79 @@
+// The five loops of ode_lz4_decode. i: bytes of the input taken; o: bytes written at out; state: 0 going on,
+// 1 at the block's end, 2 no block or no room; count: bytes still to write (or the count being read).
+// In the stack: [0] state, [8] token, [16] count, [24] the byte just read, [32] offset, [40] more, [48] result.
+
+// a sequence begins
+place +0x75 {
+    name i = r14
+    name o = r15
+    name state = stack[0]
+    fact i <= n
+    fact o <= cap
+    fact state <= 2
+    any stack[8], stack[16], stack[24], stack[32], stack[40]
+    decreases n - i, 2 - state
+}
+
+// the count of literals is read: more bytes while each is 255
+place +0xfe {
+    name i = r14
+    name o = r15
+    name state = stack[0]
+    name token = stack[8]
+    name count = stack[16]
+    name more = stack[40]
+    fact i <= n
+    fact o <= cap
+    fact state <= 2
+    fact count <= n
+    any stack[24], stack[32]
+    decreases n - i, 4 + more
+}
+
+// the literals are copied
+place +0x1ff {
+    name i = r14
+    name o = r15
+    name state = stack[0]
+    name token = stack[8]
+    name count = stack[16]
+    fact i + count <= n
+    fact o + count <= cap
+    fact state <= 2
+    any stack[24], stack[32], stack[40]
+    decreases n - i, 3
+}
+
+// the count of the match is read
+place +0x33a {
+    name i = r14
+    name o = r15
+    name state = stack[0]
+    name count = stack[16]
+    name offset = stack[32]
+    name more = stack[40]
+    fact i <= n
+    fact o <= cap
+    fact state <= 2
+    fact count <= cap
+    fact offset >= 1
+    fact offset <= o
+    any stack[8], stack[24]
+    decreases n - i, 4 + more
+}
+
+// the match is copied, a byte at a time, from `offset` before
+place +0x449 {
+    name i = r14
+    name o = r15
+    name state = stack[0]
+    name count = stack[16]
+    name offset = stack[32]
+    fact i <= n
+    fact o + count <= cap
+    fact state <= 2
+    fact offset >= 1
+    fact offset <= o
+    any stack[8], stack[24], stack[40]
+    decreases n - i, 3, count
+}

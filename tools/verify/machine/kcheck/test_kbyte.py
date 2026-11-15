@@ -71,5 +71,41 @@ class Adler32(unittest.TestCase):
         self.assertTrue(all(c == ".nop" and i.startswith(".mov 64 (.reg .r") for _, i, c in accepted), accepted)
 
 
+class Lz4Decode(unittest.TestCase):
+    """The decoder against the contract of November 15: for any input, it writes nothing but the cap bytes at
+    out, reads nothing but the n bytes at input, and returns."""
+    @classmethod
+    def setUpClass(cls): cls.p = Program("lz4", "lz4_decode", "ode_lz4_decode")
+
+    def test_it_meets_its_contract(self):
+        self.assertEqual(self.p.verdict(), "accepted")
+
+    def test_a_changed_contract_is_refused(self):
+        self.p.changed(self, "spec", [("    writes out\n", ""), ("    trace depends on input\n", ""), ("stack 104", "stack 103"), ("    requires apart(out, input)\n", ""),
+                                      ("out: cap bytes, cap: number, input: n bytes", "out: cap bytes, cap: number, input: cap bytes"),
+                                      ("out: cap bytes, cap: number, input: n bytes", "out: n bytes, cap: number, input: n bytes")])
+
+    def test_a_proof_without_one_of_its_facts_is_refused(self):
+        lines, needless = self.p.proof.split("\n"), []
+        for k, line in enumerate(lines):
+            if not line.strip().startswith(("fact ", "decreases ", "name ")): continue
+            if self.p.verdict(proof="\n".join(lines[:k] + lines[k + 1:])) == "accepted": needless.append(line.strip())
+        self.assertEqual(needless, ["fact offset >= 1"])       # where the match's count is read; the copy asks it again
+
+    def test_a_check_taken_out_of_the_code_is_refused(self):
+        # every conditional jump turned round, or left out: those that guard a read, a write or a loop's end are missed
+        refused = 0
+        for k, (a, z, i) in enumerate(self.p.rows):
+            for old, new in ((".jae", ".jb"), (".jne", ".je")):
+                if not i.startswith(old): continue
+                for c in (i.replace(old, new), ".nop"):
+                    rows = list(self.p.rows); rows[k] = (a, z, c)
+                    refused += self.p.verdict(rows=rows) != "accepted"
+        self.assertEqual(refused, REFUSED_JUMPS)
+
+
+REFUSED_JUMPS = 38         # of 54; the 16 accepted change what is decoded, of which this contract says nothing
+
+
 if __name__ == "__main__":
     unittest.main()

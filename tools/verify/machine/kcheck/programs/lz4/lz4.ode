@@ -1,0 +1,96 @@
+// An LZ4 block decoder, written to be proved against lz4.spec: one sequence a turn. It gives the count of
+// bytes written at out, or NO where the input is no block or what it decodes to has more than cap bytes.
+//
+// `state`: 0 while it goes on; 1 at the block's end; 2 where it gives NO. `count`: the literals, then the
+// match's bytes, still to be written. A count is never let above n (a block cannot hold more literals than it
+// has bytes) nor above cap, so no sum here can pass 64 bits.
+
+const NO = 0xFFFFFFFFFFFFFFFF
+
+fn lz4_decode(out, cap, input, n)
+  reg out, cap, input, n, i, o
+{
+  var i = 0
+  var o = 0
+  var state = 0
+  var token = 0
+  var count = 0
+  var b = 0
+  var offset = 0
+  var more = 0
+  while state == 0 {
+    if i >= n { state = 2 } else {
+      token = u8[input + i]
+      i = i + 1
+      count = token >> 4
+      if count == 15 {
+        if n < 15 { state = 2 } else {
+          more = 1
+          while more == 1 {
+            if i >= n { state = 2  more = 0 } else {
+              b = u8[input + i]
+              i = i + 1
+              if b > n - count { state = 2  more = 0 } else {
+                count = count + b
+                if b < 255 { more = 0 }
+              }
+            }
+          }
+        }
+      }
+      if state == 0 {
+        if count > n - i { state = 2 } else {
+          if count > cap - o { state = 2 } else {
+            while count > 0 {
+              u8[out + o] = u8[input + i]
+              o = o + 1
+              i = i + 1
+              count = count - 1
+            }
+            if i == n { state = 1 } else {
+              if n - i < 2 { state = 2 } else {
+                offset = u8[input + i] + (u8[input + i + 1] << 8)
+                i = i + 2
+                if offset == 0 { state = 2 } else {
+                  if offset > o { state = 2 } else {
+                    count = token & 15
+                    if count == 15 {
+                      if cap < 15 { state = 2 } else {
+                        more = 1
+                        while more == 1 {
+                          if i >= n { state = 2  more = 0 } else {
+                            b = u8[input + i]
+                            i = i + 1
+                            if b > cap - count { state = 2  more = 0 } else {
+                              count = count + b
+                              if b < 255 { more = 0 }
+                            }
+                          }
+                        }
+                      }
+                    }
+                    if state == 0 {
+                      if cap - o < 4 { state = 2 } else {
+                        if count > cap - o - 4 { state = 2 } else {
+                          count = count + 4
+                          while count > 0 {
+                            u8[out + o] = u8[out + o - offset]
+                            o = o + 1
+                            count = count - 1
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  var result = o
+  if state == 2 { result = NO }
+  return result
+}

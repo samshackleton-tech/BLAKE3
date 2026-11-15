@@ -19,11 +19,12 @@ What is shown, for everything the contract's `requires` lines allow, along every
     is true there whenever the code comes to it:
 
         place +0x1f {
-            name i = r14                 the number in r14 is called i
+            name i = r14                 the number in r14 is called i (`stack[8]`: the eight bytes 8 above the stack pointer)
             fact i <= len                what is known of the names
             r12 = s1(input)[i]           what a register holds, in the specification's terms
-            decreases len - i            a number that is less each time round, and never below zero
-        }
+            any stack[16]                something the loop changes, of which nothing is said
+            decreases len - i            numbers never below zero that are less at the next place the code comes
+        }                                to: the first, or the first no greater and the second less, and so on
 
     The checker runs the code from the entry to the place, and from the place (the names any numbers the
     facts allow, the registers as said, the registers a callee keeps and the stack as they were if they
@@ -269,13 +270,22 @@ def order(spec, A, e, env):
 # ---------------------------------------------------------------------------------------------------------
 # Places.
 class Place:
-    def __init__(self, at): self.at, self.names, self.facts, self.regs, self.any, self.decreases = at, [], [], {}, set(), None
+    def __init__(self, at): self.at, self.names, self.facts, self.says, self.any, self.decreases = at, [], [], {}, set(), []
 
 
 def expression(text):
     p = ode.Parser(text); e = p.expr()
-    if p.i != len(p.t) - (1 if p.t and p.t[-1][0] == "end" else 0) and p.i != len(p.t): raise Fail(f"the proof: {text!r} is not one expression")
+    if p.t[p.i][0] != "end": raise Fail(f"the proof: {text!r} is not one expression")
     return e
+
+
+def location(text):
+    """A register, or `stack[N]`: the eight bytes N above the stack pointer as it is at the place."""
+    text = text.strip()
+    if text in G64 and text != "rsp": return ("reg", text)
+    m = re.fullmatch(r"stack\[(\d+)\]", text)
+    if m and int(m.group(1)) % 8 == 0: return ("stack", int(m.group(1)))
+    raise Fail(f"the proof: {text!r} is not a register or stack[N]")
 
 
 def read_proof(text, c):
@@ -288,22 +298,41 @@ def read_proof(text, c):
         if m: p = Place(BASE + int(m.group(1), 16)); places[p.at] = p; continue
         if p is None: raise Fail(f"the proof: {line!r} outside a place")
         if line == "}": p = None; continue
-        m = re.fullmatch(r"name (\w+) = (\w+)(?: - (\w+))?", line)
+        m = re.fullmatch(r"name (\w+) = ([\w\[\]]+)(?: - (\w+))?", line)
         if m:
-            if m.group(2) not in G64 or (m.group(3) is not None and c.kind.get(m.group(3)) in (None, "number")): raise Fail(f"the proof: {line!r}")
-            p.names.append((m.group(1), m.group(2), m.group(3))); continue
+            if m.group(3) is not None and c.kind.get(m.group(3)) in (None, "number"): raise Fail(f"the proof: {line!r}")
+            p.names.append((m.group(1), location(m.group(2)), m.group(3))); continue
         if line.startswith("fact "): p.facts.append(expression(line[5:])); continue
-        if line.startswith("any "): p.any |= {r.strip() for r in line[4:].split(",")}; continue
-        if line.startswith("decreases "): p.decreases = expression(line[10:]); continue
-        m = re.fullmatch(r"(\w+) = (.+)", line)
-        if not m or m.group(1) not in G64: raise Fail(f"the proof: {line!r}")
+        if line.startswith("any "): p.any |= {location(r) for r in line[4:].split(",")}; continue
+        if line.startswith("decreases "):
+            depth, part, parts = 0, "", []
+            for ch in line[10:]:                        # E1, E2, ...: by the first, then the second, ...
+                depth += ch in "([" ; depth -= ch in ")]"
+                if ch == "," and depth == 0: parts.append(part); part = ""
+                else: part += ch
+            p.decreases = [expression(x) for x in parts + [part]]; continue
+        m = re.fullmatch(r"([\w\[\]]+) = (.+)", line)
+        if not m: raise Fail(f"the proof: {line!r}")
         e, region = expression(m.group(2)), None
         if e[0] == "name" and c.kind.get(e[1]) not in (None, "number"): region, e = e[1], ("num", 0)
         elif e[0] == "bin" and e[1] == "+" and e[2][0] == "name" and c.kind.get(e[2][1]) not in (None, "number"): region, e = e[2][1], e[3]
-        p.regs[m.group(1)] = (region, e)
-    for p in places.values():
-        if (p.any | set(p.regs) | {r for _, r, _ in p.names}) - set(G64) or "rsp" in p.any | set(p.regs): raise Fail("the proof: a place speaks of something that is not a register, or of the stack pointer")
+        p.says[location(m.group(1))] = (region, e)
     return places
+
+
+def get(e, loc):
+    if loc[0] == "reg": return e.g[loc[1]]
+    cell = e.mem["frame"].get(e.g["rsp"][2] + loc[1])
+    if cell is None or cell[1] != "q": raise Fail(f"stack[{loc[1]}]: nothing the code wrote as eight bytes is there")
+    return cell[2]
+
+
+def put(m, loc, v):
+    if loc[0] == "reg": m.g[loc[1]] = v
+    else: m.mem["frame"][m.g["rsp"][2] + loc[1]] = (8, "q", v)
+
+
+def show(loc): return loc[1] if loc[0] == "reg" else f"stack[{loc[1]}]"
 
 
 def stable(m, v):
@@ -324,15 +353,15 @@ def same(F, v, w):
 
 
 def bind(e, p):
-    """The names of a place, as the registers of e hold them."""
+    """The names of a place, as e holds them."""
     env = dict(e.given)
-    for name, reg, region in p.names:
-        v = e.g[reg]
+    for name, loc, region in p.names:
+        v = get(e, loc)
         if region is None:
-            if lin(v) is None: raise Fail(f"{reg} holds {v}: not a number to call {name}")
+            if lin(v) is None: raise Fail(f"{show(loc)} holds {v}: not a number to call {name}")
             env[name] = plain(lin(v))
         else:
-            if v[0] != "a" or v[1] != region: raise Fail(f"{reg} holds {v}: not an address in {region}")
+            if v[0] != "a" or v[1] != region: raise Fail(f"{show(loc)} holds {v}: not an address in {region}")
             env[name] = plain(Lin.of(v[2]))
         if e.tainted(env[name]): raise Fail(f"{name} depends on bytes the contract does not let the trace depend on")
     return env
@@ -343,22 +372,29 @@ def holds(e, p, env, spec, where):
     A = Algebra(e)
     try:
         for f in p.facts:
-            if spec.eval(A, f, env) is not True: raise Fail(f"{where}: a fact of the place does not hold")
-        for reg, (region, x) in p.regs.items():
-            want, v = Lin.of(spec.eval(A, x, env)), e.g[reg]
+            if spec.eval(A, f, env) is not True: raise Fail(f"{where}: a fact of the place at +{p.at - BASE:#x} does not hold")
+        for loc, (region, x) in p.says.items():
+            want, v = Lin.of(spec.eval(A, x, env)), get(e, loc)
             if region is None:
-                if lin(v) is None or e.facts.zero(lin(v) - want) is not True: raise Fail(f"{where}: {reg} holds {v}, the place says {want}")
-            elif v[0] != "a" or v[1] != region or e.facts.zero(Lin.of(v[2]) - want) is not True: raise Fail(f"{where}: {reg} holds {v}, the place says {region} + {want}")
-    except Err as err: raise Fail(f"{where}: what the place says cannot be read on this path: {err}")
+                if lin(v) is None or e.facts.zero(lin(v) - want) is not True: raise Fail(f"{where}: {show(loc)} holds {v}, the place says {want}")
+            elif v[0] != "a" or v[1] != region or e.facts.zero(Lin.of(v[2]) - want) is not True: raise Fail(f"{where}: {show(loc)} holds {v}, the place says {region} + {want}")
+    except Err as err: raise Fail(f"{where}: what the place at +{p.at - BASE:#x} says cannot be read on this path: {err}")
+
+
+def said(e, p):
+    """The registers and the stack's offsets (from the entry stack pointer) the place speaks of."""
+    locs = p.any | set(p.says) | {loc for _, loc, _ in p.names}
+    return {loc[1] for loc in locs if loc[0] == "reg"}, {e.g["rsp"][2] + loc[1] for loc in locs if loc[0] == "stack"}
 
 
 def kept(e, first, p, where):
     """What the place does not speak of, and was the same on every path when the place was first come to, is so still."""
-    said = p.any | set(p.regs) | {r for _, r, _ in p.names}
+    regs, cells = said(first, p)
     for r in HELD:
-        if r not in said and stable(first, first.g[r]) and not same(e.facts, e.g[r], first.g[r]): raise Fail(f"{where}: {r} holds {e.g[r]}, and held {first.g[r]} when the place was first come to")
+        if r not in regs and stable(first, first.g[r]) and not same(e.facts, e.g[r], first.g[r]): raise Fail(f"{where}: at +{p.at - BASE:#x} {r} holds {e.g[r]}, and held {first.g[r]} when the place was first come to")
     for off, cell in first.mem["frame"].items():
-        if stable(first, cell[2]) and e.mem["frame"].get(off) != cell: raise Fail(f"{where}: the stack at {off} is not as it was when the place was first come to")
+        if off not in cells and stable(first, cell[2]) and e.mem["frame"].get(off) != cell:
+            raise Fail(f"{where}: at +{p.at - BASE:#x} stack[{off - first.g['rsp'][2]}] is not as it was when the place was first come to (it held {cell[2]})")
 
 
 def start(entry, first, p, spec):
@@ -369,26 +405,41 @@ def start(entry, first, p, spec):
     if not stable(first, first.g["rsp"]): raise Fail("at a place the stack pointer is not the same on every path")
     for r in G64:
         if r not in HELD or not stable(first, first.g[r]): m.g[r] = ("q", f"{r}?{next(FRESH)}")
-    for off, (size, kind, v) in first.mem["frame"].items():
-        if not (kind == "q" and stable(first, v)): m.mem["frame"][off] = (size, "q", ("q", f"stack?{next(FRESH)}")) if kind == "q" else None
-    m.mem["frame"] = {off: cell for off, cell in m.mem["frame"].items() if cell is not None}
+    for off, (size, kind, v) in list(m.mem["frame"].items()):
+        if kind != "q": del m.mem["frame"][off]
+        elif not stable(first, v): m.mem["frame"][off] = (size, "q", ("q", f"stack?{next(FRESH)}"))
     env = dict(m.given)
-    for name, reg, region in p.names:
+    for name, loc, region in p.names:
         s = sym(f"{name}@{p.at - BASE:#x}"); m.facts.add(s); m.facts.add(WORD64 - s)
         env[name] = s
-        m.g[reg] = ("l", s) if region is None else ("a", region, s)
+        put(m, loc, ("l", s) if region is None else ("a", region, s))
     A = Algebra(m)
     try:
         for f in p.facts:
             for x in order(spec, A, f, env): m.facts.add(x)
-        for reg, (region, x) in p.regs.items():
+        for loc, (region, x) in p.says.items():
             v = spec.eval(A, x, env)
-            m.g[reg] = value(Lin.of(v)) if region is None else ("a", region, plain(Lin.of(v)))
-        if p.decreases is not None and not m.facts.ge0(Lin.of(spec.eval(A, p.decreases, env))): raise Fail("the number a place says decreases is not shown to stay at or above zero")
-    except Err as err: raise Fail(f"what a place says cannot be read: {err}")
-    for r in p.any: m.g[r] = ("q", f"{r}?{next(FRESH)}")
-    if not m.facts.consistent(): raise Fail("the facts of a place cannot all hold")
+            put(m, loc, value(Lin.of(v)) if region is None else ("a", region, plain(Lin.of(v))))
+        for x in p.decreases:
+            if not m.facts.ge0(Lin.of(spec.eval(A, x, env))): raise Fail(f"a number the place at +{p.at - BASE:#x} says decreases is not shown to stay at or above zero")
+    except Err as err: raise Fail(f"what the place at +{p.at - BASE:#x} says cannot be read: {err}")
+    for loc in p.any: put(m, loc, ("q", f"{show(loc)}?{next(FRESH)}"))
+    if not m.facts.consistent(): raise Fail(f"the facts of the place at +{p.at - BASE:#x} cannot all hold")
     return m, env
+
+
+def less(e, spec, before, env0, after, env, where):
+    """From one place to the next the numbers that decrease are less: the first of them, or the first the same
+    (or less) and the second less, and so on. So no path goes from place to place for ever."""
+    A = Algebra(e)
+    if not before or not after: raise Fail(f"{where}: the code goes from a place to a place, and one of them names no number that decreases")
+    try:
+        for x, y in zip(before, after):
+            x, y = Lin.of(spec.eval(A, x, env0)), Lin.of(spec.eval(A, y, env))
+            if e.facts.ge0(x - 1 - y): return
+            if not e.facts.ge0(x - y): break
+    except Err as err: raise Fail(f"{where}: the numbers that decrease cannot be read: {err}")
+    raise Fail(f"{where}: the numbers that decrease are not shown to be less at the place the code comes to")
 
 
 def run(m, places, budget):
@@ -450,12 +501,7 @@ def check(rows, spec, symbol, proof=""):
             kept(e, first[e.pc], p, where)
             holds(e, p, env, spec, where)
             within(e, c, where)
-            if origin == e.pc and p.decreases is not None:
-                A = Algebra(e)
-                try: before, after = Lin.of(spec.eval(A, p.decreases, env0)), Lin.of(spec.eval(A, p.decreases, env))
-                except Err as err: raise Fail(f"{where}: the number that decreases cannot be read: {err}")
-                if not e.facts.ge0(before - 1 - after): raise Fail(f"{where}: {after} is not shown to be less than {before}")
-            elif origin == e.pc: raise Fail(f"{where}: the code comes round to the place, and the place names no number that decreases")
+            if origin is not None: less(e, spec, places[origin].decreases, env0, p.decreases, env, f"{where} to +{e.pc - BASE:#x}")
     if set(places) - set(first): raise Fail("the proof has a place the code does not come to")
     if not tally["return"]: raise Fail("no path returns")
     tally["instructions"] = STEPS - budget[0]

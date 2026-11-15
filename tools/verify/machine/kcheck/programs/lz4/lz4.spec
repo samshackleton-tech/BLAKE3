@@ -62,15 +62,21 @@ const NO = 18446744073709551615
 // =========================================================================================================
 // The public contract (what a contract means: CONTRACT.md).
 //
-// The decoder is given room for `cap` bytes at `out`, and `n` bytes at `input`. It gives the count of the
-// bytes the block decodes to, which are then at `out`; or NO, where the bytes at `input` are no LZ4 block or
-// decode to more than `cap` bytes. Whatever the input, it writes nothing but the `cap` bytes at `out`.
-// Which instructions it runs and which addresses it touches depend on the input's bytes.
+// The decoder is given room for `cap` bytes at `out`, and `n` bytes at `input`.
+//
+// What is shown today is that it is safe on every input, a block or not: it reads nothing but the n bytes at
+// `input`, writes nothing but the cap bytes at `out`, and returns. Nothing is said yet of what it writes or of
+// the number it gives. Which instructions it runs and which addresses it touches depend on the input's bytes.
 contract ode_lz4_decode(out: cap bytes, cap: number, input: n bytes, n: number) {
     requires apart(out, input)
-    returns if fits(input, cap) then len(lz4(input)) else NO
-    ensures out[0 .. len(lz4(input))] = lz4(input) if fits(input, cap)
     writes out
     trace depends on input
-    stack 0
+    stack 104
 }
+
+// What is to be shown, and is so far tested on a processor against another decoder (native.c: 20,000
+// blocks, whole and damaged): it gives the count of the bytes the block decodes to, which are then at
+// `out`; or NO, where the bytes at `input` are no LZ4 block or decode to more than `cap` bytes.
+//
+//     returns if fits(input, cap) then len(lz4(input)) else NO
+//     ensures out[0 .. len(lz4(input))] = lz4(input) if fits(input, cap)
