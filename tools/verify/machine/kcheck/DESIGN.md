@@ -119,11 +119,11 @@ checked in about 3 seconds; audits with a processor as judge (README.md).
 
 Not done, in the order I would take them:
 
-1. **Speed.** Under the bench lock `hashr` runs at 87% to 89% of the library's own one-shot hash from 1 MiB
-   up (14.3 against 16.0 GiB/s on a Ryzen 7 9700X), 93% to 97% at 64 KiB, about 60% at 16 and 32 KiB, and is
-   no slower than the earlier `hashf` anywhere (README.md). The rest is code not yet written: parents many
-   to a call all the way up; a 16-lane path for 16 chunks or fewer (a kernel to check); AVX2 and narrower
-   machines.
+1. **Speed.** Under the bench lock `hashr` runs at 97% to 98% of the library's own one-shot hash from 1 MiB
+   up (16.05 against 16.37 GiB/s on a Ryzen 7 9700X), 94% to 95% at 64 KiB, about 60% at 16 and 32 KiB, and
+   is no slower than the earlier `hashf` anywhere (README.md). The rest is code not yet written: a 16-lane
+   path for 16 chunks or fewer (a kernel to check); parents many to a call over small parts; AVX2 and
+   narrower machines.
 2. **The checker's own worth.** It is 3,920 lines of Python, tested and audited, not proved. Smaller; a
    second one written apart; or proved once. Undecided.
 3. **The source's checker** (above), and the compiler printing bytes, not assembly (BLAKE3 #396).
