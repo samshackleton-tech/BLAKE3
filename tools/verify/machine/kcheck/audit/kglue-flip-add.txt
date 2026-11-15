@@ -1,0 +1,90 @@
+control: the unchanged object is ACCEPTED 
+add: 688 single-bit changes of 86 bytes of code (0 s): 349 stopped by the decoder, 255 refused (no proof), 84 accepted, 0 with NO VERDICT (the time limit)
+  accepted: +0x17 byte 0 bit 2: .mov 64 (.reg .r13) (.reg .rcx)  ->  .mov 64 (.reg .r13) (.reg .r9)
+  accepted: +0x17 byte 2 bit 1: .mov 64 (.reg .r13) (.reg .rcx)  ->  .mov 64 (.reg .r15) (.reg .rcx)
+  accepted: +0x17 byte 2 bit 3: .mov 64 (.reg .r13) (.reg .rcx)  ->  .mov 64 (.reg .r13) (.reg .rax)
+  accepted: +0x17 byte 2 bit 4: .mov 64 (.reg .r13) (.reg .rcx)  ->  .mov 64 (.reg .r13) (.reg .rbx)
+  accepted: +0x17 byte 2 bit 5: .mov 64 (.reg .r13) (.reg .rcx)  ->  .mov 64 (.reg .r13) (.reg .rbp)
+  accepted: +0x20 byte 2 bit 0: .mov 64 (.reg .rdi) (.reg .rbx)  ->  .mov 64 (.reg .rsi) (.reg .rbx)
+  accepted: +0x20 byte 2 bit 2: .mov 64 (.reg .rdi) (.reg .rbx)  ->  .mov 64 (.reg .rbx) (.reg .rbx)
+  accepted: +0x20 byte 2 bit 5: .mov 64 (.reg .rdi) (.reg .rbx)  ->  .mov 64 (.reg .rdi) (.reg .rdi)
+  accepted: +0x26 byte 1 bit 0: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 1 bit 1: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 1 bit 2: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 1 bit 3: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 1 bit 4: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 1 bit 5: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 1 bit 6: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 1 bit 7: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 2 bit 0: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 2 bit 1: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 2 bit 2: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 2 bit 3: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 2 bit 4: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 2 bit 5: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 2 bit 6: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 2 bit 7: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 3 bit 0: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 3 bit 1: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 3 bit 2: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 3 bit 3: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 3 bit 4: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 3 bit 5: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 3 bit 6: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 3 bit 7: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 4 bit 0: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 4 bit 1: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 4 bit 2: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 4 bit 3: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 4 bit 4: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 4 bit 5: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 4 bit 6: .call b3l_push  ->  .call b3l_push
+  accepted: +0x26 byte 4 bit 7: .call b3l_push  ->  .call b3l_push
+  accepted: +0x34 byte 0 bit 0: .mov 64 (.reg .rcx) (.reg .r13)  ->  .mov 64 (.reg .r9) (.reg .r13)
+  accepted: +0x34 byte 0 bit 2: .mov 64 (.reg .rcx) (.reg .r13)  ->  .mov 64 (.reg .rcx) (.reg .rbp)
+  accepted: +0x34 byte 2 bit 0: .mov 64 (.reg .rcx) (.reg .r13)  ->  .mov 64 (.reg .rax) (.reg .r13)
+  accepted: +0x34 byte 2 bit 1: .mov 64 (.reg .rcx) (.reg .r13)  ->  .mov 64 (.reg .rbx) (.reg .r13)
+  accepted: +0x34 byte 2 bit 2: .mov 64 (.reg .rcx) (.reg .r13)  ->  .mov 64 (.reg .rbp) (.reg .r13)
+  accepted: +0x34 byte 2 bit 3: .mov 64 (.reg .rcx) (.reg .r13)  ->  .mov 64 (.reg .rcx) (.reg .r12)
+  accepted: +0x34 byte 2 bit 4: .mov 64 (.reg .rcx) (.reg .r13)  ->  .mov 64 (.reg .rcx) (.reg .r15)
+  accepted: +0x34 byte 2 bit 5: .mov 64 (.reg .rcx) (.reg .r13)  ->  .mov 64 (.reg .rcx) (.reg .r9)
+  accepted: +0x3A byte 1 bit 0: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 1 bit 1: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 1 bit 2: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 1 bit 3: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 1 bit 4: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 1 bit 5: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 1 bit 6: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 1 bit 7: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 2 bit 0: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 2 bit 1: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 2 bit 2: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 2 bit 3: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 2 bit 4: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 2 bit 5: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 2 bit 6: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 2 bit 7: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 3 bit 0: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 3 bit 1: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 3 bit 2: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 3 bit 3: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 3 bit 4: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 3 bit 5: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 3 bit 6: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 3 bit 7: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 4 bit 0: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 4 bit 1: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 4 bit 2: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 4 bit 3: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 4 bit 4: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 4 bit 5: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 4 bit 6: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x3A byte 4 bit 7: .call b3l_merge  ->  .call b3l_merge
+  accepted: +0x43 byte 0 bit 2: .mov 64 (.reg .rax) (.mem .rsp 0x0)  ->  .mov 64 (.reg .r8) (.mem .rsp 0x0)
+  accepted: +0x43 byte 1 bit 1: .mov 64 (.reg .rax) (.mem .rsp 0x0)  ->  .mov 64 (.mem .rsp 0x0) (.reg .rax)
+  accepted: +0x43 byte 2 bit 3: .mov 64 (.reg .rax) (.mem .rsp 0x0)  ->  .mov 64 (.reg .rcx) (.mem .rsp 0x0)
+  accepted: +0x43 byte 2 bit 4: .mov 64 (.reg .rax) (.mem .rsp 0x0)  ->  .mov 64 (.reg .rdx) (.mem .rsp 0x0)
+control: the unchanged object on this processor, 3000 cases: same
+control: a change no proof was found for, on this processor: DIFFERS: case 0: a value below the count is not the machine's
+the 84 accepted changes on this processor, 3000 cases each: 84 same
+for scale, 300 of the changes stopped or refused, on this processor: 196 CRASHES, 74 DIFFERS, 30 same

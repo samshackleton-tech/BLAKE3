@@ -50,6 +50,7 @@ class Elf:
         self.index = {s["name"]: i for i, s in enumerate(self.sections)}
 
     def bytes_of(self, name):
+        if name not in self.index: return b""                 # an object with no read-only data
         s = self.sections[self.index[name]]
         return self.b[s["off"]:s["off"] + s["size"]]
 
@@ -61,8 +62,11 @@ class Elf:
                 for i in range(s["size"] // 24):
                     off, info, addend = struct.unpack_from("<QQq", self.b, s["off"] + 24 * i)
                     sym = self.symbols[info >> 32]
-                    if info & 0xFFFFFFFF != 2: raise Stop(f"a relocation of type {info & 0xFFFFFFFF}")       # R_X86_64_PC32
-                    out[off] = (self.sections[sym["shndx"]]["name"], sym["value"] + addend)
+                    kind = info & 0xFFFFFFFF
+                    if kind == 4 or kind == 2 and sym["shndx"] == 0:        # R_X86_64_PLT32, or PC32 to a name from elsewhere: a call
+                        out[off] = ("call", sym["name"])
+                    elif kind == 2: out[off] = (self.sections[sym["shndx"]]["name"], sym["value"] + addend)      # R_X86_64_PC32
+                    else: raise Stop(f"a relocation of type {kind}")
         return out
 
 
@@ -225,12 +229,24 @@ def decode(code, at, relocs, rodata, rodata_at, base, start):
     if 0xB8 <= op <= 0xBF:
         only_b()
         return p - at + 4, f".mov 32 {r64((op - 0xB8) | (B << 3))} (.imm {bv(imm(4))})"
+    if op == 0xE8:
+        no_rex(); field = p; imm(4)
+        if relocs.get(field, ("", ""))[0] != "call": raise Stop("a call with no function named")
+        return p - at, f".call {relocs[field][1]}"
+    if op in (0x72, 0x73): no_rex(); d = sx(imm(1), 8); return p - at, f".{'jb' if op == 0x72 else 'jae'} {here(p + d)}"
     if op == 0xEB: no_rex(); d = sx(imm(1), 8); return p - at, f".jmp {here(p + d)}"
     if op == 0xE9: no_rex(); d = sx(imm(4), 32); return p - at, f".jmp {here(p + d)}"
     if op in (0x74, 0x75): no_rex(); d = sx(imm(1), 8); return p - at, f".{'je' if op == 0x74 else 'jne'} {here(p + d)}"
     if op == 0x0F:
         op2 = u8()
         if op2 in (0x84, 0x85): no_rex(); d = sx(imm(4), 32); return p - at, f".{'je' if op2 == 0x84 else 'jne'} {here(p + d)}"
+        if op2 in (0x82, 0x83): no_rex(); d = sx(imm(4), 32); return p - at, f".{'jb' if op2 == 0x82 else 'jae'} {here(p + d)}"
+        if op2 in (0x10, 0x11):
+            # MOVUPS: sixteen bytes between an XMM register (0 to 7 here) and memory, any alignment
+            no_rex()
+            mod, reg, rm, mem = modrm(R, X, B)
+            if rm is not None or mem[0] == "rip" or mem[1]: raise Stop("a movups other than with [base + displacement]")
+            return p - at, (f".xloadu {reg} .{mem[0]} {bv(mem[2])}" if op2 == 0x10 else f".xstoreu .{mem[0]} {bv(mem[2])} {reg}")
         if op2 == 0xB6:
             mod, reg, rm, mem = modrm(R, X, B)
             if W: raise Stop("a movzx this does not know")
@@ -244,9 +260,9 @@ def decode(code, at, relocs, rodata, rodata_at, base, start):
             if rm is not None or reg != 1: raise Stop("0F 18 other than PREFETCHT0 of memory")
             return p - at, ".nop"
         raise Stop(f"0F {op2:02X}")
-    if op in (0x89, 0x31, 0x09, 0x85):
+    if op in (0x89, 0x31, 0x09, 0x85, 0x01, 0x29, 0x39):
         mod, reg, rm, mem = modrm(R, X, B)
-        name = {0x89: "mov", 0x31: "xor", 0x09: "or", 0x85: "test"}[op]
+        name = {0x89: "mov", 0x31: "xor", 0x09: "or", 0x85: "test", 0x01: "add", 0x29: "sub", 0x39: "cmp"}[op]
         if rm is None:
             if name != "mov" or mem[0] == "rip": raise Stop(f"{name} to memory")
             return p - at, f".mov {w} {memop(mem)} {r64(reg)}"
@@ -255,22 +271,26 @@ def decode(code, at, relocs, rodata, rodata_at, base, start):
         mod, reg, rm, mem = modrm(R, X, B)
         if rm is not None or mem[0] == "rip": raise Stop("a mov this does not know")
         return p - at, f".mov {w} {r64(reg)} {memop(mem)}"
+    if op == 0xC7:
+        mod, reg, rm, mem = modrm(R, X, B)
+        if rm is None or reg != 0 or not W: raise Stop("C7 other than a 32-bit number, sign-extended, to a 64-bit register")
+        return p - at + 4, f".mov 64 {r64(rm)} (.imm {bv(sx(imm(4), 32))})"
     if op == 0xC6:
         mod, reg, rm, mem = modrm(R, X, B)
         if rm is not None or reg != 0 or mem[0] == "rip": raise Stop("C6 other than a byte to memory")
         return p - at + 1, f".mov 8 {memop(mem)} (.imm {bv(imm(1))})"
     if op in (0x81, 0x83):
         mod, reg, rm, mem = modrm(R, X, B)
-        name = {0: "add", 4: "and", 5: "sub", 7: "cmp"}.get(reg)       # R set beside a digit: not known
+        name = {0: "add", 1: "or", 4: "and", 5: "sub", 7: "cmp"}.get(reg)       # R set beside a digit: not known
         if rm is None or name is None: raise Stop("an arithmetic instruction this does not know")
         v = sx(imm(1), 8) if op == 0x83 else (sx(imm(4), 32) if W else imm(4))
         return p - at, f".{name} {w} {r64(rm)} (.imm {bv(v)})"
     if op == 0xC1:
         mod, reg, rm, mem = modrm(R, X, B)
-        if rm is None or reg != 5: raise Stop("a shift this does not know")
+        if rm is None or reg not in (4, 5): raise Stop("a shift this does not know")
         n = imm(1)
         if n >= w: raise Stop("a shift by the register's width or more")
-        return p - at, f".shr{w} .{G[rm]} {n}"
+        return p - at, f".{'shl' if reg == 4 else 'shr'}{w} .{G[rm]} {n}"
     if op == 0xFF:
         mod, reg, rm, mem = modrm(R, X, B)
         if rm is None or reg != 1: raise Stop("FF other than DEC of a register")

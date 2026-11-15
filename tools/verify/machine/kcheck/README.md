@@ -80,6 +80,56 @@ proved by induction); a loop whose state is a data structure in memory; calls; c
 The proof's form is made for this shape of loop. The checker is `kcheck.py` and `kdecode.py` with 300 lines
 more, in Python, unverified.
 
+## Code that is not a kernel: a stack in memory, a loop over it, calls (`kglue.py`, November 15)
+
+The same way on the hasher's stack of chaining values: `push`, `merge` and `add` of `lang/hasher.ode`, as the
+Ode compiler and the assembler leave them. `merge` loops while the stack (in memory, its count a symbol) holds
+more than `target` values and calls a one-block kernel; `add` calls `push` and `merge`. Lean checks the same
+three in about 100 seconds, from proofs that name lemmas written by hand (`Lemmas_merge.lean`,
+`StackLemmas.lean`).
+
+- **The specification** is the merge machine: while the stack holds more than `target` values, its top two
+  become their parent. A function's contract says what each argument is, what the caller must show, and what
+  the function leaves (for `merge`: what the machine makes of the stack).
+- **A proof** names the loop's place and what the registers and the frame hold there *for any stack the
+  memory may hold* (`proofs/merge.json`, 396 bytes: the count in `r15`; four registers and eight frame cells
+  kept). `push` and `add` have no loop and the empty proof.
+- **The checker** runs the code from the entry and from the place along every path. To the place: the stack
+  in memory is one turn of the machine from the stack the path began with, and the machine does turn there.
+  To the return: the machine has stopped and the result is the count. At a call: the callee's contract: what
+  it asks is shown from the caller's facts, what it leaves replaces what was there. A stack is a named unknown
+  stack with some places replaced; whether two places are one is decided from linear facts.
+
+| function | instructions | proof found in | checked in |
+|---|---|---|---|
+| `push` | 26 | (none needed) | under 1 ms |
+| `merge` | 88 | 0.03 s | 0.004 s |
+| `add` | 32 | (none needed) | under 1 ms |
+
+What was done to find it wrong: `test_kglue.py` (25 changed functions: no proof found, and the true proof
+refused; 7 wrong proofs of `merge` refused). The three on a processor against the merge machine written in C,
+with the library's own one-block kernels linked (`kglue_native.c`): 20,000 cases each. And every single-bit
+change, with the processor as judge (`kglue_flip.py`, `audit/kglue-flip-*.txt`):
+
+| function | changes | stopped by the decoder | refused (no proof) | accepted | of those, as the machine on the processor |
+|---|---|---|---|---|---|
+| `push` | 568 | 308 | 256 | 4 | 4 (3,000 cases each) |
+| `merge` | 2,528 | 1,311 | 1,112 | 105 | 105 |
+| `add` | 688 | 349 | 255 | 84 | 84 |
+
+**What that audit found.** Run first, it had 24 changes of `merge` accepted that the processor told from the
+machine: all in `mov rdx, 64`, the block length given to the kernel. I had written the two kernels' contract
+by hand as "the low byte of the length"; the SSE4.1 kernel reads all of EDX. The contract was wrong, not the
+checker's logic: a callee's contract taken on trust is a hole until it is itself checked against the callee's
+bytes (the Lean proofs have it right for that reason). Reading the accepted changes then showed a second
+thing: `mov rcx, 5` (the platform word that selects the AVX-512 kernel) could become any number, and the
+AVX-512 kernel be called on a machine without it, with the contract none the wiser. The contract now says the
+AVX-512 kernel is called only where the platform word is 5.
+
+Not shown here: the one-block kernels themselves (their contract is taken); that the merge machine is BLAKE3's
+tree (`alg/Stack.lean` proves that of the same machine); buffers of bytes with a symbolic length. The
+contracts and the machine are Python inside `kglue.py`: not yet a language a reader is given.
+
 ## The parts
 
 | file | lines | what it is |
@@ -89,6 +139,7 @@ more, in Python, unverified.
 | `kcheck_cross.py` | 109 | kcheck's reading of each instruction against the Lean model's processor-validated test vectors |
 | `kflip.py`, `kflip_native.c`, `kflip_thunk.S` | 194 + 153 + 63 | the audit below: every single-bit change of a kernel, and the processor's word on each one accepted |
 | `kloop.py`, `test_kloop.py` | 491 + 94 | every number of blocks: the prover, the proof's form, the checker by induction; its tests |
+| `kglue.py`, `kglue_flip.py`, `kglue_native.c`, `test_kglue.py` | 583 + 129 + 109 + 83 | the stack's functions: contracts, the merge machine, prover, checker; the audit; the tests |
 | `kremove.py` | 41 | which instructions can be replaced by a no-op with the contract still met: for a person to read |
 | `test_kcheck.py` | 136 | the four kernels and the controls, from the sources |
 

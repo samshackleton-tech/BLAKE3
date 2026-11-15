@@ -1,5 +1,6 @@
 # call_kernel(f, args, after): call f(args[0..5]) with known values in the registers a callee keeps;
-# after[0..5] = rbx, rbp, r12, r13, r14, r15 as f left them; after[6] = 1 if the stack pointer came back moved.
+# after[0..5] = rbx, rbp, r12, r13, r14, r15 as f left them; after[6] = 1 if the stack pointer came back moved;
+# after[7] = what f returned.
     .intel_syntax noprefix
     .text
     .globl call_kernel
@@ -30,6 +31,7 @@ call_kernel:
     mov [rip + saved_rsp], rsp
     cld
     call r10
+    mov rdx, rax
     xor eax, eax
     cmp rsp, [rip + saved_rsp]
     je 1f
@@ -43,6 +45,7 @@ call_kernel:
     mov [r11 + 32], r14
     mov [r11 + 40], r15
     mov [r11 + 48], rax
+    mov [r11 + 56], rdx
     add rsp, 8
     pop r15
     pop r14

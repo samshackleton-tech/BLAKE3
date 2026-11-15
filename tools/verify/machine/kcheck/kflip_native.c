@@ -117,7 +117,7 @@ int main(int argc, char **argv) {
         uint64_t packed = mode | start_byte << 8 | end_byte << 16 | last_length << 24 | (any ? rnd() << 32 : 0);
         memset(out_page, 0xA5, PAGE);
         uint8_t *out = place(out_page, 32 * (size_t)lanes, 1);
-        uint64_t args[6] = {(uint64_t)inputs, (uint64_t)(nb + over), (uint64_t)key, counter, packed, (uint64_t)out}, after[7];
+        uint64_t args[6] = {(uint64_t)inputs, (uint64_t)(nb + over), (uint64_t)key, counter, packed, (uint64_t)out}, after[8];
         if (o16) { args[1] = (uint64_t)out; args[2] = args[3] = args[4] = args[5] = rnd(); }       // (descriptors, out); the other registers hold anything
         call_kernel(f, args, after);
         for (int i = 0; i < 6; i++)

@@ -1,0 +1,10 @@
+control: the unchanged object is ACCEPTED 
+push: 568 single-bit changes of 71 bytes of code (0 s): 308 stopped by the decoder, 256 refused (no proof), 4 accepted, 0 with NO VERDICT (the time limit)
+  accepted: +0xA byte 2 bit 5: .mov 64 (.reg .rax) (.reg .rbx)  ->  .mov 64 (.reg .rax) (.reg .rdi)
+  accepted: +0x16 byte 2 bit 5: .mov 64 (.reg .rcx) (.reg .rbx)  ->  .mov 64 (.reg .rcx) (.reg .rdi)
+  accepted: +0x3C byte 2 bit 5: .mov 64 (.reg .rcx) (.reg .rbx)  ->  .mov 64 (.reg .rcx) (.reg .rdi)
+  accepted: +0x3F byte 2 bit 1: .mov 64 (.mem .rcx 0x0) (.reg .rax)  ->  .mov 64 (.mem .rbx 0x0) (.reg .rax)
+control: the unchanged object on this processor, 3000 cases: same
+control: a change no proof was found for, on this processor: DIFFERS: case 0: a value below the count is not the machine's
+the 4 accepted changes on this processor, 3000 cases each: 4 same
+for scale, 300 of the changes stopped or refused, on this processor: 230 CRASHES, 44 DIFFERS, 26 same

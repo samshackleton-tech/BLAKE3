@@ -64,6 +64,7 @@ class Lin:
     def scale(self, m): return Lin(((s, a * m) for s, a in self.c), self.k * m)
     def __neg__(self): return self.scale(-1)
     def __sub__(self, o): return self + (-Lin.of(o))
+    def __rsub__(self, o): return Lin.of(o) - self
     def __eq__(self, o): return isinstance(o, Lin) and (self.c, self.k) == (o.c, o.k)
     def __hash__(self): return hash((self.c, self.k))
     def at(self, sym, value):
