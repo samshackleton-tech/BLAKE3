@@ -140,5 +140,59 @@ class Lz4Decode(unittest.TestCase):
 ACCEPTED = 19
 
 
+def instructions_changed(p):
+    """Every instruction left out, and every jump and add turned round: (changes, those accepted)."""
+    accepted, n = [], 0
+    for k, (a, z, i) in enumerate(p.rows):
+        changes = [".nop"] if not (i.startswith(".push") or i.startswith(".pop") or i == ".ret") else []
+        changes += [i.replace(x, y) for x, y in ((".jae", ".jb"), (".jb", ".jae"), (".jne", ".je"), (".je", ".jne"), (".add", ".sub")) if i.startswith(x)]
+        if i.startswith(".sub"): changes.append(i.replace(".sub", ".add"))
+        for c in changes:
+            rows = list(p.rows); rows[k] = (a, z, c); n += 1
+            if p.verdict(rows=rows) == "accepted": accepted.append((i, c))
+    return n, accepted
+
+
+class Varint(unittest.TestCase):
+    """No proof: the loop turns at most nine times, and the checker runs it."""
+    @classmethod
+    def setUpClass(cls): cls.p = Program("varint", "varint", "ode_varint")
+
+    def test_it_meets_its_contract(self):
+        self.assertEqual(self.p.verdict(), "accepted")
+        self.assertEqual(self.p.proof.strip(), "")
+
+    def test_a_changed_specification_or_contract_is_refused(self):
+        self.p.changed(self, "spec", [("if v < 128 then [v]", "if v < 127 then [v]"), ("if v < 128 then [v]", "if v < 128 then [v + 1]"), ("[128 + v % 128]", "[127 + v % 128]"), ("[128 + v % 128]", "[128 + v % 64]"),
+                                      ("++ varint(v / 128)", "++ varint(v / 64)"), ("[128 + v % 128] ++ varint(v / 128)", "varint(v / 128) ++ [128 + v % 128]"),
+                                      ("ensures out[0 .. r] = varint(v)", "ensures out[0 .. r] = varint(v) ++ [0]"), ("ensures out[0 .. r] = varint(v)", "ensures out[0 .. r] = varint(v + 1)"),
+                                      ("out: 10 bytes", "out: 9 bytes"), ("stack 24", "stack 16")])
+
+    def test_a_changed_instruction_is_refused_unless_it_did_nothing(self):
+        n, accepted = instructions_changed(self.p)
+        self.assertTrue(all(c == ".nop" and i.startswith(".mov 64 (.reg") for i, c in accepted), accepted)
+        self.assertLess(len(accepted), 6)
+
+
+class Common(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls): cls.p = Program("common", "common", "ode_common")
+
+    def test_it_meets_its_contract(self):
+        self.assertEqual(self.p.verdict(), "accepted")
+
+    def test_a_changed_specification_contract_or_proof_is_refused(self):
+        self.p.changed(self, "spec", [("if at == len(a) then at else", "if at == len(a) then 0 else"), ("if a[at] != b[at] then at", "if a[at] != b[at] then at + 1"), ("else alike(a, b, at + 1)", "else alike(a, b, at + 2)"),
+                                      ("def common(a, b) { alike(a, b, 0) }", "def common(a, b) { alike(a, b, 1) }"), ("    trace depends on a, b\n", ""), ("trace depends on a, b", "trace depends on a"),
+                                      ("returns common(a, b)", "returns common(a, b) + 1"), ("stack 40", "stack 32"), ("a: n bytes, b: n bytes, n: number", "a: n bytes, b: n bytes, m: number, n: number")])
+        self.p.changed(self, "proof", [("    fact go == 1\n", ""), ("    fact i <= n\n", ""), ("    fact alike(a, b, i) == common(a, b)\n", ""), ("fact alike(a, b, i) == common(a, b)", "fact alike(a, b, i + 1) == common(a, b)"),
+                                       ("    decreases n - i\n", ""), ("name i = r13", "name i = r12")])
+
+    def test_a_changed_instruction_is_refused_unless_it_did_nothing(self):
+        n, accepted = instructions_changed(self.p)
+        self.assertTrue(all(c == ".nop" and i.startswith(".mov 64 (.reg") for i, c in accepted), accepted)
+        self.assertLess(len(accepted), 6)
+
+
 if __name__ == "__main__":
     unittest.main()

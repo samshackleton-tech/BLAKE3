@@ -4,8 +4,9 @@
     python3 programs/test_specs.py [SIGIL]         (SIGIL: a checkout of github.com/johnservil/sigil, for its vectors.tsv)
 
 Adler-32 against zlib's; LZ4 against a decoder written here another way (a loop, as decoders are), on blocks
-a small compressor here makes, on the format document's examples, and on damaged blocks; Sigil against the
-220 good vectors of its repository. A specification that disagrees with them is wrong, or they are."""
+a small compressor here makes, on the format document's examples, and on damaged blocks; a varint against
+LEB128 written here; the count of bytes alike against a search; Sigil against the 220 good vectors of its
+repository. A specification that disagrees with them is wrong, or they are."""
 import os, random, sys, unittest, zlib
 sys.setrecursionlimit(60000)            # a definition of itself on smaller things is followed as deep as its count
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -108,6 +109,24 @@ class Specs(unittest.TestCase):
         for block, data in zip(blocks, texts):              # room: one byte too few is ROOM; none of the damaged is taken for whole
             if data: self.assertEqual(value(s, "lz4", list(block), len(data) - 1), ("fails", 2))
         self.assertEqual(value(s, "lz4", [0x10], 100), ("fails", 1))
+
+    def test_varint_is_leb128(self):
+        s, r = spec("varint"), random.Random(3)
+        def leb128(v):
+            out = []
+            while v >= 128: out.append(128 | (v & 127)); v >>= 7
+            return out + [v]
+        for v in [0, 1, 127, 128, 300, 16383, 16384, 2 ** 32, 2 ** 63, 2 ** 64 - 1] + [r.getrandbits(r.randrange(1, 65)) for _ in range(300)]:
+            self.assertEqual(value(s, "varint", v), ("ok", leb128(v)), v)
+        self.assertEqual(value(s, "varint", 300), ("ok", [0xAC, 0x02]))               # the example of the protocol buffers' documentation
+
+    def test_common_is_the_count_alike(self):
+        s, r = spec("common"), random.Random(4)
+        for _ in range(300):
+            n = r.randrange(0, 60); a = [r.randrange(3) for _ in range(n)]; b = list(a)
+            for k in range(r.randrange(0, n + 1), n): b[k] = r.randrange(3)
+            want = next((k for k in range(n) if a[k] != b[k]), n)
+            self.assertEqual(value(s, "common", a, b), ("ok", want))
 
     def test_sigil_is_the_repositorys(self):
         path = os.path.join(sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/tmp/night/sigil"), "vectors.tsv")

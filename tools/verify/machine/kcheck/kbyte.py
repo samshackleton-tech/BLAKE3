@@ -90,9 +90,6 @@ class Contract:
             n = kfn.bytes_kind(kind)
             if kind != "number" and n is None: raise Fail(f"{symbol}: {name} is of a kind this checker does not know: {kind}")
             if isinstance(n, str) and self.kind.get(n) != "number": raise Fail(f"{symbol}: {name} is {kind}, and {n} is not a number among the arguments")
-        addresses = [name for _, kind, name in self.args if kind != "number"]
-        if len(addresses) > 1 and sorted(c["apart"] or []) != sorted(addresses):
-            raise Fail(f"{symbol}: the contract does not say `requires apart({', '.join(addresses)})`: the things at the addresses it is given are taken to be apart")
         if c["calls"] or c["needs"] or c["given"] or c["decreases"] is not None: raise Fail(f"{symbol}: a clause this checker does not know")
         if not isinstance(c["stack"], int): raise Fail(f"{symbol}: the stack it may use is not a plain number")
         # `returns r`, r a name the specification does not have: the number returned is called r, and `ensures` lines speak of it
@@ -103,6 +100,11 @@ class Contract:
             if leaf["name"] != self.result and self.kind.get(leaf["name"]) in (None, "number"): raise Fail(f"{symbol}: it ensures something of {leaf['name']}, which is not at an address among its arguments nor the result")
         self.held = {leaf["name"] for leaf in c["leaves"] if leaf["name"] != self.result}        # what the checker keeps the bytes of
         self.stack, self.writes, self.trace = c["stack"], set(c["spoils"]) | self.held, set(c["trace"])
+        # What is written is taken to be apart from everything else given: the contract must ask it of the caller.
+        # (Things that are only read may overlap: their bytes are then any bytes, alike or not.)
+        addresses = [name for _, kind, name in self.args if kind != "number"]
+        if self.writes and len(addresses) > 1 and sorted(c["apart"] or []) != sorted(addresses):
+            raise Fail(f"{symbol}: the contract does not say `requires apart({', '.join(addresses)})`: what it writes is taken to be apart from the other things it is given")
         for name in self.writes | self.trace:
             if self.kind.get(name) in (None, "number"): raise Fail(f"{symbol}: {name} is not something at an address among its arguments")
 

@@ -1,0 +1,13 @@
+// A varint's bytes, written to be proved against varint.spec.
+fn varint(out, v)
+  reg out, v, k
+{
+  var k = 0
+  while v > 127 {
+    u8[out + k] = 128 + (v & 127)
+    v = v >> 7
+    k = k + 1
+  }
+  u8[out + k] = v
+  return k + 1
+}

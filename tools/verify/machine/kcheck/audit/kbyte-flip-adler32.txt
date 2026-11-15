@@ -1,0 +1,22 @@
+control: the unchanged object is ACCEPTED 
+ode_adler32: 1368 single-bit changes of 171 bytes of code (1 s): 644 stopped by the decoder, 707 refused, 17 accepted, 0 with NO VERDICT (the time limit)
+  accepted: +0x22 byte 0 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .r8) (.imm 0x0)
+  accepted: +0x22 byte 2 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rcx) (.imm 0x0)
+  accepted: +0x22 byte 2 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rdx) (.imm 0x0)
+  accepted: +0x32 byte 2 bit 5: .cmp 64 (.reg .rax) (.reg .rcx)  ->  .cmp 64 (.reg .rax) (.reg .rbp)
+  accepted: +0x49 byte 0 bit 0: .mov 64 (.reg .rax) (.reg .r12)  ->  .mov 64 (.reg .r8) (.reg .r12)
+  accepted: +0x49 byte 2 bit 0: .mov 64 (.reg .rax) (.reg .r12)  ->  .mov 64 (.reg .rcx) (.reg .r12)
+  accepted: +0x49 byte 2 bit 1: .mov 64 (.reg .rax) (.reg .r12)  ->  .mov 64 (.reg .rdx) (.reg .r12)
+  accepted: +0x5A byte 0 bit 0: .mov 64 (.reg .rax) (.reg .r12)  ->  .mov 64 (.reg .r8) (.reg .r12)
+  accepted: +0x5A byte 2 bit 0: .mov 64 (.reg .rax) (.reg .r12)  ->  .mov 64 (.reg .rcx) (.reg .r12)
+  accepted: +0x5A byte 2 bit 1: .mov 64 (.reg .rax) (.reg .r12)  ->  .mov 64 (.reg .rdx) (.reg .r12)
+  accepted: +0x6F byte 0 bit 0: .mov 64 (.reg .rax) (.reg .r13)  ->  .mov 64 (.reg .r8) (.reg .r13)
+  accepted: +0x6F byte 2 bit 0: .mov 64 (.reg .rax) (.reg .r13)  ->  .mov 64 (.reg .rcx) (.reg .r13)
+  accepted: +0x6F byte 2 bit 1: .mov 64 (.reg .rax) (.reg .r13)  ->  .mov 64 (.reg .rdx) (.reg .r13)
+  accepted: +0x72 byte 0 bit 0: .mov 64 (.reg .rcx) (.imm 0xFFF1)  ->  .mov 64 (.reg .r9) (.imm 0xFFF1)
+  accepted: +0x80 byte 0 bit 0: .mov 64 (.reg .rax) (.reg .r13)  ->  .mov 64 (.reg .r8) (.reg .r13)
+  accepted: +0x80 byte 2 bit 0: .mov 64 (.reg .rax) (.reg .r13)  ->  .mov 64 (.reg .rcx) (.reg .r13)
+  accepted: +0x80 byte 2 bit 1: .mov 64 (.reg .rax) (.reg .r13)  ->  .mov 64 (.reg .rdx) (.reg .r13)
+control: the unchanged object on this processor (200): same
+the 17 accepted changes on this processor: 17 same
+for scale, 300 of the changes stopped or refused, on this processor: 150 CRASHES, 118 DIFFERS, 32 same

@@ -1,0 +1,9 @@
+// The loop of ode_common, at the first instruction of its body: the count from here on is the whole count.
+place +0x34 {
+    name i = r13
+    name go = r14
+    fact go == 1
+    fact i <= n
+    fact alike(a, b, i) == common(a, b)
+    decreases n - i
+}

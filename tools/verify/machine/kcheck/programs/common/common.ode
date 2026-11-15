@@ -1,0 +1,13 @@
+// The count of bytes two runs have alike at their start, written to be proved against common.spec.
+fn common(a, b, n)
+  reg a, b, n, i, go
+{
+  var i = 0
+  var go = 1
+  while go == 1 {
+    if i >= n { go = 0 } else {
+      if u8[a + i] == u8[b + i] { i = i + 1 } else { go = 0 }
+    }
+  }
+  return i
+}
