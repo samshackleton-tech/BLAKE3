@@ -29,6 +29,57 @@ eight instructions whose results nothing reads (BLAKE3 #398).
     python3 kcheck.py k32 --object OBJECT [--anchor ../../../../test_vectors/test_vectors.json] [--mutants]
     python3 test_kcheck.py            # all of it from the sources, with the controls: 9 tests, 12 s
 
+## Every number of blocks: a proof that is found, then checked (`kloop.py`, November 15)
+
+The table above is each kernel for one number of blocks (16, or 1), run to its end. `kloop.py` shows K32, P32
+and P16 for **every** number of blocks `n >= 1` and every value of the four flag bytes (flags, start, end,
+last length): the kernels' whole interface. It is a first trial of how proofs could be made for code with
+loops: the proof is a small text the prover finds, and the checker reads it and does no searching.
+
+- **The specification is a small machine**, a lane at a time: state 0 is the key; state b+1 is
+  `compress(state b, block b, counter, length, flags)` with the start byte or-ed in for block 0, and the end
+  byte and the length byte for the last block; what is stored is state n.
+- **A proof** names one place in the code, the head of the loop over blocks, and says what each register and
+  frame cell holds there when b blocks are done: kept as it was after the first block, a number `c + cn*n +
+  cb*b`, or a word of the specification's state. K32's, with every name the checker does not need taken out
+  (`proofs/k32.json`, 1,088 bytes): the place `+0x133`; `r13 = n - b`; `r14 = 64*b`; six registers kept (the
+  flags, the stack and frame pointers, the inputs' table, the output's address); `zmm0` to `zmm15` hold the
+  state's eight words for lanes 0-15 and 16-31; four frame cells (the counters) kept.
+- **The checker** runs the code from its entry through the first block; then from the place, for an unknown
+  b and an unknown state, along every path to the place again or to the return; and compares terms by
+  identity with the specification's next state. That is Floyd's method. "Is this the last block?" is decided
+  from two linear facts (`b >= 1`, `b <= n-1`) by adding them up.
+- **The prover** runs the loop twice, compares the second and third visits of the place, guesses, and weakens
+  the guess where the checker refuses. Nothing it does is trusted.
+
+| kernel | proof found in | proof checked in | paths of the step |
+|---|---|---|---|
+| K32 | 0.36 s | 0.18 s | one back to the place, one to the return |
+| P32 | 0.37 s | 0.18 s | the same |
+| P16 | 0.18 s | 0.09 s | the same |
+
+What was done to find it wrong: `test_kloop.py` (25 changed kernels: no proof is found for any, and the true
+proof is refused on each; 7 wrong proofs are refused on the true kernel; an entry is refused against the other
+entry's specification). The true kernels on a processor on the same claim (`kflip_native.c … any`: 1 to 20
+blocks, any flag bytes, any counter, anything in the packed word's upper half): 5,000 cases each, as BLAKE3.
+And the single-bit audit with a processor as judge (`kflip.py --general`; "accepted" = a proof is found and
+checked):
+
+| kernel | changes | stopped by the decoder | refused (no proof) | accepted | of those, as BLAKE3 on the processor |
+|---|---|---|---|---|---|
+| P16 | 22,144 | 14,340 | 7,591 | 213 | 213 (1,000 cases each) |
+| K32 | 35,824 | 22,321 | 11,753 | 1,750 | 1,750 |
+| P32 | 35,824 | 22,321 | 11,625 | 1,878 | 1,878 |
+
+With the whole interface in the specification, what the contract "does not see" in P16 falls from 142
+accepted changes to 13 (a larger frame, a 64-bit form of a 32-bit move): the statement now says what the code
+does.
+
+What this trial does not show: more than one loop that needs a proof (the seven rounds inside are run, not
+proved by induction); a loop whose state is a data structure in memory; calls; code that is not a kernel.
+The proof's form is made for this shape of loop. The checker is `kcheck.py` and `kdecode.py` with 300 lines
+more, in Python, unverified.
+
 ## The parts
 
 | file | lines | what it is |
@@ -37,6 +88,7 @@ eight instructions whose results nothing reads (BLAKE3 #398).
 | `kcheck.py` | 594 | runs the instructions on symbolic values, builds the specification with the same term constructors, compares |
 | `kcheck_cross.py` | 109 | kcheck's reading of each instruction against the Lean model's processor-validated test vectors |
 | `kflip.py`, `kflip_native.c`, `kflip_thunk.S` | 194 + 153 + 63 | the audit below: every single-bit change of a kernel, and the processor's word on each one accepted |
+| `kloop.py`, `test_kloop.py` | 491 + 94 | every number of blocks: the prover, the proof's form, the checker by induction; its tests |
 | `kremove.py` | 41 | which instructions can be replaced by a no-op with the contract still met: for a person to read |
 | `test_kcheck.py` | 136 | the four kernels and the controls, from the sources |
 
