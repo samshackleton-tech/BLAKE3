@@ -607,6 +607,11 @@ is right (a byte at a time, a modulo at every byte). The hash, whose time is spe
 the library. Faster code needs facts the checker cannot yet carry (a sum that is only reduced now and then
 is equal to the specification's modulo 65521, not equal to it).
 
+**Devon's Adler-32** (BLAKE3 #377; `tools/verify/machine/experiments/adler32/adler32.ode` on his branch,
+proved in Lean with 133 lines of lemmas) compiles to the same 55 instructions as the one here but one: he
+joins the two sums with `|` where this one adds them. `kbyte.py` stops at that instruction ("or of ..."):
+that two numbers with no bit in common have their sum for their `or` is a rule the machine does not have.
+
 **Not done.** Sigil has no code. `kbyte.py` does not follow calls, and `kfn.py` does not know places or
 bytes in parts: they should be one checker. No prover searches for places: each was written from the
 checker's refusals.
@@ -763,7 +768,7 @@ specification. (The hash above does not use them: it has no stack.)
 | `programs/` | | six other programs (Sigil a specification only): each its specification and public contract, its Ode source, the compiler's assembly, its proof, a harness for the processor; `check_programs.py`, `test_specs.py`, `bench.c`; `blake3-rust/` |
 | `kbyte.py`, `test_kbyte.py` | 910 + 326 | the checker of those programs (bytes, numbers, places); its tests |
 | `kbyte_flip.py`, `kbyte_nop.py` | 117 + 37 | their single-bit audit and every instruction left out, the processor judging |
-| `programs/kpack.py`, `programs/check_file.py`, `programs/test_files.py` | 55 + 63 + 82 | a program as one file with its proof (untrusted); what a reader runs on it, or on what a linker made of it; tests |
+| `programs/kpack.py`, `programs/check_file.py`, `programs/test_files.py` | 55 + 78 + 82 | a program as one file with its proof (untrusted); what a reader runs on it, or on what a linker made of it (`--json`: what was checked, for a benchmark's record); tests |
 | `klink.py`, `klink_flip.py`, `test_kbinary.py` | 134 + 72 + 182 | makes the binary of the assembler's objects (untrusted); every single-bit change of what a linker would have written; tests of the reading of a linked file |
 | `check_all.py` | 120 | every function from an assembler's objects, and that the hash's functions end |
 | `ode.py`, `kspec.py`, `klin.py` | 694 + 565 + 256 | the specification's reader; its algebra on symbols; numbers that depend on counts and the facts about them |
