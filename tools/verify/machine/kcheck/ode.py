@@ -26,7 +26,7 @@ class Err(Exception):
 
 # ---------------------------------------------------------------------------------------------------------
 # Text to tree.
-TOKEN = re.compile(r"\s*(?:(//[^\n]*)|(0x[0-9A-Fa-f]+|\d+)|([A-Za-z_][A-Za-z_0-9]*)|(>>>|\+\+|\.\.|==|!=|<=|>=|&&|\|\||[-+*/%^|&<>=!(){}\[\],:]))")
+TOKEN = re.compile(r"\s*(?:(//[^\n]*)|(0x[0-9A-Fa-f]+|\d+)|([A-Za-z_][A-Za-z_0-9]*)|(>>>|\+\+|\.\.|==|!=|<=|>=|&&|\|\||[-+*/%^|&<>=!(){}\[\],:.]))")
 KEYWORDS = {"const", "fn", "machine", "contract", "on", "while", "for", "in", "turn", "if", "then", "else", "let", "var", "return"}
 LEVELS = [["||"], ["&&"], ["==", "!=", "<", "<=", ">", ">="], ["++"], ["|"], ["^"], ["&"], ["+", "-"], ["*", "/", "%"], [">>>"]]
 
@@ -87,8 +87,9 @@ class Parser:
         """(arg: kind, ...) { asks E | leaves NAME = E | returns E | stack N | calls F if E }"""
         self.take("("); args = []
         while not self.maybe(")"):
-            arg = self.take(kind="name"); self.take(":"); kind = [self.take(kind="name")]
-            while self.peek(kind="name"): kind.append(self.take(kind="name"))
+            arg = self.take(kind="name"); self.take(":"); kind = []
+            while self.peek(kind="name") or self.peek(kind="num"): kind.append(str(self.take()))
+            if not kind: raise Err(f"line {self.t[self.i][2]}: the kind of {arg} expected")
             args.append((arg, " ".join(kind))); self.maybe(",")
         c = dict(args=args, asks=[], leaves=[], returns=None, stack=None, calls=[])
         self.take("{")
@@ -96,7 +97,16 @@ class Parser:
             clause = self.take(kind="name")
             if clause == "asks": c["asks"].append(self.expr())
             elif clause == "leaves":
-                name = self.take(kind="name"); self.take("="); c["leaves"].append((name, self.expr()))
+                # leaves NAME = E, or leaves NAME[I] = E for I in A..B (each place of what NAME addresses)
+                name, index, each = self.take(kind="name"), None, None
+                if self.maybe("["):
+                    index = self.take(kind="name"); self.take("]")
+                self.take("="); e = self.expr()
+                if index is not None:
+                    self.take("for")
+                    if self.take(kind="name") != index: raise Err(f"line {self.t[self.i - 1][2]}: `for {index}` expected")
+                    self.take("in"); a = self.expr(); self.take(".."); each = (a, self.expr())
+                c["leaves"].append(dict(name=name, index=index, expr=e, each=each))
             elif clause == "returns": c["returns"] = self.expr()
             elif clause == "stack": c["stack"] = self.take(kind="num")
             elif clause == "calls":
@@ -159,6 +169,7 @@ class Parser:
                 if self.maybe(".."): e = ("slice", e, a, self.expr())
                 else: e = ("index", e, a)
                 self.take("]")
+            elif self.maybe("."): e = ("field", e, self.take(kind="name"))
             else: return e
 
     def primary(self):
@@ -343,6 +354,10 @@ class Spec:
         if kind == "index": return A.index(self.eval(A, e[1], env), self.eval(A, e[2], env))
         if kind == "slice": return A.slice(self.eval(A, e[1], env), self.eval(A, e[2], env), self.eval(A, e[3], env))
         if kind == "list": return [self.eval(A, x, env) for x in e[1]]
+        if kind == "field":
+            record = self.eval(A, e[1], env)
+            if not isinstance(record, dict) or e[2] not in record: raise Err(f"no field {e[2]}")
+            return record[e[2]]
         if kind == "each":
             out = []
             for i in self.span(A, e[3], e[4], env):

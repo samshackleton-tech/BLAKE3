@@ -83,6 +83,11 @@ class Blocks:
     def __init__(self, lane): self.lane = lane
 
 
+class Inputs:
+    """The inputs a kernel is given the addresses of: each a lane's blocks."""
+    def __init__(self, lanes): self.lanes = lanes
+
+
 # ---------------------------------------------------------------------------------------------------------
 # The algebra.
 class Symbols:
@@ -138,6 +143,9 @@ class Symbols:
     def index(self, x, i):
         if isinstance(x, Stack): return [Word(t) for t in x.get(self.T, self.facts, i)]
         if isinstance(x, Blocks): return [Word(self.T.var("input", x.lane, plain(i), w)) for w in range(16)]
+        if isinstance(x, Inputs):
+            if not isinstance(i, int) or not 0 <= i < x.lanes: raise Err(f"input {i} of {x.lanes}")
+            return Blocks(i)
         return ode.at(x, i)
     def slice(self, x, a, b):
         if isinstance(x, Stack):
@@ -149,6 +157,16 @@ class Symbols:
             if not isinstance(y, list) or len(y) != 1: raise Err("a stack takes one value at a time")
             return x.put(self.T, self.facts, x.count, [w.v for w in y[0]], x.count + 1)
         return x + y
+
+
+def asked(contract, A, env):
+    """What a contract asks, as numbers the caller must show are not below zero."""
+    out = []
+    for e in contract["asks"]:
+        if e[0] != "bin" or e[1] not in (">=", "<=", ">", "<"): raise Err("a contract asks something that is not an order of two numbers")
+        x, y = Lin.of(SPEC.eval(A, e[2], env)), Lin.of(SPEC.eval(A, e[3], env))
+        out.append({">=": x - y, "<=": y - x, ">": x - y - 1, "<": y - x - 1}[e[1]])
+    return out
 
 
 def words(terms): return [Word(t) for t in terms]

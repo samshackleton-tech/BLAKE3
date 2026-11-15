@@ -81,6 +81,27 @@ class Kloop(unittest.TestCase):
             with self.assertRaises(kcheck.Fail, msg=label):
                 kloop.check(rows, data, "k32", wrong(change), entry)
 
+    def test_a_changed_contract_refuses_the_true_kernel(self):
+        # the kernels' contracts are text in blake3.ode
+        import kspec, ode
+        true = kspec.SPEC
+        with open(os.path.join(HERE, "blake3.ode")) as f: text = f.read()
+        k32 = "contract blake3_servil_avx512_k32(inputs: 32 inputs, n: number, key: cv, t: counter, packed: bytes flags start end length, out: 32 cvs) {\n    asks n >= 1\n    leaves out[i] = chunk(key, t + i, flags, start, end, length, n, inputs[i]) for i in 0..32"
+        self.assertEqual(text.count(k32), 1)
+        rows, data, entry = self.k32
+        try:
+            for old, new in (("t + i", "t"), ("t + i", "t + i + 1"), ("flags, start, end, length", "flags, end, start, length"), ("inputs[i])", "inputs[31 - i])"),
+                             ("asks n >= 1", "asks n >= 0"), ("for i in 0..32", "for i in 0..16"), ("bytes flags start end length", "bytes start flags end length"),
+                             ("chunk(key,", "chunk(key[0..4] ++ key[0..4],"), ("32 inputs", "16 inputs")):
+                self.assertEqual(k32.count(old), 1, old)
+                kspec.SPEC = ode.Spec(text.replace(k32, k32.replace(old, new)))
+                with self.assertRaises(kcheck.Fail, msg=new):
+                    kloop.KERNELS = kloop.kernels()
+                    kloop.find(rows, data, "k32", entry)
+        finally:
+            kspec.SPEC = true
+            kloop.KERNELS = kloop.kernels()
+
     def test_the_other_entry_is_refused_with_this_ones_specification(self):
         rows, data, entry = self.k32
         p32 = kloop.load(self.obj, "p32")[2]

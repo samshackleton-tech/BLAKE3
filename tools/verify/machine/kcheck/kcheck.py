@@ -106,11 +106,17 @@ def spec_chunk(T, kernel, lane):
 
 
 def spec_output(T, kernel, lane):
-    """Lane `lane`'s one compression from its descriptor: its own chaining value, block, block length and flags,
-    counter 0 (a root's output block, or any node whose values the caller holds)."""
-    A = kspec.Symbols(T)
-    return kspec.terms(kspec.SPEC.call(A, "compress", kspec.words(T.var("cv", lane, w) for w in range(8)), kspec.words(T.var("input", lane, 0, w) for w in range(16)),
-                                       A.counter(0), ode.Word(T.var("length", lane)), ode.Word(T.var("flags of", lane))))
+    """What blake3.ode's contract of `blake3_servil_output16` says lane `lane`'s chaining value is left as: (the
+    address of sixteen descriptors, the address of sixteen chaining values); each descriptor a block, a
+    chaining value, a length byte and a flags byte."""
+    c = kspec.SPEC.contracts[kernel["symbol"]]
+    left = c["leaves"][0]
+    if ([kind for _, kind in c["args"]] != ["16 descriptors", "16 cvs"] or left["name"] != c["args"][1][0] or left["index"] is None
+            or left["each"] != (("num", 0), ("num", 16)) or c["asks"] or c["returns"] is not None or c["stack"] != 4096):
+        raise Fail(f"{kernel['symbol']}: not the contract of sixteen descriptors this checker knows")
+    nodes = [dict(block=kspec.words(T.var("input", n, 0, w) for w in range(16)), cv=kspec.words(T.var("cv", n, w) for w in range(8)),
+                  length=ode.Word(T.var("length", n)), flags=ode.Word(T.var("flags of", n))) for n in range(16)]
+    return kspec.terms(kspec.SPEC.eval(kspec.Symbols(T), left["expr"], {c["args"][0][0]: nodes, left["index"]: lane}))
 
 
 # ---------------------------------------------------------------------------------------------------------
@@ -429,7 +435,9 @@ KERNELS = {
     "o16": dict(entry=0, start="blake3_servil_output16", symbol="blake3_servil_output16", given="chaining value, block, length and flags of every lane",
                 lanes=16, blocks=1, table="descriptors", spec=spec_output),
     # c/blake3_avx512_32.S, as the library calls them: whole chunks (16 blocks; the flags, CHUNK_START, CHUNK_END
-    # and a last length of 64 packed), and parents (one block, counter 0, the flags with PARENT)
+    # and a last length of 64 packed), and parents (one block, counter 0, the flags with PARENT). These are
+    # cases of the kernels' contracts in blake3.ode, which kloop.py shows for every number of blocks and every
+    # packed byte; they are kept for the audits that run a kernel to its end.
     "k32": dict(entry=0, start="blake3_servil_avx512_k32", symbol="blake3_servil_avx512_k32", given="key, flags and input and every counter", lanes=32, blocks=16,
                 counter=("q", "counter"), increment=True, packed=((0, ("flags",)), CHUNK_START, CHUNK_END, 64), spec=spec_chunk),
     "p32": dict(entry=3, start="blake3_servil_avx512_k32", symbol="blake3_servil_avx512_p32", given="key, flags and input and every counter", lanes=32, blocks=16,

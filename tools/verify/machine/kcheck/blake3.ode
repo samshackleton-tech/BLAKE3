@@ -93,16 +93,48 @@ machine merge(key, flags, target) on s {
 }
 
 // ---------------------------------------------------------------------------------------------------------
-// What functions of the binary are claimed to do (so far: the one-block kernels and the hasher's stack; the
-// wide kernels' claims are still in kloop.py and kcheck.py). The arguments are in the order the machine's
-// calling convention passes them. An argument is the address of a `stack` of chaining values (1792 bytes: its
-// count in the first 8, value i at 32 + 32*i, at most 55 of them), the address of a `cv` (32 bytes: 8 words)
-// or of a `block` (64 bytes: 16 words), a `byte` (a number below 256), a `number`, a `counter` (64 bits), or
-// `any` 64 bits; `low byte`, `word` (a number below 2^32) and `low word` say how much of a register a kernel
-// reads. `asks`: what a caller must show. `leaves`: what the memory named holds afterwards; all else is as it
-// was. `returns`: the result. `stack`: the bytes of stack the function may use below its return address.
-// `calls F if C`: the function calls F only where C holds (the platform word 5 means the machine has AVX-512,
-// which its caller answers for).
+// What the functions of the binary are claimed to do. The arguments are in the order the machine's calling
+// convention passes them. An argument is:
+//   stack            the address of a stack of chaining values (1792 bytes: its count in the first 8, value i
+//                    at 32 + 32*i, at most 55 of them)
+//   cv, block        the address of 32 bytes (8 words), of 64 bytes (16 words)
+//   N inputs         the address of a table of N addresses, each of an input of n blocks
+//   N cvs            the address of N chaining values, one after another
+//   N descriptors    the address of N records of 24 bytes: a block's address, a chaining value's address, a
+//                    length byte, a flags byte
+//   bytes a b c d    a word whose four low bytes are named a, b, c, d
+//   byte, number, counter, any       a number below 256; a number; 64 bits of a counter; any 64 bits
+//   low byte, word, low word         how much of a register a kernel reads (word: the number is below 2^32)
+// `asks`: what a caller must show. `leaves`: what the memory named holds afterwards (`x[i] = ... for i in a..b`:
+// each of its values); all else is as it was. `returns`: the result. `stack`: the bytes of stack the function
+// may use below its return address. `calls F if C`: the function calls F only where C holds (the platform
+// word 5 means the machine has AVX-512, which its caller answers for).
+
+// The wide kernels: each lane's chunk machine, for any number of blocks n. K32 gives lane i the counter t + i;
+// P32 is the same code entered a little later, and gives every lane t; P16 has sixteen lanes.
+contract blake3_servil_avx512_k32(inputs: 32 inputs, n: number, key: cv, t: counter, packed: bytes flags start end length, out: 32 cvs) {
+    asks n >= 1
+    leaves out[i] = chunk(key, t + i, flags, start, end, length, n, inputs[i]) for i in 0..32
+    stack 4096
+}
+
+contract blake3_servil_avx512_p32(inputs: 32 inputs, n: number, key: cv, t: counter, packed: bytes flags start end length, out: 32 cvs) {
+    asks n >= 1
+    leaves out[i] = chunk(key, t, flags, start, end, length, n, inputs[i]) for i in 0..32
+    stack 4096
+}
+
+contract blake3_servil_avx512_p16(inputs: 16 inputs, n: number, key: cv, t: counter, packed: bytes flags start end length, out: 16 cvs) {
+    asks n >= 1
+    leaves out[i] = chunk(key, t, flags, start, end, length, n, inputs[i]) for i in 0..16
+    stack 4096
+}
+
+// Sixteen compressions, each node with its own chaining value, block, length and flags, counter 0.
+contract blake3_servil_output16(nodes: 16 descriptors, out: 16 cvs) {
+    leaves out[i] = compress(nodes[i].cv, nodes[i].block, counter(0), nodes[i].length, nodes[i].flags) for i in 0..16
+    stack 4096
+}
 
 contract blake3_servil_compress_in_place_avx512(h: cv, m: block, length: low byte, t: counter, flags: low byte) {
     leaves h = compress(h, m, t, length, flags)

@@ -63,8 +63,8 @@ class Contract:
         self.args = [(reg, kind, name) for reg, (name, kind) in zip(ARGS, c["args"])]
         if any(kind not in ("stack", "cv", "byte", "number", "any") for _, kind, _ in self.args): raise Fail(f"{symbol}: an argument of a kind this checker does not know")
         stacks = [name for _, kind, name in self.args if kind == "stack"]
-        if len(stacks) != 1 or c["leaves"][0][0] != stacks[0]: raise Fail(f"{symbol}: a function of the stack has one stack, and leaves it")
-        self.region, self.left, self.asked, self.returned = stacks[0], c["leaves"][0][1], c["asks"], c["returns"]
+        if len(stacks) != 1 or c["leaves"][0]["name"] != stacks[0] or c["leaves"][0]["index"] is not None: raise Fail(f"{symbol}: a function of the stack has one stack, and leaves it")
+        self.region, self.left, self.text, self.returned = stacks[0], c["leaves"][0]["expr"], c, c["returns"]
         # a function that leaves `machine(..., its stack)` is a loop of that machine: proved turn by turn
         e = self.left
         self.machine = e[1] if e[0] == "call" and e[1] in kspec.SPEC.machines and e[2] and e[2][-1] == ("name", self.region) else None
@@ -86,12 +86,7 @@ class Contract:
 
     def asks(self, T, facts, v):
         """What the caller must show, as numbers that are not below zero."""
-        A, env, out = kspec.Symbols(T, facts), self.env(T, v), []
-        for e in self.asked:
-            if e[0] != "bin" or e[1] not in (">=", "<=", ">", "<"): raise Fail(f"{self.name}: asks something that is not an order of two numbers")
-            x, y = Lin.of(kspec.SPEC.eval(A, e[2], env)), Lin.of(kspec.SPEC.eval(A, e[3], env))
-            out.append({">=": x - y, "<=": y - x, ">": x - y - 1, "<": y - x - 1}[e[1]])
-        return out
+        return kspec.asked(self.text, kspec.Symbols(T, facts), self.env(T, v))
 
     def leaves(self, T, facts, v):
         """The stack afterwards, and the result (None: the contract says nothing of it)."""

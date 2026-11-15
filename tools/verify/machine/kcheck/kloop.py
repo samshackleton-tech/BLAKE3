@@ -72,48 +72,76 @@ class Fork(Exception):
 
 # ---------------------------------------------------------------------------------------------------------
 # The specification: the chunk machine of blake3.ode, a turn at a time (kspec.py reads it on symbols).
-KERNELS = {
-    "k32": dict(start="blake3_servil_avx512_k32", symbol="blake3_servil_avx512_k32", lanes=32, increment=True),
-    "p32": dict(start="blake3_servil_avx512_k32", symbol="blake3_servil_avx512_p32", lanes=32, increment=False),
-    "p16": dict(start="blake3_servil_avx512_p16", symbol="blake3_servil_avx512_p16", lanes=16, increment=False),
-}
+def kernel_of(symbol, start):
+    """A wide kernel's contract, as blake3.ode states it: (inputs, n, key, counter, packed bytes, out) in the
+    calling convention's order; each of the out's chaining values is left as a machine's result on a lane's
+    input. `start`: the symbol its code begins at (P32 enters K32's body)."""
+    c = kspec.SPEC.contracts[symbol]
+    kinds = [kind.split() for _, kind in c["args"]]
+    lanes = int(kinds[0][0]) if kinds[0][0].isdigit() else 0
+    if (len(kinds) != 6 or kinds[0][1:] != ["inputs"] or kinds[1] != ["number"] or kinds[2] != ["cv"] or kinds[3] != ["counter"]
+            or kinds[4][0] != "bytes" or len(kinds[4]) != 5 or kinds[5] != [str(lanes), "cvs"] or lanes not in (16, 32)):
+        raise Fail(f"{symbol}: not a wide kernel's contract: {kinds}")
+    left = c["leaves"][0]
+    e = left["expr"]
+    if left["name"] != c["args"][5][0] or left["index"] is None or left["each"] != (("num", 0), ("num", lanes)): raise Fail(f"{symbol}: a wide kernel leaves each of its {lanes} chaining values")
+    if e[0] != "call" or e[1] not in kspec.SPEC.machines or c["returns"] is not None: raise Fail(f"{symbol}: each chaining value is a machine's result, and nothing is returned")
+    return dict(symbol=symbol, start=start, lanes=lanes, names=[arg for arg, _ in c["args"]], bytes=kinds[4][1:], index=left["index"], machine=e[1], args=e[2],
+                stack=c["stack"], text=c)
+
+
+def kernels():
+    return {"k32": kernel_of("blake3_servil_avx512_k32", "blake3_servil_avx512_k32"), "p32": kernel_of("blake3_servil_avx512_p32", "blake3_servil_avx512_k32"),
+            "p16": kernel_of("blake3_servil_avx512_p16", "blake3_servil_avx512_p16")}
+
+
+KERNELS = kernels()
 
 
 def given(T, facts, kernel, lane):
-    """What the chunk machine is given, for a lane: the key, the counter (+ the lane's number where the kernel
-    counts), the four flag bytes, the number of blocks n, the lane's input."""
+    """The contract's arguments in the specification's terms, and the lane's number under the contract's name
+    for it: the inputs, the number of blocks n, the key, the counter, the four packed bytes."""
     A = kspec.Symbols(T, facts)
-    t = ode.Counter(ode.Word(T.var("counter low")), ode.Word(T.var("counter high")))
-    if kernel["increment"]: t = A.counter_add(t, lane)
-    named = lambda name: ode.Word(byte_term(T, (0, (name,))))
-    return A, dict(key=kspec.words(T.var("key", w) for w in range(8)), t=t, flags=named("flags"), start=named("start"), end=named("end"), length=named("len"),
-                   n=N, input=kspec.Blocks(lane))
+    inputs, n, key, t, _, _ = kernel["names"]
+    env = {inputs: kspec.Inputs(kernel["lanes"]), n: N, key: kspec.words(T.var("key", w) for w in range(8)),
+           t: ode.Counter(ode.Word(T.var("counter low")), ode.Word(T.var("counter high"))), kernel["index"]: lane}
+    for name in kernel["bytes"]: env[name] = ode.Word(byte_term(T, (0, (name,))))
+    return A, env
 
 
-def spec_start(T):
-    """The machine's first state (`on h = key`)."""
-    A, env = given(T, Facts(), KERNELS["p16"], 0)
-    return list(kspec.terms(kspec.SPEC.eval(A, kspec.SPEC.machines["chunk"]["init"], env)))
+def machine_given(T, facts, kernel, lane):
+    """What the contract's machine is given for a lane: its arguments, as the contract writes them."""
+    A, env = given(T, facts, kernel, lane)
+    m = kspec.SPEC.machines[kernel["machine"]]
+    if len(m["params"]) != len(kernel["args"]) or m["loop"][0] != "for": raise Fail(f"{kernel['symbol']}: the machine is not given what it takes, or is not a counted loop")
+    return A, m, {p: kspec.SPEC.eval(A, e, env) for p, e in zip(m["params"], kernel["args"])}
+
+
+def spec_start(T, kernel):
+    """The machine's first state."""
+    A, m, env = machine_given(T, Facts(), kernel, 0)
+    return list(kspec.terms(kspec.SPEC.eval(A, m["init"], env)))
 
 
 def spec_step(T, facts, kernel, state, lane, b):
     """The lane's state after block b, from its state before it: one turn of the machine. Whether b is the
     first block and whether it is the last are asked of the path's facts: the code must have asked too."""
-    A, env = given(T, facts, kernel, lane)
-    env.update(h=kspec.words(state), b=kspec.plain(b))
-    return list(kspec.terms(kspec.SPEC.turn(A, "chunk", env)))
+    A, m, env = machine_given(T, facts, kernel, lane)
+    env[m["state"]], env[m["loop"][1]] = kspec.words(state), kspec.plain(b)
+    return list(kspec.terms(kspec.SPEC.turn(A, kernel["machine"], env)))
 
 
 # ---------------------------------------------------------------------------------------------------------
 # The machine of kcheck.py, with a number of blocks that is a symbol, the flags' bytes unknown, and paths.
 class Machine(kcheck.Machine):
     def __init__(self, T, rows, data_at, data, kernel):
-        super().__init__(T, rows, data_at, data, dict(lanes=kernel["lanes"], blocks=0, counter=("q", "counter"), packed=(0, 0, 0, 0)))
+        super().__init__(T, rows, data_at, data, dict(lanes=kernel["lanes"], blocks=0, counter=("q", "counter"), packed=(0, 0, 0, 0)), stack_budget=kernel["stack"])
         self.kernel, self.facts, self.moved = kernel, Facts(), False
-        self.facts.add(N - 1)                               # the contract: at least one block
         self.g["rsi"] = ("l", N)
-        # the packed flags: four unknown bytes, and four above them the code must not need
-        self.g["r8"] = ("p", ((0, ("flags",)), (0, ("start",)), (0, ("end",)), (0, ("len",)), (0, ("byte 4",)), (0, ("byte 5",)), (0, ("byte 6",)), (0, ("byte 7",))))
+        # the packed flags: four unknown bytes (the contract names them), and four above them the code must not need
+        self.g["r8"] = ("p", tuple((0, (name,)) for name in kernel["bytes"]) + ((0, ("byte 4",)), (0, ("byte 5",)), (0, ("byte 6",)), (0, ("byte 7",))))
+        A, env = given(T, self.facts, kernel, 0)
+        for f in kspec.asked(kernel["text"], A, env): self.facts.add(f)             # what the contract asks: at least one block
 
     def clone(self):
         c = copy.copy(self)
@@ -277,7 +305,7 @@ def check(rows, data, name, proof, entry):
     # base: from the entry through the first block. The first block is run as it is (it may differ from the
     # others: the start flag); what the proof says must hold from the second visit of the place on.
     first, second, one_block = visits(rows, data, kernel, T, head, entry)
-    start = spec_start(T)
+    start = spec_start(T, kernel)
     for e in one_block:
         if e.facts.zero(N - 1) is not True: raise Fail("base: the code returns after its first block when there are more")
         stored(e, lanes, {lane: spec_step(T, e.facts, kernel, start, lane, 0) for lane in range(lanes)}, "one block")
@@ -326,7 +354,7 @@ def find(rows, data, name, entry):
     third = [e for kind, e in paths(second.clone_at_rest(), head) if kind == "head"]
     if len(third) != 1: raise Fail("the second block does not lead back to the place by one path")
     third = third[0]
-    start = spec_start(T)
+    start = spec_start(T, kernel)
     words = {}
     for lane0 in range(0, kernel["lanes"], 16):
         after2 = [spec_step(T, third.facts, kernel, spec_step(T, third.facts, kernel, start, lane0 + lane, 0), lane0 + lane, 1) for lane in range(16)]

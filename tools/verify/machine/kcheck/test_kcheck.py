@@ -83,6 +83,21 @@ class Kcheck(unittest.TestCase):
             with self.assertRaises(kcheck.Fail, msg=old):
                 kcheck.check(changed, DATA, data, "o16", entry)
 
+    def test_a_changed_contract_refuses_the_output_kernel(self):
+        import kspec, ode
+        true = kspec.SPEC
+        with open(os.path.join(HERE, "blake3.ode")) as f: text = f.read()
+        rows, data, entry = load(self.obj16, "o16")
+        try:
+            for old, new in (("nodes[i].length, nodes[i].flags)", "nodes[i].flags, nodes[i].length)"), ("compress(nodes[i].cv, nodes[i].block, counter(0),", "compress(nodes[i].cv, nodes[i].block, counter(1),"),
+                             ("compress(nodes[i].cv, nodes[i].block,", "compress(nodes[15 - i].cv, nodes[i].block,"), ("contract blake3_servil_output16(nodes: 16 descriptors, out: 16 cvs)", "contract blake3_servil_output16(nodes: 16 descriptors, out: 32 cvs)")):
+                self.assertEqual(text.count(old), 1, old)
+                kspec.SPEC = ode.Spec(text.replace(old, new))
+                with self.assertRaises(kcheck.Fail, msg=new):
+                    kcheck.check(rows, DATA, data, "o16", entry)
+        finally:
+            kspec.SPEC = true
+
     def test_a_frame_that_is_not_whole_cells_is_refused(self):
         # found by kflip.py: `sub rsp, 0x101` was accepted, and its aligned stores fault on a processor
         rows, data, entry = load(self.obj, "p16")

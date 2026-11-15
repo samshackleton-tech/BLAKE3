@@ -34,8 +34,8 @@ def contract_of(symbol):
     kinds = [kind for _, kind in c["args"]]
     if len(kinds) != 5 or kinds[0] != "cv" or kinds[1] != "block" or kinds[2] not in ("low byte", "word") or kinds[3] != "counter" or kinds[4] not in ("low byte", "low word"):
         raise Fail(f"{symbol}: not a one-block kernel's contract: {kinds}")
-    if c["stack"] != 0 or c["leaves"][0][0] != c["args"][0][0] or c["asks"] or c["returns"] is not None: raise Fail(f"{symbol}: a one-block kernel leaves its chaining value, uses no stack, asks and returns nothing")
-    return dict(symbol=symbol, length=kinds[2], flags=kinds[4], names=[arg for arg, _ in c["args"]], leaves=c["leaves"][0][1])
+    if c["stack"] != 0 or c["leaves"][0]["name"] != c["args"][0][0] or c["leaves"][0]["index"] is not None or c["asks"] or c["returns"] is not None: raise Fail(f"{symbol}: a one-block kernel leaves its chaining value, uses no stack, asks and returns nothing")
+    return dict(symbol=symbol, length=kinds[2], flags=kinds[4], names=[arg for arg, _ in c["args"]], leaves=c["leaves"][0]["expr"])
 
 
 def contracts(): return {name: contract_of("blake3_servil_compress_in_place_" + name) for name in ("avx512", "sse41")}
