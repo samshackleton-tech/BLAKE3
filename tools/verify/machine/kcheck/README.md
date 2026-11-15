@@ -331,9 +331,9 @@ checked):
 
 | kernel | changes | stopped by the decoder | refused (no proof) | accepted | of those, as BLAKE3 on the processor |
 |---|---|---|---|---|---|
-| P16 | 22,144 | 14,191 | 7,740 | 213 | 213 (1,000 cases each) |
-| K32 | 35,824 | 22,163 | 11,910 | 1,751 | 1,751 |
-| P32 | 35,824 | 22,163 | 11,783 | 1,878 | 1,878 |
+| P16 | 22,144 | 14,132 | 7,799 | 213 | 213 (1,000 cases each) |
+| K32 | 35,824 | 22,053 | 12,019 | 1,752 | 1,752 |
+| P32 | 35,824 | 22,053 | 11,893 | 1,878 | 1,878 |
 
 With the whole interface in the specification, what the contract "does not see" in P16 falls from 142
 accepted changes to 13 (a larger frame, a 64-bit form of a 32-bit move): the statement now says what the code
@@ -378,9 +378,9 @@ change, with the processor as judge (`kglue_flip.py`, `audit/kglue-flip-*.txt`):
 
 | function | changes | stopped by the decoder | refused (no proof) | accepted | of those, as the machine on the processor |
 |---|---|---|---|---|---|
-| `push` | 568 | 308 | 256 | 4 | 4 (3,000 cases each) |
-| `merge` | 2,528 | 1,311 | 1,112 | 105 | 105 |
-| `add` | 688 | 349 | 255 | 84 | 84 |
+| `push` | 568 | 304 | 260 | 4 | 4 (3,000 cases each) |
+| `merge` | 2,528 | 1,296 | 1,127 | 105 | 105 |
+| `add` | 688 | 348 | 256 | 84 | 84 |
 
 **What that audit found.** Run first, it had 24 changes of `merge` accepted that the processor told from the
 machine: all in `mov rdx, 64`, the block length given to the kernel. I had written the two kernels' contract
@@ -444,8 +444,10 @@ same for every input.
 
 ## What has been done to find it wrong
 
-(Every single-bit audit below and above was run again, by `sh audit.sh 40`, at commit `b3d52cc1`: the
-specification and all nine contracts in `blake3.spec`. `audit/` holds the outputs.)
+(Every single-bit audit of the kernels and of the stack's functions, below and above, was run again by
+`sh audit.sh 48` at commit `55bcb1c6`: the declarative specification, and the readers and the numbers' part
+as `kfn.py` needs them. `audit/` holds the outputs. The commits since have changed these checkers in one
+way: what a function needs of the processor is read from its bytes, which only refuses more.)
 
 1. **Changed kernels** (`--mutants`): 15 of 15 refused (rotations, operands, the carry's mask, a message offset,
    a store's offset, a shuffle, a flag, a saved register, the frame's bound, the block step, one entry of the
@@ -469,18 +471,18 @@ specification and all nine contracts in `blake3.spec`. `audit/` holds the output
 
    | kernel | changes | stopped by the decoder | refused by the checker | accepted | of those, as BLAKE3 on the processor |
    |---|---|---|---|---|---|
-   | P16 | 22,144 | 14,191 | 7,611 | 342 | 342 (1,000 cases each) |
-   | K32 | 35,824 | 22,163 | 11,905 | 1,756 | 1,756 (1,000 cases each) |
-   | P32 | 35,824 | 22,163 | 11,778 | 1,883 | 1,883 (1,000 cases each) |
-   | `output16` | 29,384 | 17,597 | 11,393 | 394 | 394 (2,000 cases each) |
+   | P16 | 22,144 | 14,132 | 7,670 | 342 | 342 (1,000 cases each) |
+   | K32 | 35,824 | 22,053 | 12,014 | 1,757 | 1,757 (1,000 cases each) |
+   | P32 | 35,824 | 22,053 | 11,888 | 1,883 | 1,883 (1,000 cases each) |
+   | `output16` | 29,384 | 17,516 | 11,474 | 394 | 394 (2,000 cases each) |
 
-   (Threadripper PRO 7975WX, clang 21.1.8's objects, the checker and decoder as they are at commit `b3d52cc1`;
-   16 s for P16, 26 s for `output16`, 13 minutes each for K32 and P32, 40 at a time.
+   (Threadripper PRO 7975WX, clang 21.1.8's objects, the checker and decoder as they are at commit `55bcb1c6`;
+   17 s for P16, 27 s for `output16`, 13 minutes each for K32 and P32, 48 at a time.
    No change ended without a verdict. Controls in each run: the unchanged object is accepted and runs as BLAKE3;
    asked for a block more than its inputs hold it faults; a refused change of a rotation does not run as BLAKE3.)
 
    Where the accepted changes of the first three are: in the no-ops an assembler pads with (148), in the
-   operand of a prefetch (2,560), in the four bytes of a field the linker fills (832), and 440 elsewhere, of two kinds
+   operand of a prefetch (2,560), in the four bytes of a field the linker fills (832), and 442 elsewhere, of two kinds
    (`kflip.py --detail` lists each with what it became; `audit/`):
    - code the contract never reaches, or whose result it never uses. The kernels take 1 to 16 blocks, any
      start and end flags and either entry, and the contracts fix them: the jump that P32's entry takes is never
