@@ -69,6 +69,9 @@ two lines of their own (`decreases`, `calls`); a reader need not read them.
 **Not yet so** (November 15). There are two checkers of functions: `kfn.py` for the hash (words, vectors,
 calls by contract) and `kbyte.py` for the programs of `programs/` (bytes, numbers, loops with places). The
 first does not yet know `ensures X[a .. b]`, `ensures ... if C`, `ensures CONDITION` or `trace depends on`, and
-refuses a contract that has them; the second does not follow calls. The inner contracts of the hash
+refuses a contract that has them; the second follows calls by contract (programs/frame) but not a function
+that calls itself, and knows none of the first one's kinds of memory. In a specification a name is defined
+once: a text that defines one twice is refused (so a proof's inner contracts, read after the reader's
+text, cannot change it). The inner contracts of the hash
 (`proofs/inner.spec`) still name kinds of memory (`cv`: eight words); the public contract does not. That a
 function returns is shown as far as the kernels it calls (README.md).

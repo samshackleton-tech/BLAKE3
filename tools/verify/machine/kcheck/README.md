@@ -529,6 +529,7 @@ bytes and the proof's offsets), takes the proof from the file, and checks:
 | `base64/odebase64.o` | 4,336 | 1 | 13 s |
 | `inet/odeinet.o` | 4,104 | 1 | 0.17 s |
 | `common/odecommon.o` | 2,008 | 1 | 0.01 s |
+| `frame/odeframe.o` (a function and the two it calls) | 13,304 (1,936 of code) | 3 | 2.4 s |
 | `programs/lz4-rust/main.rs` linked with `odelz4.o` (rustc 1.99.1) | 4,568,904 | 3 | 4.4 s on the Threadripper |
 | the same after `strip` | 364,504 | 3, found by their bytes | 4.4 s |
 
@@ -659,10 +660,63 @@ with no bit in common (Devon's Adler-32); a shift right by more than 16 (the che
 sequence's value a few places after a known one, taken a place at a time (the fast Adler-32 with four
 bytes a turn, which was refused before and is `programs/adler32/blocks4.ode` now).
 
+### A function made of others, each used by its contract: `programs/frame` (November 15, evening)
+
+`ode_unframe` opens a frame: an LZ4 block, and after it the Adler-32 of what the block decodes to. Its code
+(`frame.ode`, 80 instructions) calls `ode_lz4_decode` and `ode_adler32_blocks4`, the functions of the tables
+above, unchanged, and compares four bytes. Its specification (`frame.spec`) is the two parts' definitions,
+word for word, and eight lines of its own:
+
+    def unframe(bytes, cap) {
+        fails SHORT if len(bytes) < 4
+        let body = lz4(bytes[0 .. len(bytes) - 4], cap)
+        fails SUM if adler32(body) != be32(bytes[len(bytes) - 4 .. len(bytes)])
+        body
+    }
+
+`kbyte.py` takes a call by the callee's contract and by nothing else of it (`Machine.call`): what the
+contract requires is shown at the call; what it ensures is so afterwards; its stack is counted. The
+contracts of the two functions called are steps of the proof (`unframe.inner`: the auditor does not read
+them), and each of the two is checked against that same text from its own bytes. What was measured:
+
+| | |
+|---|---|
+| the caller checked | 10 ms; 4 paths; 115 instructions run; no proof text |
+| the two it calls, against the contracts used | 0.5 s and 1.9 s (as alone) |
+| the file shipped, `odeframe.o`, checked from its bytes | 2.4 s |
+| on a processor (Threadripper), against another decoder and zlib's `adler32` | 30,000 frames, 6,746 opened and 23,254 refused, as the reference |
+
+So using a function through its contract costs the checker close to nothing: the work is in the function
+called, once, and not again at each use. What it taught:
+
+- **The caller is shown whatever the parts are.** With another Adler-32 in the definitions (`s[0] = 2`) the
+  caller is accepted as before, and it is `ode_adler32_blocks4` that is refused. The caller's check never
+  opens `adler32` or `lz4` beyond their names.
+- **A callee's contract can be too weak to use, and the caller finds it.** The decoder returns NO or a
+  count, and its contract does not say a count is never NO (only a comment did). The caller could not be
+  shown until its own contract required `cap < NO`. The exactness is the same the other way: a decoder
+  that asked `n < 2^56 - 4` is still enough for the caller (it passes n - 4); one that asks `2^56 - 5` is
+  refused.
+- **A question the callee's contract asks and the path does not answer is taken both ways** ("has
+  `lz4(input, cap)` failed?"): two paths after the call, one with the value named as a list, one with it
+  failed. This is the piece `kbyte.py` lacked for UTF-8 too, here only at calls.
+- **What `kbyte.py` does not do at a call**: a function that calls itself; a caller whose trace may not
+  depend on something it reads (what the callee does with such bytes is not followed); passing bytes of
+  its own stack; reading, as numbers its branches may depend on, the bytes a callee wrote (they are a
+  list with a name: it can pass them on and return them).
+- **A hole found on the way, in `ode.py`, and closed: a name defined twice.** The second definition took
+  the first one's place without a word. `check_binary.py` (and now `check_file.py`) reads the proof's inner
+  contracts after the reader's specification, so a proof could have given the public function a second,
+  weaker contract, and the check would have said "meets its public contract". One attempt was made on
+  `b3hashr.o` with the old `ode.py`: the weaker contract was taken in place of the reader's, and the check
+  then failed for an unrelated reason; no file wrongly shown was produced. A specification with a name
+  defined twice is refused now (tests in `test_ode.py`, `test_kbinary.py`, `programs/test_files.py`). This
+  is of the kind that matters most: it could have said "shown" of something false.
+
 **Not done.** Sigil has no code. No prover searches for places: each was written from the checker's
 refusals. And what `kbyte.py` still lacks, each found by a program that wanted it:
 
-- calls (`kfn.py` follows them, and knows no places and no bytes in parts: they should be one checker);
+- one checker of functions (`kfn.py` and `kbyte.py` both follow calls now, each with its own kind of memory);
 - tables of constants beside the code, and multiplication in Ode (Sigil);
 - facts about a specification itself that take an induction: that what an LZ4 block decodes to only
   grows; that the least place two runs differ is where a walk over them stops. Those specifications were
