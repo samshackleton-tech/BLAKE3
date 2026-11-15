@@ -8,10 +8,10 @@
 of them with the 64 bytes at block. kglue.py first took their contract as I wrote it by hand, and it was wrong
 for the SSE4.1 kernel (which reads all of EDX for the length, not its low byte). Here the contract is CHECKED
 against the kernel's bytes, in kcheck.py's way: the instructions are run on symbols (an XMM register is four
-32-bit terms), the specification's `compress` (blake3.ode) is built on the same symbols, and the eight words
+32-bit terms), the specification's `compress` (blake3.spec) is built on the same symbols, and the eight words
 stored are compared by identity.
 
-What each kernel is claimed to do is its `contract` in blake3.ode, and shown for every cv, block and counter:
+What each kernel is claimed to do is its `contract` in blake3.spec, and shown for every cv, block and counter:
   avx512   cv <- compress(cv, block, counter, the low byte of RDX, the low byte of R8), whatever else RDX and R8 hold
   sse41    cv <- compress(cv, block, counter, EDX, the low word of R8), IF RDX is below 2^32 (its upper half would
            be added into the flags' word: the contract's `word`); whatever the upper half of R8 holds
@@ -27,7 +27,7 @@ BASE, DATA = 0x10000, 0x50000000
 KEPT = kcheck.SAVED
 
 def contract_of(symbol):
-    """A one-block kernel's contract, as blake3.ode states it: (cv, block, length, counter, flags) in the calling
+    """A one-block kernel's contract, as blake3.spec states it: (cv, block, length, counter, flags) in the calling
     convention's order, the length a `low byte` or a `word`, the flags a `low byte` or a `low word`, and what the
     chaining value is left as."""
     c = kspec.SPEC.contracts[symbol]

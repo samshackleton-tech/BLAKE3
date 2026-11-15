@@ -1,0 +1,106 @@
+control: the unchanged object is ACCEPTED 
+chunk_node: 2280 single-bit changes of 285 bytes of code (5 s): 1080 stopped by the decoder, 1100 refused (no proof), 100 accepted, 0 with NO VERDICT (the time limit)
+  accepted: +0x3B byte 2 bit 4: .mov 64 (.reg .rbp) (.reg .rax)  ->  .mov 64 (.reg .rbp) (.reg .rdx)
+  accepted: +0x48 byte 2 bit 5: .cmp 64 (.reg .rax) (.reg .rcx)  ->  .cmp 64 (.reg .rax) (.reg .rbp)
+  accepted: +0x5D byte 2 bit 0: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rax) (.imm 0x5)
+  accepted: +0x7E byte 1 bit 0: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 1 bit 1: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 1 bit 2: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 1 bit 3: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 1 bit 4: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 1 bit 5: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 1 bit 6: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 1 bit 7: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 2 bit 0: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 2 bit 1: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 2 bit 2: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 2 bit 3: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 2 bit 4: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 2 bit 5: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 2 bit 6: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 2 bit 7: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 3 bit 0: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 3 bit 1: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 3 bit 2: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 3 bit 3: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 3 bit 4: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 3 bit 5: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 3 bit 6: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 3 bit 7: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 4 bit 0: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 4 bit 1: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 4 bit 2: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 4 bit 3: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 4 bit 4: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 4 bit 5: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 4 bit 6: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x7E byte 4 bit 7: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x9A byte 1 bit 0: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 1 bit 1: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 1 bit 2: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 1 bit 3: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 1 bit 4: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 1 bit 5: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 1 bit 6: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 1 bit 7: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 2 bit 0: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 2 bit 1: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 2 bit 2: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 2 bit 3: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 2 bit 4: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 2 bit 5: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 2 bit 6: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 2 bit 7: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 3 bit 0: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 3 bit 1: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 3 bit 2: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 3 bit 3: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 3 bit 4: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 3 bit 5: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 3 bit 6: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 3 bit 7: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 4 bit 0: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 4 bit 1: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 4 bit 2: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 4 bit 3: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 4 bit 4: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 4 bit 5: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 4 bit 6: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0x9A byte 4 bit 7: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0xD6 byte 2 bit 5: .mov 64 (.reg .rdx) (.reg .rbp)  ->  .mov 64 (.reg .rdx) (.reg .rcx)
+  accepted: +0xD9 byte 1 bit 0: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 1 bit 1: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 1 bit 2: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 1 bit 3: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 1 bit 4: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 1 bit 5: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 1 bit 6: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 1 bit 7: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 2 bit 0: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 2 bit 1: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 2 bit 2: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 2 bit 3: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 2 bit 4: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 2 bit 5: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 2 bit 6: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 2 bit 7: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 3 bit 0: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 3 bit 1: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 3 bit 2: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 3 bit 3: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 3 bit 4: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 3 bit 5: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 3 bit 6: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 3 bit 7: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 4 bit 0: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 4 bit 1: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 4 bit 2: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 4 bit 3: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 4 bit 4: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 4 bit 5: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 4 bit 6: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xD9 byte 4 bit 7: .call b3l_pad  ->  .call b3l_pad
+control: the unchanged object on this processor, the lengths and 200 more: same
+control: a change no proof was found for, on this processor: NONE FOUND
+the 100 accepted changes on this processor: 100 same
+for scale, 300 of the changes stopped or refused, on this processor: 179 CRASHES, 79 DIFFERS, 42 same

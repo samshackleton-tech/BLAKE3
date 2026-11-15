@@ -86,7 +86,7 @@ class Kcheck(unittest.TestCase):
     def test_a_changed_contract_refuses_the_output_kernel(self):
         import kspec, ode
         true = kspec.SPEC
-        with open(os.path.join(HERE, "blake3.ode")) as f: text = f.read()
+        text = ode.source()
         rows, data, entry = load(self.obj16, "o16")
         try:
             for old, new in (("nodes[i].length, nodes[i].flags)", "nodes[i].flags, nodes[i].length)"), ("compress(nodes[i].cv, nodes[i].block, counter(0),", "compress(nodes[i].cv, nodes[i].block, counter(1),"),
@@ -115,13 +115,13 @@ class Kcheck(unittest.TestCase):
             for _ in range(12): x = T.add(x, x)
 
     def test_a_changed_specification_refuses_the_true_kernels(self):
-        # the specification is blake3.ode (test_ode.py: it gives the official vectors): one change of its text,
+        # the specification is blake3.spec (test_ode.py: it gives the official vectors): one change of its text,
         # and the kernel that met it does not
         import kspec, ode
         true = kspec.SPEC
-        with open(os.path.join(HERE, "blake3.ode")) as f: text = f.read()
+        text = ode.source()
         try:
-            for old, new in (("(v[b] ^ v[c]) >>> 7", "(v[b] ^ v[c]) >>> 8"), ("if b == n - 1 then length else 64,", "63,"), ("[s[i] ^ s[i + 8] for i in 0..8]", "[s[i + 8] ^ s[i] ^ s[i] for i in 0..8]")):
+            for old, new in (("(b1 ^ c2) >>> 7", "(b1 ^ c2) >>> 8"), ("if b == n - 1 then length else 64,", "63,"), ("[s[7][i] ^ s[7][i + 8] for i in 0..8]", "[s[7][i + 8] ^ s[7][i] ^ s[7][i] for i in 0..8]")):
                 self.assertEqual(text.count(old), 1, old)
                 kspec.SPEC = ode.Spec(text.replace(old, new))
                 rows, data, entry = load(self.obj, "p16")

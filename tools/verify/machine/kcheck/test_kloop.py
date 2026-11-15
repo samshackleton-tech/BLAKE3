@@ -82,10 +82,10 @@ class Kloop(unittest.TestCase):
                 kloop.check(rows, data, "k32", wrong(change), entry)
 
     def test_a_changed_contract_refuses_the_true_kernel(self):
-        # the kernels' contracts are text in blake3.ode
+        # the kernels' contracts are text in blake3.spec
         import kspec, ode
         true = kspec.SPEC
-        with open(os.path.join(HERE, "blake3.ode")) as f: text = f.read()
+        text = ode.source()
         k32 = "contract blake3_servil_avx512_k32(inputs: 32 inputs, n: number, key: cv, t: counter, packed: bytes flags start end length, out: 32 cvs) {\n    asks n >= 1\n    leaves out[i] = chunk(key, t + i, flags, start, end, length, n, inputs[i]) for i in 0..32"
         self.assertEqual(text.count(k32), 1)
         rows, data, entry = self.k32

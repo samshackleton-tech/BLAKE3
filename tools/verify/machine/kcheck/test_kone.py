@@ -63,7 +63,7 @@ class Kone(unittest.TestCase):
     def test_a_changed_contract_refuses_the_true_kernel(self):
         import kspec, ode
         true = kspec.SPEC
-        with open(os.path.join(HERE, "blake3.ode")) as f: text = f.read()
+        text = ode.source()
         head = {"avx512": "contract blake3_servil_compress_in_place_avx512(h: cv, m: block, length: low byte, t: counter, flags: low byte) {\n    leaves h = compress(h, m, t, length, flags)",
                 "sse41": "contract blake3_servil_compress_in_place_sse41(h: cv, m: block, length: word, t: counter, flags: low word) {\n    leaves h = compress(h, m, t, length, flags)"}
         try:

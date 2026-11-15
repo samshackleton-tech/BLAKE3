@@ -74,17 +74,17 @@ class Kglue(unittest.TestCase):
                 kglue.check(rows, name, self.proofs[name])
 
     def test_a_changed_contract_refuses_the_true_function(self):
-        # the contracts are text in blake3.ode: one change of a contract, and the function that met it does not
+        # the contracts are text in blake3.spec: one change of a contract, and the function that met it does not
         import kspec, ode
         true = kspec.SPEC
-        with open(os.path.join(HERE, "blake3.ode")) as f: text = f.read()
+        text = ode.source()
         changes = [("push", "leaves st = st ++ [new]", "leaves st = st"),
                    ("push", "asks len(st) <= 54\n    leaves st = st ++ [new]", "asks len(st) <= 55\n    leaves st = st ++ [new]"),
-                   ("push", "stack 64", "stack 16"),
+                   ("push", "leaves st = st ++ [new]\n    stack 64\n", "leaves st = st ++ [new]\n    stack 16\n"),
                    ("merge", "asks target >= 1\n    leaves st = merge(key, flags, target, st)", "asks target >= 0\n    leaves st = merge(key, flags, target, st)"),
                    ("merge", "returns len(st)\n    stack 256", "returns len(st) + 1\n    stack 256"),
-                   ("merge", "stack 256", "stack 100"),
-                   ("merge", "calls blake3_servil_compress_in_place_avx512 if plat == 5", "calls blake3_servil_compress_in_place_avx512 if plat == 4"),
+                   ("merge", "returns len(st)\n    stack 256", "returns len(st)\n    stack 100"),
+                   ("merge", "returns len(st)\n    stack 256\n    calls blake3_servil_compress_in_place_avx512 if plat == 5", "returns len(st)\n    stack 256\n    calls blake3_servil_compress_in_place_avx512 if plat == 4"),
                    ("merge", "leaves st = merge(key, flags, target, st)", "leaves st = merge(key, flags, target + 1, st)"),
                    ("add", "leaves st = merge(key, flags, target, st ++ [new])", "leaves st = merge(key, flags, target, st)"),
                    ("add", "leaves st = merge(key, flags, target, st ++ [new])", "leaves st = merge(new, flags, target, st ++ [new])"),

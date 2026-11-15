@@ -1,76 +1,197 @@
-# kcheck: a specification that runs, proofs that are found, a checker that does not search (a trial, November 14 and 15, 2026)
+# kcheck: a specification, a binary, and a checker a reader runs (a trial, November 14 and 15, 2026)
 
 **Not a proof in a proof assistant, and checked by none.** A trial of another way to the goal of BLAKE3 #361:
-to hand a reader a specification, a binary and a proof, such that he checks in a second, by a small program
-he can read, that the binary meets the specification.
+to hand a skeptical reader a specification, a binary and a proof, such that he checks for himself, in
+seconds, that the binary meets the specification, relying on little.
 
-- **The specification is a text that runs** (`blake3.ode`, 222 lines with its comments and the contracts): BLAKE3 as small pure
-  functions and two machines, in a language of our own. Run on numbers it gives the 105 official test vectors;
-  read on symbols it gives the terms machine code is compared with. There is no other specification.
-- **A proof is a short text nobody writes**: the places of the code's loops, and what the registers and the
-  memory hold there in the specification's terms. A prover finds it by running the loop twice.
-- **The checker does not search**: it runs the machine code from each place to the next on symbols, runs the
-  specification's step on the same symbols, and compares. Loops of any length are covered by induction
-  (Floyd's method); there is no solver.
+The scope is narrow on purpose (Sam, November 15). The code is new code written for this, not existing code.
+The mathematics is what the code needs, not all of mathematics. The programs are those that can be written
+this way, not all programs. The languages are our own.
 
-What is shown so far, each in under a second: four AVX-512 kernels of the library; three of them for every
-number of blocks and every flag byte; and `push`, `merge` and `add` of the hasher's stack (a loop over a data
-structure in memory, calls by contract), and the two one-block kernels those call. The programs here are
-what would have to be trusted, about 2,900 lines of Python; most of this page is what has been done to find where they are wrong, and what that found.
+- **The specification says what the hash is, not how to compute it** (`blake3.spec`: 147 lines with its
+  comments, and an 18-line claim). Definitions by equations, in a language made for specifications of this
+  kind: the compression function; a chunk as a sequence (`h[0] = key`, `h[b + 1] = compress(h[b], ...)`);
+  the tree by the paper's own rule (the left part holds `the greatest power of two k with 1024 * k < len`
+  chunks; a tree is its two parts' trees under a parent). Evaluated on numbers it gives the 105 official test
+  vectors. Nothing in it is a stack, a counter of subtrees, or a loop.
+- **The code is written to be proved** (`hash.ode`, in Ode), as code is written to be fast: in the
+  specification's shape. `subtree` splits its bytes by the same rule and calls itself on each part; its loops
+  run a number of times the paths fix.
+- **The proof is whatever the checker needs beside the binary.** Here: what each function inside is claimed
+  to do (`proofs/inner.spec`). For the hash that is all: there is no proof text to write. (The library's wide
+  kernels loop over a number of blocks that is an argument: each has a place, which a prover finds.)
+- **The checker does not search.** It runs each function's machine code on symbols along every path; a call
+  is taken by the callee's contract (a call of itself by its own); what is left at the return is compared
+  with the specification's definition, opened once. Terms are compared by identity, numbers by adding linear
+  facts up. No solver.
 
-## The specification: `blake3.ode`
+What is shown, from the binary's bytes (`python3 check_all.py`: 14 functions, 2,499 instructions, 3.3 s on an
+Apple M6):
 
-The language: numbers, 32-bit words (`+` wraps, `^`, `|`, `>>>` rotates), 64-bit counters, lists, `if`; a
-`fn` is a pure function; a `machine` is a loop over a state, and `turn` is one step. The file holds the
-compression function, the chunk machine (a chunk's blocks, from the key), `parent`, the merge machine (the
-stack of chaining values), and the whole hash of a message (chunks, the stack, the root), which exists only to
-be run on the test vectors.
+- **`b3l_hashr`: BLAKE3 of a message of every length, under any key and flags** (the claim in `blake3.spec`),
+  through `pad`, `chunk_node`, `node_out` and `subtree` of `hash.ode` and the library's two one-block
+  kernels. Nothing is assumed of a callee: each is checked against its own bytes. It is slow code: one block
+  at a time. The wide kernels are not yet in it.
+- The library's wide kernels (K32, P32 and P16 for every number of blocks; `output16`).
+- An earlier trial (`push`, `merge`, `add` of a stack of subtrees) against an algorithm, not the
+  specification.
 
-    python3 ode.py blake3.ode --vectors ../../../../test_vectors/test_vectors.json      # 105 vectors, 7 s
+What a reader relies on: `blake3.spec`, which he reads; the checker, 3,222 lines of unverified Python for the
+hash (4,228 with the wide kernels' and the stack's checkers); the processor doing what the checker takes
+each instruction form to do; Python. Most of this page is what has been done to find where the checker is wrong,
+and what that found.
+
+## The specification: `blake3.spec`
+
+    python3 ode.py blake3.spec --vectors ../../../../test_vectors/test_vectors.json      # 105 vectors, 6 s
     python3 test_ode.py
 
-- `ode.py` (431 lines) reads the text and evaluates it over an algebra of words. On numbers: the official
-  vectors, at every length, for the hash, the keyed hash and key derivation.
-- `kspec.py` (173 lines) is the other algebra: words are the checkers' terms, a number may depend on a count
-  (and a comparison is decided from the code path's facts, or the evaluation stops), a list may be a stack of
-  unknown count or an input of unknown length. `kcheck.py`, `kloop.py` and `kglue.py` take `compress`, the
-  two machines and `parent` from the file through it.
-- `test_ode.py`: 18 single changes of the text (a rotation, the permutation, a flag, the counter, the root)
-  are each told from BLAKE3 by the vectors. `test_kcheck.py`: a changed specification refuses the true kernels.
+The language (its summary is at the top of the file): numbers, 32-bit words, 64-bit counters, lists, bytes,
+records, `if c then a else b`, and
 
-**The contracts are in the file too**, for all nine functions: what each argument is, what a caller must
-show (`asks`), what the function `leaves` and `returns` in the specification's terms, its `stack`, and which
-function it `calls` only on a condition:
+    def NAME(args) { let X = E ... VALUE }                     a definition: equations and a value
+    let s[0] = A   let s[i + 1] = F(s[i])                      a sequence, by its first value and each next
+    sequence NAME(args) { h[0] = A   h[b + 1] = F(h[b])   for b in 0..n }
+    the least number n in a..b with C                          a number by what is true of it
+    the greatest power of two k with C
 
-    contract blake3_servil_avx512_k32(inputs: 32 inputs, n: number, key: cv, t: counter, packed: bytes flags start end length, out: 32 cvs) {
-        asks n >= 1
-        leaves out[i] = chunk(key, t + i, flags, start, end, length, n, inputs[i]) for i in 0..32
-        stack 4096
+Nothing is given twice and nothing loops; a definition may be of itself on smaller things. The tree:
+
+    def left_chunks(bytes) { the greatest power of two k with 1024 * k < len(bytes) }
+
+    def children(key, flags, t, bytes) {
+        let k = left_chunks(bytes)
+        subtree(key, flags, t, bytes[0 .. 1024 * k]) ++ subtree(key, flags, t + k, bytes[1024 * k .. len(bytes)])
     }
 
-    contract b3l_merge(st: stack, key: cv, flags: byte, plat: any, target: number) {
-        asks target >= 1
-        leaves st = merge(key, flags, target, st)
-        returns len(st)
-        stack 256
+    def subtree(key, flags, t, bytes) {
+        if len(bytes) <= 1024 then node_value(chunk_node(key, t, flags, bytes), 0)
+        else compress(key, children(key, flags, t, bytes), counter(0), 64, flags | PARENT)
+    }
+
+and the claim, which is all of the contracts a reader need read:
+
+    contract b3l_hashr(out: cv, input: len bytes, len: number, key: cv, flags: byte, plat: any) {
+        leaves out = hash_words(key, flags, input)
+        stack 1024 + 384 * bits(len / 1024)
         calls blake3_servil_compress_in_place_avx512 if plat == 5
     }
 
-The checkers take them from there, and a change of a contract's text refuses the function that met it
-(`test_kglue.py`: 11 changes; `test_kloop.py`: 9; `test_kone.py`: 6; `test_kcheck.py`: 4). Writing those
-tests found a hole: `merge`'s result was compared with the stack's count by the checker's own code, whatever
-the contract said it returns.
+- `ode.py` (635 lines) reads the text and evaluates it over an algebra of words. On numbers: the official
+  vectors, at every length, for the hash, the keyed hash and key derivation.
+- `kspec.py` (453 lines) is the other algebra, for the checkers: words are terms; a number may depend on a
+  count, and a comparison of such numbers is decided from the code path's facts or the evaluation stops;
+  bytes may be some of a message of unknown length. What cannot be worked out on a path (the tree over bytes
+  whose count is not known) is named by what it is of, and two names are one thing when they are the same.
+- `test_ode.py`: 21 single changes of the text (a rotation, the permutation, a flag, the counter, the root,
+  the rule for the left part, the padding) are each told from BLAKE3 by the vectors. Three more are of the
+  parts of `chunk` that the hash's own definitions do not use (an end flag and a last length inside the
+  sequence: the wide kernels' contracts use them); they are told by a chunk's value computed both ways.
 
-So the triple exists for these nine functions: the specification and the contracts (`blake3.ode`, 222
-lines), the binary (the objects), the proofs (`proofs/*.json`, 3.4 KB in all), and
+**What the specification is not.** It was first "a program that runs": machines whose turns the code's loops
+followed, the hash by a stack (then by Sam's levels) of subtrees. A reader would have had to see that such an
+algorithm is BLAKE3. Now the algorithm is in the code only, and the code is compared with the definition.
+(One algorithm remains, in `proofs/inner.spec` and marked so: the stack machine three functions of the
+earlier trial follow.)
 
-    python3 check_all.py          # 9 functions, 2,061 instructions, under a second
+## The code: `hash.ode`, written to be proved
 
-What the file is not yet: how a `stack`, a `cv` or a table of inputs lies in memory is a kind the checkers
-know, not text (each checker refuses a contract whose kinds it does not know); and no code is compiled from
-it.
+141 lines of Ode (the language of `lang/`; its compiler is `lang/odec.py` and `lang/Lang.lean`, and prints
+assembly). Five functions:
 
-## What it shows today
+| function | instructions | what its contract says it leaves (`proofs/inner.spec`, but for the last) |
+|---|---|---|
+| `pad(block, src, n)` | 39 | `block = padded(src)` |
+| `chunk_node(nd, input, len, t, flags, plat)` | 81 | `nd = chunk_node(nd.h, t, flags, input)` |
+| `node_out(out, nd, root, plat)` | 58 | `out = node_value(nd, root)` |
+| `subtree(out, input, len, kf, t, plat)` | 128 | `out = subtree(kf.key, kf.flags, t, input)` |
+| `hashr(out, input, len, key, flags, plat)` | 132 | `out = hash_words(key, flags, input)` |
+
+What "written to be proved" meant, each a choice the programmer made as one makes choices for speed:
+
+- **The tree is a recursion, as in the specification.** `subtree` finds the count of chunks for its left
+  part, calls itself on the two parts, and compresses the two values. Its own contract is what the checker
+  takes at those calls. An earlier form of this code kept a stack of subtrees (and one after it, levels): to
+  show that such a thing makes the tree takes an induction over counts and their bits, which Lean did by
+  lemmas written by hand. Here there is nothing to show: the code's two calls are the definition's two parts.
+- **Every loop runs a number of times that the paths fix**: a block's 64 bytes, a chunk's 16 blocks, the 54
+  doublings that find the left part's count. The checker runs them; none needs an invariant.
+- **Six arguments**, which the calling convention carries in registers: the key and the flags travel as one
+  record (`kf`).
+- **The stack is bounded by the length**: `subtree` may use `640 + 384 * bits((len - 1) / 1024)` bytes, a
+  level of recursion for each halving of the count of chunks.
+
+    python3 kfn.py subtree OBJECT          # the checker: the object's bytes, blake3.spec, proofs/inner.spec
+    python3 test_kfn.py                    # 4 tests, 23 s
+
+| function | paths to the return | instructions run | checked in |
+|---|---|---|---|
+| `pad` | 65 | 40,564 | 0.11 s |
+| `chunk_node` | 31 | 1,740 | 0.43 s |
+| `node_out` | 2 | 67 | 0.01 s |
+| `subtree` | 109 | 4,646 | 1.0 s |
+| `hashr` | 109 | 4,544 | 1.0 s |
+
+## The checker of functions: `kfn.py`
+
+It follows one function at a time. Memory is in named regions of typed things: a chaining value, bytes (a
+message's, of a length that is a symbol), a record whose `layout` is in `proofs/inner.spec`. A branch on
+something the path does not fix splits the path, and each side keeps the fact; a path whose facts cannot all
+hold is dropped. At a call the callee's contract is used: what it `asks` is shown from the caller's facts,
+what it `leaves` replaces what was there (a definition's value there is not opened, only named: the caller's
+own specification, opened later on the same path, finds the same name). At the return each thing the
+contract says is left is the specification's value of it; the result, the registers a callee keeps, the stack
+pointer and the stack used are checked; every write was within what the contract lets the function write.
+
+The numbers' part (`klin.py`, 209 lines): a fact is a number known not to be below zero; one known both
+ways is an equality and one of its symbols is replaced; a question is answered by adding facts up (Fourier
+and Motzkin's elimination, in whole numbers). Halving and the low bit make a symbol with its two facts.
+
+A loop is run: a path that jumps back to one instruction more than 100 times is refused. (The code's
+earlier form, a stack of levels with a loop over them, was checked too, by a place for that loop: the name of
+a machine of the specification and what the registers and the memory hold for any state of it, found by a
+prover that comes to the loop three times. When the hash was written as the specification's own recursion no
+loop needed a place, and that part of the checker was taken out: 715 lines are left.)
+
+**What was done to find it wrong**, as for the kernels below:
+
+- *Changed code* (`test_kfn.py`): every call left out and every branch turned round, in all five functions:
+  each refused.
+- *Changed text* (`test_kfn.py`): 22 changes of the contracts, the layouts and the specification: each
+  refuses the function that met the text.
+- *Every single-bit change of each function's code, with a processor as the judge* (`kfn_flip.py`,
+  `khash_native.c`). A change for which a proof is found is linked with the other four functions and the
+  kernels, and the whole hash is run on an AVX-512 processor against BLAKE3 written out in C another way (the
+  reference's stack of subtrees): every length from 0 to 200, every seventh to 2,200, the three around each
+  multiple of 1,024 up to 70 chunks, 200 random lengths to 300,000; the three modes' flags; both kernels; the
+  message ending where a page that faults begins.
+
+  | function | changes | stopped by the decoder | refused (no proof) | accepted | of those, as BLAKE3 on the processor |
+  |---|---|---|---|---|---|
+  | `pad` | 896 | 447 | 416 | 33 | 33 |
+  | `chunk_node` | 2,280 | 1,080 | 1,100 | 100 | 100 |
+  | `node_out` | 1,432 | 722 | 635 | 75 | 75 |
+  | `subtree` | 5,008 | 1,999 | 2,641 | 368 | 368 |
+  | `hashr` | 5,048 | 2,099 | 2,575 | 374 | 374 |
+
+  (Threadripper PRO 7975WX. The judge is the whole hash: a change that is wrong only where no hash goes, a
+  write beside what a callee may write that no later read meets, is not seen by it. The accepted changes are
+  mostly of moves whose value is already where it goes, of the first values of variables that are given
+  again before they are read, and of which register carries the platform word to a callee when it is a
+  plain number that is not 5.)
+
+**What that found.** Before the processor was asked, a run of changed instructions through the checker had
+`hashl` (the earlier form) accept 80 changes of the moves that carry the platform word to its callees: a
+callee's `calls F if plat == 5` was not carried to its caller, so a caller could hand a callee anything as
+the platform, and the AVX-512 kernel be run where the caller's contract says it is not. The condition is now
+carried: what a callee is given for `plat` must be the caller's own, or a plain number that is not 5, or
+anything on a path where the caller's own condition holds.
+
+**Not shown:** that `hashr` ends (each loop is bounded and each call of itself is on fewer bytes, so it
+does, but the checker shows only what holds if it returns, and the stack it uses on the way); speed: this
+code compresses one block at a time; AArch64.
+
+## The library's wide kernels, each run to its end (`kcheck.py`, the first trial)
 
 From the library's own assembly sources (`c/blake3_avx512_32.S`, `c/blake3_output16.S`), assembled, the
 objects' bytes read directly:
@@ -101,9 +222,9 @@ and P16 for **every** number of blocks `n >= 1` and every value of the four flag
 last length): the kernels' whole interface. It is a first trial of how proofs could be made for code with
 loops: the proof is a small text the prover finds, and the checker reads it and does no searching.
 
-- **The specification is a small machine**, a lane at a time: state 0 is the key; state b+1 is
-  `compress(state b, block b, counter, length, flags)` with the start byte or-ed in for block 0, and the end
-  byte and the length byte for the last block; what is stored is state n.
+- **The specification is the sequence `chunk`**, a lane at a time: `h[0]` is the key; `h[b + 1]` is
+  `compress(h[b], block b, counter, length, flags)` with the start byte or-ed in for block 0, and the end
+  byte and the length byte for the last block; what is stored is `h[n]`.
 - **A proof** names one place in the code, the head of the loop over blocks, and says what each register and
   frame cell holds there when b blocks are done: kept as it was after the first block, a number `c + cn*n +
   cb*b`, or a word of the specification's state. K32's, with every name the checker does not need taken out
@@ -145,15 +266,16 @@ proved by induction); a loop whose state is a data structure in memory; calls; c
 The proof's form is made for this shape of loop. The checker is `kcheck.py` and `kdecode.py` with 300 lines
 more, in Python, unverified.
 
-## Code that is not a kernel: a stack in memory, a loop over it, calls (`kglue.py`, November 15)
+## A stack in memory, a loop over it, calls: against an algorithm (`kglue.py`, November 15, an earlier trial)
 
-The same way on the hasher's stack of chaining values: `push`, `merge` and `add` of `lang/hasher.ode`, as the
+(Before `hash.ode`: existing code, and a specification that was the code's algorithm. Kept for what its
+audit found.) The same way on a hasher's stack of chaining values: `push`, `merge` and `add` of `lang/hasher.ode`, as the
 Ode compiler and the assembler leave them. `merge` loops while the stack (in memory, its count a symbol) holds
 more than `target` values and calls a one-block kernel; `add` calls `push` and `merge`. Lean checks the same
 three in about 100 seconds, from proofs that name lemmas written by hand (`Lemmas_merge.lean`,
 `StackLemmas.lean`).
 
-- **The specification** is the merge machine: while the stack holds more than `target` values, its top two
+- **What it is compared with** is the merge machine (an algorithm, not BLAKE3's specification): while the stack holds more than `target` values, its top two
   become their parent. A function's contract says what each argument is, what the caller must show, and what
   the function leaves (for `merge`: what the machine makes of the stack).
 - **A proof** names the loop's place and what the registers and the frame hold there *for any stack the
@@ -193,7 +315,7 @@ AVX-512 kernel is called only where the platform word is 5.
 
 **The kernels `merge` calls are checked too** (`kone.py`, written after that finding): the library's
 `blake3_servil_compress_in_place_avx512` (76 instructions) and `_sse41` (94), each against `compress` of
-`blake3.ode` for every chaining value, block and counter, in 3 ms. What each asks of its caller is now read
+`blake3.spec` for every chaining value, block and counter, in 3 ms. What each asks of its caller is now read
 from that check, not written by hand: the AVX-512 kernel takes the low byte of RDX and of R8; the SSE4.1
 kernel takes all of EDX (RDX must be below 2^32) and the low word of R8. `test_kone.py`: 19 changed kernels
 refused, and each kernel refused against the other's contract. On the processor (`kone_native.c`): 200,000
@@ -203,16 +325,20 @@ as BLAKE3 on 20,000 cases; 3,528 of the SSE4.1 kernel, 116 accepted, each as BLA
 So for `add` everything it runs is checked against the one specification: `add`, `push`, `merge`, and the two
 kernels, 316 instructions in all, in under 20 ms.
 
-Not shown here: that the merge machine is BLAKE3's tree (`alg/Stack.lean` proves that of the same machine);
-buffers of bytes with a symbolic length. The machine and the contracts are `blake3.ode`'s.
+Not shown here: that the merge machine is BLAKE3's tree (`alg/Stack.lean` proves that of its twin). The
+machine and these three contracts are in `proofs/inner.spec`, marked as an algorithm and not the
+specification. (The hash above does not use them: it has no stack.)
 
 ## The parts
 
 | file | lines | what it is |
 |---|---|---|
-| `blake3.ode` | 222 | the specification, and the contracts of the nine functions |
-| `ode.py`, `kspec.py`, `klin.py` | 431 + 173 + 78 | the specification's reader; its algebra on symbols; numbers that depend on counts and the facts about them |
-| `kdecode.py` | 441 | reads the ELF object (sections, symbol, relocations) and decodes the instruction forms the code uses, and no others; no disassembler |
+| `blake3.spec` | 166 | the specification (147 lines), and the claim: the contract of the function a user calls |
+| `proofs/inner.spec`, `proofs/*.json` | 131 | what the functions inside are claimed to do, the layouts of two records; the wide kernels' and `merge`'s places |
+| `hash.ode`, `glue/*.S` | 141 | the hash written to be proved; the assembly the Ode compiler prints of it (and of the stack's three functions) |
+| `ode.py`, `kspec.py`, `klin.py` | 635 + 453 + 209 | the specification's reader; its algebra on symbols; numbers that depend on counts and the facts about them |
+| `kfn.py`, `kfn_flip.py`, `khash_native.c`, `test_kfn.py` | 715 + 132 + 140 + 92 | the checker of functions; its single-bit audit; the whole hash on a processor against BLAKE3 in C; the tests |
+| `kdecode.py` | 459 | reads the ELF object (sections, symbol, relocations) and decodes the instruction forms the code uses, and no others; no disassembler |
 | `kcheck.py` | 534 | runs a kernel's instructions on symbolic values and compares with the specification's terms |
 | `kcheck_cross.py` | 109 | kcheck's reading of each instruction against the Lean model's processor-validated test vectors |
 | `kflip.py`, `kflip_native.c`, `kflip_thunk.S` | 204 + 160 + 66 | the audit below: every single-bit change of a kernel, and the processor's word on each one accepted |
@@ -220,7 +346,7 @@ buffers of bytes with a symbolic length. The machine and the contracts are `blak
 | `kglue.py`, `kglue_flip.py`, `kglue_native.c`, `test_kglue.py` | 568 + 135 + 109 + 119 | the stack's functions: contracts, prover, checker; the audit; the tests |
 | `kone.py`, `kone_native.c`, `test_kone.py` | 217 + 86 + 94 | the one-block kernels: the checker (XMM registers as four terms), the processor run, the tests |
 | `kremove.py` | 41 | which instructions can be replaced by a no-op with the contract still met: for a person to read |
-| `test_kcheck.py`, `test_ode.py` | 163 + 64 | the four kernels and the controls, from the sources; the specification on the vectors |
+| `test_kcheck.py`, `test_ode.py` | 163 + 99 | the four kernels and the controls, from the sources; the specification on the vectors |
 
 ## How
 
@@ -228,7 +354,7 @@ buffers of bytes with a symbolic length. The machine and the contracts are `blak
    plus a number, or the packed flags by bytes. A ZMM register is sixteen 32-bit terms. Memory is named regions:
    the aligned frame, the saved registers, the table of inputs' addresses, the inputs, the key, the object's
    read-only data, the output.
-2. The specification (`blake3.ode`, read on symbols) is built with the same term constructors.
+2. The specification (`blake3.spec`, read on symbols) is built with the same term constructors.
 3. Terms are interned, and sums and xors are kept flat and sorted, so two terms are equal when they are the same
    node. The comparison is of 256 (or 128) node numbers. No solver.
 
@@ -241,7 +367,7 @@ same for every input.
 ## What has been done to find it wrong
 
 (Every single-bit audit below and above was run again, by `sh audit.sh 40`, at commit `b3d52cc1`: the
-specification and all nine contracts in `blake3.ode`. `audit/` holds the outputs.)
+specification and all nine contracts in `blake3.spec`. `audit/` holds the outputs.)
 
 1. **Changed kernels** (`--mutants`): 15 of 15 refused (rotations, operands, the carry's mask, a message offset,
    a store's offset, a shuffle, a flag, a saved register, the frame's bound, the block step, one entry of the
@@ -310,9 +436,13 @@ an 8-bit `or` read as 32 bits.
 
 ## What it rests on (what a reader must trust or check)
 
-- The specification and contracts `blake3.ode` (222 lines), and the programs that read it and the bytes:
-  `ode.py`, `kspec.py`, `klin.py`, `kdecode.py`, `kcheck.py`, `kloop.py`, `kone.py`, `kglue.py`, 2,880 lines
-  (their provers, about 150 of those, need no trust), and Python.
+- The specification and the claim, `blake3.spec` (166 lines), and the programs that read it and the bytes:
+  for the hash `ode.py`, `kspec.py`, `klin.py`, `kdecode.py`, `kcheck.py` (its terms and its reading of an
+  instruction's text), `kone.py`, `kfn.py`: 3,222 lines; with `kloop.py` and `kglue.py`, 4,228 (their
+  provers, about 150 of those, need no trust). And Python.
+- What the functions inside are claimed to do (`proofs/inner.spec`) is not relied on: a wrong contract there
+  makes the checker refuse the function it is of, or a function that calls it.
+- For a function that calls itself: what is shown is what holds if it returns.
 - That the regions are apart (the contract's own condition: the stack and the output apart from everything).
 - One arithmetic fact taken as the specification's form of a lane's counter: low word + index, high word + carry.
   Lean proves it equal to the 64-bit counter plus the index (`lang/K32Lemmas.lean`, `counter_lo`, `counter_hi`);

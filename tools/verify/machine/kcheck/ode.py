@@ -1,23 +1,29 @@
 #!/usr/bin/env python3
 """ode: a specification that runs, read on numbers and on symbols.
 
-    python3 ode.py blake3.ode --vectors ../../../../test_vectors/test_vectors.json [--up-to BYTES]
+    python3 ode.py blake3.spec --vectors ../../../../test_vectors/test_vectors.json [--up-to BYTES]
 
-The language is described at the top of blake3.ode. This file is its reader: a parser (to a tree), and one
+The language is described at the top of blake3.spec. This file is its reader: a parser (to a tree), and one
 evaluator of the tree over an "algebra" of words: Numbers (words are 32-bit numbers) or Symbols (words are
 the checkers' terms; a comparison of numbers that depend on a count is decided from the path's facts, or the
 evaluation stops). The same text is thus the thing that gives BLAKE3's test vectors and the thing code is
 compared with.
 
-    fn NAME(args) { statements }           the value of the last expression, or of `return`
-    machine NAME(args) on STATE [= INIT] { while COND | for I in A..B   turn { statements } }
+    fn NAME(args) [: KIND] { statements }  the value of the last expression, or of `return`
+    machine NAME(args) on STATE, ... [= INIT, ...] { while COND | for I in A..B   turn { statements } }
     const NAME = EXPR
+    layout NAME BYTES { FIELD: KIND at OFFSET [below N], FIELD[COUNT]: KIND at OFFSET, ... }
+    contract NAME(ARG: KIND, ...) { asks E | leaves NAME = E | spoils NAME | returns E | stack N | calls F if E }
 
-A machine called as a function runs to its end (its state the last argument, if it has no INIT). The
-checkers ask it for one `turn` and whether it `goes` on."""
+A machine called as a function runs to its end (its state the last arguments, if it has no INIT); with more
+than one state its result is a record of them. The checkers ask it for one `turn` and whether it `goes` on.
+On symbols a machine that cannot be run (its condition depends on a count the path does not fix) gives a
+result named by what it was given; a `fn` with a KIND that cannot be evaluated likewise."""
 import json, os, re, sys, time
 
 M32 = 0xFFFFFFFF
+DEEP = 400                      # definitions inside definitions: more is a definition of itself that does not end
+sys.setrecursionlimit(max(sys.getrecursionlimit(), 30000))
 
 
 class Err(Exception):
@@ -27,7 +33,7 @@ class Err(Exception):
 # ---------------------------------------------------------------------------------------------------------
 # Text to tree.
 TOKEN = re.compile(r"\s*(?:(//[^\n]*)|(0x[0-9A-Fa-f]+|\d+)|([A-Za-z_][A-Za-z_0-9]*)|(>>>|\+\+|\.\.|==|!=|<=|>=|&&|\|\||[-+*/%^|&<>=!(){}\[\],:.]))")
-KEYWORDS = {"const", "fn", "machine", "contract", "on", "while", "for", "in", "turn", "if", "then", "else", "let", "var", "return"}
+KEYWORDS = {"const", "fn", "def", "sequence", "the", "machine", "contract", "layout", "kind", "on", "while", "for", "in", "turn", "if", "then", "else", "let", "var", "return"}
 LEVELS = [["||"], ["&&"], ["==", "!=", "<", "<=", ">", ">="], ["++"], ["|"], ["^"], ["&"], ["+", "-"], ["*", "/", "%"], [">>>"]]
 
 
@@ -63,35 +69,115 @@ class Parser:
         return False
 
     def file(self):
-        consts, fns, machines, self.contracts = {}, {}, {}, {}
+        consts, fns, machines, self.contracts, self.layouts, self.kinds = {}, {}, {}, {}, {}, {}
         while not self.peek(kind="end"):
             if self.maybe("const"):
                 name = self.take(kind="name"); self.take("="); consts[name] = self.expr()
             elif self.maybe("fn"):
-                name = self.take(kind="name"); fns[name] = (self.params(), self.block())
+                name = self.take(kind="name"); params = self.params()
+                if self.maybe(":"): self.kinds[name] = self.kind()
+                fns[name] = (params, self.block())
+            elif self.maybe("def"):
+                # a definition: equations (`let`) and a value; nothing is assigned twice, nothing loops
+                name = self.take(kind="name"); params = self.params()
+                if self.maybe(":"): self.kinds[name] = self.kind()
+                fns[name] = (params, self.definition())
+            elif self.maybe("sequence"):
+                # NAME(args) { h[0] = FIRST   h[b + 1] = NEXT   for b in 0..n }: a sequence by its first value and
+                # each next one from the one before; NAME(args) is its last, h[n]
+                name = self.take(kind="name"); params = self.params(); self.take("{")
+                h = self.take(kind="name"); self.take("["); zero = self.take(kind="num"); self.take("]"); self.take("=")
+                if zero != 0: raise Err(f"sequence {name}: its first equation is of {h}[0]")
+                first = self.expr()
+                if self.take(kind="name") != h: raise Err(f"sequence {name}: its second equation is of {h}[b + 1]")
+                self.take("["); b = self.take(kind="name"); self.take("+")
+                if self.take(kind="num") != 1: raise Err(f"sequence {name}: its second equation is of {h}[{b} + 1]")
+                self.take("]"); self.take("="); nxt = self.expr()
+                self.take("for")
+                if self.take(kind="name") != b: raise Err(f"sequence {name}: `for {b} in 0..n` expected")
+                self.take("in"); a = self.expr(); self.take(".."); n = self.expr(); self.take("}")
+                if a != ("num", 0): raise Err(f"sequence {name}: it begins at 0")
+                machines[name] = dict(params=params, states=[h], state=h, init=first, inits=[first], loop=("for", b, a, n),
+                                      turn=[("set", h, self.before(nxt, h, b, name))])
+            elif self.maybe("layout"):
+                name = self.take(kind="name"); self.layouts[name] = self.layout()
+            elif self.maybe("kind"):
+                name = self.take(kind="name"); self.take(":"); self.kinds[name] = self.kind()
             elif self.maybe("machine"):
-                name = self.take(kind="name"); params = self.params(); self.take("on"); state = self.take(kind="name")
-                init = self.expr() if self.maybe("=") else None
+                name = self.take(kind="name"); params = self.params(); self.take("on"); state = [self.take(kind="name")]
+                while self.maybe(","): state.append(self.take(kind="name"))
+                init = None
+                if self.maybe("="):
+                    init = [self.expr()]
+                    while self.maybe(","): init.append(self.expr())
+                    if len(init) != len(state): raise Err(f"machine {name}: {len(state)} states and {len(init)} first values")
                 self.take("{")
                 if self.maybe("while"): loop = ("while", self.expr())
                 else:
                     self.take("for"); var = self.take(kind="name"); self.take("in"); a = self.expr(); self.take(".."); loop = ("for", var, a, self.expr())
                 self.take("turn"); turn = self.block(); self.take("}")
-                machines[name] = dict(params=params, state=state, init=init, loop=loop, turn=turn)
+                machines[name] = dict(params=params, states=state, state=state[0] if len(state) == 1 else None,
+                                      init=init[0] if init is not None and len(state) == 1 else None, inits=init, loop=loop, turn=turn)
             elif self.maybe("contract"):
                 name = self.take(kind="name"); self.contracts[name] = self.contract()
-            else: raise Err(f"line {self.t[self.i][2]}: const, fn, machine or contract expected")
+            else: raise Err(f"line {self.t[self.i][2]}: const, def, sequence, contract, layout, kind (or fn, machine) expected")
         return consts, fns, machines
 
+    def before(self, e, h, b, name):
+        """The equation's right side with `h[b]`, the value before, as the one name `h`; `h` any other way is refused."""
+        if e == ("index", ("name", h), ("name", b)): return ("name", h)
+        if e == ("name", h): raise Err(f"sequence {name}: {h} is used other than as {h}[{b}]")
+        if isinstance(e, tuple): return tuple(self.before(x, h, b, name) for x in e)
+        if isinstance(e, list): return [self.before(x, h, b, name) for x in e]
+        return e
+
+    def definition(self):
+        """{ let NAME = E | let NAME[0] = E | let NAME[i + 1] = E ... VALUE }"""
+        self.take("{"); out = []
+        while self.maybe("let"):
+            name = self.take(kind="name")
+            if self.maybe("["):
+                if self.peek(kind="num"):
+                    if self.take(kind="num") != 0: raise Err(f"line {self.t[self.i][2]}: a sequence's first equation is of {name}[0]")
+                    self.take("]"); self.take("="); out.append(("first", name, self.expr()))
+                else:
+                    i = self.take(kind="name"); self.take("+")
+                    if self.take(kind="num") != 1: raise Err(f"line {self.t[self.i][2]}: a sequence's equation is of {name}[{i} + 1]")
+                    self.take("]"); self.take("="); out.append(("next", name, i, self.expr()))
+            else:
+                self.take("="); out.append(("set", name, self.expr()))
+        out.append(("expr", self.expr()))
+        if any(s[0] == "set" and sum(1 for r in out if r[0] == "set" and r[1] == s[1]) > 1 for s in out): raise Err("a definition gives a name twice")
+        self.take("}")
+        return out
+
+    def kind(self):
+        kind = []
+        while self.peek(kind="name") or self.peek(kind="num"): kind.append(str(self.take()))
+        if not kind: raise Err(f"line {self.t[self.i][2]}: a kind expected")
+        return " ".join(kind)
+
+    def layout(self):
+        """BYTES { FIELD: KIND at OFFSET [below N], FIELD[COUNT]: KIND at OFFSET, ... }: where a record's parts lie."""
+        size = self.take(kind="num"); self.take("{"); fields = {}
+        while not self.maybe("}"):
+            name, count = self.take(kind="name"), None
+            if self.maybe("["):
+                count = self.take(kind="num"); self.take("]")
+            self.take(":"); kind = []
+            while not (self.t[self.i][0] == "name" and self.t[self.i][1] == "at"): kind.append(str(self.take()))
+            self.take(); at = self.take(kind="num"); below = None
+            if self.t[self.i][0] == "name" and self.t[self.i][1] == "below":
+                self.take(); below = self.take(kind="num")
+            fields[name] = dict(kind=" ".join(kind), at=at, count=count, below=below); self.maybe(",")
+        return dict(size=size, fields=fields)
+
     def contract(self):
-        """(arg: kind, ...) { asks E | leaves NAME = E | returns E | stack N | calls F if E }"""
+        """(arg: kind, ...) { asks E | leaves NAME = E | spoils NAME | returns E | stack N | calls F if E }"""
         self.take("("); args = []
         while not self.maybe(")"):
-            arg = self.take(kind="name"); self.take(":"); kind = []
-            while self.peek(kind="name") or self.peek(kind="num"): kind.append(str(self.take()))
-            if not kind: raise Err(f"line {self.t[self.i][2]}: the kind of {arg} expected")
-            args.append((arg, " ".join(kind))); self.maybe(",")
-        c = dict(args=args, asks=[], leaves=[], returns=None, stack=None, calls=[])
+            arg = self.take(kind="name"); self.take(":"); args.append((arg, self.kind())); self.maybe(",")
+        c = dict(args=args, asks=[], leaves=[], spoils=[], returns=None, stack=None, calls=[])
         self.take("{")
         while not self.maybe("}"):
             clause = self.take(kind="name")
@@ -108,11 +194,14 @@ class Parser:
                     self.take("in"); a = self.expr(); self.take(".."); each = (a, self.expr())
                 c["leaves"].append(dict(name=name, index=index, expr=e, each=each))
             elif clause == "returns": c["returns"] = self.expr()
-            elif clause == "stack": c["stack"] = self.take(kind="num")
+            elif clause == "spoils": c["spoils"].append(self.take(kind="name"))
+            elif clause == "stack":
+                e = self.expr()
+                c["stack"] = e[1] if e[0] == "num" else ("grows", e)
             elif clause == "calls":
                 name = self.take(kind="name"); self.take("if"); c["calls"].append((name, self.expr(1)))
-            else: raise Err(f"line {self.t[self.i - 1][2]}: asks, leaves, returns, stack or calls expected, not {clause!r}")
-        if c["stack"] is None or len(c["leaves"]) != 1: raise Err("a contract says its stack, and what one thing it leaves")
+            else: raise Err(f"line {self.t[self.i - 1][2]}: asks, leaves, spoils, returns, stack or calls expected, not {clause!r}")
+        if c["stack"] is None or not c["leaves"]: raise Err("a contract says its stack, and what it leaves")
         return c
 
     def params(self):
@@ -170,6 +259,12 @@ class Parser:
                 else: e = ("index", e, a)
                 self.take("]")
             elif self.maybe("."): e = ("field", e, self.take(kind="name"))
+            elif self.t[self.i][:2] == ("name", "with") and self.t[self.i + 1][:2] == ("sym", "["):
+                # xs with [i: a, j: b]: the list xs with those places replaced
+                self.take(); self.take("["); places = []
+                while not self.maybe("]"):
+                    i = self.expr(1); self.take(":"); places.append((i, self.expr())); self.maybe(",")
+                e = ("with", e, places)
             else: return e
 
     def primary(self):
@@ -187,6 +282,23 @@ class Parser:
             while self.maybe(","): items.append(self.expr())
             self.take("]"); return ("list", items)
         if self.peek("if"): return self.expr()
+        if self.maybe("the"):
+            # the least number n in A..B with COND | the greatest power of two k with COND (and the other two)
+            which = self.take(kind="name")
+            if which not in ("least", "greatest"): raise Err(f"line {line}: `the least` or `the greatest` expected")
+            if self.take(kind="name") == "number":
+                var = self.take(kind="name"); self.take("in"); a = self.expr(1); self.take(".."); among = ("range", a, self.expr(1))
+            else:
+                for word in ("of", "two"):
+                    if self.take(kind="name") != word: raise Err(f"line {line}: `number NAME in A..B` or `power of two NAME` expected")
+                var, among = self.take(kind="name"), ("powers",)
+            if self.take(kind="name") != "with": raise Err(f"line {line}: `with` expected")
+            return ("the", which, var, among, self.expr())
+        if self.maybe("{"):
+            fields = []
+            while not self.maybe("}"):
+                name = self.take(kind="name"); self.take(":"); fields.append((name, self.expr())); self.maybe(",")
+            return ("record", fields)
         name = self.take(kind="name")
         if self.maybe("("):
             args = []
@@ -231,11 +343,25 @@ class Numbers:
     def index(self, x, i): return at(x, i)
     def slice(self, x, a, b): return part(x, a, b)
     def concat(self, x, y): return x + y
+    def put(self, xs, i, v):
+        if not isinstance(xs, list) or not isinstance(i, int) or not 0 <= i < len(xs): raise Err(f"place {i} of a list of {len(xs) if isinstance(xs, list) else '?'}")
+        xs = list(xs); xs[i] = v
+        return xs
+    def words(self, bs):
+        if len(bs) % 4 or any(not isinstance(b, int) or not 0 <= b < 256 for b in bs): raise Err("words of something that is not bytes, four to a word")
+        return [Word(bs[i] | bs[i + 1] << 8 | bs[i + 2] << 16 | bs[i + 3] << 24) for i in range(0, len(bs), 4)]
+    def nothing(self, n): return [None] * n
+    def bits(self, x): return Spec.number(x).bit_length()
+    def div(self, x, y): return Spec.number(x) // Spec.number(y)
+    def mod(self, x, y): return Spec.number(x) % Spec.number(y)
+    def mul(self, x, y): return Spec.number(x) * Spec.number(y)
+    def plain(self, x): return Spec.number(x)
 
 
 def at(xs, i):
     """A list's value at a place: the place must be there (no counting from the end, as Python would)."""
     if not isinstance(xs, list) or not isinstance(i, int) or not 0 <= i < len(xs): raise Err(f"place {i} of a list of {len(xs) if isinstance(xs, list) else '?'}")
+    if xs[i] is None: raise Err(f"place {i} of a list: nothing was put there")
     return xs[i]
 
 
@@ -248,11 +374,27 @@ class Return(Exception):
     def __init__(self, value): self.value = value
 
 
+class Seq:
+    """A sequence inside a definition: its first value, and each next from the one before."""
+    def __init__(self): self.first, self.var, self.next, self.env, self.memo = None, None, None, None, {}
+    def at(self, spec, A, i):
+        if i not in self.memo:
+            if self.first is None or self.next is None or i < 0: raise Err("a sequence without its two equations, or a place before its first")
+            if i == 0: self.memo[i] = spec.eval(A, self.first, self.env)
+            else:
+                self.at(spec, A, i - 1)
+                inner = dict(self.env); inner[self.var] = i - 1
+                self.memo[i] = spec.eval(A, self.next, inner)
+        return self.memo[i]
+
+
 class Spec:
     def __init__(self, text):
         parser = Parser(text)
         self.consts, self.fns, self.machines = parser.file()
-        self.contracts, self.turns = parser.contracts, 0
+        self.contracts, self.layouts, self.kinds, self.turns = parser.contracts, parser.layouts, parser.kinds, 0
+        self.fuel = None        # on symbols: the applications that may still be followed before a result is given a name instead
+        self.deep = 0
         numbers = Numbers()
         self.consts = {k: self.eval(numbers, e, {}) for k, e in self.consts.items()}
 
@@ -261,13 +403,22 @@ class Spec:
         self.turns += 1
         if self.turns > 10_000_000: raise Err("a loop has turned ten million times")
 
+    def spend(self):
+        if self.fuel is not None:
+            self.fuel -= 1
+            if self.fuel < 0: raise Err("too much to follow here")
+
     # -- what the checkers ask
     def call(self, A, name, *args): return self.apply(A, name, list(args))
     def turn(self, A, name, env):
         """One turn of a machine: env names its arguments, its state, and for a `for` machine its counter."""
         m, env = self.machines[name], dict(env)
         self.run(A, m["turn"], env)
-        return env[m["state"]]
+        return self.state_of(m, env)
+    @staticmethod
+    def state_of(m, env):
+        """A machine's state: the one value, or with several states a record of them."""
+        return env[m["state"]] if m["state"] is not None else {s: env[s] for s in m["states"]}
     def goes(self, A, name, env):
         """Does the machine turn again from this state? (On symbols it may raise: the facts do not say.)"""
         m = self.machines[name]
@@ -277,38 +428,54 @@ class Spec:
     # -- the evaluator
     def apply(self, A, name, args):
         if name in self.fns:
+            self.spend()
             params, body = self.fns[name]
             if len(params) != len(args): raise Err(f"{name}: {len(params)} arguments expected")
             env = dict(zip(params, args))
+            self.deep += 1
             try:
-                last = self.run(A, body, env)
-            except Return as r: return r.value
-            return last
+                if self.deep > DEEP: raise Err(f"{name}: a definition of itself that does not come to an end")
+                if name in self.kinds and hasattr(A, "named"):
+                    # on symbols: a function with a kind that cannot be evaluated here is named by what it was given
+                    return A.named(self, name, self.kinds[name], args, lambda: self.body(A, body, env))
+                return self.body(A, body, env)
+            finally: self.deep -= 1
         if name in self.machines:
             m = self.machines[name]
-            names = m["params"] + ([] if m["init"] is not None else [m["state"]])
+            names = m["params"] + ([] if m["inits"] is not None else m["states"])
             if len(names) != len(args): raise Err(f"{name}: {len(names)} arguments expected")
             env = dict(zip(names, args))
-            if m["init"] is not None: env[m["state"]] = self.eval(A, m["init"], env)
-            named = A.machine_result(name, m, env) if hasattr(A, "machine_result") else None
-            if named is not None: return named          # on symbols: what the machine makes of a state it cannot be run on
-            if m["loop"][0] == "while":
-                while self.eval(A, m["loop"][1], env) is True: self.tick(); self.run(A, m["turn"], env)
-            else:
-                _, var, a, b = m["loop"]
-                for i in self.span(A, a, b, env):
-                    env[var] = i; self.run(A, m["turn"], env)
-            return env[m["state"]]
+            if m["inits"] is not None:
+                first = [self.eval(A, e, env) for e in m["inits"]]
+                env.update(zip(m["states"], first))
+            if hasattr(A, "machine_result"): return A.machine_result(self, name, m, env)
+            return self.run_machine(A, m, env)
         return self.builtin(A, name, args)
 
+    def body(self, A, body, env):
+        try:
+            return self.run(A, body, env)
+        except Return as r: return r.value
+
+    def run_machine(self, A, m, env):
+        if m["loop"][0] == "while":
+            while self.eval(A, m["loop"][1], env) is True: self.tick(); self.spend(); self.run(A, m["turn"], env)
+        else:
+            _, var, a, b = m["loop"]
+            for i in self.span(A, a, b, env):
+                self.spend(); env[var] = i; self.run(A, m["turn"], env)
+        return self.state_of(m, env)
+
     def span(self, A, a, b, env):
-        a, b = self.eval(A, a, env), self.eval(A, b, env)
-        if not isinstance(a, int) or not isinstance(b, int): raise Err("a loop whose bounds are not plain numbers (a machine's loop is turned by the checker)")
+        a, b = A.plain(self.eval(A, a, env)), A.plain(self.eval(A, b, env))
         return range(a, b)
 
     def builtin(self, A, name, args):
-        if name == "word": return args[0] if isinstance(args[0], Word) else A.word(self.number(args[0]))
-        if name == "counter": return A.counter(self.number(args[0]))
+        if name == "word": return args[0] if isinstance(args[0], Word) else A.word(args[0])
+        if name == "counter": return args[0] if isinstance(args[0], Counter) else A.counter(args[0])
+        if name == "words": return A.words(args[0])
+        if name == "nothing": return A.nothing(self.number(args[0]))
+        if name == "bits": return A.bits(args[0])
         if name == "lo": return args[0].lo
         if name == "hi": return args[0].hi
         if name == "len": return A.length(args[0])
@@ -326,10 +493,16 @@ class Spec:
         for s in body:
             kind = s[0]
             if kind == "set": env[s[1]] = self.eval(A, s[2], env); last = None
+            elif kind in ("first", "next"):
+                seq = env.get(s[1])
+                if not isinstance(seq, Seq): seq = env[s[1]] = Seq()
+                seq.env = env
+                if kind == "first": seq.first = s[2]
+                else: seq.var, seq.next = s[2], s[3]
+                last = None
             elif kind == "setidx":
-                xs, i = list(env[s[1]]), self.number(self.eval(A, s[2], env))
-                if not 0 <= i < len(xs): raise Err(f"place {i} of a list of {len(xs)}")
-                xs[i] = self.eval(A, s[3], env); env[s[1]] = xs; last = None
+                i = self.eval(A, s[2], env)
+                env[s[1]] = A.put(env[s[1]], i, self.eval(A, s[3], env)); last = None
             elif kind == "for":
                 for i in self.span(A, s[2], s[3], env):
                     env[s[1]] = i; self.run(A, s[4], env)
@@ -351,9 +524,27 @@ class Spec:
             if e[1] in self.consts: return self.consts[e[1]]
             raise Err(f"no name {e[1]}")
         if kind == "call": return self.apply(A, e[1], [self.eval(A, a, env) for a in e[2]])
-        if kind == "index": return A.index(self.eval(A, e[1], env), self.eval(A, e[2], env))
+        if kind == "index":
+            x = self.eval(A, e[1], env)
+            if isinstance(x, Seq): return x.at(self, A, A.plain(self.eval(A, e[2], env)))
+            return A.index(x, self.eval(A, e[2], env))
+        if kind == "the":
+            # the least (or greatest) of some numbers for which a condition holds: each is asked in turn
+            _, which, var, among, cond = e
+            numbers = [1 << i for i in range(64)] if among[0] == "powers" else list(range(A.plain(self.eval(A, among[1], env)), A.plain(self.eval(A, among[2], env))))
+            for v in (numbers if which == "least" else reversed(numbers)):
+                inner = dict(env); inner[var] = v
+                c = self.eval(A, cond, inner)
+                if c is True: return v
+                if c is not False: raise Err("a condition that is not true or false")
+            raise Err(f"the {which} {var}: there is none")
         if kind == "slice": return A.slice(self.eval(A, e[1], env), self.eval(A, e[2], env), self.eval(A, e[3], env))
         if kind == "list": return [self.eval(A, x, env) for x in e[1]]
+        if kind == "record": return {name: self.eval(A, x, env) for name, x in e[1]}
+        if kind == "with":
+            xs = self.eval(A, e[1], env)
+            for i, x in e[2]: xs = A.put(xs, self.eval(A, i, env), self.eval(A, x, env))
+            return xs
         if kind == "field":
             record = self.eval(A, e[1], env)
             if not isinstance(record, dict) or e[2] not in record: raise Err(f"no field {e[2]}")
@@ -383,19 +574,32 @@ class Spec:
         if isinstance(x, Word) or isinstance(y, Word): raise Err(f"{op} of words")
         if op == "+": return x + y
         if op == "-": return A.minus(x, y)
-        if op == "*": return x * y
-        if op == "/": return self.number(x) // self.number(y)
-        if op == "%": return self.number(x) % self.number(y)
+        if op == "*": return A.mul(x, y)
+        if op == "/": return A.div(x, y)
+        if op == "%": return A.mod(x, y)
         if op == "|": return self.number(x) | self.number(y)
         if op == "&": return self.number(x) & self.number(y)
         raise Err(f"no operator {op}")
 
     @staticmethod
-    def as_word(A, x): return x if isinstance(x, Word) else A.word(Spec.number(x))
+    def as_word(A, x): return x if isinstance(x, Word) else A.word(x)
+
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+SOURCES = ["blake3.spec", os.path.join("proofs", "inner.spec")]      # the specification and the claim; what the functions inside are claimed to do
+
+
+def source():
+    """The specification's text, and after it the contracts of the functions inside."""
+    out = []
+    for name in SOURCES:
+        with open(os.path.join(HERE, name)) as f: out.append(f.read())
+    return "\n".join(out)
 
 
 def load(path=None):
-    with open(path or os.path.join(os.path.dirname(os.path.abspath(__file__)), "blake3.ode")) as f: return Spec(f.read())
+    if path is None: return Spec(source())
+    with open(path) as f: return Spec(f.read())
 
 
 def vectors(spec, path, up_to=None):

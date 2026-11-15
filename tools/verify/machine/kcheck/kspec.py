@@ -1,16 +1,32 @@
-"""kspec: the specification (blake3.ode) read on symbols, for the checkers.
+"""kspec: the specification (blake3.spec) read on symbols, for the checkers.
 
 ode.py evaluates the specification's text over an algebra of words. Numbers (ode.Numbers) gives the test
 vectors. Symbols, here, gives the checkers their terms: a word is a term of the checker's table (kcheck.Terms);
 a number may depend on counts (klin.Lin), and a comparison of such numbers is decided from the path's facts or
-the evaluation stops; a list may be a stack of chaining values of unknown count (Stack) or a lane's input of
-unknown length (Blocks). There is no other specification: kcheck.py, kloop.py and kglue.py take compress, the
-chunk machine, parent and the merge machine from the one text."""
+the evaluation stops. There is no other specification: every checker takes what it compares code with from
+the one text.
+
+Values that are not plain lists:
+  Stack    a stack of chaining values of unknown count (kglue.py)
+  Blocks   a lane's input of unknown length; Inputs: a kernel's table of them (kloop.py)
+  Arr      an array of chaining values: a named unknown array (or one nothing was written to) with some
+           places replaced; a place may be a number that depends on counts
+  Slice    some bytes of a named region of memory (a message): from an offset, a length
+  Named    bytes that are the result of something that could not be evaluated: named by what made them
+  a record is a dict.
+
+A machine that cannot be run on symbols (its condition depends on a count the path does not fix) gives a
+result of the shape of its first state, named by the machine and all it was given. A `fn` with a kind
+(`fn f(..): node`) that cannot be evaluated gives a value of that kind, named likewise. Two such results are
+one thing exactly when the names are: both are functions of what they were given. (If a machine does not
+stop, its result is a name for nothing, and a contract that speaks of it claims nothing for that input.)"""
 import ode
 from ode import Word, Counter, Err
-from klin import Lin, Facts
+from klin import Lin, Facts, sym
 
 SPEC = ode.load()
+HALVES = {}                 # the symbol of x / 2 -> x (for facts of the kind "x is below 2^k")
+FUEL = 100000               # applications of the specification's functions followed before a result is named instead
 
 
 def plain(x):
@@ -88,11 +104,80 @@ class Inputs:
     def __init__(self, lanes): self.lanes = lanes
 
 
+class Arr:
+    """An array of chaining values. `base`: the name of an unknown array, or None (nothing was written: a
+    place not replaced has no value). `over`: the places replaced."""
+    def __init__(self, base, size, over=None): self.base, self.size, self.over = base, size, dict(over or {})
+    def where(self, facts, i):
+        i = Lin.of(i)
+        if not facts.ge0(i) or not facts.ge0(self.size - 1 - i): raise Err(f"place {i} of an array of {self.size}: not shown to be within it")
+        return i
+    def get(self, T, facts, i):
+        i = self.where(facts, i)
+        for j, words in self.over.items():
+            z = facts.zero(i - j)
+            if z is None: raise Err(f"places {i} and {j} of an array: the facts do not say whether they are one")
+            if z: return words
+        if self.base is None: raise Err(f"place {i} of an array: nothing was put there")
+        return tuple(T.var("value", self.base, plain(i), w) for w in range(8))
+    def put(self, T, facts, i, words):
+        i, over = self.where(facts, i), {}
+        for j, old in self.over.items():
+            z = facts.zero(i - j)
+            if z is None: raise Err(f"places {i} and {j} of an array: the facts do not say whether they are one")
+            if not z: over[j] = old
+        over[i] = tuple(words)
+        return Arr(self.base, self.size, over)
+    def key(self): return ("arr", self.base, self.size, tuple(sorted((repr(i), w) for i, w in self.over.items())))
+    def same(self, T, facts, other):
+        """The same value at every place either has replaced (and the same array beneath)."""
+        if self.base != other.base or self.size != other.size: return False
+        for i in set(self.over) | set(other.over):
+            mine, theirs = self.has(T, facts, i), other.has(T, facts, i)
+            if mine != theirs: return False
+        return True
+    def has(self, T, facts, i):
+        try: return self.get(T, facts, i)
+        except Err:
+            if self.base is None: return None
+            raise
+
+
+class ByteT:
+    """A byte that is a term (a byte of a message)."""
+    __slots__ = ("v",)
+    def __init__(self, v): self.v = v
+    def __eq__(self, o): return isinstance(o, ByteT) and self.v == o.v
+    def __hash__(self): return hash(("byte", self.v))
+    def __repr__(self): return f"byte({self.v})"
+
+
+class Slice:
+    """n bytes of the memory named `base`, from the offset `off`."""
+    def __init__(self, base, off, n): self.base, self.off, self.n = base, Lin.of(off), Lin.of(n)
+    def key(self): return ("slice", self.base, self.off, self.n)
+
+
+class Named:
+    """n bytes named by what made them."""
+    def __init__(self, name, n): self.name, self.n = name, n
+    def key(self): return ("named", self.name, self.n)
+
+
 # ---------------------------------------------------------------------------------------------------------
 # The algebra.
 class Symbols:
-    def __init__(self, T, facts=None): self.T, self.facts = T, facts if facts is not None else Facts()
-    def word(self, n): return Word(self.T.const(n))
+    def __init__(self, T, facts=None, memo=None, ghost=None):
+        self.T, self.facts = T, facts if facts is not None else Facts()
+        self.memo = memo if memo is not None else {}        # what was named or evaluated on this path, by what it was given
+        self.ghost = ghost or {}                            # a machine the checker is at a place of: its state there
+        self.unrun = []                                     # the machines that could not be run: (instance, first state)
+        self.bound = None                                   # "least" or "most": how `bits` of a number the path does not fix is read
+        self.fold = False                                   # at a call: a function with a kind is not opened, only named
+        self.depth = 0                                      # how many functions with a kind are being followed
+    def word(self, n):
+        n = plain(n)
+        return Word(self.T.const(n)) if isinstance(n, int) else Word(self.T.mk("numw", n))
     def add(self, a, b): return Word(self.T.add(a.v, b.v))
     def xor(self, a, b): return Word(self.T.xor(a.v, b.v))
     def rotr(self, a, n): return Word(self.T.ror(a.v, n))
@@ -101,14 +186,18 @@ class Symbols:
         x, y = term_byte(self.T, a.v), term_byte(self.T, b.v)
         if x is None or y is None: raise Err("an or of words that are not flag bytes")
         return Word(byte_term(self.T, byte_or(x, y)))
-    def counter(self, n): return Counter(Word(self.T.const(n & 0xFFFFFFFF)), Word(self.T.const(n >> 32)))
+    def counter(self, n):
+        n = plain(n)
+        if isinstance(n, int): return Counter(Word(self.T.const(n & 0xFFFFFFFF)), Word(self.T.const(n >> 32)))
+        return Counter(Word(self.T.mk("lo", n)), Word(self.T.mk("hi", n)))
     def counter_add(self, t, n):
         # 64 bits in two words: the low word plus n, and a carry into the high word when the sum is below the low word
         T = self.T
         low = T.add(t.lo.v, T.const(n))
         return Counter(Word(low), Word(T.ite(T.ult(low, t.lo.v), T.add(t.hi.v, T.const(1)), t.hi.v)))
     def compare(self, op, a, b):
-        d = Lin.of(a) - Lin.of(b)
+        if not isinstance(a, (int, Lin)) or not isinstance(b, (int, Lin)): raise Err("a comparison of things that are not numbers")
+        d = self.facts.subst(Lin.of(a) - Lin.of(b))
         if not d.c: return {"==": d.k == 0, "!=": d.k != 0, "<": d.k < 0, "<=": d.k <= 0, ">": d.k > 0, ">=": d.k >= 0}[op]
         if op in ("==", "!="):
             z = self.facts.zero(d)
@@ -118,45 +207,236 @@ class Symbols:
         else: yes = True if self.facts.ge0(d - 1) else False if self.facts.ge0(-d) else None                       # is a > b?
         if yes is None: raise Err(f"the specification asks how {Lin.of(a)} and {Lin.of(b)} compare, and the code's path does not say")
         return yes if op in (">=", ">") else not yes
-    def machine_result(self, name, m, env):
-        """A machine applied to a stack whose count is not a plain number cannot be run: its result is a stack
-        named by the machine and everything it was given, with a count of its own. (In the machine's own
-        function the code is checked against it turn by turn; here a caller only names what it gets.)"""
-        state = env[m["state"]]
-        if not isinstance(state, Stack) or not state.count.c: return None
-        named = self.T.mk("machine", name, *(self.key(env[p]) for p in m["params"]), state.key(self.T, self.facts))
-        count = Lin([(f"count of {name} {named}", 1)])
-        self.facts.add(count)
-        return Stack((name, named), count)
-    def key(self, v):
-        if isinstance(v, Word): return ("word", v.v)
-        if isinstance(v, Counter): return ("counter", v.lo.v, v.hi.v)
-        if isinstance(v, list): return tuple(self.key(x) for x in v)
-        if isinstance(v, Stack): return v.key(self.T, self.facts)
-        if isinstance(v, Blocks): return ("blocks", v.lane)
-        return Lin.of(v)
     def minus(self, x, y):
         d = Lin.of(x) - Lin.of(y)
         if not self.facts.ge0(d): raise Err(f"the specification takes {Lin.of(y)} from {Lin.of(x)}, and the code's path does not show the result is not below zero")
         return plain(d)
-    def length(self, x): return plain(x.count) if isinstance(x, Stack) else len(x)
+    def mul(self, x, y):
+        x, y = plain(x), plain(y)
+        if isinstance(x, int): return plain(Lin.of(y).scale(x))
+        if isinstance(y, int): return plain(x.scale(y))
+        raise Err("a product of two numbers that both depend on counts")
+    def div(self, x, d): return plain(halved(self.facts, x, d))
+    def mod(self, x, d): return plain(Lin.of(x) - Lin.of(halved(self.facts, x, d)).scale(ode.Spec.number(d)))
+    def bits(self, x):
+        """The length in bits of a number. Where the path does not fix it: the least it can be, or the most
+        (the checker says which it needs: the stack a function may use, or the stack a callee may use)."""
+        x = self.facts.subst(Lin.of(x))
+        if not x.c: return x.k.bit_length()
+        if self.bound == "most":
+            # the least j for which x <= 2^j - 1 is shown (if it is shown for j it is for every greater one)
+            lo, hi = 0, 65
+            while lo < hi:
+                mid = (lo + hi) // 2
+                if self.facts.ge0((1 << mid) - 1 - x): hi = mid
+                else: lo = mid + 1
+            return lo
+        if self.bound == "least":
+            # the greatest j for which x >= 2^(j-1) is shown
+            lo, hi = 0, 64
+            while lo < hi:
+                mid = (lo + hi + 1) // 2
+                if self.facts.ge0(x - (1 << (mid - 1))): lo = mid
+                else: hi = mid - 1
+            return lo
+        raise Err(f"the length in bits of {x}, which the path does not fix")
+    def plain(self, x):
+        """A number the path fixes, as a plain number."""
+        n = self.facts.number(Lin.of(x)) if isinstance(x, (int, Lin)) else None
+        if n is None: raise Err(f"a plain number expected, not {x!r}")
+        return n
+
+    # -- lists, arrays, bytes
+    def length(self, x):
+        if isinstance(x, Stack): return plain(x.count)
+        if isinstance(x, Slice): return plain(x.n)
+        if isinstance(x, Named): return x.n
+        if isinstance(x, Arr): return x.size
+        return len(x)
     def index(self, x, i):
         if isinstance(x, Stack): return [Word(t) for t in x.get(self.T, self.facts, i)]
+        if isinstance(x, Arr): return [Word(t) for t in x.get(self.T, self.facts, i)]
         if isinstance(x, Blocks): return [Word(self.T.var("input", x.lane, plain(i), w)) for w in range(16)]
         if isinstance(x, Inputs):
             if not isinstance(i, int) or not 0 <= i < x.lanes: raise Err(f"input {i} of {x.lanes}")
             return Blocks(i)
-        return ode.at(x, i)
+        if isinstance(x, Slice):
+            i = Lin.of(i)
+            if not self.facts.ge0(i) or not self.facts.ge0(x.n - 1 - i): raise Err(f"byte {i} of {x.n} bytes: not shown to be one of them")
+            return ByteT(self.T.var("byte", x.base, plain(x.off + i)))
+        if isinstance(x, Named): return ByteT(self.T.mk("byte of", x.key(), self.plain(i)))
+        return ode.at(x, i if isinstance(i, int) else self.plain(i))
     def slice(self, x, a, b):
         if isinstance(x, Stack):
             if plain(a) != 0: raise Err("a part of a stack that does not begin at its oldest value")
             return x.counted(b)
-        return ode.part(x, a, b)
+        if isinstance(x, Slice):
+            a, b = Lin.of(a), Lin.of(b)
+            if not self.facts.ge0(a) or not self.facts.ge0(b - a) or not self.facts.ge0(x.n - b): raise Err(f"bytes {a} to {b} of {x.n}: not shown to be within them")
+            return Slice(x.base, x.off + a, b - a)
+        return ode.part(x, a if isinstance(a, int) else self.plain(a), b if isinstance(b, int) else self.plain(b))
     def concat(self, x, y):
         if isinstance(x, Stack):
             if not isinstance(y, list) or len(y) != 1: raise Err("a stack takes one value at a time")
             return x.put(self.T, self.facts, x.count, [w.v for w in y[0]], x.count + 1)
+        if not isinstance(x, list) or not isinstance(y, list): raise Err("++ of things that are not plain lists")
         return x + y
+    def put(self, xs, i, v):
+        if isinstance(xs, Arr):
+            if not isinstance(v, list) or len(v) != 8 or not all(isinstance(w, Word) for w in v): raise Err("an array of chaining values takes a chaining value")
+            return xs.put(self.T, self.facts, i, [w.v for w in v])
+        if not isinstance(xs, list): raise Err("a place of something that is not a list")
+        i = i if isinstance(i, int) else self.plain(i)
+        if not 0 <= i < len(xs): raise Err(f"place {i} of a list of {len(xs)}")
+        xs = list(xs); xs[i] = v
+        return xs
+    def words(self, bs):
+        """Every four bytes a word, the lowest byte first."""
+        T = self.T
+        if isinstance(bs, Slice):
+            n = self.plain(bs.n)
+            if n % 4: raise Err("words of bytes that are not four to a word")
+            return [Word(T.var("mw", bs.base, plain(bs.off + 4 * j))) for j in range(n // 4)]
+        if isinstance(bs, Named):
+            if bs.n % 4: raise Err("words of bytes that are not four to a word")
+            return [Word(T.mk("word of", bs.key(), j)) for j in range(bs.n // 4)]
+        if not isinstance(bs, list) or len(bs) % 4: raise Err("words of something that is not bytes, four to a word")
+        return [Word(word_of_bytes(T, bs[i:i + 4])) for i in range(0, len(bs), 4)]
+    def nothing(self, n): return Arr(None, n)
+
+    # -- what could not be evaluated
+    def key(self, v):
+        if isinstance(v, Word): return ("word", v.v)
+        if isinstance(v, ByteT): return ("byte", v.v)
+        if isinstance(v, Counter): return ("counter", v.lo.v, v.hi.v)
+        if isinstance(v, list): return tuple(self.key(x) for x in v)
+        if isinstance(v, dict): return ("record",) + tuple((name, self.key(x)) for name, x in sorted(v.items()))
+        if isinstance(v, Stack): return v.key(self.T, self.facts)
+        if isinstance(v, (Arr, Slice, Named)): return v.key()
+        if isinstance(v, Blocks): return ("blocks", v.lane)
+        if v is None: return None
+        if isinstance(v, bool): raise Err("a truth where a value is expected")
+        return Lin.of(v)
+
+    def machine_result(self, spec, name, m, env):
+        """A machine called. If the checker is at a place of this very machine, its state there. If it can be
+        run, it is. Else its result is named by the machine and everything it was given, in the shape of its
+        first state. (In the machine's own function the code is checked against it turn by turn.)"""
+        state = env[m["states"][0]]
+        if m["state"] is not None and isinstance(state, Stack):
+            if not state.count.c: return spec.run_machine(self, m, env)
+            named = self.T.mk("machine", name, *(self.key(env[p]) for p in m["params"]), state.key(self.T, self.facts))
+            count = sym(f"count of {name} {named}")
+            self.facts.add(count)
+            return Stack((name, named), count)
+        first = spec.state_of(m, env)
+        instance = (name, tuple(self.key(env[p]) for p in m["params"]), self.key(first))
+        if instance in self.ghost: return self.ghost[instance]
+        if instance in self.memo: return self.memo[instance]
+        try:
+            result = spec.run_machine(self, m, dict(env))
+        except Err:
+            self.unrun.append((instance, first, {p: env[p] for p in m["params"]}))
+            result = self.like(first, f"{name}#{self.T.mk('machine', *instance)}")
+        self.memo[instance] = result
+        return result
+
+    def like(self, v, name):
+        """A value of the shape of v, of which only its name is known."""
+        if isinstance(v, (int, Lin)) and not isinstance(v, bool):
+            x = sym(name); self.facts.add(x)
+            return x
+        if isinstance(v, Word): return Word(self.T.mk("part", name))
+        if isinstance(v, list): return [self.like(x, f"{name}.{i}") for i, x in enumerate(v)]
+        if isinstance(v, dict): return {k: self.like(x, f"{name}.{k}") for k, x in v.items()}
+        if isinstance(v, Arr): return Arr(name, v.size)
+        raise Err("a machine's state of a shape that cannot be named")
+
+    def named(self, spec, name, kind, args, body):
+        """A function with a kind: evaluated if it can be, else a value of the kind named by what it was given."""
+        instance = (name, tuple(self.key(a) for a in args))
+        if instance in self.memo: return self.memo[instance]
+        if self.fold and self.depth == 0:
+            # a call is taken by the callee's contract as it is written: what it leaves is not opened here.
+            # (The caller's own specification, opened later on the same path, finds this name for the same
+            # application.)
+            result = self.memo[instance] = self.of_kind(spec, kind, f"{name}#{self.T.mk('named', *instance)}")
+            return result
+        outer = spec.fuel
+        if outer is None: spec.fuel = FUEL
+        self.depth += 1
+        try:
+            result = body()
+        except Err:
+            result = self.of_kind(spec, kind, f"{name}#{self.T.mk('named', *instance)}")
+        finally:
+            self.depth -= 1
+            if outer is None: spec.fuel = None
+        self.memo[instance] = result
+        return result
+
+    def of_kind(self, spec, kind, name):
+        """A value of a kind (a layout's record, a chaining value, bytes, a number, a flags byte), of which only
+        its name is known; a number or a byte is within what its kind says."""
+        parts = kind.split()
+        if kind == "cv": return [Word(self.T.mk("part", name, w)) for w in range(8)]
+        if len(parts) == 2 and parts[1] == "bytes" and parts[0].isdigit(): return Named(name, int(parts[0]))
+        if kind == "number":
+            x = sym(name); self.facts.add(x)
+            return x
+        if kind == "byte": return Word(byte_term(self.T, (0, (name,))))
+        if kind in spec.layouts:
+            out = {}
+            for field, f in spec.layouts[kind]["fields"].items():
+                if f["count"] is not None:
+                    if f["kind"] != "cv": raise Err("an array that is not of chaining values")
+                    out[field] = Arr(f"{name}.{field}", f["count"])
+                else:
+                    out[field] = self.of_kind(spec, f["kind"], f"{name}.{field}")
+                    if f["below"] is not None: self.facts.add(f["below"] - 1 - out[field])
+            return out
+        raise Err(f"no kind {kind}")
+
+
+def halved(facts, x, d):
+    """x / d for d a power of two (rounded down): exact where x's parts all divide, else a symbol q with
+    d*q <= x <= d*q + d - 1. The code's shifts and the specification's divisions make the same symbol."""
+    d = ode.Spec.number(d)
+    if d < 2 or d & (d - 1): raise Err(f"a division by {d}: not a power of two")
+    x = Lin.of(x)
+    if not x.c: return x.k // d
+    exact = x.over(d)
+    if exact is not None: return exact
+    if not facts.ge0(x): raise Err(f"{x} is divided, and is not shown to be a number not below zero")
+    name = f"({x!r})/{d}"
+    q = sym(name)
+    if d == 2: HALVES[name] = x
+    facts.add(q); facts.add(x - q.scale(d)); facts.add(q.scale(d) + d - 1 - x)
+    return q
+
+
+def word_of_bytes(T, four):
+    """Four bytes (numbers, or bytes of a message) as a word, the lowest first."""
+    if all(isinstance(b, int) and not isinstance(b, bool) and 0 <= b < 256 for b in four): return T.const(four[0] | four[1] << 8 | four[2] << 16 | four[3] << 24)
+    if not all(isinstance(b, ByteT) or (isinstance(b, int) and not isinstance(b, bool) and 0 <= b < 256) for b in four): raise Err("a word of things that are not bytes")
+    nodes = [T.nodes[b.v] if isinstance(b, ByteT) else None for b in four]
+    if all(n is not None and n[0] == "v" and n[1] == "byte" for n in nodes):
+        base, first = nodes[0][2], Lin.of(nodes[0][3])
+        if all(n[2] == base and Lin.of(n[3]) == first + i for i, n in enumerate(nodes)): return T.var("mw", base, plain(first))         # four bytes of a message as they lie: its word there
+    return T.mk("word of bytes", *(b.v if isinstance(b, ByteT) else ("c", b) for b in four))
+
+
+def same(A, v, w):
+    """Are two values of the specification one? (Numbers by the path's facts; arrays place by place.)"""
+    if isinstance(v, (int, Lin)) and isinstance(w, (int, Lin)) and not isinstance(v, bool) and not isinstance(w, bool): return A.facts.zero(Lin.of(v) - Lin.of(w)) is True
+    if isinstance(v, Word) and isinstance(w, Word): return v.v == w.v
+    if isinstance(v, ByteT) and isinstance(w, ByteT): return v.v == w.v
+    if isinstance(v, list) and isinstance(w, list): return len(v) == len(w) and all(same(A, x, y) for x, y in zip(v, w))
+    if isinstance(v, dict) and isinstance(w, dict): return v.keys() == w.keys() and all(same(A, v[k], w[k]) for k in v)
+    if isinstance(v, Arr) and isinstance(w, Arr): return v.same(A.T, A.facts, w)
+    if isinstance(v, Stack) and isinstance(w, Stack): return v.same(A.T, A.facts, w)
+    if isinstance(v, (Slice, Named)) and type(v) is type(w): return v.key() == w.key()
+    return False
 
 
 def asked(contract, A, env):

@@ -10,7 +10,7 @@ functions `push`, `merge` and `add` of lang/hasher.ode, as the Ode compiler and 
 calls `push` and `merge`. Lean checks the same three in about 100 seconds from proofs with lemmas by hand
 (lang/Proof_merge.lean, Lemmas_merge.lean, StackLemmas.lean).
 
-WHAT IS CLAIMED OF A FUNCTION is its `contract` in blake3.ode (b3l_push, b3l_merge, b3l_add): what each
+WHAT IS CLAIMED OF A FUNCTION is its `contract` in blake3.spec (b3l_push, b3l_merge, b3l_add): what each
 argument is, what the caller must show (`asks`), what the function `leaves` and `returns`, how much `stack` it
 may use, and which function it `calls` only on a condition. `merge` leaves what the merge machine of the same
 file makes of the stack (while it holds more than `target` values, its top two become their parent).
@@ -54,7 +54,7 @@ def sym(name): return Lin([(name, 1)])
 # ---------------------------------------------------------------------------------------------------------
 # The specification: the merge machine, and what each function is claimed to do.
 class Contract:
-    """A function's contract, as blake3.ode states it. The arguments are in the calling convention's order;
+    """A function's contract, as blake3.spec states it. The arguments are in the calling convention's order;
     each is a `stack` (the address of a stack of chaining values, which the function may change), a `cv` (the
     address of 32 bytes it may read), a `byte` (a number below 256), a `number`, or `any`."""
     def __init__(self, symbol):

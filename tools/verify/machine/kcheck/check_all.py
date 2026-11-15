@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""check_all: what a reader would run. Every function shown so far, from its bytes, against blake3.ode.
+"""check_all: what a reader would run. Every function shown so far, from its bytes, against blake3.spec.
 
     python3 check_all.py [FOLDER]
 
-FOLDER holds the objects (lib32.o, out16.o, avx512.o, sse41.o, push.o, merge.o, add.o). Without it they are
-assembled here from the library's sources (c/*.S) and the Ode functions' assembly (glue/*.S), with clang where
-there is one. Each function's bytes are read by kdecode.py and checked against the specification (blake3.ode)
+FOLDER holds the objects (lib32.o, out16.o, avx512.o, sse41.o, and one for each of glue/*.S). Without it they
+are assembled here from the library's sources (c/*.S) and the Ode functions' assembly (glue/*.S), with clang
+where there is one. Each function's bytes are read by kdecode.py and checked against the specification (blake3.spec)
 by the checker for its kind, with its proof from proofs/ where it has a loop. Nothing here is a proof
 assistant; the programs are what is trusted (README.md)."""
 import json, os, shutil, sys, tempfile, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
 sys.path.insert(0, HERE)
-import kcheck, kdecode, kglue, kloop, kone
+import kcheck, kdecode, kfn, kglue, kloop, kone
 from test_kcheck import assemble
 
 BASE, DATA = 0x10000, 0x50000000
@@ -50,10 +50,20 @@ def stack_function(folder, name):
     return "b3l_" + name, len(rows), size if p["places"] else 0, "every stack and argument its contract allows"
 
 
+def hash_function(folder, name):
+    rows = kfn.load(os.path.join(folder, name + ".o"), name)
+    kfn.check(rows, name)
+    return "b3l_" + name, len(rows), 0, "everything its contract allows" + (": every length of message" if name in ("subtree", "hashr") else "")
+
+
 CHECKS = [("the wide kernels", [lambda f: kernel_any_count(f, "k32"), lambda f: kernel_any_count(f, "p32"), lambda f: kernel_any_count(f, "p16"),
                                 lambda f: kernel_fixed(f, "o16", "out16.o")]),
           ("the one-block kernels", [lambda f: one_block(f, "avx512"), lambda f: one_block(f, "sse41")]),
-          ("the hasher's stack (calls the one-block kernels)", [lambda f: stack_function(f, "push"), lambda f: stack_function(f, "merge"), lambda f: stack_function(f, "add")])]
+          ("the hash of a message, written to be proved (hash.ode; calls the one-block kernels)",
+           [lambda f: hash_function(f, "pad"), lambda f: hash_function(f, "chunk_node"), lambda f: hash_function(f, "node_out"), lambda f: hash_function(f, "subtree"),
+            lambda f: hash_function(f, "hashr")]),
+          ("a stack of subtrees, against an algorithm that is not the specification (an earlier trial; calls the one-block kernels)",
+           [lambda f: stack_function(f, "push"), lambda f: stack_function(f, "merge"), lambda f: stack_function(f, "add")])]
 
 
 def main():
@@ -61,7 +71,7 @@ def main():
     if made:
         for obj, src in (("lib32.o", "c/blake3_avx512_32.S"), ("out16.o", "c/blake3_output16.S"), ("avx512.o", "c/blake3_avx512_x86-64_unix.S"), ("sse41.o", "c/blake3_sse41_x86-64_unix.S")):
             assemble(os.path.join(ROOT, src), os.path.join(folder, obj))
-        for name in ("push", "merge", "add"): assemble(os.path.join(HERE, "glue", name + ".S"), os.path.join(folder, name + ".o"))
+        for name in ("push", "merge", "add", "pad", "chunk_node", "node_out", "subtree", "hashr"): assemble(os.path.join(HERE, "glue", name + ".S"), os.path.join(folder, name + ".o"))
     bodies, count, failed, t_all = {}, 0, 0, time.time()
     try:
         for title, checks in CHECKS:
@@ -76,7 +86,7 @@ def main():
                     failed += 1; print(f"  NOT shown: {e}")
     finally:
         if made: shutil.rmtree(folder)
-    print(f"{count} functions, {sum(bodies.values())} instructions (K32 and P32 are two entries of one body), against blake3.ode, in {time.time() - t_all:.2f} s"
+    print(f"{count} functions, {sum(bodies.values())} instructions (K32 and P32 are two entries of one body), against blake3.spec, in {time.time() - t_all:.2f} s"
           + (f"; {failed} NOT shown" if failed else ""))
     return 1 if failed else 0
 

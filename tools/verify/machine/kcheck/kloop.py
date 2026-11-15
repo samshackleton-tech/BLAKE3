@@ -71,9 +71,9 @@ class Fork(Exception):
 
 
 # ---------------------------------------------------------------------------------------------------------
-# The specification: the chunk machine of blake3.ode, a turn at a time (kspec.py reads it on symbols).
+# The specification: the chunk machine of blake3.spec, a turn at a time (kspec.py reads it on symbols).
 def kernel_of(symbol, start):
-    """A wide kernel's contract, as blake3.ode states it: (inputs, n, key, counter, packed bytes, out) in the
+    """A wide kernel's contract, as blake3.spec states it: (inputs, n, key, counter, packed bytes, out) in the
     calling convention's order; each of the out's chaining values is left as a machine's result on a lane's
     input. `start`: the symbol its code begins at (P32 enters K32's body)."""
     c = kspec.SPEC.contracts[symbol]

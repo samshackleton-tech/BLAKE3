@@ -344,9 +344,27 @@ def decode(code, at, relocs, rodata, rodata_at, base, start):
             if rm is not None or reg != 1: raise Stop("0F 18 other than PREFETCHT0 of memory")
             return p - at, ".nop"
         raise Stop(f"0F {op2:02X}")
-    if op in (0x89, 0x31, 0x09, 0x85, 0x01, 0x29, 0x39):
+    if op in (0x05, 0x0D, 0x25, 0x2D, 0x3D):
+        # the short forms with RAX and a 32-bit number (sign-extended to 64 bits)
+        if R or X or B: raise Stop("a REX bit this instruction does not use")
+        name = {0x05: "add", 0x0D: "or", 0x25: "and", 0x2D: "sub", 0x3D: "cmp"}[op]
+        return p - at + 4, f".{name} {w} (.reg .rax) (.imm {bv(sx(imm(4), 32) if W else imm(4))})"
+    if op in (0x03, 0x0B, 0x23, 0x2B, 0x3B):
         mod, reg, rm, mem = modrm(R, X, B)
-        name = {0x89: "mov", 0x31: "xor", 0x09: "or", 0x85: "test", 0x01: "add", 0x29: "sub", 0x39: "cmp"}[op]
+        name = {0x03: "add", 0x0B: "or", 0x23: "and", 0x2B: "sub", 0x3B: "cmp"}[op]
+        if rm is not None or mem[0] == "rip": raise Stop(f"{name} from a register in the form assemblers do not write, or from read-only data")
+        return p - at, f".{name} {w} {r64(reg)} {memop(mem)}"
+    if op == 0x88:
+        mod, reg, rm, mem = modrm(R, X, B)
+        if rex or rm is not None or reg != 0 or mem[0] == "rip": raise Stop("88 other than AL to memory")
+        return p - at, f".mov 8 {memop(mem)} (.reg .rax)"
+    if op == 0xD1:
+        mod, reg, rm, mem = modrm(R, X, B)
+        if rm is None or reg not in (4, 5): raise Stop("a shift this does not know")
+        return p - at, f".{'shl' if reg == 4 else 'shr'}{w} .{G[rm]} 1"
+    if op in (0x89, 0x31, 0x09, 0x85, 0x01, 0x29, 0x39, 0x21):
+        mod, reg, rm, mem = modrm(R, X, B)
+        name = {0x89: "mov", 0x31: "xor", 0x09: "or", 0x85: "test", 0x01: "add", 0x29: "sub", 0x39: "cmp", 0x21: "and"}[op]
         if rm is None:
             if name != "mov" or mem[0] == "rip": raise Stop(f"{name} to memory")
             return p - at, f".mov {w} {memop(mem)} {r64(reg)}"

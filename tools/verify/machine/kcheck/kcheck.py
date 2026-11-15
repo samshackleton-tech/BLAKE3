@@ -11,7 +11,7 @@ proofs are about):
      named regions (the frame, the saved registers, the inputs' address table, the 32 inputs, the key,
      the object's read-only data, the output);
   2. builds, with the same term constructors, what the specification says each lane's chaining value is:
-     the specification is blake3.ode (which gives the official test vectors when run on numbers: ode.py),
+     the specification is blake3.spec (which gives the official test vectors when run on numbers: ode.py),
      read here on symbols (kspec.py);
   3. compares the 256 words the code stored with the 256 the specification names. Terms are interned and
      sums and xors are kept flat and sorted, so "equal" is "the same node": no solver.
@@ -34,7 +34,7 @@ import ode, kspec
 from kspec import byte_or, byte_term
 
 MASK32 = 0xFFFFFFFF
-CHUNK_START, CHUNK_END, PARENT = 1, 2, 4      # as blake3.ode names them: what the callers pack beside the flags
+CHUNK_START, CHUNK_END, PARENT = 1, 2, 4      # as blake3.spec names them: what the callers pack beside the flags
 
 
 from ode import Err as Fail        # one failure: the checker's and the specification reader's
@@ -92,7 +92,7 @@ class Terms:
 
 
 # ---------------------------------------------------------------------------------------------------------
-# The specification is blake3.ode, read on symbols (kspec.py). Here: what each kernel is claimed to compute,
+# The specification is blake3.spec, read on symbols (kspec.py). Here: what each kernel is claimed to compute,
 # in its words.
 def spec_chunk(T, kernel, lane):
     """Lane `lane`'s chaining value by the specification's chunk machine: the kernel's number of blocks from
@@ -106,7 +106,7 @@ def spec_chunk(T, kernel, lane):
 
 
 def spec_output(T, kernel, lane):
-    """What blake3.ode's contract of `blake3_servil_output16` says lane `lane`'s chaining value is left as: (the
+    """What blake3.spec's contract of `blake3_servil_output16` says lane `lane`'s chaining value is left as: (the
     address of sixteen descriptors, the address of sixteen chaining values); each descriptor a block, a
     chaining value, a length byte and a flags byte."""
     c = kspec.SPEC.contracts[kernel["symbol"]]
@@ -436,7 +436,7 @@ KERNELS = {
                 lanes=16, blocks=1, table="descriptors", spec=spec_output),
     # c/blake3_avx512_32.S, as the library calls them: whole chunks (16 blocks; the flags, CHUNK_START, CHUNK_END
     # and a last length of 64 packed), and parents (one block, counter 0, the flags with PARENT). These are
-    # cases of the kernels' contracts in blake3.ode, which kloop.py shows for every number of blocks and every
+    # cases of the kernels' contracts in blake3.spec, which kloop.py shows for every number of blocks and every
     # packed byte; they are kept for the audits that run a kernel to its end.
     "k32": dict(entry=0, start="blake3_servil_avx512_k32", symbol="blake3_servil_avx512_k32", given="key, flags and input and every counter", lanes=32, blocks=16,
                 counter=("q", "counter"), increment=True, packed=((0, ("flags",)), CHUNK_START, CHUNK_END, 64), spec=spec_chunk),

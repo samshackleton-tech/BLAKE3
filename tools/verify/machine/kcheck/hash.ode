@@ -1,0 +1,141 @@
+// BLAKE3's hash of a message, written to be proved.
+//
+// The code is in the shape of the specification (blake3.ode): `subtree` is the specification's `subtree`, in two
+// parts by the same rule, each part by a call of itself; `chunk_node` and `node_out` are the specification's.
+// So nothing has to be shown about a stack of subtrees or a counter of them: the checker (kfn.py) follows each
+// function once, takes a call by the callee's contract (a call of itself by its own), and compares what is
+// left with the specification's definition unfolded once. No loop here needs a proof: each runs a number of
+// times the paths fix (a chunk's 16 blocks, a block's 64 bytes, the 54 doublings of a count of chunks).
+//
+// This is the language of lang/ (Ode); the compiler is lang/odec.py and lang/Lang.lean.
+
+const CHUNK_START = 1
+const CHUNK_END   = 2
+const PARENT      = 4
+const ROOT        = 8
+const AVX512      = 5
+
+extern compress_avx512/5  = "blake3_servil_compress_in_place_avx512"
+extern compress_sse41/5   = "blake3_servil_compress_in_place_sse41"
+
+// The one-block kernel the platform has.
+def compress(cv, block, block_len, counter, flags) {
+  if plat == AVX512 { compress_avx512(cv, block, block_len, counter, flags) }
+  else              { compress_sse41(cv, block, block_len, counter, flags) }
+}
+
+// A chunk's last block as a compression reads it: the n bytes at src (at most 64), then zeros to 64.
+fn pad(block, src, n)
+{
+  var i = 64
+  while i > 0 {
+    i = i - 1
+    if i < n { u8[block + i] = u8[src + i] }
+    else     { u8[block + i] = 0 }
+  }
+}
+
+// A chunk's node: h, the chaining value after every block but the last (the key is in the node's h at the
+// call); the last block, padded; the chunk's number; the last block's length; its flags. 120 bytes.
+fn chunk_node(nd, input, len, counter, flags, plat)
+  reg p, rem, first, nd, counter, plat
+{
+  var first = CHUNK_START
+  var p = input
+  var rem = len
+  while rem > 64 {
+    var f = flags | first
+    compress(nd, p, 64, counter, f)
+    first = 0
+    p = p + 64
+    rem = rem - 64
+  }
+  var blk = nd + 32
+  pad(blk, p, rem)
+  u64[nd + 96] = counter
+  u64[nd + 104] = rem
+  u64[nd + 112] = flags | first | CHUNK_END
+}
+
+// A node's compression: its chaining value, or with root = ROOT the hash.
+fn node_out(out, nd, root, plat)
+{
+  var blk = nd + 32
+  var len = u64[nd + 104]
+  var t = u64[nd + 96]
+  var f = u64[nd + 112] | root
+  copy 32 out <- nd
+  compress(out, blk, len, t, f)
+}
+
+// The count of chunks in the left part of len bytes (more than 1024): the greatest power of two k with
+// 1024 k < len. c is the count of chunks; k doubles while it stays below c.
+def left_chunks() {
+  c = ((len - 1) >> 10) + 1
+  k = 1
+  k2 = 2
+  while k2 < c {
+    k = k2
+    k2 = k2 << 1
+  }
+}
+
+// The chaining value of the tree over the len bytes at input (1 or more), whose chunks are numbered from t.
+// kf: the key (32 bytes) and the flags (8 bytes).
+fn subtree(out, input, len, kf, t, plat)
+  reg out, input, len, kf, t, plat
+{
+  buf nd[120]
+  buf blk[64]
+  var flags = u64[kf + 32]
+  var c = 0
+  var k = 0
+  var k2 = 0
+  if len > 1024 {
+    left_chunks()
+    var n = k << 10
+    var right = blk + 32
+    var rest = input + n
+    var restlen = len - n
+    var rt = t + k
+    var pf = flags | PARENT
+    subtree(blk, input, n, kf, t, plat)
+    subtree(right, rest, restlen, kf, rt, plat)
+    copy 32 out <- kf
+    compress(out, blk, 64, 0, pf)
+  } else {
+    copy 32 nd <- kf
+    chunk_node(nd, input, len, t, flags, plat)
+    node_out(out, nd, 0, plat)
+  }
+}
+
+// The hash: the tree over the whole message, its last compression with ROOT.
+fn hashr(out, input, len, key, flags, plat)
+  reg out, input, len, key, flags, plat
+{
+  buf kf[40]
+  buf nd[120]
+  buf blk[64]
+  var c = 0
+  var k = 0
+  var k2 = 0
+  copy 32 kf <- key
+  u64[kf + 32] = flags
+  if len > 1024 {
+    left_chunks()
+    var n = k << 10
+    var right = blk + 32
+    var rest = input + n
+    var restlen = len - n
+    var pf = flags | PARENT | ROOT
+    subtree(blk, input, n, kf, 0, plat)
+    subtree(right, rest, restlen, kf, k, plat)
+    copy 32 out <- key
+    compress(out, blk, 64, 0, pf)
+  } else {
+    copy 32 nd <- key
+    chunk_node(nd, input, len, 0, flags, plat)
+    node_out(out, nd, ROOT, plat)
+  }
+}
