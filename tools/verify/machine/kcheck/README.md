@@ -612,9 +612,23 @@ proved in Lean with 133 lines of lemmas) compiles to the same 55 instructions as
 joins the two sums with `|` where this one adds them. `kbyte.py` stops at that instruction ("or of ..."):
 that two numbers with no bit in common have their sum for their `or` is a rule the machine does not have.
 
-**Not done.** Sigil has no code. `kbyte.py` does not follow calls, and `kfn.py` does not know places or
-bytes in parts: they should be one checker. No prover searches for places: each was written from the
-checker's refusals.
+**Not done.** Sigil has no code. No prover searches for places: each was written from the checker's
+refusals. And what `kbyte.py` lacks, each found by a program that wanted it:
+
+- calls (`kfn.py` follows them, and knows no places and no bytes in parts: they should be one checker);
+- tables of constants beside the code, and multiplication in Ode (Sigil);
+- facts about a specification itself: that what an LZ4 block decodes to only grows; that the least place
+  two runs differ is where a walk over them stops; that four folds of the carries are the remainder by
+  65535. The first two are inductions over a definition, and the specifications were written as walks
+  over the input so as not to need them;
+- facts modulo a number (a sum reduced only now and then), and reads of more than a byte at a time: both
+  for speed;
+- taking a specification's question both ways where the code's path does not answer it (UTF-8), and
+  joining paths that have come to the same state (base 64);
+- that two numbers with no bit in common have their sum for their `or` (Devon's Adler-32); a constant
+  above 32 bits and a shift by more than 16 (the checksum's own bound);
+- in-place work: a byte the function may write and has not yet written is unknown to it, so a function
+  that reads and writes one buffer cannot be shown.
 
 ## The library's wide kernels, each run to its end (`kcheck.py`, the first trial)
 
