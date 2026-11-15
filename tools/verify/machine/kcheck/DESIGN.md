@@ -145,7 +145,7 @@ stays the auditor's.
 Done: the whole hash of a message, every length, from the binary's bytes, with nothing assumed of a callee,
 checked in 19 seconds; seven other programs with their own specifications and contracts (Adler-32, an LZ4
 decoder and two encoders, a varint, a first difference, a UTF-8 validator, a base-64 encoder, the Internet
-checksum), 1,467 instructions, checked in 18 seconds; the
+checksum), 1,467 instructions, checked in 15 seconds; the
 proof carried in the binary; a C and a Rust program linked with it and checked as files; audits with a
 processor as judge (README.md).
 

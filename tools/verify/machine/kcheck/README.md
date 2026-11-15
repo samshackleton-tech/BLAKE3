@@ -49,19 +49,19 @@ assembler and no linker is relied on.
 
 **Programs other than the hash** (`programs/`, November 15: to find what the two languages lack). Each has
 its own specification and public contract, code in Ode, and is checked from its bytes
-(`python3 programs/check_programs.py`: nine functions, 1,467 instructions, 18 s, 14 of them the base-64
+(`python3 programs/check_programs.py`: nine functions, 1,467 instructions, 15 s, 12 of them the base-64
 encoder's):
 
 | | the public contract's `ensures` and `returns` | instructions | proof | checked in |
 |---|---|---|---|---|
-| Adler-32 | `returns adler32(input)` | 55 | 1 place, 7 lines | 4 ms |
-| LZ4 block decoder | `returns if failed(lz4(input, cap)) then NO else len(lz4(input, cap))`; `ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap) if !failed(lz4(input, cap))` | 267 | 5 places, 96 lines | 0.33 s |
-| LZ4 encoder, literals only | `ensures lz4(out[0 .. r], n) == input if r != NO`; `ensures r != NO if cap >= n + n / 255 + 16` | 132 | 2 places, 26 lines | 20 ms |
-| LZ4 encoder with matches | the same two lines | 360 | 6 places, 133 lines | 2.1 s |
-| a number's varint | `returns r`; `ensures out[0 .. r] = varint(v)` | 35 | none | 0.1 s |
-| first difference of two runs of bytes | `returns common(a, b)` | 45 | 1 place, 8 lines | 3 ms |
-| UTF-8: is it well-formed, and how many code points | `returns if failed(utf8(input)) then NO else utf8(input)` | 300 | 1 place, 11 lines | 0.17 s |
-| Base 64 encoder | `requires cap >= 4 * ((n + 2) / 3)`; `returns 4 * ((n + 2) / 3)`; `ensures out[0 .. 4 * ((n + 2) / 3)] = base64(input)` | 197 | 1 place, 12 lines | 13 s |
+| Adler-32 | `returns adler32(input)` | 55 | 1 place, 7 lines | 5 ms |
+| LZ4 block decoder | `returns if failed(lz4(input, cap)) then NO else len(lz4(input, cap))`; `ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap) if !failed(lz4(input, cap))` | 267 | 5 places, 96 lines | 0.54 s |
+| LZ4 encoder, literals only | `ensures lz4(out[0 .. r], n) == input if r != NO`; `ensures r != NO if cap >= n + n / 255 + 16` | 132 | 2 places, 26 lines | 34 ms |
+| LZ4 encoder with matches | the same two lines | 360 | 6 places, 129 lines | 1.9 s |
+| a number's varint | `returns r`; `ensures out[0 .. r] = varint(v)` | 35 | none | 0.17 s |
+| first difference of two runs of bytes | `returns common(a, b)` | 45 | 1 place, 8 lines | 5 ms |
+| UTF-8: is it well-formed, and how many code points | `returns if failed(utf8(input)) then NO else utf8(input)` | 300 | 1 place, 11 lines | 0.16 s |
+| Base 64 encoder | `requires cap >= 4 * ((n + 2) / 3)`; `returns 4 * ((n + 2) / 3)`; `ensures out[0 .. 4 * ((n + 2) / 3)] = base64(input)` | 197 | 1 place, 12 lines | 12 s |
 | the Internet checksum (RFC 1071) | `requires n < 562949953421312`; `returns checksum(input)`; no `trace` line: its timing does not depend on the bytes | 76 | 1 place, 8 lines | 0.13 s |
 
 What is shown of BLAKE3, from the bytes (`python3 check_all.py`, of the objects an assembler makes of the
@@ -422,7 +422,7 @@ something BLAKE3 does not have: a result that is a number, a loop whose count is
 that may be malformed, output that depends on earlier output, an answer that may be "no", and a contract
 that is no way to compute anything.
 
-    python3 programs/check_programs.py          # the nine functions from their bytes: 1,467 instructions, 18 s
+    python3 programs/check_programs.py          # the nine functions from their bytes: 1,467 instructions, 15 s
     python3 programs/test_specs.py              # each specification against someone else's answers
     python3 test_kbyte.py                       # changed specifications, contracts, proofs and instructions
 
