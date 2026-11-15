@@ -225,7 +225,7 @@ anything on a path where the caller's own condition holds.
 **Speed.** One thread, under the bench lock, on two machines with AVX-512 (pinned runs
 `hashr-speed-9700x-…-cd10a392` and `hashr-speed-epyc9255-…-733ace9a` at commit `28e1c94b`; GNU as 2.46's
 objects). `khash_bench.c`: GiB a second, the best of 7 passes; the median of three rounds (the three were
-within 2% of one another in every cell). `hashf` is the earlier code (`levels/levels.ode`: levels over groups
+within 4% of one another in every cell). `hashf` is the earlier code (`levels/levels.ode`: levels over groups
 of 32 chunks, written for speed, proved in Lean with a stand-in), on the same kernels:
 
 | bytes | `hashr`, Ryzen 7 9700X | `hashf` | `hashr`, EPYC 9255 | `hashf` |
