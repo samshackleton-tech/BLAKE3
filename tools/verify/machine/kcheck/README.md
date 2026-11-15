@@ -39,8 +39,8 @@ Apple M6):
 - An earlier trial (`push`, `merge`, `add` of a stack of subtrees) against an algorithm, not the
   specification.
 
-What a reader relies on: `blake3.spec`, which he reads; the checker, 3,920 lines of unverified Python for the
-hash (4,489 with the stack's checker); the processor doing what the checker takes each instruction form
+What a reader relies on: `blake3.spec`, which he reads; the checker, 3,933 lines of unverified Python for the
+hash (4,502 with the stack's checker); the processor doing what the checker takes each instruction form
 to do; Python. Most of this page is what has been done to find where the checker is wrong,
 and what that found.
 
@@ -83,7 +83,7 @@ and the claim, which is all of the contracts a reader need read:
 
 (`needs`: it runs SSE4.1 instructions, and AVX-512 instructions only where `plat` is 5.)
 
-- `ode.py` (647 lines) reads the text and evaluates it over an algebra of words. On numbers: the official
+- `ode.py` (648 lines) reads the text and evaluates it over an algebra of words. On numbers: the official
   vectors, at every length, for the hash, the keyed hash and key derivation.
 - `kspec.py` (522 lines) is the other algebra, for the checkers: words are terms; a number may depend on a
   count, and a comparison of such numbers is decided from the code path's facts or the evaluation stops;
@@ -416,19 +416,24 @@ specification. (The hash above does not use them: it has no stack.)
 | file | lines | what it is |
 |---|---|---|
 | `blake3.spec` | 168 | the specification (147 lines), and the claim: the contract of the function a user calls |
+| `DESIGN.md` | 136 | the design: what is wanted and given up, the rules for code written to be proved, how it stands to types-as-proofs |
 | `proofs/inner.spec`, `proofs/*.json` | 175 | what the functions inside are claimed to do, the layouts of two records; the wide kernels' and `merge`'s places |
 | `hash.ode`, `glue/*.S` | 332 | the hash written to be proved; the assembly the Ode compiler prints of it (and of the stack's three functions) |
-| `ode.py`, `kspec.py`, `klin.py` | 647 + 522 + 211 | the specification's reader; its algebra on symbols; numbers that depend on counts and the facts about them |
-| `kfn.py`, `kfn_flip.py`, `khash_native.c`, `test_kfn.py` | 870 + 132 + 142 + 120 | the checker of functions; its single-bit audit; the whole hash on a processor against BLAKE3 in C; the tests |
+| `check_all.py` | 120 | what a reader runs: every function from its bytes, and that the hash's functions end |
+| `ode.py`, `kspec.py`, `klin.py` | 648 + 522 + 211 | the specification's reader; its algebra on symbols; numbers that depend on counts and the facts about them |
 | `kdecode.py` | 479 | reads the ELF object (sections, symbol, relocations) and decodes the instruction forms the code uses, and no others; no disassembler |
-| `kcheck.py` | 534 | runs a kernel's instructions on symbolic values and compares with the specification's terms |
+| `kfn.py`, `test_kfn.py` | 882 + 122 | the checker of functions; its tests |
+| `kfn_flip.py`, `khash_native.c` | 133 + 142 | its single-bit audit; the whole hash on a processor against BLAKE3 in C |
+| `khash_bench.c`, `earlier/*.S` | 37 | the speed of `hashr`, of the library, and of the earlier `hashf` (its assembly), in one harness |
+| `kloop.py`, `test_kloop.py` | 439 + 115 | the wide kernels for every number of blocks: the prover, the proof's form, the checker by induction; its tests |
+| `kone.py`, `kone_native.c`, `test_kone.py` | 218 + 86 + 112 | the one-block kernels: the checker (XMM registers as four terms), the processor run, the tests |
+| `kcheck.py`, `test_kcheck.py` | 534 + 163 | the first checker: a kernel's instructions run to the end on symbols (and the terms and the reading of an instruction's text that the others use); its tests |
 | `kcheck_cross.py` | 109 | kcheck's reading of each instruction against the Lean model's processor-validated test vectors |
-| `kflip.py`, `kflip_native.c`, `kflip_thunk.S` | 204 + 160 + 66 | the audit below: every single-bit change of a kernel, and the processor's word on each one accepted |
-| `kloop.py`, `test_kloop.py` | 438 + 115 | every number of blocks: the prover, the proof's form, the checker by induction; its tests |
-| `kglue.py`, `kglue_flip.py`, `kglue_native.c`, `test_kglue.py` | 568 + 135 + 109 + 119 | the stack's functions: contracts, prover, checker; the audit; the tests |
-| `kone.py`, `kone_native.c`, `test_kone.py` | 217 + 86 + 94 | the one-block kernels: the checker (XMM registers as four terms), the processor run, the tests |
+| `kflip.py`, `kflip_native.c`, `kflip_thunk.S` | 206 + 160 + 66 | the kernels' single-bit audit, and the processor's word on each change accepted |
+| `kglue.py`, `kglue_flip.py`, `kglue_native.c`, `test_kglue.py` | 569 + 136 + 109 + 119 | the stack's functions (the earlier trial): prover, checker; the audit; the tests |
 | `kremove.py` | 41 | which instructions can be replaced by a no-op with the contract still met: for a person to read |
-| `test_kcheck.py`, `test_ode.py` | 163 + 99 | the four kernels and the controls, from the sources; the specification on the vectors |
+| `test_ode.py` | 99 | the specification on the vectors, and 24 changes of its text |
+| `audit.sh`, `audit/` | 45 | every single-bit audit, with this machine's processor as the judge; their outputs |
 
 ## How
 
@@ -522,7 +527,7 @@ an 8-bit `or` read as 32 bits.
 
 - The specification and the claim, `blake3.spec` (168 lines), and the programs that read it and the bytes:
   for the hash `ode.py`, `kspec.py`, `klin.py`, `kdecode.py`, `kcheck.py`, `kone.py`, `kloop.py`, `kfn.py`:
-  3,920 lines; with `kglue.py`, 4,489 (their provers, about 150 of those, need no trust). And Python.
+  3,933 lines; with `kglue.py`, 4,502 (their provers, about 150 of those, need no trust). And Python.
 - That the things `hashr` is given the addresses of are apart from one another and from the stack (the
   claim says so: its caller's part).
 - What the functions inside are claimed to do (`proofs/inner.spec`) is not relied on: a wrong contract there
