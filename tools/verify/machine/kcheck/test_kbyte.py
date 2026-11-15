@@ -341,8 +341,8 @@ class Base64(unittest.TestCase):
 
 
 class Inet(unittest.TestCase):
-    """The Internet checksum: the one program here whose contract has no `trace` line: no branch and no address
-    depends on the bytes. Written with the checker frozen: no change to it."""
+    """The Internet checksum. Its contract has no `trace` line: no branch and no address depends on the bytes,
+    though every byte goes into the result. Written with the checker frozen: no change to it."""
     @classmethod
     def setUpClass(cls): cls.p = Program("inet", "inet", "ode_inet")
 
@@ -377,6 +377,22 @@ class Inet(unittest.TestCase):
         n, accepted = instructions_changed(self.p)
         self.assertEqual((n, len(accepted)), (86, 4))
         self.assertTrue(all(i.startswith(".mov") and c == ".nop" for i, c in accepted))
+
+
+class Contracts(unittest.TestCase):
+    def test_no_line_of_a_public_contract_can_go(self):
+        """Every `requires`, `writes`, `trace` and `needs` line of every program's public contract, left out in turn,
+        is refused: none asks more of the caller, or allows the function more, than the code needs. (It found two
+        such lines in the base-64 encoder's contract when it was first run.)"""
+        from programs.check_programs import PROGRAMS
+        for program, function, _ in PROGRAMS:
+            p = Program(program, function, "ode_" + function)
+            lines = p.spec.split("\n")
+            start = next(k for k, l in enumerate(lines) if l.startswith(f"contract ode_{function}("))
+            end = next(k for k in range(start, len(lines)) if lines[k].startswith("}"))
+            for k in range(start + 1, end):
+                if lines[k].strip().startswith(("requires", "writes", "trace", "needs")):
+                    self.assertTrue(p.verdict(spec="\n".join(lines[:k] + lines[k + 1:])).startswith("refused"), f"ode_{function}: {lines[k].strip()}")
 
 
 class Arithmetic(unittest.TestCase):

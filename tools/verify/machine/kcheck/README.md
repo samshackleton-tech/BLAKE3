@@ -62,7 +62,7 @@ encoder's):
 | first difference of two runs of bytes | `returns common(a, b)` | 45 | 1 place, 8 lines | 3 ms |
 | UTF-8: is it well-formed, and how many code points | `returns if failed(utf8(input)) then NO else utf8(input)` | 300 | 1 place, 11 lines | 0.17 s |
 | Base 64 encoder | `requires cap >= 4 * ((n + 2) / 3)`; `returns 4 * ((n + 2) / 3)`; `ensures out[0 .. 4 * ((n + 2) / 3)] = base64(input)` | 197 | 1 place, 12 lines | 13 s |
-| the Internet checksum (RFC 1071) | `requires n < 562949953421312`; `returns checksum(input)`; and no `trace` line: its timing does not depend on the bytes | 76 | 1 place, 8 lines | 0.13 s |
+| the Internet checksum (RFC 1071) | `requires n < 562949953421312`; `returns checksum(input)`; no `trace` line: its timing does not depend on the bytes | 76 | 1 place, 8 lines | 0.13 s |
 
 What is shown of BLAKE3, from the bytes (`python3 check_all.py`, of the objects an assembler makes of the
 sources: 18 functions, 3,831 instructions, 19 s):
@@ -470,10 +470,12 @@ that is no way to compute anything.
   give (`requires cap >= 4 * ((n + 2) / 3)`), so it has no NO. One thing it showed: **paths multiply.** A
   letter is a choice of five; the four letters of a group are written in a loop the checker runs through;
   that is 625 paths a turn, and the check takes 13 s where the others take a fraction of one. A place
-  inside the group would join them; so would a checker that joined paths that end alike.
+  inside the group should join them (not tried); a checker that joined paths that end alike would do it
+  for every program.
 - *The Internet checksum*: nothing in the languages (written with the checker frozen, accepted on its
-  first run). It is the one program here whose contract has no `trace` line: no branch and no address
-  depends on the bytes, and the checker shows it (it refuses Adler-32 without the line). And the checker
+  first run). Its contract has no `trace` line: no branch and no address depends on the bytes, though every
+  byte goes into the result, and the checker shows it (it refuses Adler-32 without the line; the storing
+  encoder and the varint have none either). And the checker
   did arithmetic its author had wrong: I wrote `requires n < 2^32` with four folds of the carries; a
   changed specification with three folds was accepted (three do suffice below 2^32), and so was `n < 2^49`
   with four (the sum then still fits 64 bits, and four folds bring any such sum within 16). The contract

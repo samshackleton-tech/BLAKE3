@@ -28,7 +28,8 @@ and nothing an argument addresses lies in it.
 **If the caller does that, the function returns**, and then:
 
 - `ensures X = E`: the bytes at X are E, a value of the specification. `ensures X[a .. b] = E`: those of its
-  bytes. `ensures ... if C`: where C holds.
+  bytes, and nothing is said of the rest of X, which may then hold anything. `ensures ... if C`: where C
+  holds. On the right, a name means what was there when the function was called.
 - `returns E`: the number it gives back. With no such line, nothing is said of that number. `returns r`,
   where r is no name of the specification's, gives the number that name, and other lines speak of it:
   `ensures lz4(out[0 .. r], n) == input if r != NO` (what it wrote decodes to the input, unless it said NO),

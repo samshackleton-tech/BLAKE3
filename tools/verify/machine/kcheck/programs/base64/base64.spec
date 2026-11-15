@@ -29,10 +29,8 @@ def base64(bytes) { groups(bytes)[len(bytes) / 3] ++ rest(bytes, 3 * (len(bytes)
 contract ode_base64(out: cap bytes, cap: number, input: n bytes, n: number) {
     requires apart(out, input)
     requires cap >= 4 * ((n + 2) / 3)
-    requires cap < 18446744073709551615
     returns 4 * ((n + 2) / 3)
     ensures out[0 .. 4 * ((n + 2) / 3)] = base64(input)
-    writes out
     trace depends on input
     stack 120
 }

@@ -1,0 +1,17 @@
+control: the unchanged object is ACCEPTED 
+ode_inet: 2024 single-bit changes of 253 bytes of code (50 s): 953 stopped by the decoder, 1058 refused, 13 accepted, 0 with NO VERDICT (the time limit)
+  accepted: +0x1A byte 0 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .r8) (.imm 0x0)
+  accepted: +0x1A byte 2 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rcx) (.imm 0x0)
+  accepted: +0x1A byte 2 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rdx) (.imm 0x0)
+  accepted: +0x6E byte 2 bit 0: .mov 64 (.reg .rcx) (.imm 0x1)  ->  .mov 64 (.reg .rax) (.imm 0x1)
+  accepted: +0xA6 byte 0 bit 0: .mov 64 (.reg .rax) (.reg .r13)  ->  .mov 64 (.reg .r8) (.reg .r13)
+  accepted: +0xA6 byte 2 bit 0: .mov 64 (.reg .rax) (.reg .r13)  ->  .mov 64 (.reg .rcx) (.reg .r13)
+  accepted: +0xA6 byte 2 bit 1: .mov 64 (.reg .rax) (.reg .r13)  ->  .mov 64 (.reg .rdx) (.reg .r13)
+  accepted: +0xBC byte 0 bit 0: .mov 64 (.reg .rax) (.reg .r13)  ->  .mov 64 (.reg .r8) (.reg .r13)
+  accepted: +0xBC byte 2 bit 0: .mov 64 (.reg .rax) (.reg .r13)  ->  .mov 64 (.reg .rcx) (.reg .r13)
+  accepted: +0xBC byte 2 bit 1: .mov 64 (.reg .rax) (.reg .r13)  ->  .mov 64 (.reg .rdx) (.reg .r13)
+  accepted: +0xD2 byte 0 bit 0: .mov 64 (.reg .rax) (.reg .r13)  ->  .mov 64 (.reg .r8) (.reg .r13)
+  accepted: +0xD2 byte 2 bit 0: .mov 64 (.reg .rax) (.reg .r13)  ->  .mov 64 (.reg .rcx) (.reg .r13)
+  accepted: +0xD2 byte 2 bit 1: .mov 64 (.reg .rax) (.reg .r13)  ->  .mov 64 (.reg .rdx) (.reg .r13)
+control: the unchanged object on this processor (3000): same
+the 13 accepted changes on this processor: 13 same
