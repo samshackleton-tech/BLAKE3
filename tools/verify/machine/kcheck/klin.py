@@ -44,11 +44,16 @@ class Lin:
 def sym(name): return Lin([(name, 1)])
 
 
+AGAIN = 30000           # rows, where a question is asked again
+
+
 class Facts:
     """Numbers known to be >= 0, numbers known not to be 0, symbols known in terms of others. Whole numbers."""
+    thorough = False        # kbyte.py sets it: a question the first elimination does not answer is asked again (see `again`)
     def __init__(self): self.ge, self.ne, self.eq, self.below, self.bad, self.memo, self.asked = [], [], {}, [], False, {}, 0
     def clone(self):
         f = Facts(); f.ge, f.ne, f.eq, f.below, f.bad, f.memo, f.asked = list(self.ge), list(self.ne), dict(self.eq), list(self.below), self.bad, dict(self.memo), self.asked
+        f.thorough = self.thorough
         return f
     @staticmethod
     def norm(f):
@@ -74,9 +79,47 @@ class Facts:
         if self.bad: return True                                    # facts that cannot all hold show anything: such a path is no path
         goal = self.norm(goal)
         if goal in self.memo: return self.memo[goal]
-        answer = self.quick(goal) or self.eliminate(self.ge + self.from_below() + [self.norm(-goal - 1)])
+        system = self.ge + self.from_below() + [self.norm(-goal - 1)]
+        answer = self.quick(goal) or self.eliminate(system)
+        if not answer and self.thorough: answer = self.again(system, goal)
         self.memo[goal] = answer
         return answer
+
+    def again(self, system, goal):
+        """A question the first elimination left open, asked again, two other ways. Each, like the first, says
+        "shown" only when the numbers cannot all be >= 0.
+        By bounds: the least and the greatest each symbol can be, from the rows that hold it and the bounds of the
+        other symbols there, rounded to whole numbers, over and over; a symbol whose least passes its greatest
+        cannot be. (This does not depend on an order, and it is where a quotient gets its value: 16 q <= m + 236
+        and m <= 18 give q <= 15.)
+        By the same elimination with more room, the goal's own symbols taken last."""
+        return self.bounded(system) or self.eliminate(system, limit=AGAIN, last=frozenset(s for s, _ in goal.c))
+
+    @staticmethod
+    def bounded(system, rounds=12):
+        """Can the numbers in `system` not all be >= 0, by the bounds of their symbols alone?"""
+        lo, hi = {}, {}
+        for _ in range(rounds):
+            changed = False
+            for f in system:
+                for s, a in f.c:
+                    # a * s >= -(the rest), and the rest is at most `most`
+                    most = f.k
+                    for t, b in f.c:
+                        if t == s: continue
+                        bound = hi.get(t) if b > 0 else lo.get(t)
+                        if bound is None: most = None; break
+                        most += b * bound
+                    if most is None: continue
+                    if a > 0:
+                        least = -(most // a)                        # s >= -most / a, rounded up
+                        if s not in lo or least > lo[s]: lo[s] = least; changed = True
+                    else:
+                        greatest = most // -a                       # s <= most / -a, rounded down
+                        if s not in hi or greatest < hi[s]: hi[s] = greatest; changed = True
+                    if s in lo and s in hi and lo[s] > hi[s]: return True
+            if not changed: return False
+        return False
 
     def quick(self, goal):
         for f in self.ge:
@@ -97,7 +140,7 @@ class Facts:
         return self.memo["from below"]
 
     @staticmethod
-    def eliminate(system, limit=600):
+    def eliminate(system, limit=600, last=frozenset()):
         """Can the numbers in `system` not all be >= 0? Symbols are eliminated one after another; a constant
         below zero left over says so."""
         rows = set()
@@ -110,7 +153,7 @@ class Facts:
             for f in rows:
                 for s, a in f.c:
                     p = count.setdefault(s, [0, 0]); p[0 if a > 0 else 1] += 1
-            s = min(count, key=lambda s: count[s][0] * count[s][1])
+            s = min(count, key=lambda s: (s in last, count[s][0] * count[s][1]))
             pos = [f for f in rows if dict(f.c).get(s, 0) > 0]
             neg = [f for f in rows if dict(f.c).get(s, 0) < 0]
             rows = {f for f in rows if s not in dict(f.c)}
@@ -129,7 +172,9 @@ class Facts:
     def consistent(self):
         """False: the facts cannot all hold (a path that assumes them is taken by no run)."""
         if self.bad: return False
-        if "consistent" not in self.memo: self.memo["consistent"] = not self.eliminate(self.ge + self.from_below())
+        if "consistent" not in self.memo:
+            system = self.ge + self.from_below()
+            self.memo["consistent"] = not (self.eliminate(system) or (self.thorough and (self.bounded(system) or self.eliminate(system, limit=AGAIN))))
         return self.memo["consistent"]
 
     def zero(self, x):

@@ -14,6 +14,10 @@
 //       what the m bytes found alike amount to);
 //   counted(...) == counted(...), count(...) == {value: lit, next: ...}
 //       the count of literals reads as it was written.
+// And one kind carries the room: what is written is never much more than what it stands for,
+//   255 * e <= 256 * a
+// at each sequence's start, with the count's bytes and the literals accounted for inside a sequence. With
+// the room the contract names (n + n / 255 + 16) no path comes to NO.
 
 // a place in the input is looked at
 place +0x9b {
@@ -26,6 +30,7 @@ place +0x9b {
     fact state == 0
     fact a <= p
     fact p <= n
+    fact 255 * e <= 256 * a
     fact sequences(E ++ R, e, input[0 .. a], n) == lz4(E ++ R, n)
     any stack[24], stack[32], stack[40], stack[48], stack[56]
     decreases n - p, 9
@@ -45,6 +50,7 @@ place +0xff {
     fact d <= p
     fact m <= 18
     fact p + m + 5 <= n
+    fact 255 * e <= 256 * a
     fact copies(input[0 .. p], d)[m] == input[0 .. p + m]
     fact sequences(E ++ R, e, input[0 .. a], n) == lz4(E ++ R, n)
     any stack[40], stack[48], stack[56]
@@ -66,9 +72,10 @@ place +0x24c {
     ghost e0 = e - 1
     fact state == 0
     fact go == 1
-    fact e0 + 1 <= e
     fact lit + a == p
     fact rest + 15 <= lit
+    fact 255 * e + rest == lit + 255 * e0 + 240
+    fact 255 * e0 <= 256 * a
     fact m >= 4
     fact m <= 18
     fact d <= p
@@ -98,6 +105,7 @@ place +0x326 {
     fact lit + a == p
     fact e0 + 1 <= len(HDR)
     fact e + lit <= cap + j
+    fact 255 * len(HDR) <= 256 * a + lit + 495
     fact m <= 18
     fact d <= p
     fact p + m + 5 <= n
@@ -121,9 +129,10 @@ place +0x492 {
     future R = out
     ghost e0 = e - 1
     fact go == 1
-    fact e0 + 1 <= e
     fact lit + a == n
     fact rest + 15 <= lit
+    fact 255 * e + rest == lit + 255 * e0 + 240
+    fact 255 * e0 <= 256 * a
     fact M[e0] == 240
     fact counted(M ++ R, e, lit - rest) == counted(M ++ R, e0 + 1, 15)
     fact sequences(M ++ R, e0, input[0 .. a], n) == lz4(M ++ R, n)

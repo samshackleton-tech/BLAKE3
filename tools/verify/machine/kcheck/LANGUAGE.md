@@ -28,7 +28,8 @@ But it is not written as a way to compute, and a contract may use it in a way no
   see "No value" below. `pow(a, b)`, `bits(n)` (its length in bits), `==`, `!=`, `<`, `<=`, `>`, `>=`.
 - **Lists**: `xs[i]` (place i, from 0), `xs[a .. b]` (places a up to b, b not among them), `xs ++ ys`,
   `len(xs)`, `[e for i in a .. b]` (e for each i from a up to b), `xs with [i: a]` (xs with place i
-  replaced), `words(bytes)` (every four bytes a word, the lowest first).
+  replaced), `words(bytes)` (every four bytes a word, the lowest byte first) and `bytes_of(words)` (the
+  other way). These two are the only place a byte order is said, and a specification may not define them.
 - **Choice**: `if c then a else b`.
 - **Search**, among numbers that can be listed: `the least number n in a .. b with C`,
   `the greatest power of two k with C`.

@@ -333,6 +333,7 @@ class Machine(kfn.Machine):
         self.g = {r: ("q", r + " at entry") for r in G64}
         self.g["rsp"] = ("a", "frame", 0)
         self.x, self.flags, self.facts, self.conds, self.memo = {}, None, Facts(), {}, {}
+        self.facts.thorough = True
         self.mem = {"frame": {0: (8, "q", ("q", "return address"))}}
         self.readonly, self.given, self.len = set(), {}, {}
         self.low, self.pc, self.steps, self.back, self.since = 0, None, 0, {}, 0

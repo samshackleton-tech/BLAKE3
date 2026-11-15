@@ -161,7 +161,8 @@ class Lz4Store(unittest.TestCase):
         self.assertEqual(self.p.verdict(), "accepted")
 
     def test_a_changed_specification_or_contract_is_refused(self):
-        room = "\n    ensures r != NO if cap >= n + n / 255 + 16"
+        after = "\n    writes out\n    stack 88"
+        room = "\n    ensures r != NO if cap >= n + n / 255 + 16" + after
         self.p.changed(self, "spec", [
             ("{value: sum + bytes[at], next: at + 1}", "{value: sum + bytes[at] + 1, next: at + 1}"), ("{value: sum + bytes[at], next: at + 1}", "{value: sum + bytes[at], next: at + 2}"),
             ("counted(bytes, at + 1, sum + 255)", "counted(bytes, at + 1, sum + 254)"), ("if bytes[at] < 255 then", "if bytes[at] < 254 then"),
@@ -176,8 +177,8 @@ class Lz4Store(unittest.TestCase):
             ("ensures lz4(out[0 .. r], n) == input if r != NO" + room, "ensures lz4(out[0 .. r], n) == input" + room),
             ("ensures lz4(out[0 .. r], n) == input if r != NO" + room, "ensures lz4(out[0 .. r + 1], n) == input if r != NO" + room),
             # when it does not give NO: no less room than it needs will do (15 bytes need 17), and not the other answer
-            (room, "\n    ensures r != NO if cap >= n + n / 255 + 1"), (room, "\n    ensures r != NO if cap >= n + 16"), (room, "\n    ensures r != NO if cap >= n + n / 256 + 2"),
-            (room, "\n    ensures r != NO"), (room, "\n    ensures r == NO if cap >= n + n / 255 + 16"),
+            (room, "\n    ensures r != NO if cap >= n + n / 255 + 1" + after), (room, "\n    ensures r != NO if cap >= n + 16" + after), (room, "\n    ensures r != NO if cap >= n + n / 256 + 2" + after),
+            (room, "\n    ensures r != NO" + after), (room, "\n    ensures r == NO if cap >= n + n / 255 + 16" + after),
             ("    writes out\n    stack 88", "    stack 88"), ("stack 88", "stack 80")])
 
     def test_a_proof_without_one_of_its_lines_is_refused(self):
@@ -205,7 +206,8 @@ class Lz4Pack(unittest.TestCase):
         self.assertEqual(self.p.verdict(), "accepted")
 
     def test_a_changed_specification_or_contract_is_refused(self):
-        tail = "\n    writes out\n    trace"
+        tail = "\n    ensures r != NO if cap >= n + n / 255 + 16\n    writes out\n    trace"
+        room, after = "\n    ensures r != NO if cap >= n + n / 255 + 16\n    writes out\n    trace", "\n    writes out\n    trace"
         self.p.changed(self, "spec", [
             ("{value: sum + bytes[at], next: at + 1}", "{value: sum + bytes[at] + 1, next: at + 1}"), ("counted(bytes, at + 1, sum + 255)", "counted(bytes, at + 1, sum + 254)"), ("if bytes[at] < 255 then", "if bytes[at] < 254 then"),
             ("if first < 15 then {value: first, next: at} else counted(bytes, at, 15)", "if first < 14 then {value: first, next: at} else counted(bytes, at, 15)"),
@@ -224,7 +226,10 @@ class Lz4Pack(unittest.TestCase):
             ("ensures lz4(out[0 .. r], n) == input if r != NO" + tail, "ensures lz4(out[0 .. r], n) == input" + tail),
             ("ensures lz4(out[0 .. r], n) == input if r != NO" + tail, "ensures lz4(out[0 .. r + 1], n) == input if r != NO" + tail),
             ("    requires d >= 1\n", ""), ("    requires d <= 65535\n", ""), ("requires d <= 65535", "requires d <= 65536"),
-            ("    trace depends on input\n    stack 120", "    stack 120"), ("stack 120", "stack 112")])
+            ("    trace depends on input\n    stack 120", "    stack 120"), ("stack 120", "stack 112"), ("    requires cap < NO\n    requires d", "    requires d"),
+            # when it does not give NO: no less room will do (15 bytes that do not repeat need 17), and not the other answer
+            (room, "\n    ensures r != NO if cap >= n + n / 255 + 1" + after), (room, "\n    ensures r != NO if cap >= n + 16" + after), (room, "\n    ensures r != NO if cap >= n + n / 256 + 16" + after),
+            (room, "\n    ensures r != NO" + after), (room, "\n    ensures r == NO if cap >= n + n / 255 + 16" + after)])
 
     def test_a_proof_without_one_of_its_lines_is_refused(self):
         lines, needless = self.p.proof.split("\n"), []
@@ -234,12 +239,47 @@ class Lz4Pack(unittest.TestCase):
         self.assertEqual(needless, [])
 
     def test_a_changed_instruction_is_refused_unless_it_keeps_the_contract(self):
-        # Of 429, 45 accepted, each an instruction left out: moves that change nothing, and jumps after which NO is
-        # given where it need not be, or a match is not taken. (Each such object is run on the processor by the
-        # audit: what it writes still decodes to its input.)
+        # Of 429, 38 accepted, each an instruction left out: moves that change nothing, and jumps after which a
+        # match is not taken. (Each such object is run on the processor by the audit: what it writes still decodes
+        # to its input, and it has room where the contract says so. Before the contract said when NO is not given,
+        # 45: seven more, after which NO was given for a block that fits.)
         n, accepted = instructions_changed(self.p)
-        self.assertEqual((n, len(accepted)), (429, 45))
+        self.assertEqual((n, len(accepted)), (429, 38))
         self.assertEqual({c for i, c in accepted}, {".nop"})
+
+
+class Arithmetic(unittest.TestCase):
+    """klin.py asked again (kbyte.py's facts are `thorough`): by bounds, and by elimination with more room."""
+    def test_a_quotient_gets_its_value_from_bounds_whatever_else_is_known(self):
+        from klin import Facts, sym, Lin
+        f = Facts(); f.thorough = True
+        q, m = sym("q"), sym("m")
+        others = [sym(f"x{i}") for i in range(12)]
+        for a, b in zip(others, others[1:]): f.add(b.scale(255) - a.scale(256) + 7); f.add(a.scale(3) - b + 1000)       # rows that have nothing to do with it
+        for fact in (m - 4, Lin.of(18) - m, m + 236 - q.scale(16), q.scale(16) + 15 - m - 236): f.add(fact)
+        self.assertIs(f.zero(q - 15), True)
+        self.assertFalse(f.ge0(q - 16)); self.assertFalse(f.ge0(Lin.of(14) - q))
+        plain = Facts()
+        for fact in (m - 4, Lin.of(18) - m, m + 236 - q.scale(16), q.scale(16) + 15 - m - 236): plain.add(fact)
+        self.assertFalse(plain.thorough)
+
+    def test_neither_way_shows_what_is_not_so(self):
+        # 3,000 systems of a few small rows over three symbols: where `bounded`, or the elimination with the room
+        # and the order `again` gives it, says they cannot all hold, no values from -6 to 6 make them hold
+        import itertools, random
+        from klin import Facts, Lin, AGAIN
+        r, shown = random.Random(5), [0, 0]
+        names = ("x", "y", "z")
+        for _ in range(3000):
+            rows = [Lin([(s, r.randrange(-3, 4)) for s in names if r.random() < 0.7], r.randrange(-8, 9)) for _ in range(r.randrange(2, 6))]
+            rows = [Facts.norm(f) for f in rows if f.c]
+            ways = (Facts.bounded(rows), Facts.eliminate(rows, limit=AGAIN, last=frozenset(r.sample(names, r.randrange(0, 3)))))
+            for k, said in enumerate(ways): shown[k] += said
+            if any(ways):
+                for v in itertools.product(range(-6, 7), repeat=3):
+                    env = dict(zip(names, v))
+                    self.assertFalse(all(sum(a * env[s] for s, a in f.c) + f.k >= 0 for f in rows), (rows, v, ways))
+        self.assertGreater(min(shown), 50)
 
 
 class Varint(unittest.TestCase):

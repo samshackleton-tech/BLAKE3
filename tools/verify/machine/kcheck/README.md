@@ -49,14 +49,14 @@ assembler and no linker is relied on.
 
 **Programs other than the hash** (`programs/`, November 15: to find what the two languages lack). Each has
 its own specification and public contract, code in Ode, and is checked from its bytes
-(`python3 programs/check_programs.py`: six functions, 894 instructions, 1.2 s):
+(`python3 programs/check_programs.py`: six functions, 894 instructions, 3 s):
 
 | | the public contract's `ensures` and `returns` | instructions | proof | checked in |
 |---|---|---|---|---|
 | Adler-32 | `returns adler32(input)` | 55 | 1 place, 7 lines | 4 ms |
 | LZ4 block decoder | `returns if failed(lz4(input, cap)) then NO else len(lz4(input, cap))`; `ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap) if !failed(lz4(input, cap))` | 267 | 5 places, 96 lines | 0.33 s |
 | LZ4 encoder, literals only | `ensures lz4(out[0 .. r], n) == input if r != NO`; `ensures r != NO if cap >= n + n / 255 + 16` | 132 | 2 places, 26 lines | 20 ms |
-| LZ4 encoder with matches | `ensures lz4(out[0 .. r], n) == input if r != NO` | 360 | 6 places, 124 lines | 0.55 s |
+| LZ4 encoder with matches | the same two lines | 360 | 6 places, 133 lines | 2.1 s |
 | a number's varint | `returns r`; `ensures out[0 .. r] = varint(v)` | 35 | none | 0.1 s |
 | first difference of two runs of bytes | `returns common(a, b)` | 45 | 1 place, 8 lines | 3 ms |
 
@@ -75,7 +75,7 @@ sources: 18 functions, 3,831 instructions, 19 s):
   specification.
 
 What a reader relies on: the specification and the public contract, which he reads, with the two pages that
-say what they mean; the checker, unverified Python (4,131 lines for the hash, 909 more for the programs of
+say what they mean; the checker, unverified Python (4,176 lines for the hash, 910 more for the programs of
 `programs/`, 569 for the stack's); the processor doing what the checker takes each instruction form to do;
 a loader that maps the file as its headers say; Python. Most of this page is what has been done to find
 where the checker is wrong, and what that found.
@@ -213,7 +213,7 @@ own specification, opened later on the same path, finds the same name). At the r
 contract says is left is the specification's value of it; the result, the registers a callee keeps, the stack
 pointer and the stack used are checked; every write was within what the contract lets the function write.
 
-The numbers' part (`klin.py`, 211 lines): a fact is a number known not to be below zero; one known both
+The numbers' part (`klin.py`, 256 lines): a fact is a number known not to be below zero; one known both
 ways is an equality and one of its symbols is replaced; a question is answered by adding facts up (Fourier
 and Motzkin's elimination, in whole numbers). Halving and the low bit make a symbol with its two facts.
 
@@ -297,6 +297,20 @@ the library still does that `hash.ode` does not: a 16-lane path for 16 chunks or
 kernel runs half empty), and parents many to a call over small parts and at the top of a message of 32 KiB.
 Neither is something the way of proving forbids: they are code not yet written (the first needs a kernel
 checked). On the SSE4.1 kernel `hashr` and `hashf` are alike (0.74 and 0.58 GiB/s: one block at a time).
+
+**The file shipped, itself** (`b3hashr.o`, SHA-256 `ddcc8b45…f48e`, linked into the same harness; pinned runs
+`hashr-speed4-9700x-…-90f68963` and `hashr-speed4-epyc9255-…-445a8dd9`, the same library, beside the
+separately assembled objects in the same run):
+
+| bytes | `b3hashr.o`, Ryzen 7 9700X | the objects | library | `b3hashr.o`, EPYC 9255 | the objects | library |
+|---|---|---|---|---|---|---|
+| 16,384 | 6.37 | 6.38 | 10.63 | 5.13 | 5.13 | 8.44 |
+| 65,536 | 14.96 | 14.96 | 16.02 | 12.14 | 12.17 | 13.09 |
+| 1,048,576 | 15.77 | 15.87 | 16.35 | 13.05 | 13.17 | 13.28 |
+| 16,777,216 | 15.54 | 15.50 | 16.03 | 12.72 | 12.69 | 13.12 |
+
+96% and 98% of the library at 1 MiB, 97% at 16 MiB. At 1 MiB the file is 0.6% to 0.9% slower than the
+objects: the same instructions, laid out by `klink.py` and not by a linker.
 
 **The checker refused my first form of the wide leaf.** I had written `wide32(...)` and then `return 0`
 inside an `if`; Ode's `return` gives the result and does not leave the function, so the code went on, hashed
@@ -404,7 +418,7 @@ something BLAKE3 does not have: a result that is a number, a loop whose count is
 that may be malformed, output that depends on earlier output, an answer that may be "no", and a contract
 that is no way to compute anything.
 
-    python3 programs/check_programs.py          # the six functions from their bytes: 894 instructions, 1.2 s
+    python3 programs/check_programs.py          # the six functions from their bytes: 894 instructions, 3 s
     python3 programs/test_specs.py              # each specification against someone else's answers
     python3 test_kbyte.py                       # changed specifications, contracts, proofs and instructions
 
@@ -429,12 +443,12 @@ that is no way to compute anything.
   closed world already demands: no byte read outside the block, none written outside `cap`.
 - *LZ4 encoding*: a contract that is not a way to compute: `ensures lz4(out[0 .. r], n) == input`. It is
   true of every right encoder; the two here differ in what they write and share the line. It is also true
-  of an encoder that always says NO, so the plain one's contract has a second line saying when it does not
-  (`ensures r != NO if cap >= n + n / 255 + 16`); the packing one's has not (below).
+  of an encoder that always says NO, so each contract has a second line saying when it does not
+  (`ensures r != NO if cap >= n + n / 255 + 16`: the room LZ4's users know as its bound).
 - *Varint, first difference*: nothing. They were written after the others and needed no change to either
   language or to the checker.
 
-**`kbyte.py`** (909 lines) is the checker for these: `kfn.py`'s machine, with memory as bytes and lists of
+**`kbyte.py`** (910 lines) is the checker for these: `kfn.py`'s machine, with memory as bytes and lists of
 bytes in parts, numbers that depend on counts, and places. A proof (`programs/NAME/FUNCTION.proof`) is a
 place for each loop:
 
@@ -456,7 +470,7 @@ the model that wrote the code wrote them, from the checker's refusals. Nothing s
 
 **What was done to find it wrong** (`test_kbyte.py`, `kbyte_flip.py`, `kbyte_nop.py`, `audit.sh`):
 
-- **Changed texts** (`test_kbyte.py`, 23 tests, about three minutes). Each program's specification and
+- **Changed texts** (`test_kbyte.py`, 25 tests, about ten minutes). Each program's specification and
   contract with one thing changed (a constant, a bound, a `requires` or a `trace` line left out, the result
   off by one): refused. Each line of each proof left out in turn: refused (a line that could go was taken
   out). Each instruction left out in turn, and each jump, add and subtract turned round: refused, but for
@@ -489,18 +503,24 @@ the model that wrote the code wrote them, from the checker's refusals. Nothing s
 - An encoder's contract (`ensures lz4(out[0 .. r], n) == input if r != NO`) is met by an object that says
   NO where there is room. Of the packing encoder's 360 instructions, 44 could be left out with the contract
   still met, and seven of those objects, on the processor, said NO for a block that fits. The contract was
-  true of them. The plain encoder's contract now says when NO is not given, and three of the 17 changed
-  instructions that had been accepted for it are refused.
+  true of them. Both contracts now say when NO is not given, and those changes are refused (the plain
+  encoder's accepted changes of an instruction went from 17 to 14, the packing one's from 45 to 38).
 - A contract with two `stack` lines was read as having the second. A contract now says each such thing once.
 - `bytes_of` was a definition in `blake3.spec`. A contract whose meaning in memory rests on it could have
   been changed by changing the specification. It is the language's own now, as `words` was.
-- The checker's arithmetic is the weak part. It decides `a <= b` by eliminating symbols from linear facts,
-  with a limit on the rows and with rounding to whole numbers that depends on the order of elimination. The
-  packing encoder's bound on its output (`255 * e <= 256 * a` at each sequence) is linear and true, and with
-  it some other fact of the same path was no longer shown; changing the limit changed which. So that
-  contract has no line for when NO is not given. "Not shown" is never "shown wrong", but a prover should
-  not have to learn the order of elimination. (To do: a search that returns multipliers, which the checker
-  then adds up; cuts for whole numbers.)
+- The checker's arithmetic was too weak, in a way that depended on luck. It decides `a <= b` by eliminating
+  symbols from linear facts (`klin.py`), with a limit on the rows, and it rounds to whole numbers only where
+  a row happens to be left with one symbol, which depends on the order of elimination. The packing
+  encoder's bound on its output (`255 * e <= 256 * a` at each sequence) is linear and true; with it in the
+  proof, another fact of the same path (that a token's low four bits are the match's length less four) was
+  no longer shown, and
+  changing the limit changed which fact failed. Now, for these programs, a question the first elimination
+  leaves open is asked again two ways (`Facts.again`): by bounds (the least and greatest each symbol can
+  be, from each row and the other symbols' bounds, rounded, to a fixed point: no order), and by the same
+  elimination with fifty times the room and the goal's symbols last. Both only ever say "shown" when the
+  facts cannot all hold; `test_kbyte.py` tries 3,000 small systems against all values. The hash's checkers
+  ask as before. "Not shown" was never "shown wrong", but a prover should not have to learn an order. (Still
+  to do: a search that returns multipliers, which the checker then only adds up.)
 
 **Speed** (pinned runs, under the bench lock, one thread; `programs/bench.c`):
 
@@ -518,8 +538,8 @@ the library. Faster code needs facts the checker cannot yet carry (a sum that is
 is equal to the specification's modulo 65521, not equal to it).
 
 **Not done.** Sigil has no code. `kbyte.py` does not follow calls, and `kfn.py` does not know places or
-bytes in parts: they should be one checker. The packing encoder's contract does not say when NO is not
-given. No prover searches for places: each was written from the checker's refusals.
+bytes in parts: they should be one checker. No prover searches for places: each was written from the
+checker's refusals.
 
 ## The library's wide kernels, each run to its end (`kcheck.py`, the first trial)
 
@@ -671,11 +691,11 @@ specification. (The hash above does not use them: it has no stack.)
 | `b3hashr.o` | | the binary: 30,888 bytes, the proof in it |
 | `check_binary.py` | 140 | what a reader runs on the binary, or on what a linker made of it |
 | `programs/` | | five other programs: each its specification and public contract, its Ode source, the compiler's assembly, its proof, a harness for the processor; `check_programs.py`, `test_specs.py`, `bench.c`; `blake3-rust/` |
-| `kbyte.py`, `test_kbyte.py` | 909 + 287 | the checker of those programs (bytes, numbers, places); its tests |
+| `kbyte.py`, `test_kbyte.py` | 910 + 326 | the checker of those programs (bytes, numbers, places); its tests |
 | `kbyte_flip.py`, `kbyte_nop.py` | 117 + 37 | their single-bit audit and every instruction left out, the processor judging |
 | `klink.py`, `klink_flip.py`, `test_kbinary.py` | 134 + 72 + 182 | makes the binary of the assembler's objects (untrusted); every single-bit change of what a linker would have written; tests of the reading of a linked file |
 | `check_all.py` | 120 | every function from an assembler's objects, and that the hash's functions end |
-| `ode.py`, `kspec.py`, `klin.py` | 694 + 565 + 211 | the specification's reader; its algebra on symbols; numbers that depend on counts and the facts about them |
+| `ode.py`, `kspec.py`, `klin.py` | 694 + 565 + 256 | the specification's reader; its algebra on symbols; numbers that depend on counts and the facts about them |
 | `kdecode.py` | 581 | reads the ELF file (an object's sections, names and relocations; a linked file as a loader maps it) and decodes the instruction forms the code uses, and no others; no disassembler |
 | `kfn.py`, `test_kfn.py` | 889 + 131 | the checker of functions; its tests |
 | `kfn_flip.py`, `khash_native.c` | 133 + 176 | its single-bit audit; the whole hash on a processor against BLAKE3 in C |
@@ -783,7 +803,7 @@ an 8-bit `or` read as 32 bits.
 - The specification and the public contract (`blake3.spec`, 185 lines; for another program, its own
   `.spec`), with what they mean (`LANGUAGE.md`, `CONTRACT.md`), and the programs that read them and the
   bytes: for the hash `ode.py`, `kspec.py`, `klin.py`, `kdecode.py`, `kcheck.py`, `kone.py`, `kloop.py`,
-  `kfn.py`: 4,131 lines; for the programs of `programs/`, `kbyte.py` in place of the last four: 909 more;
+  `kfn.py`: 4,176 lines; for the programs of `programs/`, `kbyte.py` in place of the last four: 910 more;
   `kglue.py`, 569 (their provers, about 150 of those, need no trust). And Python.
 - No assembler and no linker, when the file checked is the file run (`check_binary.py`). A loader that
   maps the file as its program headers say, and nothing else in the process writing over the code.

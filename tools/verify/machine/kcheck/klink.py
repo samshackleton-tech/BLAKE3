@@ -92,11 +92,11 @@ def proof(image, where):
     return out
 
 
-def elf(image, where, sizes, align):
-    """An ELF object: .text (code and constants), the names, the proof (a section that is not loaded), and the
-    note that the stack is not to be run."""
+def elf(image, where, sizes, align, carried=None):
+    """An ELF object: .text (code and constants), the names, the proof (a section that is not loaded; the hash's,
+    unless one is given), and the note that the stack is not to be run."""
     shstr = b"\0.text\0.note.GNU-stack\0.symtab\0.strtab\0.shstrtab\0.ode.proof\0"
-    carried = proof(image, where)
+    if carried is None: carried = proof(image, where)
     strtab, syms = bytearray(b"\0"), bytearray(24)
     for name, at in sorted(where.items(), key=lambda x: x[1]):
         syms += struct.pack("<IBBHQQ", len(strtab), (1 << 4) | 2, 0, 1, at, sizes.get(name, 0))       # global, a function, in section 1

@@ -23,7 +23,7 @@ writes the code so that it can be proved, as he writes it so that it is fast).
 | the code | written to be proved, in Ode | nobody has to | `hash.ode`, 332 lines; `programs/*/*.ode` |
 | the binary | one file: the code's bytes, its constants, its names, the proof; nothing for a linker to fill in | the checker | `b3hashr.o`, 30,888 bytes |
 | the proof | what the checker needs beside the code: the inner contracts; a place for a loop whose count is not fixed | nobody has to | for the hash, `proofs/inner.spec` and no place of its own; for the programs, 0 to 6 places each |
-| the checker | runs the binary on symbols and compares with the specification; does not search | the auditor, once, for every program | 4,131 lines of Python for the hash, 909 more for the programs; unverified |
+| the checker | runs the binary on symbols and compares with the specification; does not search | the auditor, once, for every program | 4,176 lines of Python for the hash, 910 more for the programs; unverified |
 
 The auditor reads the specification and the public contract, and runs the checker on the binary
 (`python3 check_binary.py b3hashr.o`, or on the shared object or the executable a linker made of it: 19 s).
@@ -144,7 +144,7 @@ stays the auditor's.
 
 Done: the whole hash of a message, every length, from the binary's bytes, with nothing assumed of a callee,
 checked in 19 seconds; five other programs with their own specifications and contracts (Adler-32, an LZ4
-decoder and two encoders, a varint, a first difference), 894 instructions, checked in 1.2 seconds; the
+decoder and two encoders, a varint, a first difference), 894 instructions, checked in 3 seconds; the
 proof carried in the binary; a C and a Rust program linked with it and checked as files; audits with a
 processor as judge (README.md).
 
@@ -158,7 +158,7 @@ Not done, in the order I would take them:
 2. **The checker's own worth.** It is Python, tested and audited, not proved, and since November 15 it is
    two checkers of functions that should be one (`kfn.py`: words, calls by contract; `kbyte.py`: bytes,
    places). How a reader comes to trust it is put off (Sam, November 15): for now it is taken that he does.
-   Its weakest part is its arithmetic (README.md, "What that found").
+   Its arithmetic was its weakest part and is still its least principled (README.md, "What that found").
 3. **The source's checker** (above), and the compiler printing bytes, not assembly (BLAKE3 #396). (The
    binary is already one file of settled bytes, made of an assembler's objects by `klink.py`; the checker
    reads it as a loader maps it.)

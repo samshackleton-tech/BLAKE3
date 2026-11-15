@@ -49,10 +49,18 @@ flip() {    # PROGRAM FUNCTION HARNESS ARGS...
 LIBS=-lz flip adler32 adler32 native.c 200
 flip lz4 lz4_decode native.c 3000 full
 flip lz4 lz4_store native_store.c 3000 room
-flip lz4 lz4_pack native_pack.c 2000 sound
+flip lz4 lz4_pack native_pack.c 2000 full
 flip varint varint native.c 3000
 flip common common native.c 3000
-run "kbyte-nop-lz4_pack.txt" python3 kbyte_nop.py programs/lz4/lz4.spec ode_lz4_pack "$work/p/lz4_pack.o" programs/lz4/lz4_pack.proof programs/lz4/native_pack.c 6000 sound
+run "kbyte-nop-lz4_pack.txt" python3 kbyte_nop.py programs/lz4/lz4.spec ode_lz4_pack "$work/p/lz4_pack.o" programs/lz4/lz4_pack.proof programs/lz4/native_pack.c 6000 full
+# the programs' files as shipped (programs/NAME/odeNAME.o): each checked as a file, then run on this processor
+run "programs-shipped.txt" sh -c "for p in adler32 lz4 varint common; do python3 programs/check_file.py programs/\$p/ode\$p.o programs/\$p/\$p.spec || exit 1; done
+  cc -O1 -o '$work/s1' programs/adler32/native.c programs/adler32/odeadler32.o -lz && '$work/s1' 200 &&
+  cc -O1 -o '$work/s2' programs/lz4/native.c programs/lz4/odelz4.o && '$work/s2' 20000 full &&
+  cc -O1 -DBOTH -o '$work/s3' programs/lz4/native_store.c programs/lz4/odelz4.o && '$work/s3' 20000 room &&
+  cc -O1 -DBOTH -o '$work/s4' programs/lz4/native_pack.c programs/lz4/odelz4.o && '$work/s4' 20000 full &&
+  cc -O1 -o '$work/s5' programs/varint/native.c programs/varint/odevarint.o && '$work/s5' 100000 &&
+  cc -O1 -o '$work/s6' programs/common/native.c programs/common/odecommon.o && '$work/s6' 20000"
 # the binary as one file: what a linker would have written, bit by bit; then the file shipped, on this processor
 python3 klink.py "$work/hash" "$work/blob.o" > /dev/null && run "klink-flip.txt" python3 klink_flip.py "$work/blob.o" --native 2000
 run "binary.txt" sh -c "python3 check_binary.py b3hashr.o && cc -O1 -o '$work/shipped' khash_native.c kflip_thunk.S b3hashr.o && '$work/shipped' 2000 say"
