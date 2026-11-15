@@ -91,6 +91,22 @@ safety alone. A contract is a function's type. A function's own contract, used a
 rule for a recursive function: the induction. A place is a loop's type. The programmer directs the proof by
 the code's shape and by the contracts he gives the functions inside.
 
+Nearest relatives, as I remember them (not re-read today; to be read against this design):
+
+- Xi and Pfenning, "Eliminating array bound checking through dependent types" (1998) and "Dependent types in
+  practical programming" (1999): DML. Indices from linear arithmetic; annotations, not proofs.
+- Xi and Harper, "A dependently typed assembly language" (2001): the same at the level of assembly.
+- Morrisett, Walker, Crary and Glew, "From System F to typed assembly language" (1998).
+- Necula and Lee, "Safe kernel extensions without run-time checking" (1996); Necula, "Proof-carrying code"
+  (1997); Appel, "Foundational proof-carrying code" (2001), which shrinks what the consumer trusts to a
+  machine's semantics and a logic.
+- Bond and others, "Vale: verifying high-performance cryptographic assembly code" (2017): a language made
+  for assembly procedures with requires and ensures, checked through Dafny or F* and an SMT solver. Nearest in
+  subject (hashes and ciphers in assembly, fast). It trusts the solver and proves at the level of assembly
+  text; proofs take minutes and people guide them.
+- Sammler and others, "RefinedC" (2021): refinement types for C whose checking is a search-free procedure
+  (no backtracking), producing proofs a proof assistant checks. Nearest in method.
+
 What that tradition has and this has not: a checker of the *source*. Today the programmer learns that his
 code is not provable from the checker of the binary ("at a return: out is not what the contract says"). A
 type checker for Ode that says so of the source line would be the programmer's tool; the binary's checker
