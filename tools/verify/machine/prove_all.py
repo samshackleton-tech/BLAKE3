@@ -89,7 +89,7 @@ CHAINS = [
      ("audit-p16", "lang", "python3 mutants_p16.py 4 --spec-only", True)],
     [("p16-linkage", "lang", "python3 test_p16_linkage.py && python3 ../wide/test_p16_source.py", False)],
     # not a proof: the checker made for the wide kernels (kcheck/README.md), on the library's own assembly
-    [("kcheck", "kcheck", "python3 test_ode.py && python3 test_kcheck.py && python3 test_kloop.py && python3 test_kone.py && python3 test_kglue.py && python3 test_kfn.py && python3 test_kbinary.py && python3 check_binary.py b3hashr.o && python3 programs/test_specs.py && python3 test_kbyte.py", False)],
+    [("kcheck", "kcheck", "python3 test_ode.py && python3 test_kcheck.py && python3 test_kloop.py && python3 test_kone.py && python3 test_kglue.py && python3 test_kfn.py && python3 test_kbinary.py && python3 check_binary.py b3hashr.o && python3 programs/test_specs.py && python3 test_kbyte.py && python3 programs/check_programs.py", False)],
     [("hashw", "lang", SLOW + fn("hashw", "0x190000", True), False),
      ("hashf", "lang", SLOW + fn("hashf", "0x1A0000", True), False),
      ("hashf-bytes", "lang", 'lake build Meets_hashf_bytes > hashfbytes.log 2>&1 && ! grep -q -E "error|sorry" hashfbytes.log && grep -q "hashf_meets_bytes. depends on axioms" hashfbytes.log', False),

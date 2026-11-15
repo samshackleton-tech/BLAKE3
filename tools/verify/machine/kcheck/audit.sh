@@ -7,8 +7,9 @@
 # for (or, for a kernel, that the checker accepts) is linked with BLAKE3 written out in C and run on the
 # processor on inputs the contract allows. The outputs go to audit/*.txt; the last lines here are one a
 # function. Exit 1 if any accepted change is told from BLAKE3 by the processor, or any change has no verdict.
-# Run it after any change of kdecode.py, kcheck.py, kloop.py, kglue.py, kone.py, kfn.py, kspec.py, ode.py,
-# klin.py, blake3.spec or proofs/inner.spec: an unverified checker is worth what its audits are worth.
+# Run it after any change of kdecode.py, kcheck.py, kloop.py, kglue.py, kone.py, kfn.py, kbyte.py, kspec.py,
+# ode.py, klin.py, blake3.spec, proofs/inner.spec or a program's specification or proof: an unverified
+# checker is worth what its audits are worth.
 # (The functions of hash.ode are judged by the whole hash: each accepted change of one of them is linked with
 # the others and the kernels, and `hashr` is run against BLAKE3 on some 2,400 lengths and 200 more.)
 set -u
@@ -38,11 +39,25 @@ for f in push merge add; do run "kglue-flip-$f.txt" python3 kglue_flip.py $f "$w
 for f in avx512 sse41; do run "kone-flip-$f.txt" python3 kglue_flip.py $f "$work/glue" --jobs "$jobs" --native 20000; done
 fi
 for f in pad chunk_node node_out wide32 wide128 take part32 subtree hashr; do run "kfn-flip-$f.txt" env LIMIT="${LIMIT:-900}" python3 kfn_flip.py $f "$work/hash" --jobs "$jobs" --native 200; done
+# the programs of programs/ (kbyte.py): every single-bit change, the processor's word on each one accepted
+mkdir -p "$work/p"
+for f in adler32/adler32 lz4/lz4_decode lz4/lz4_store lz4/lz4_pack varint/varint common/common; do cc -c -o "$work/p/$(basename $f).o" "programs/$f.S" || exit 2; done
+flip() {    # PROGRAM FUNCTION HARNESS ARGS...
+    prog=$1; fn=$2; harness=$3; shift 3
+    run "kbyte-flip-$fn.txt" python3 kbyte_flip.py "programs/$prog/$prog.spec" "ode_$fn" "$work/p/$fn.o" "programs/$prog/$fn.proof" --jobs "$jobs" --detail --native "programs/$prog/$harness" "$@"
+}
+LIBS=-lz flip adler32 adler32 native.c 200
+flip lz4 lz4_decode native.c 3000 full
+flip lz4 lz4_store native_store.c 3000 sound
+flip lz4 lz4_pack native_pack.c 2000 sound
+flip varint varint native.c 3000
+flip common common native.c 3000
+run "kbyte-nop-lz4_pack.txt" python3 kbyte_nop.py programs/lz4/lz4.spec ode_lz4_pack "$work/p/lz4_pack.o" programs/lz4/lz4_pack.proof programs/lz4/native_pack.c 6000 sound
 # the binary as one file: what a linker would have written, bit by bit; then the file shipped, on this processor
 python3 klink.py "$work/hash" "$work/blob.o" > /dev/null && run "klink-flip.txt" python3 klink_flip.py "$work/blob.o" --native 2000
 run "binary.txt" sh -c "python3 check_binary.py b3hashr.o && cc -O1 -o '$work/shipped' khash_native.c kflip_thunk.S b3hashr.o && '$work/shipped' 2000 say"
 rm -rf "$work"
-grep -H "single-bit changes" audit/kflip-*.txt audit/kglue-flip-*.txt audit/kone-flip-*.txt audit/kfn-flip-*.txt | sed "s|^audit/||" | cut -c1-250
+grep -H "single-bit changes" audit/kflip-*.txt audit/kglue-flip-*.txt audit/kone-flip-*.txt audit/kfn-flip-*.txt audit/kbyte-flip-*.txt | sed "s|^audit/||" | cut -c1-250
 grep -h "accepted changes on this processor" audit/*.txt | sort | uniq -c | cut -c1-160
 tail -n 1 audit/binary.txt | sed "s|^|b3hashr.o on this processor: |"
 echo "audit: $([ $bad = 0 ] && echo 'every accepted change runs as the specification on this processor' || echo 'FAILED')"
