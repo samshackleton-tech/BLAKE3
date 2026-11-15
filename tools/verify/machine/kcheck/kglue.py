@@ -15,7 +15,7 @@ show, what the function leaves, how much stack it may use.
   merge(st, key, flags, plat, target)   the stack at `st` becomes what THE MERGE MACHINE makes of it, and the
                                         result is its count; the AVX-512 kernel is called only where plat is 5
   THE MERGE MACHINE                     while the stack holds more than `target` values, its top two become
-                                        their parent: compress(key, left ++ right, counter 0, 64 bytes, flags | PARENT)
+                                        their parent: `machine merge` and `fn parent` of blake3.ode
   push(st, cv)                          the value at `cv` is put on the stack at `st`
   add(st, key, flags, plat, cv, target) push, then merge
 
@@ -38,84 +38,43 @@ WHAT IS NOT CHECKED HERE: the one-block kernels themselves (their contract is ta
 merge machine is BLAKE3's tree (alg/Stack.lean proves that of the same machine: `merge_lazy`)."""
 import copy, json, os, sys, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import kcheck, kdecode
+import kcheck, kdecode, kspec, ode
 from kcheck import Fail, num, signed
-from kloop import Lin, Facts, value, lin, byte, unbyte, byte_or, byte_term
+from klin import Lin, Facts
+from kloop import value, lin
+from kspec import Stack, plain, byte, byte_or, byte_term
 
 BASE, DATA = 0x10000, 0x50000000
 CAPACITY = 55                       # values a stack's memory holds (1792 bytes: the count's 32, and 55 of 32)
-PARENT = 4
 AVX512 = 5                          # the platform word that says the machine has AVX-512 (hasher.ode)
 G64 = kcheck.G64
 KEPT = kcheck.SAVED                 # the registers a callee keeps
 ARGS = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
 
 
-def plain(x):
-    x = Lin.of(x)
-    return x if x.c else x.k
-
-
 def sym(name): return Lin([(name, 1)])
 
 
 # ---------------------------------------------------------------------------------------------------------
-# An abstract stack of chaining values.
-class Stack:
-    """A named unknown stack with some places replaced, and its count. Place 0 is the oldest value."""
-    def __init__(self, base, count, over=None):
-        self.base, self.count, self.over = base, Lin.of(count), dict(over or {})
-    def get(self, T, facts, i):
-        i = Lin.of(i)
-        for j, words in self.over.items():
-            z = facts.zero(i - j)
-            if z is None: raise Fail(f"places {i} and {j} of a stack: the facts do not say whether they are one")
-            if z: return words
-        return tuple(T.var("value", self.base, plain(i), w) for w in range(8))
-    def put(self, T, facts, i, words, count=None):
-        i, over = Lin.of(i), {}
-        for j, old in self.over.items():
-            z = facts.zero(i - j)
-            if z is None: raise Fail(f"places {i} and {j} of a stack: the facts do not say whether they are one")
-            if not z: over[j] = old
-        over[i] = tuple(words)
-        return Stack(self.base, self.count if count is None else count, over)
-    def counted(self, count): return Stack(self.base, count, self.over)
-    def same(self, T, facts, other):
-        """The same count, and the same value at every place below it."""
-        if self.base != other.base or self.count != other.count: return False
-        for i in set(self.over) | set(other.over):
-            if facts.ge0(i - self.count): continue                         # at or above the count: no part of the stack
-            if not facts.ge0(self.count - i - 1): raise Fail(f"place {i} of a stack: the facts do not say whether it is below the count {self.count}")
-            if self.get(T, facts, i) != other.get(T, facts, i): return False
-        return True
-    def key(self, T, facts):
-        """What names this stack's value: for a machine's result, which is a function of it."""
-        below = []
-        for i, words in self.over.items():
-            if facts.ge0(i - self.count): continue
-            if not facts.ge0(self.count - i - 1): raise Fail(f"place {i} of a stack: the facts do not say whether it is below the count {self.count}")
-            below.append((repr(i), words))
-        return (self.base, self.count, tuple(sorted(below)))
-
-
-# ---------------------------------------------------------------------------------------------------------
 # The specification: the merge machine, and what each function is claimed to do.
-def parent(T, key, flags, left, right):
-    return tuple(kcheck.spec_compress(T, list(key), list(left) + list(right), T.const(0), T.const(0), T.const(64), byte_term(T, byte_or(flags, PARENT))))
+def merge_given(T, facts, key, flags, target, stack):
+    """What blake3.ode's merge machine is given: the key, the flags byte, the target, and its state, the stack."""
+    return kspec.Symbols(T, facts), dict(key=kspec.words(key), flags=ode.Word(byte_term(T, flags)), target=plain(target), s=stack)
 
 
-def machine_turns(facts, stack, target):
-    """Does the merge machine turn on this stack (it holds more than target)? True, False, or None: not known."""
-    if facts.ge0(stack.count - target - 1): return True
-    if facts.ge0(target - stack.count): return False
-    return None
+def machine_turns(T, facts, key, flags, target, stack):
+    """Does the merge machine turn on this stack? True, False, or None: the facts do not say."""
+    A, env = merge_given(T, facts, key, flags, target, stack)
+    try:
+        return kspec.SPEC.goes(A, "merge", env)
+    except ode.Err:
+        return None
 
 
-def machine_turn(T, facts, key, flags, stack):
-    """One turn: the top two values become their parent."""
-    n = stack.count
-    return stack.put(T, facts, n - 2, parent(T, key, flags, stack.get(T, facts, n - 2), stack.get(T, facts, n - 1)), n - 1)
+def machine_turn(T, facts, key, flags, target, stack):
+    """One turn of the merge machine: the top two values become their parent."""
+    A, env = merge_given(T, facts, key, flags, target, stack)
+    return kspec.SPEC.turn(A, "merge", env)
 
 
 def machine_result(T, facts, key, flags, target, stack):
@@ -300,7 +259,8 @@ class Machine:
                 raise Fail("the AVX-512 kernel is called on a path that does not say the platform word is 5 (AVX-512)")
             if COMPRESS[name] == "whole word" and (length[1] >= 256 or any(b != 0 for b in flags[1][1:])):
                 raise Fail(f"{name} reads all of EDX and R8D: the caller does not show the length and the flags are below 256")
-            out = kcheck.spec_compress(T, list(state), list(message), T.const(counter[1] & 0xFFFFFFFF), T.const(counter[1] >> 32), T.const(length[1] & 0xFF), byte_term(T, flags[1][0]))
+            A = kspec.Symbols(T, self.facts)
+            out = kspec.terms(kspec.SPEC.call(A, "compress", kspec.words(state), kspec.words(message), A.counter(counter[1]), length[1] & 0xFF, ode.Word(byte_term(T, flags[1][0]))))
             self.store(cv[1], cv[2], 16, tuple(out[:4])); self.store(cv[1], cv[2] + 16, 16, tuple(out[4:]))
             used = 8
         else:
@@ -457,7 +417,7 @@ def check(rows, name, proof):
         if kind == "return":
             if c.machine:
                 # a loop of the machine that returns before its place: the machine must not turn at all
-                if machine_turns(e.facts, given[region], given["target"]) is not False: raise Fail("entry: the code returns where the machine turns")
+                if machine_turns(T, e.facts, given["key"], given["flags"], given["target"], given[region]) is not False: raise Fail("entry: the code returns where the machine turns")
                 want, result = given[region], given[region].count
             else: want, result = c.leaves(T, e.facts, given)
             if not e.stacks[region].same(T, e.facts, want): raise Fail("entry: the stack at the return is not what the contract says")
@@ -477,10 +437,10 @@ def check(rows, name, proof):
         m.pc = at
         for kind, e in paths(m, places):
             tally[kind] += 1; tally["steps"] += e.steps
-            turns = machine_turns(e.facts, now, given["target"])
+            turns = machine_turns(T, e.facts, given["key"], given["flags"], given["target"], now)
             if kind == "place":
                 if turns is not True: raise Fail("step: the code goes round where the machine has stopped (or the path does not say)")
-                want = machine_turn(T, e.facts, given["key"], given["flags"], now)
+                want = machine_turn(T, e.facts, given["key"], given["flags"], given["target"], now)
                 if not e.stacks[region].same(T, e.facts, want): raise Fail("step: the stack at the place is not one turn of the machine")
                 agrees(e, at_place(seen[e.pc], places[e.pc], region, e.stacks[region]), "step")
                 if -e.low > c.stack: raise Fail(f"step: {-e.low} bytes of stack used, the contract gives {c.stack}")

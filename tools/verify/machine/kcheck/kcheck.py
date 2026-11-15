@@ -10,8 +10,9 @@ proofs are about):
      region, or the packed flags by bytes; a ZMM register is sixteen 32-bit terms, one a lane; memory is
      named regions (the frame, the saved registers, the inputs' address table, the 32 inputs, the key,
      the object's read-only data, the output);
-  2. builds, with the same term constructors, what the specification says each lane's chaining value is
-     (sixteen blocks of BLAKE3's compression, written here from the paper's definition);
+  2. builds, with the same term constructors, what the specification says each lane's chaining value is:
+     the specification is blake3.ode (which gives the official test vectors when run on numbers: ode.py),
+     read here on symbols (kspec.py);
   3. compares the 256 words the code stored with the 256 the specification names. Terms are interned and
      sums and xors are kept flat and sorted, so "equal" is "the same node": no solver.
 Beside the result it checks: no read outside what the contract gives, no write outside the frame, the saved
@@ -20,23 +21,23 @@ the registers a callee keeps are restored; every branch decided by numbers (no i
 address a region and a number (so the trace of addresses and branches is the same for every input).
 
 Not a proof assistant, and nothing here is checked by one: this program is what would have to be trusted
-(or itself proved, or made to emit a certificate). One arithmetic fact is taken as the specification's own
-form: a lane's counter words, low + index and high + carry, which Lean proves equal to the 64-bit counter
-plus the index (K32Lemmas.lean: counter_lo, counter_hi).
+(or itself proved, or made to emit a certificate). One arithmetic fact is taken as the form of a 64-bit
+counter plus a lane's number on symbols: low + index, and high + carry (kspec.py, counter_add), which Lean
+proves equal to the 64-bit sum (K32Lemmas.lean: counter_lo, counter_hi).
 
-usage: kcheck.py k32|p32|p16 --object OBJECT [--anchor test_vectors.json] [--mutants]   (the library's object, read by kdecode.py)
-       kcheck.py k32|p32|p16 ROWS DATA [--anchor test_vectors.json] [--mutants]      (ROWS, DATA: lift_one.py's OUT.rows and OUT.data)
+usage: kcheck.py k32|p32|p16|o16 --object OBJECT [--mutants]   (the library's object, read by kdecode.py)
+       kcheck.py k32|p32|p16 ROWS DATA [--mutants]             (ROWS, DATA: lift_one.py's OUT.rows and OUT.data)
 """
-import collections, re, sys, time
+import collections, os, re, sys, time
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import ode, kspec
+from kspec import byte_or, byte_term
 
 MASK32 = 0xFFFFFFFF
-IV = [0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A]
-PERM = [2, 6, 3, 10, 7, 0, 4, 13, 1, 11, 12, 5, 9, 14, 15, 8]
-CHUNK_START, CHUNK_END = 1, 2
+CHUNK_START, CHUNK_END, PARENT = 1, 2, 4      # as blake3.ode names them: what the callers pack beside the flags
 
 
-class Fail(Exception):
-    pass
+from ode import Err as Fail        # one failure: the checker's and the specification reader's
 
 
 WIDEST = 64        # terms in one flat sum or xor. A state word gathers 8 a round: 57 after BLAKE3's 7 rounds
@@ -91,45 +92,25 @@ class Terms:
 
 
 # ---------------------------------------------------------------------------------------------------------
-# The specification: BLAKE3's compression (section 2.2 of the paper), a chunk's chaining value (2.4, 2.5).
-def spec_round(T, s, m):
-    def g(a, b, c, d, x, y):
-        s[a] = T.add(s[a], s[b], x); s[d] = T.ror(T.xor(s[d], s[a]), 16)
-        s[c] = T.add(s[c], s[d]); s[b] = T.ror(T.xor(s[b], s[c]), 12)
-        s[a] = T.add(s[a], s[b], y); s[d] = T.ror(T.xor(s[d], s[a]), 8)
-        s[c] = T.add(s[c], s[d]); s[b] = T.ror(T.xor(s[b], s[c]), 7)
-    g(0, 4, 8, 12, m[0], m[1]); g(1, 5, 9, 13, m[2], m[3]); g(2, 6, 10, 14, m[4], m[5]); g(3, 7, 11, 15, m[6], m[7])
-    g(0, 5, 10, 15, m[8], m[9]); g(1, 6, 11, 12, m[10], m[11]); g(2, 7, 8, 13, m[12], m[13]); g(3, 4, 9, 14, m[14], m[15])
+# The specification is blake3.ode, read on symbols (kspec.py). Here: what each kernel is claimed to compute,
+# in its words.
+def spec_chunk(T, kernel, lane):
+    """Lane `lane`'s chaining value by the specification's chunk machine: the kernel's number of blocks from
+    the key, the counter (+ the lane's number where the kernel counts), the flags as the contract packs them."""
+    A = kspec.Symbols(T)
+    flags, start, end, length = kernel["packed"]
+    counter = ode.Counter(ode.Word(T.var("counter low")), ode.Word(T.var("counter high"))) if kernel["counter"] == ("q", "counter") else A.counter(kernel["counter"][1])
+    if kernel.get("increment"): counter = A.counter_add(counter, lane)
+    return kspec.terms(kspec.SPEC.call(A, "chunk", kspec.words(T.var("key", w) for w in range(8)), counter, ode.Word(byte_term(T, flags)), start, end, length,
+                                       kernel["blocks"], kspec.Blocks(lane)))
 
 
-def spec_compress(T, cv, m, t_lo, t_hi, length, flags):
-    s = list(cv) + [T.const(x) for x in IV] + [t_lo, t_hi, length, flags]
-    m = list(m)
-    for r in range(7):
-        spec_round(T, s, m)
-        m = [m[PERM[k]] for k in range(16)]
-    return [T.xor(s[i], s[i + 8]) for i in range(8)]
-
-
-def spec_counter(T, lane):
-    """A lane's counter words: the 64-bit counter plus the lane's index, low word and high word."""
-    lo, hi = T.var("counter low"), T.var("counter high")
-    low = T.add(lo, T.const(lane))
-    return low, T.ite(T.ult(low, lo), T.add(hi, T.const(1)), hi)
-
-
-def spec_flags(T, extra): return T.var("flags") if extra == 0 else T.mk("or", T.var("flags"), extra)
-
-
-def spec_chunk_cv(T, lane, blocks=16, increment=True):
-    """Lane `lane`'s chunk: `blocks` blocks from the key, numbered counter + lane (or counter, for the entry that
-    does not increment)."""
-    cv = [T.var("key", w) for w in range(8)]
-    t_lo, t_hi = spec_counter(T, lane) if increment else (T.var("counter low"), T.var("counter high"))
-    for j in range(blocks):
-        flags = spec_flags(T, (CHUNK_START if j == 0 else 0) | (CHUNK_END if j + 1 == blocks else 0))
-        cv = spec_compress(T, cv, [T.var("input", lane, j, w) for w in range(16)], t_lo, t_hi, T.const(64), flags)
-    return cv
+def spec_output(T, kernel, lane):
+    """Lane `lane`'s one compression from its descriptor: its own chaining value, block, block length and flags,
+    counter 0 (a root's output block, or any node whose values the caller holds)."""
+    A = kspec.Symbols(T)
+    return kspec.terms(kspec.SPEC.call(A, "compress", kspec.words(T.var("cv", lane, w) for w in range(8)), kspec.words(T.var("input", lane, 0, w) for w in range(16)),
+                                       A.counter(0), ode.Word(T.var("length", lane)), ode.Word(T.var("flags of", lane))))
 
 
 # ---------------------------------------------------------------------------------------------------------
@@ -264,10 +245,8 @@ class Machine:
         if v[0] == "lo": return T.var("counter low")
         if v[0] == "hi": return T.var("counter high")
         if v[0] == "p":
-            b = v[1]
-            if any(b[1:4]): raise Fail(f"a word of packed bytes {b}")
-            if isinstance(b[0], int): return T.const(b[0])
-            return spec_flags(T, b[0][1]) if isinstance(b[0], tuple) else T.var("flags")
+            if any(x != 0 for x in v[1][1:4]): raise Fail(f"a word of packed bytes {v[1]}")
+            return byte_term(T, v[1][0])
         raise Fail(f"a lane from {v}")
 
     def stack_pointer(self):
@@ -351,10 +330,7 @@ class Machine:
             if a[0] != "32" or a[1][0] != ".reg": raise Fail("an or that is not of 32 bits into a register")
             x, y = self.val(a[1], 32), self.val(a[2], 32)
             if x[0] == "n" and y[0] == "n": self.setreg(a[1][1], ("n", x[1] | y[1]))
-            elif x[0] == "p" and y[0] == "p":
-                bx, by = x[1], y[1]
-                if any(bx[1:]) or any(by[1:]): raise Fail(f"or of {x} and {y}")
-                self.setreg(a[1][1], ("p", (or8(bx[0], by[0]),) + (0,) * 7))
+            elif x[0] == "p" and y[0] == "p": self.setreg(a[1][1], ("p", tuple(byte_or(p, q) for p, q in zip(x[1], y[1]))))
             else: raise Fail(f"or of {x} and {y}")
             self.zf = None
         elif op in (".shr64", ".shr32"):
@@ -437,7 +413,7 @@ def check(rows, data_at, data, name="k32", entry=None):
     T = Terms()
     m = Machine(T, rows, data_at, data, kernel)
     m.run(rows[kernel["entry"]][0] if entry is None else entry)
-    want = [kernel["spec"](T, lane) for lane in range(kernel["lanes"])]
+    want = [kernel["spec"](T, kernel, lane) for lane in range(kernel["lanes"])]
     for lane in range(kernel["lanes"]):
         for w in range(8):
             word = 8 * lane + w
@@ -447,36 +423,20 @@ def check(rows, data_at, data, name="k32", entry=None):
     return m, T
 
 
-def spec_output_cv(T, lane):
-    """Lane `lane`'s one compression from its descriptor: its own chaining value, block, block length and flags,
-    counter 0 (a root's output block, or any node whose values the caller holds)."""
-    return spec_compress(T, [T.var("cv", lane, w) for w in range(8)], [T.var("input", lane, 0, w) for w in range(16)],
-                         T.const(0), T.const(0), T.var("length", lane), T.var("flags of", lane))
-
-
-def spec_parent_cv(T, lane):
-    """Lane `lane`'s parent node (section 2.5): one block, the two children's chaining values, counter 0, PARENT."""
-    return spec_compress(T, [T.var("key", w) for w in range(8)], [T.var("input", lane, 0, w) for w in range(16)],
-                         T.const(0), T.const(0), T.const(64), spec_flags(T, 4))
-
-
 # What each kernel is given (its contract's `accepts`), and what it must leave.
 KERNELS = {
     # c/blake3_output16.S: sixteen compressions, each lane with its own chaining value, block, length and flags
     "o16": dict(entry=0, start="blake3_servil_output16", symbol="blake3_servil_output16", given="chaining value, block, length and flags of every lane",
-                lanes=16, blocks=1, table="descriptors", spec=spec_output_cv),
-    "k32": dict(entry=0, start="blake3_servil_avx512_k32", symbol="blake3_servil_avx512_k32", given="key, flags and input and every counter", lanes=32, blocks=16, counter=("q", "counter"), packed=("flags", CHUNK_START, CHUNK_END, 64), spec=lambda T, lane: spec_chunk_cv(T, lane)),
-    "p32": dict(entry=3, start="blake3_servil_avx512_k32", symbol="blake3_servil_avx512_p32", given="key, flags and input and every counter", lanes=32, blocks=16, counter=("q", "counter"), packed=("flags", CHUNK_START, CHUNK_END, 64), spec=lambda T, lane: spec_chunk_cv(T, lane, increment=False)),
-    "p16": dict(entry=0, start="blake3_servil_avx512_p16", symbol="blake3_servil_avx512_p16", given="key, flags and input", lanes=16, blocks=1, counter=("n", 0), packed=(("flags|", 4), 0, 0, 64), spec=spec_parent_cv),
+                lanes=16, blocks=1, table="descriptors", spec=spec_output),
+    # c/blake3_avx512_32.S, as the library calls them: whole chunks (16 blocks; the flags, CHUNK_START, CHUNK_END
+    # and a last length of 64 packed), and parents (one block, counter 0, the flags with PARENT)
+    "k32": dict(entry=0, start="blake3_servil_avx512_k32", symbol="blake3_servil_avx512_k32", given="key, flags and input and every counter", lanes=32, blocks=16,
+                counter=("q", "counter"), increment=True, packed=((0, ("flags",)), CHUNK_START, CHUNK_END, 64), spec=spec_chunk),
+    "p32": dict(entry=3, start="blake3_servil_avx512_k32", symbol="blake3_servil_avx512_p32", given="key, flags and input and every counter", lanes=32, blocks=16,
+                counter=("q", "counter"), packed=((0, ("flags",)), CHUNK_START, CHUNK_END, 64), spec=spec_chunk),
+    "p16": dict(entry=0, start="blake3_servil_avx512_p16", symbol="blake3_servil_avx512_p16", given="key, flags and input", lanes=16, blocks=1,
+                counter=("n", 0), packed=((PARENT, ("flags",)), 0, 0, 64), spec=spec_chunk),
 }
-
-
-def or8(x, y):
-    """The or of two bytes, each a number, the mode flags, or the mode flags with bits set."""
-    if isinstance(x, int) and isinstance(y, int): return x | y
-    bits = lambda b: b if isinstance(b, int) else (b[1] if isinstance(b, tuple) else 0)
-    c = bits(x) | bits(y)
-    return ("flags|", c) if c else "flags"
 
 
 def evaluate(T, env):
@@ -495,37 +455,12 @@ def evaluate(T, env):
         elif op == "ror": val[i] = rot(val[k[1]], k[2])
         elif op == "ult": val[i] = int(val[k[1]] < val[k[2]])
         elif op == "ite": val[i] = val[k[2]] if val[k[1]] else val[k[3]]
-        elif op == "or": val[i] = val[k[1]] | k[2]
+        elif op == "orb":
+            v = k[1]
+            for name in k[2]: v |= env[(name,)]
+            val[i] = v
         else: raise Fail(f"a term this evaluator does not know: {k}")
     return val
-
-
-def anchor(vectors_path):
-    """The specification written here against the official test vectors: the hash of the 2048-byte input is the
-    root of two chunks, so lanes 0 and 1 of the symbolic specification (the same terms the code was compared
-    with), given that input's two chunks, the IV as key, counter 0 and no mode flags, must give the two
-    chaining values whose parent's root output is that hash. Lane 1's counter is 1: the lane index is in it."""
-    import json
-    with open(vectors_path) as f: cases = {c["input_len"]: c["hash"] for c in json.load(f)["cases"]}
-    data = bytes(i % 251 for i in range(2048))
-    T = Terms()
-    cvs = [spec_chunk_cv(T, lane) for lane in (0, 1)]
-    env = {("counter low",): 0, ("counter high",): 0, ("flags",): 0}
-    env.update({("key", w): IV_FULL[w] for w in range(8)})
-    for k in T.nodes:
-        if k[0] == "v" and k[1] == "input":
-            lane, blk, w = k[2:]
-            env[k[1:]] = int.from_bytes(data[1024 * lane + 64 * blk + 4 * w:][:4], "little")
-    val = evaluate(T, env)
-    left, right = ([val[x] for x in cv] for cv in cvs)
-    C = Terms(); c = C.const
-    root = spec_compress(C, [c(x) for x in IV_FULL], [c(x) for x in left + right], c(0), c(0), c(64), c(4 | 8))    # PARENT | ROOT
-    got = b"".join(C.nodes[x][1].to_bytes(4, "little") for x in root).hex()
-    if got != cases[2048][:64]: raise Fail(f"the specification written here gives {got} for the 2048-byte test vector, the vector says {cases[2048][:64]}")
-    return got
-
-
-IV_FULL = IV + [0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19]
 
 
 def read(rows_path, data_path):
@@ -564,9 +499,6 @@ def main():
     print(f"{name}: the {KERNELS[name]['lanes']} chaining values the code stores are the specification's, for every {KERNELS[name]['given']}")
     print(f"     {m.steps} instructions run, {len(T.nodes)} terms, {dt:.2f} s; stack used at most {-m.low} bytes of {m.budget}")
     print(f"     trace: {kinds.get('read', 0)} reads, {kinds.get('write', 0)} writes, {kinds.get('branch', 0)} branches, each a region and a number: the same for every input")
-    if "--anchor" in sys.argv:
-        t1 = time.time(); got = anchor(sys.argv[sys.argv.index("--anchor") + 1])
-        print(f"     the specification's terms, evaluated on the official 2048-byte test vector (two chunks, counters 0 and 1): {got[:16]}... as the vector says ({time.time() - t1:.2f} s)")
     if "--mutants" in sys.argv:
         assert name == "k32", "the changed kernels are K32's"
         caught = 0

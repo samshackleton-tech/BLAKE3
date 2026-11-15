@@ -40,44 +40,18 @@ THE PROVER guesses the proof: it runs the code from the entry to the place and t
 compares the second and third visits. What is the same is "keep"; a number that moved is "lin"; a register that holds the
 specification's next state is "cv"; the rest is unnamed. A guess the checker refuses at one register is
 weakened there (that register becomes unnamed) and tried again. Nothing the prover does is trusted."""
-import copy, json, math, os, sys, time
+import copy, json, os, sys, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import kcheck, kdecode
+import kcheck, kdecode, kspec, ode
 from kcheck import Fail, num
+from klin import Lin, Facts
+from kspec import byte_or, byte_term
 
 BASE, DATA = 0x10000, 0x50000000
 
 
 # ---------------------------------------------------------------------------------------------------------
-# Numbers that depend on n and b: c + cn*n + cb*b. And what is known of them.
-class Lin:
-    __slots__ = ("c", "k")
-    def __init__(self, c=(), k=0):
-        self.c, self.k = tuple(sorted((s, a) for s, a in c if a)), k
-    @staticmethod
-    def of(x): return x if isinstance(x, Lin) else Lin((), x)
-    def __add__(self, o):
-        o = Lin.of(o); d = dict(self.c)
-        for s, a in o.c: d[s] = d.get(s, 0) + a
-        return Lin(d.items(), self.k + o.k)
-    __radd__ = __add__
-    def scale(self, m): return Lin(((s, a * m) for s, a in self.c), self.k * m)
-    def __neg__(self): return self.scale(-1)
-    def __sub__(self, o): return self + (-Lin.of(o))
-    def __rsub__(self, o): return Lin.of(o) - self
-    def __eq__(self, o): return isinstance(o, Lin) and (self.c, self.k) == (o.c, o.k)
-    def __hash__(self): return hash((self.c, self.k))
-    def at(self, sym, value):
-        """This number with `sym` replaced by a number or another such number."""
-        rest = Lin(((s, a) for s, a in self.c if s != sym), self.k)
-        return rest + Lin.of(value).scale(dict(self.c).get(sym, 0))
-    def over(self, d):
-        """Divided by d, if that is exact."""
-        if self.k % d or any(a % d for _, a in self.c): return None
-        return Lin(((s, a // d) for s, a in self.c), self.k // d)
-    def __repr__(self): return " + ".join([f"{a}*{s}" for s, a in self.c] + ([str(self.k)] if self.k or not self.c else []))
-
-
+# Numbers that depend on n and b (klin.py), as register values.
 N, B = Lin([("n", 1)]), Lin([("b", 1)])
 
 
@@ -92,68 +66,12 @@ def lin(v):
     return Lin.of(v[1]) if v[0] in ("n", "l") else None
 
 
-class Facts:
-    """Numbers known to be >= 0, and numbers known not to be 0. Whole numbers."""
-    def __init__(self): self.ge, self.ne = [], []
-    def clone(self):
-        f = Facts(); f.ge, f.ne = list(self.ge), list(self.ne); return f
-    @staticmethod
-    def norm(f):
-        g = 0
-        for _, a in f.c: g = math.gcd(g, abs(a))
-        return f if g <= 1 else Lin(((s, a // g) for s, a in f.c), f.k // g)        # whole numbers: the constant rounds down
-    def ge0(self, goal):
-        """Is goal >= 0 a sum of known facts (each taken a few times) and a number >= 0?"""
-        goal = Lin.of(goal)
-        if not goal.c: return goal.k >= 0
-        goal = self.norm(goal)
-        for f in self.ge:
-            if f.c == goal.c and goal.k >= f.k: return True
-        for i, f in enumerate(self.ge):
-            for g in self.ge[i + 1:]:
-                for a in (1, 2):
-                    for b in (1, 2):
-                        s = f.scale(a) + g.scale(b)
-                        if s.c == goal.c and goal.k >= s.k: return True
-        return False
-    def zero(self, x):
-        """True: x is 0. False: it is not. None: the facts do not say."""
-        x = Lin.of(x)
-        if not x.c: return x.k == 0
-        if any(x == y or x == -y for y in self.ne): return False
-        if self.ge0(x - 1) or self.ge0(-x - 1): return False
-        if self.ge0(x) and self.ge0(-x): return True
-        return None
-    def add(self, f):
-        f = self.norm(Lin.of(f))
-        if f.c and f not in self.ge: self.ge.append(f)
-    def assume_zero(self, x): self.add(x); self.add(-Lin.of(x))
-    def assume_nonzero(self, x):
-        x = Lin.of(x)
-        if self.ge0(x): self.add(x - 1)
-        elif self.ge0(-x): self.add(-x - 1)
-        else: self.ne.append(x)
-
-
 class Fork(Exception):
     def __init__(self, x): self.x = x
 
 
 # ---------------------------------------------------------------------------------------------------------
-# The flags' bytes: a byte is a number, or a number or-ed with named unknown bytes.
-def byte(x): return (x, ()) if isinstance(x, int) else x
-def unbyte(c, names): return c if not names else (c, tuple(sorted(set(names))))
-def byte_or(x, y):
-    (c, p), (d, q) = byte(x), byte(y)
-    return unbyte(c | d, p + q)
-def byte_term(T, x):
-    """A byte, zero-extended to a lane's 32 bits, as a term."""
-    c, names = byte(x)
-    return T.const(c) if not names else T.mk("orb", c, names)
-
-
-# ---------------------------------------------------------------------------------------------------------
-# The specification's step.
+# The specification: the chunk machine of blake3.ode, a turn at a time (kspec.py reads it on symbols).
 KERNELS = {
     "k32": dict(start="blake3_servil_avx512_k32", symbol="blake3_servil_avx512_k32", lanes=32, increment=True),
     "p32": dict(start="blake3_servil_avx512_k32", symbol="blake3_servil_avx512_p32", lanes=32, increment=False),
@@ -161,19 +79,29 @@ KERNELS = {
 }
 
 
-def spec_start(T): return [T.var("key", w) for w in range(8)]
+def given(T, facts, kernel, lane):
+    """What the chunk machine is given, for a lane: the key, the counter (+ the lane's number where the kernel
+    counts), the four flag bytes, the number of blocks n, the lane's input."""
+    A = kspec.Symbols(T, facts)
+    t = ode.Counter(ode.Word(T.var("counter low")), ode.Word(T.var("counter high")))
+    if kernel["increment"]: t = A.counter_add(t, lane)
+    named = lambda name: ode.Word(byte_term(T, (0, (name,))))
+    return A, dict(key=kspec.words(T.var("key", w) for w in range(8)), t=t, flags=named("flags"), start=named("start"), end=named("end"), length=named("len"),
+                   n=N, input=kspec.Blocks(lane))
+
+
+def spec_start(T):
+    """The machine's first state (`on h = key`)."""
+    A, env = given(T, Facts(), KERNELS["p16"], 0)
+    return list(kspec.terms(kspec.SPEC.eval(A, kspec.SPEC.machines["chunk"]["init"], env)))
 
 
 def spec_step(T, facts, kernel, state, lane, b):
-    """The lane's state after block b, from its state before it. Whether b is the first block and whether it is
-    the last are asked of the path's facts: the code must have asked too."""
-    first, last = facts.zero(b), facts.zero(N - b - 1)
-    if first is None or last is None: raise Fail("the specification asks whether this block is the first, or the last, and the code's path does not say")
-    flags = byte_term(T, unbyte(0, ("flags",) + (("start",) if first else ()) + (("end",) if last else ())))
-    length = byte_term(T, (0, ("len",))) if last else T.const(64)
-    t_lo, t_hi = kcheck.spec_counter(T, lane) if kernel["increment"] else (T.var("counter low"), T.var("counter high"))
-    block = b.k if isinstance(b, Lin) and not b.c else b
-    return kcheck.spec_compress(T, state, [T.var("input", lane, block, w) for w in range(16)], t_lo, t_hi, length, flags)
+    """The lane's state after block b, from its state before it: one turn of the machine. Whether b is the
+    first block and whether it is the last are asked of the path's facts: the code must have asked too."""
+    A, env = given(T, facts, kernel, lane)
+    env.update(h=kspec.words(state), b=kspec.plain(b))
+    return list(kspec.terms(kspec.SPEC.turn(A, "chunk", env)))
 
 
 # ---------------------------------------------------------------------------------------------------------
@@ -195,12 +123,6 @@ class Machine(kcheck.Machine):
     def trunc(self, v, w):
         if v[0] == "l" and w != 64: raise Fail(f"{w} bits of a number that depends on the block count")
         return super().trunc(v, w)
-
-    def lane(self, v):
-        if v[0] == "p":
-            if any(x != 0 for x in v[1][1:4]): raise Fail(f"a word of packed bytes {v[1]}")
-            return byte_term(self.T, v[1][0])
-        return super().lane(v)
 
     def addr(self, base, disp, index=None):
         if index is not None and self.reg(index)[0] == "l":
@@ -245,10 +167,6 @@ class Machine(kcheck.Machine):
             self.steps += 1; self.setreg(r, value(d)); self.pc = nxt
             self.zf = (("zero?", d) if d.c else d.k == 0) if op == ".dec64" else None
             return
-        if op == ".or" and a[0] == "32" and a[1][0] == ".reg":
-            x, y = self.val(a[1], 32), self.val(a[2], 32)
-            if x[0] == "p" and y[0] == "p":
-                self.steps += 1; self.setreg(a[1][1], ("p", tuple(byte_or(p, q) for p, q in zip(x[1], y[1])))); self.zf = None; self.pc = nxt; return
         self.moved = True
         return super().step()
 

@@ -1,9 +1,45 @@
-# kcheck: a checker made for one job (a trial, November 14, 2026)
+# kcheck: a specification that runs, proofs that are found, a checker that does not search (a trial, November 14 and 15, 2026)
 
-**Not a proof, and checked by no proof assistant.** A trial of whether a small program made for exactly this
-job can show that a wide kernel's machine code computes BLAKE3, for every input, in seconds and with nothing
-written by hand for each kernel. The programs here are what would have to be trusted; the second half of this
-page is what has been done to find where they are wrong, and what that found.
+**Not a proof in a proof assistant, and checked by none.** A trial of another way to the goal of BLAKE3 #361:
+to hand a reader a specification, a binary and a proof, such that he checks in a second, by a small program
+he can read, that the binary meets the specification.
+
+- **The specification is a text that runs** (`blake3.ode`, 146 lines with its comments): BLAKE3 as small pure
+  functions and two machines, in a language of our own. Run on numbers it gives the 105 official test vectors;
+  read on symbols it gives the terms machine code is compared with. There is no other specification.
+- **A proof is a short text nobody writes**: the places of the code's loops, and what the registers and the
+  memory hold there in the specification's terms. A prover finds it by running the loop twice.
+- **The checker does not search**: it runs the machine code from each place to the next on symbols, runs the
+  specification's step on the same symbols, and compares. Loops of any length are covered by induction
+  (Floyd's method); there is no solver.
+
+What is shown so far, each in under a second: four AVX-512 kernels of the library; three of them for every
+number of blocks and every flag byte; and `push`, `merge` and `add` of the hasher's stack (a loop over a data
+structure in memory, calls by contract). The programs here are what would have to be trusted, about 2,600
+lines of Python; most of this page is what has been done to find where they are wrong, and what that found.
+
+## The specification: `blake3.ode`
+
+The language: numbers, 32-bit words (`+` wraps, `^`, `|`, `>>>` rotates), 64-bit counters, lists, `if`; a
+`fn` is a pure function; a `machine` is a loop over a state, and `turn` is one step. The file holds the
+compression function, the chunk machine (a chunk's blocks, from the key), `parent`, the merge machine (the
+stack of chaining values), and the whole hash of a message (chunks, the stack, the root), which exists only to
+be run on the test vectors.
+
+    python3 ode.py blake3.ode --vectors ../../../../test_vectors/test_vectors.json      # 105 vectors, 7 s
+    python3 test_ode.py
+
+- `ode.py` (389 lines) reads the text and evaluates it over an algebra of words. On numbers: the official
+  vectors, at every length, for the hash, the keyed hash and key derivation.
+- `kspec.py` (138 lines) is the other algebra: words are the checkers' terms, a number may depend on a count
+  (and a comparison is decided from the code path's facts, or the evaluation stops), a list may be a stack of
+  unknown count or an input of unknown length. `kcheck.py`, `kloop.py` and `kglue.py` take `compress`, the
+  two machines and `parent` from the file through it.
+- `test_ode.py`: 18 single changes of the text (a rotation, the permutation, a flag, the counter, the root)
+  are each told from BLAKE3 by the vectors. `test_kcheck.py`: a changed specification refuses the true kernels.
+
+What the file is not yet: the contracts (what each function is given and leaves, how values lie in memory) are
+still Python in the checkers; and no code is compiled from it.
 
 ## What it shows today
 
@@ -26,7 +62,7 @@ load, a byte read, a 32-bit store), four cases in the checker, a five-line speci
 its first run, a few minutes after the start. Its audit (below) then ran clean, and `kremove.py` on it found
 eight instructions whose results nothing reads (BLAKE3 #398).
 
-    python3 kcheck.py k32 --object OBJECT [--anchor ../../../../test_vectors/test_vectors.json] [--mutants]
+    python3 kcheck.py k32 --object OBJECT [--mutants]
     python3 test_kcheck.py            # all of it from the sources, with the controls: 9 tests, 12 s
 
 ## Every number of blocks: a proof that is found, then checked (`kloop.py`, November 15)
@@ -128,20 +164,22 @@ AVX-512 kernel is called only where the platform word is 5.
 
 Not shown here: the one-block kernels themselves (their contract is taken); that the merge machine is BLAKE3's
 tree (`alg/Stack.lean` proves that of the same machine); buffers of bytes with a symbolic length. The
-contracts and the machine are Python inside `kglue.py`: not yet a language a reader is given.
+machine is `blake3.ode`'s; the contracts are Python inside `kglue.py`: not yet in the language.
 
 ## The parts
 
 | file | lines | what it is |
 |---|---|---|
-| `kdecode.py` | 337 | reads the ELF object (sections, symbol, relocations) and decodes the instruction forms the kernels use, and no others; no disassembler |
-| `kcheck.py` | 594 | runs the instructions on symbolic values, builds the specification with the same term constructors, compares |
+| `blake3.ode` | 146 | the specification |
+| `ode.py`, `kspec.py`, `klin.py` | 389 + 138 + 78 | the specification's reader; its algebra on symbols; numbers that depend on counts and the facts about them |
+| `kdecode.py` | 357 | reads the ELF object (sections, symbol, relocations) and decodes the instruction forms the code uses, and no others; no disassembler |
+| `kcheck.py` | 526 | runs a kernel's instructions on symbolic values and compares with the specification's terms |
 | `kcheck_cross.py` | 109 | kcheck's reading of each instruction against the Lean model's processor-validated test vectors |
 | `kflip.py`, `kflip_native.c`, `kflip_thunk.S` | 194 + 153 + 63 | the audit below: every single-bit change of a kernel, and the processor's word on each one accepted |
-| `kloop.py`, `test_kloop.py` | 491 + 94 | every number of blocks: the prover, the proof's form, the checker by induction; its tests |
-| `kglue.py`, `kglue_flip.py`, `kglue_native.c`, `test_kglue.py` | 583 + 129 + 109 + 83 | the stack's functions: contracts, the merge machine, prover, checker; the audit; the tests |
+| `kloop.py`, `test_kloop.py` | 410 + 94 | every number of blocks: the prover, the proof's form, the checker by induction; its tests |
+| `kglue.py`, `kglue_flip.py`, `kglue_native.c`, `test_kglue.py` | 541 + 129 + 109 + 92 | the stack's functions: contracts, prover, checker; the audit; the tests |
 | `kremove.py` | 41 | which instructions can be replaced by a no-op with the contract still met: for a person to read |
-| `test_kcheck.py` | 136 | the four kernels and the controls, from the sources |
+| `test_kcheck.py`, `test_ode.py` | 149 + 66 | the four kernels and the controls, from the sources; the specification on the vectors |
 
 ## How
 
@@ -149,8 +187,7 @@ contracts and the machine are Python inside `kglue.py`: not yet a language a rea
    plus a number, or the packed flags by bytes. A ZMM register is sixteen 32-bit terms. Memory is named regions:
    the aligned frame, the saved registers, the table of inputs' addresses, the inputs, the key, the object's
    read-only data, the output.
-2. The specification (BLAKE3's compression, a chunk, a parent node: about 40 lines, from the paper) is built
-   with the same term constructors.
+2. The specification (`blake3.ode`, read on symbols) is built with the same term constructors.
 3. Terms are interned, and sums and xors are kept flat and sorted, so two terms are equal when they are the same
    node. The comparison is of 256 (or 128) node numbers. No solver.
 
@@ -165,8 +202,8 @@ same for every input.
 1. **Changed kernels** (`--mutants`): 15 of 15 refused (rotations, operands, the carry's mask, a message offset,
    a store's offset, a shuffle, a flag, a saved register, the frame's bound, the block step, one entry of the
    schedule table). A kernel against another kernel's specification is refused.
-2. **The specification against an official vector** (`--anchor`): the terms the code is compared with,
-   evaluated on the 2048-byte test vector (two chunks, then the parent as root), give the vector's hash.
+2. **The specification against the official vectors** (`ode.py --vectors`, `test_ode.py`): the text the code
+   is compared with gives all 105, and 18 single changes of it are each told by them.
 3. **Its reading of each instruction against the Lean model's** (`kcheck_cross.py`): the model's test vectors,
    which a processor agreed with (`one/cross_one.sh`): 2,925 vectors of 585 instruction forms, 0 differ. 215
    forms are not covered: SSE and XMM forms kcheck does not know, and forms it reads in its own domains (the
@@ -229,7 +266,9 @@ an 8-bit `or` read as 32 bits.
 
 ## What it rests on (what a reader must trust or check)
 
-- `kdecode.py` and `kcheck.py`, 931 lines, and Python.
+- The specification `blake3.ode` (146 lines), and for a kernel its reader and the checker: `ode.py`,
+  `kspec.py`, `klin.py`, `kdecode.py`, `kcheck.py`, 1,488 lines, and Python. For the loops and the stack's
+  functions, `kloop.py` and `kglue.py` beside them.
 - That the regions are apart (the contract's own condition: the stack and the output apart from everything).
 - One arithmetic fact taken as the specification's form of a lane's counter: low word + index, high word + carry.
   Lean proves it equal to the 64-bit counter plus the index (`lang/K32Lemmas.lean`, `counter_lo`, `counter_hi`);

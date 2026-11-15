@@ -5,8 +5,8 @@
 
 c/blake3_avx512_32.S and c/blake3_output16.S are assembled (clang where there is one, else cc), the objects'
 bytes are read by kdecode.py, and kcheck.py shows each of the four kernels against the specification. Then the controls:
-changed kernels are refused; a kernel is refused against another's specification; the specification gives the
-official test vector; and, where there is an objdump, kdecode's reading is the lifter's (one/lift_one.py)
+changed kernels are refused; a kernel is refused against another's specification; a changed specification
+refuses the true kernels; and, where there is an objdump, kdecode's reading is the lifter's (one/lift_one.py)
 instruction for instruction. The single-bit audit with a processor's verdict (kflip.py) is not run here: it
 wants an AVX-512 machine and a minute."""
 import os, shutil, subprocess, sys, tempfile, unittest
@@ -99,9 +99,21 @@ class Kcheck(unittest.TestCase):
         with self.assertRaises(kcheck.Fail):
             for _ in range(12): x = T.add(x, x)
 
-    def test_the_specification_gives_the_official_vector(self):
-        got = kcheck.anchor(os.path.join(ROOT, "test_vectors", "test_vectors.json"))
-        self.assertTrue(got.startswith("e776b6028c7cd22a"), got)
+    def test_a_changed_specification_refuses_the_true_kernels(self):
+        # the specification is blake3.ode (test_ode.py: it gives the official vectors): one change of its text,
+        # and the kernel that met it does not
+        import kspec, ode
+        true = kspec.SPEC
+        with open(os.path.join(HERE, "blake3.ode")) as f: text = f.read()
+        try:
+            for old, new in (("(v[b] ^ v[c]) >>> 7", "(v[b] ^ v[c]) >>> 8"), ("if b == n - 1 then length else 64,", "63,"), ("[s[i] ^ s[i + 8] for i in 0..8]", "[s[i + 8] ^ s[i] ^ s[i] for i in 0..8]")):
+                self.assertEqual(text.count(old), 1, old)
+                kspec.SPEC = ode.Spec(text.replace(old, new))
+                rows, data, entry = load(self.obj, "p16")
+                with self.assertRaises(kcheck.Fail, msg=old):
+                    kcheck.check(rows, DATA, data, "p16", entry)
+        finally:
+            kspec.SPEC = true
 
     def test_the_decoder_stops_at_encodings_no_assembler_writes(self):
         with open(self.obj, "rb") as f: obj = f.read()
