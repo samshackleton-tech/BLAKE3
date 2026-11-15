@@ -411,16 +411,17 @@ that is no way to compute anything.
 | folder | specification (lines a reader reads, with comments and contract) | checked against | code |
 |---|---|---|---|
 | `adler32/` | 19 | zlib's `adler32` | `ode_adler32` |
-| `lz4/` | 112: the block format, its two ways to fail, three contracts | an LZ4 decoder written another way, on blocks an LZ4 encoder made and on damaged ones | `ode_lz4_decode`, `ode_lz4_store`, `ode_lz4_pack` |
+| `lz4/` | 111: the block format, its two ways to fail, three contracts | a decoder written in the test as decoders are (a loop over the block), on blocks an encoder of the test's made and on damaged ones | `ode_lz4_decode`, `ode_lz4_store`, `ode_lz4_pack` |
 | `varint/` | 12 | LEB128 written another way | `ode_varint` |
 | `common/` | 15 | the same in Python | `ode_common` |
-| `sigil/` | 175: John's Sigil encoding of 32 bytes (base 39 in groups, a check group) | the 220 vectors of its repository | none: it needs arithmetic on numbers of 258 bits, which Ode has no way to write yet |
+| `sigil/` | 175: John's Sigil 0.1 (the data with two marker bits, times a check prime, written in base 2,048 as letters) | the 220 good vectors of its repository | none: for 32 bytes it needs arithmetic on a number of 275 bits, which Ode has no way to write yet |
 
 **What each made the languages gain.**
 
-- *Adler-32*: a `sequence` with a name, used at any place (`sums(bytes)[k]`); a result that is a number
+- *Adler-32*: a `sequence` with a name, used at any place (`s1(bytes)[k]`); a result that is a number
   (`returns`); a loop whose count is the input's length, so a **place**: what holds each time the loop
-  comes round, in the specification's terms (`a == sums(input)[i].a`), and a number that decreases.
+  comes round, in the specification's terms (`r12 = s1(input)[i]`: the register holds the sequence's value
+  at place i), and a number that decreases.
 - *LZ4 decoding*: **failure** in the specification (`fails MALFORMED if ...`, `failed(E)`), so that "it says
   NO exactly where the format gives no value" can be written; `ensures X[a .. b] = E` and `ensures ... if
   C`; `trace depends on input`, since which instructions run depends on the block (the closed world's rule
@@ -450,16 +451,16 @@ From each place the code is run on symbols to the next place or to the return; w
 hold there; the numbers after `decreases` must have got less, the first, or the first no greater and the
 second less, and so on. There is no induction in the checker and no solver: a fact about the whole input is
 carried from place to place by the specification's own equations, opened one step. The proof is not
-trusted: a wrong place is refused where it does not hold. Finding the places is the prover's work (here, a
-person's and a model's; nothing searches for them).
+trusted: a wrong place is refused where it does not hold. Finding the places is the prover's work: here
+the model that wrote the code wrote them, from the checker's refusals. Nothing searches for them.
 
 **What was done to find it wrong** (`test_kbyte.py`, `kbyte_flip.py`, `kbyte_nop.py`, `audit.sh`):
 
 - **Changed texts** (`test_kbyte.py`, 23 tests, about three minutes). Each program's specification and
   contract with one thing changed (a constant, a bound, a `requires` or a `trace` line left out, the result
   off by one): refused. Each line of each proof left out in turn: refused (a line that could go was taken
-  out). Each instruction changed in turn (a branch reversed, an instruction left out, a register or a
-  number changed): refused, but for those the test lists, which keep the contract.
+  out). Each instruction left out in turn, and each jump, add and subtract turned round: refused, but for
+  those the test counts, which keep the contract.
 - **Every single-bit change of each function's code** (`kbyte_flip.py`), and every instruction left out
   (`kbyte_nop.py`, for the packing encoder), with a processor as the judge of those accepted: the changed
   object is linked with a harness (`programs/NAME/native*.c`) and run against someone else's answer on
@@ -485,10 +486,11 @@ person's and a model's; nothing searches for them).
 
 **What that found.**
 
-- The first contract of an encoder (`ensures lz4(out[0 .. r], n) == input if r != NO`) was accepted for an
-  object that says NO where there is room: 17 of the plain encoder's changed instructions were accepted, and
-  three of them did that on the processor. The contract was true of them. It now says when NO is not given,
-  and they are refused.
+- An encoder's contract (`ensures lz4(out[0 .. r], n) == input if r != NO`) is met by an object that says
+  NO where there is room. Of the packing encoder's 360 instructions, 44 could be left out with the contract
+  still met, and seven of those objects, on the processor, said NO for a block that fits. The contract was
+  true of them. The plain encoder's contract now says when NO is not given, and three of the 17 changed
+  instructions that had been accepted for it are refused.
 - A contract with two `stack` lines was read as having the second. A contract now says each such thing once.
 - `bytes_of` was a definition in `blake3.spec`. A contract whose meaning in memory rests on it could have
   been changed by changing the specification. It is the language's own now, as `words` was.
@@ -517,8 +519,7 @@ is equal to the specification's modulo 65521, not equal to it).
 
 **Not done.** Sigil has no code. `kbyte.py` does not follow calls, and `kfn.py` does not know places or
 bytes in parts: they should be one checker. The packing encoder's contract does not say when NO is not
-given. Nothing here was written by a prover that searches: each place was written by hand, from the
-checker's refusals.
+given. No prover searches for places: each was written from the checker's refusals.
 
 ## The library's wide kernels, each run to its end (`kcheck.py`, the first trial)
 
