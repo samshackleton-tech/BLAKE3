@@ -90,5 +90,17 @@ show `i < len(bytes)`), or it refuses. So a specification that means to have no 
   should mean one thing, on one kind of value.
 - `machine` (states that change, a turn at a time) is still read, for `proofs/inner.spec`'s earlier trial of
   a stack. It is not part of this language and is in no specification a reader reads.
+- **Nothing makes a definition come to an end.** "A definition may be of itself on smaller things", and
+  nothing checks that they are smaller. The reader stops a definition that goes deeper and deeper (`def k(n)
+  { k(n) + 1 }`: "does not come to an end"), but one whose call of itself is the last thing it does (`def
+  k(n) { k(n + 1) }`) it follows for ever: no verdict, never a wrong one. It matters beyond that: a
+  definition is read as an equation, and an equation with no solution proves anything (from `k(n) = k(n) +
+  1`, 0 = 1). Noether's innermost language is definite for this reason: every computation gives a value or
+  fails, in finite time. This language should be the same, and its reader should refuse a definition it
+  cannot see ending (a `decreases` for definitions; every recursion in the specifications here has an
+  obvious one: bytes left, `len(bytes) - at`).
+- `failed(E)` and `reason(E)` look at a failure, which no definition should: with them inside definitions
+  "what has no value gives none to what is made of it" would not hold. They are used only in contracts,
+  and should be the contract's alone; the reader does not yet refuse them elsewhere.
 - The meaning above is this page and a program in Python; neither is checked against the other but by the
   tests (`test_ode.py`, `programs/test_specs.py`).
