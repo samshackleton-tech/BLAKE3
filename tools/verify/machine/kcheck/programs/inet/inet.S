@@ -18,19 +18,29 @@ _ode_inet:
     push rbp
     push r12
     push r13
-    sub rsp, 8
+    push r14
     mov rbx, rdi
     mov rbp, rsi
     mov rax, 0
     mov r12, rax
     mov rax, 0
     mov r13, rax
-.Lode_inet_0:
+    mov rax, 18446744073709551615
+    mov r14, rax
+    mov rax, rbp
+    shr rax, 16
+    shr rax, 16
+    shr rax, 16
+    shr rax, 1
+    mov rcx, 0
+    cmp rax, rcx
+    jne .Lode_inet_0
+.Lode_inet_2:
     mov rax, 1
     mov rcx, rbp
     sub rcx, r12
     cmp rax, rcx
-    jae .Lode_inet_1
+    jae .Lode_inet_3
     mov rax, r13
     mov rcx, rbx
     add rcx, r12
@@ -46,13 +56,13 @@ _ode_inet:
     mov rax, r12
     add rax, 2
     mov r12, rax
-    jmp .Lode_inet_0
-.Lode_inet_1:
+    jmp .Lode_inet_2
+.Lode_inet_3:
     mov rax, rbp
     sub rax, r12
     mov rcx, 1
     cmp rax, rcx
-    jne .Lode_inet_2
+    jne .Lode_inet_4
     mov rax, r13
     mov rcx, rbx
     add rcx, r12
@@ -60,7 +70,7 @@ _ode_inet:
     shl rcx, 8
     add rax, rcx
     mov r13, rax
-.Lode_inet_2:
+.Lode_inet_4:
     mov rax, r13
     and rax, 65535
     mov rcx, r13
@@ -87,7 +97,10 @@ _ode_inet:
     mov r13, rax
     mov rax, 65535
     sub rax, r13
-    add rsp, 8
+    mov r14, rax
+.Lode_inet_0:
+    mov rax, r14
+    pop r14
     pop r13
     pop r12
     pop rbp

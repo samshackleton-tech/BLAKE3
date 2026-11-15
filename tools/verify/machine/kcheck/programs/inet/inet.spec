@@ -24,11 +24,13 @@ def fold(s) { s % 65536 + s / 65536 }
 
 def checksum(bytes) { 65535 - fold(fold(fold(fold(total(bytes))))) }
 
+const NO = 18446744073709551615
+
 // =========================================================================================================
-// The public contract (what a contract means: CONTRACT.md). There is no `trace` line: which instructions run
-// and which addresses are touched depend on n, and not on the bytes.
+// The public contract (what a contract means: CONTRACT.md). There is no `requires`: of 2^49 bytes or more,
+// whose plain sum might not fit 64 bits, it says NO and reads none. There is no `trace` line: which
+// instructions run and which addresses are touched depend on n, and not on the bytes.
 contract ode_inet(input: n bytes, n: number) {
-    requires n < 562949953421312
-    returns checksum(input)
+    returns if n < 562949953421312 then checksum(input) else NO
     stack 40
 }

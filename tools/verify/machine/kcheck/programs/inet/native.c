@@ -1,7 +1,8 @@
 // ode_inet on this machine's processor against the Internet checksum as RFC 1071's own C code computes it
 // (16 bits at a time, the carries folded in while there are any): every length from 0 to 2,000 and random
 // longer ones; random bytes, all 0xFF, all zero, and bytes that carry often. The input ends where a page
-// that faults begins (a read past it is a crash).
+// that faults begins (a read past it is a crash). And for 2^49 bytes and more it must say NO having read
+// nothing: it is given the address of the page that faults.
 //   cc -O1 -o run native.c inet.o && ./run [CASES]
 #include <stdint.h>
 #include <stdio.h>
@@ -32,6 +33,8 @@ int main(int argc, char **argv) {
         if (got != want) { printf("case %ld: %zu bytes: %llx, RFC 1071's code says %llx\n", c, n, (unsigned long long)got, (unsigned long long)want); return 1; }
         done++;
     }
-    printf("%ld checksums as RFC 1071's code gives them\n", done);
+    uint64_t big[] = {1ull << 49, (1ull << 49) + 1, 1ull << 50, 1ull << 63, ~0ull};
+    for (int k = 0; k < 5; k++) if (ode_inet(x + room, big[k]) != ~0ull) { printf("%llu bytes: not NO\n", (unsigned long long)big[k]); return 1; }
+    printf("%ld checksums as RFC 1071's code gives them; NO for 2^49 bytes and more, with nothing read\n", done);
     return 0;
 }
