@@ -505,6 +505,15 @@ an 8-bit `or` read as 32 bits.
 | what is trusted | Lean's kernel, the model (cross-checked on processors), `bv_decide`'s axioms, the lifter (`llvm-objdump`) | these two programs |
 | usable by a caller's Lean proof | yes | no: a caller's theorem would name the kernel's contract as a hypothesis this checker discharges |
 
+For the whole hash the two are not of the same code: Lean checked the earlier code (`levels/levels.ode`:
+`ladd`, `lroot`, `chunk_node`, `hashl`, and the fast path `wide`, `group`, `groupf`, `finish`, `hashw`,
+`hashf`), each function from a proof with invariants and lemmas written by hand, and with the 32-lane kernel
+taken on trust (a stand-in). A whole run of those chains on the workhorse, 12 at a time, took 3,120 s
+(`hashw` alone 1,360 s, `hashl` 690 s, `groupf` 630 s; pinned run `wide-model-check4`, November 15: every
+chain checked but one, a listing compared across two versions of `llvm-objdump`, which is not a proof).
+Here `hash.ode` has no invariant and no lemma, nothing is taken on trust of a callee, and `check_all.py`
+takes 5 s on a laptop.
+
 Also tried the same day: SAW 1.6 on P16 with a Cryptol specification stops at the kernel's first AVX-512
 instruction ("Could not decode instruction 62d2").
 
