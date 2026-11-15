@@ -1,0 +1,43 @@
+odeadler32.o: an object with nothing left for a linker to fill in, 4576 bytes; 1136 of them loaded to be run
+the proof: the file's own section .ode.proof; the specification is the reader's (adler32.spec), the one the maker had
+  ode_adler32        at      0x0    55 instructions  1 places      8.1 ms  meets its public contract
+  ode_adler32_blocks at     0xb0   116 instructions  2 places    265.1 ms  meets its public contract
+  ode_adler32_blocks4 at    0x240   164 instructions  3 places   3014.2 ms  meets its public contract
+3 function(s) in this file, 335 instructions, each meets its public contract (adler32.spec), from the file's bytes, in 3.29 s
+odelz4.o: an object with nothing left for a linker to fill in, 14808 bytes; 3088 of them loaded to be run
+the proof: the file's own section .ode.proof; the specification is the reader's (lz4.spec), the one the maker had
+  ode_lz4_decode     at      0x0   267 instructions  5 places    733.7 ms  meets its public contract
+  ode_lz4_store      at    0x440   132 instructions  2 places     46.2 ms  meets its public contract
+  ode_lz4_pack       at    0x640   360 instructions  6 places   2869.7 ms  meets its public contract
+3 function(s) in this file, 759 instructions, each meets its public contract (lz4.spec), from the file's bytes, in 3.65 s
+odevarint.o: an object with nothing left for a linker to fill in, 1032 bytes; 112 of them loaded to be run
+the proof: the file's own section .ode.proof; the specification is the reader's (varint.spec), the one the maker had
+  ode_varint         at      0x0    35 instructions  0 places    256.6 ms  meets its public contract
+1 function(s) in this file, 35 instructions, each meets its public contract (varint.spec), from the file's bytes, in 0.26 s
+odecommon.o: an object with nothing left for a linker to fill in, 1320 bytes; 144 of them loaded to be run
+the proof: the file's own section .ode.proof; the specification is the reader's (common.spec), the one the maker had
+  ode_common         at      0x0    45 instructions  1 places      7.3 ms  meets its public contract
+1 function(s) in this file, 45 instructions, each meets its public contract (common.spec), from the file's bytes, in 0.01 s
+odeutf8.o: an object with nothing left for a linker to fill in, 2624 bytes; 1200 of them loaded to be run
+the proof: the file's own section .ode.proof; the specification is the reader's (utf8.spec), the one the maker had
+  ode_utf8           at      0x0   300 instructions  1 places    220.3 ms  meets its public contract
+1 function(s) in this file, 300 instructions, each meets its public contract (utf8.spec), from the file's bytes, in 0.22 s
+odebase64.o: an object with nothing left for a linker to fill in, 2304 bytes; 832 of them loaded to be run
+the proof: the file's own section .ode.proof; the specification is the reader's (base64.spec), the one the maker had
+  ode_base64         at      0x0   197 instructions  1 places  16630.9 ms  meets its public contract
+1 function(s) in this file, 197 instructions, each meets its public contract (base64.spec), from the file's bytes, in 16.63 s
+odeinet.o: an object with nothing left for a linker to fill in, 1632 bytes; 304 of them loaded to be run
+the proof: the file's own section .ode.proof; the specification is the reader's (inet.spec), the one the maker had
+  ode_inet           at      0x0    88 instructions  1 places    374.9 ms  meets its public contract
+1 function(s) in this file, 88 instructions, each meets its public contract (inet.spec), from the file's bytes, in 0.37 s
+6201 checksums as zlib's
+9001 checksums as zlib's
+9001 checksums as zlib's
+2383649 inputs as the table's validator: 90560 well-formed, 2293089 not
+20601 inputs written as the table's encoder writes them
+22001 checksums as RFC 1071's code gives them; NO for 2^49 bytes and more, with nothing read
+7015 blocks decoded and 12985 refused, as the reference decoder does
+12877 blocks written that decode to their input, 7723 refused for want of room
+15065 blocks written that decode to their input (437519350 bytes in 193777123), 5535 refused for want of room
+100200 varints as LEB128's
+20301 counts as the loop's

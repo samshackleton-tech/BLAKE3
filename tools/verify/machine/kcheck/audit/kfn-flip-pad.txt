@@ -34,6 +34,6 @@ pad: 896 single-bit changes of 112 bytes of code (1 s): 447 stopped by the decod
   accepted: +0x54 byte 6 bit 7: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0xFFFFFFFF80000000)
   accepted: +0x5B byte 2 bit 5: .mov 64 (.reg .rcx) (.reg .rbx)  ->  .mov 64 (.reg .rcx) (.reg .rdi)
 control: the unchanged object on this processor, the lengths and 200 more: same
-control: a change no proof was found for, on this processor: NONE FOUND
+control: a change no proof was found for, on this processor: DIFFERS: an official vector (1 bytes, plain) is not what hashr gives
 the 33 accepted changes on this processor: 33 same
-for scale, 300 of the changes stopped or refused, on this processor: 220 CRASHES, 51 DIFFERS, 29 same
+for scale, 300 of the changes stopped or refused, on this processor: 200 CRASHES, 71 DIFFERS, 29 same

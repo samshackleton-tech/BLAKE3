@@ -1,5 +1,5 @@
 control: the unchanged object is ACCEPTED 
-chunk_node: 2280 single-bit changes of 285 bytes of code (5 s): 1080 stopped by the decoder, 1100 refused (no proof), 100 accepted, 0 with NO VERDICT (the time limit)
+chunk_node: 2280 single-bit changes of 285 bytes of code (3 s): 1080 stopped by the decoder, 1100 refused (no proof), 100 accepted, 0 with NO VERDICT (the time limit)
   accepted: +0x3B byte 2 bit 4: .mov 64 (.reg .rbp) (.reg .rax)  ->  .mov 64 (.reg .rbp) (.reg .rdx)
   accepted: +0x48 byte 2 bit 5: .cmp 64 (.reg .rax) (.reg .rcx)  ->  .cmp 64 (.reg .rax) (.reg .rbp)
   accepted: +0x5D byte 2 bit 0: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rax) (.imm 0x5)
@@ -101,6 +101,6 @@ chunk_node: 2280 single-bit changes of 285 bytes of code (5 s): 1080 stopped by 
   accepted: +0xD9 byte 4 bit 6: .call b3l_pad  ->  .call b3l_pad
   accepted: +0xD9 byte 4 bit 7: .call b3l_pad  ->  .call b3l_pad
 control: the unchanged object on this processor, the lengths and 200 more: same
-control: a change no proof was found for, on this processor: NONE FOUND
+control: a change no proof was found for, on this processor: DIFFERS: an official vector (0 bytes, plain) is not what hashr gives
 the 100 accepted changes on this processor: 100 same
-for scale, 300 of the changes stopped or refused, on this processor: 179 CRASHES, 79 DIFFERS, 42 same
+for scale, 300 of the changes stopped or refused, on this processor: 174 CRASHES, 84 DIFFERS, 42 same

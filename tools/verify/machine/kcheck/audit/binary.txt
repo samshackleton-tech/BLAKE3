@@ -1,0 +1,18 @@
+b3hashr.o: an object with nothing left for a linker to fill in, 30888 bytes; 18176 of them loaded to be run
+the proof: the file's own section .ode.proof; the specification is the reader's, the one the maker had
+  b3l_hashr                                  at   0x1cf0   265 instructions   5162.6 ms  everything its contract allows
+  b3l_chunk_node                             at     0x70    81 instructions    227.1 ms  everything its contract allows
+  b3l_node_out                               at    0x190    58 instructions      5.0 ms  everything its contract allows
+  b3l_subtree                                at   0x1970   189 instructions   1858.1 ms  everything its contract allows
+  b3l_take                                   at   0x1590   133 instructions   3943.7 ms  everything its contract allows
+  blake3_servil_avx512_k32                   at   0x25c0   702 instructions    683.6 ms  a wide kernel: every number of blocks
+  blake3_servil_compress_in_place_avx512     at   0x2280    76 instructions      5.7 ms  a one-block kernel
+  blake3_servil_compress_in_place_sse41      at   0x2400    94 instructions      5.8 ms  a one-block kernel
+  b3l_pad                                    at      0x0    39 instructions    175.6 ms  everything its contract allows
+  b3l_part32                                 at   0x1820    76 instructions   6452.2 ms  everything its contract allows
+  b3l_wide128                                at    0x770   670 instructions   8692.3 ms  everything its contract allows
+  b3l_wide32                                 at    0x250   259 instructions   1986.3 ms  everything its contract allows
+  blake3_servil_avx512_p16                   at   0x3740   460 instructions    300.5 ms  a wide kernel: every number of blocks
+of the 18176 bytes loaded to be run: 16788 are the 13 bodies checked (3102 instructions), 859 are zero, 529 are others (constants the functions read; what lies between functions; whatever else the file holds)
+b3l_hashr in this file meets its public contract (blake3.spec), with all it calls: 13 functions, from the file's bytes, in 29.50 s
+5466 hashes as BLAKE3's (both kernels)

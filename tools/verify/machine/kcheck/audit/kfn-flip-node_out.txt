@@ -76,6 +76,6 @@ node_out: 1432 single-bit changes of 179 bytes of code (0 s): 722 stopped by the
   accepted: +0x9F byte 4 bit 6: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
   accepted: +0x9F byte 4 bit 7: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
 control: the unchanged object on this processor, the lengths and 200 more: same
-control: a change no proof was found for, on this processor: DIFFERS: case 0: the hash of 0 bytes (flags 16, platform 3) is not BLAKE3's
+control: a change no proof was found for, on this processor: DIFFERS: an official vector (0 bytes, plain) is not what hashr gives
 the 75 accepted changes on this processor: 75 same
-for scale, 300 of the changes stopped or refused, on this processor: 162 CRASHES, 90 DIFFERS, 48 same
+for scale, 300 of the changes stopped or refused, on this processor: 158 CRASHES, 95 DIFFERS, 47 same

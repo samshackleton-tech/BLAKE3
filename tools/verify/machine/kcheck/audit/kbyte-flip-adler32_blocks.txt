@@ -1,5 +1,5 @@
 control: the unchanged object is ACCEPTED 
-ode_adler32_blocks: 3144 single-bit changes of 393 bytes of code (146 s): 1458 stopped by the decoder, 1608 refused, 78 accepted, 0 with NO VERDICT (the time limit)
+ode_adler32_blocks: 3144 single-bit changes of 393 bytes of code (47 s): 1458 stopped by the decoder, 1607 refused, 79 accepted, 0 with NO VERDICT (the time limit)
   accepted: +0x32 byte 0 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .r8) (.imm 0x0)
   accepted: +0x32 byte 2 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rcx) (.imm 0x0)
   accepted: +0x32 byte 2 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rdx) (.imm 0x0)
@@ -78,5 +78,7 @@ ode_adler32_blocks: 3144 single-bit changes of 393 bytes of code (146 s): 1458 s
   accepted: +0x15F byte 0 bit 0: .mov 64 (.reg .rax) (.reg .r14)  ->  .mov 64 (.reg .r8) (.reg .r14)
   accepted: +0x15F byte 2 bit 0: .mov 64 (.reg .rax) (.reg .r14)  ->  .mov 64 (.reg .rcx) (.reg .r14)
   accepted: +0x15F byte 2 bit 1: .mov 64 (.reg .rax) (.reg .r14)  ->  .mov 64 (.reg .rdx) (.reg .r14)
+  accepted: +0x177 byte 1 bit 3: .add 64 (.reg .rax) (.reg .r13)  ->  .or 64 (.reg .rax) (.reg .r13)
 control: the unchanged object on this processor (300): same
-the 78 accepted changes on this processor: 78 same
+the 79 accepted changes on this processor: 79 same
+for scale, 300 of the changes stopped or refused, on this processor: 151 CRASHES, 109 DIFFERS, 40 same

@@ -248,7 +248,7 @@ processor the caller's contract allows there.
   multiple of 1,024 up to 70 chunks, 200 random lengths to 300,000; the three modes' flags; both kernels; the
   message ending where a page that faults begins.
 
-  (All nine functions, commit `17b15a69`; each change was given 900 s at most and none took them.)
+  (All nine functions, the checkers as at commit `2ae7c9e9`; each change was given 900 s at most and none took them.)
 
   | function | changes | stopped by the decoder | refused (no proof) | accepted | of those, as BLAKE3 on the processor |
   |---|---|---|---|---|---|
@@ -551,20 +551,28 @@ and with a wrong one the check fails.
 
   | function | single-bit changes | stopped by the decoder | refused | accepted | of those, on the processor |
   |---|---|---|---|---|---|
-  | `ode_adler32` | 1,368 | 644 | 707 | 17 | 17 keep the contract |
-  | `ode_lz4_decode` | 8,608 | 4,026 | 4,157 | 425 | 425 keep the contract |
+  | `ode_adler32` | 1,368 | 644 | 706 | 18 | 18 keep the contract |
+  | `ode_adler32_blocks` | 3,144 | 1,458 | 1,607 | 79 | 79 keep the contract |
+  | `ode_adler32_blocks4` | 4,400 | 2,047 | 2,241 | 112 | 112 keep the contract |
+  | `ode_lz4_decode` | 8,608 | 4,026 | 4,156 | 426 | 426 keep the contract |
   | `ode_lz4_store` | 4,016 | 1,866 | 1,830 | 320 | 320 keep the contract |
-  | `ode_lz4_pack` | 11,784 | 5,415 | 5,470 | 899 | 899 keep the contract |
-  | `ode_varint` | 840 | 413 | 420 | 7 | 7 keep the contract |
+  | `ode_lz4_pack` | 11,784 | 5,415 | 5,516 | 853 | 853 keep the contract |
+  | `ode_varint` | 840 | 413 | 419 | 8 | 8 keep the contract |
   | `ode_common` | 1,072 | 526 | 483 | 63 | 63 keep the contract |
+  | `ode_utf8` | 9,576 | 4,305 | 4,399 | 872 | 872 keep the contract |
+  | `ode_base64` | 6,608 | 3,121 | 2,984 | 503 | 503 keep the contract |
+  | `ode_inet` | 2,392 | 1,130 | 1,249 | 13 | 13 keep the contract |
 
   (Threadripper PRO 7975WX. The judges: zlib's `adler32`; for the decoder a decoder written in C in the
   harness, on blocks that are right and blocks that are damaged; for the encoders that decoder,
   `ode_lz4_decode`, and for the packing one `LZ4_decompress_safe` of lz4's `lz4.c` (commit `6b589e80`) as
   well; for UTF-8 a validator by the standard's table of byte ranges and the C library's converter; for
   base 64 an encoder by a table and the C library's `b64_ntop`; for the checksum RFC 1071's own C code.
-  The first six rows are of the full audit; the last four were run apart, with the same checker files,
-  because those programs were written after it began.)
+  All eleven are of one run, `sh audit.sh 10 programs` at commit `f7c0cfa9`, the last change to `kbyte.py`:
+  53,808 changes, 3,267 accepted, none without a verdict. The same run left every instruction out of five
+  of them in turn: 38, 47, 4, 11 and 12 objects accepted (`lz4_pack`, `utf8`, `inet`, `adler32_blocks`,
+  `adler32_blocks4`), each keeping its contract on the processor; and checked and ran the seven shipped
+  files.)
 - **The unchanged functions on the processor**: Adler-32 on 6,301 inputs as zlib's; the decoder on 20,000
   blocks as the C decoder (count, bytes, and NO); the plain encoder: 12,877 blocks that decode to their
   input, NO only where the room is less than the block needs; the packing encoder: 15,065 blocks, each
@@ -853,10 +861,12 @@ same for every input.
 
 ## What has been done to find it wrong
 
-(Every single-bit audit of the kernels and of the stack's functions, below and above, was run again by
-`sh audit.sh 48` at commit `55bcb1c6`: the declarative specification, and the readers and the numbers' part
-as `kfn.py` needs them. `audit/` holds the outputs. The commits since have changed these checkers in one
-way: what a function needs of the processor is read from its bytes, which only refuses more.)
+(Every single-bit audit was run again on November 15 by `sh audit.sh 60` on the tree of commit `2ae7c9e9`,
+the last change to any checker the hash uses, and `audit/` holds the outputs: 350,960 single-bit changes
+in all, 17,785 accepted, each of those as its specification on the processor, none without a verdict
+(900 s a change at most). The kernels', the stack's and the one-block kernels' counts are what they were
+at `55bcb1c6`: 227,296 changes, 8,576 accepted. The checker of the programs, `kbyte.py`, changed twice
+after that run began; its eleven functions are of a second run at `f7c0cfa9`.)
 
 1. **Changed kernels** (`--mutants`): 15 of 15 refused (rotations, operands, the carry's mask, a message offset,
    a store's offset, a shuffle, a flag, a saved register, the frame's bound, the block step, one entry of the

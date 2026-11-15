@@ -1,0 +1,448 @@
+control: the unchanged object is ACCEPTED 
+take: 5176 single-bit changes of 647 bytes of code (786 s): 2096 stopped by the decoder, 2638 refused (no proof), 442 accepted, 0 with NO VERDICT (the time limit)
+  accepted: +0x35 byte 0 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .r8) (.imm 0x0)
+  accepted: +0x35 byte 2 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rcx) (.imm 0x0)
+  accepted: +0x35 byte 2 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rdx) (.imm 0x0)
+  accepted: +0x35 byte 3 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x1)
+  accepted: +0x35 byte 3 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x2)
+  accepted: +0x35 byte 3 bit 2: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x4)
+  accepted: +0x35 byte 3 bit 3: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x8)
+  accepted: +0x35 byte 3 bit 4: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x10)
+  accepted: +0x35 byte 3 bit 5: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x20)
+  accepted: +0x35 byte 3 bit 6: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x40)
+  accepted: +0x35 byte 3 bit 7: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x80)
+  accepted: +0x35 byte 4 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x100)
+  accepted: +0x35 byte 4 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x200)
+  accepted: +0x35 byte 4 bit 2: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x400)
+  accepted: +0x35 byte 4 bit 3: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x800)
+  accepted: +0x35 byte 4 bit 4: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x1000)
+  accepted: +0x35 byte 4 bit 5: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x2000)
+  accepted: +0x35 byte 4 bit 6: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x4000)
+  accepted: +0x35 byte 4 bit 7: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x8000)
+  accepted: +0x35 byte 5 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x10000)
+  accepted: +0x35 byte 5 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x20000)
+  accepted: +0x35 byte 5 bit 2: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x40000)
+  accepted: +0x35 byte 5 bit 3: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x80000)
+  accepted: +0x35 byte 5 bit 4: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x100000)
+  accepted: +0x35 byte 5 bit 5: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x200000)
+  accepted: +0x35 byte 5 bit 6: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x400000)
+  accepted: +0x35 byte 5 bit 7: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x800000)
+  accepted: +0x35 byte 6 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x1000000)
+  accepted: +0x35 byte 6 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x2000000)
+  accepted: +0x35 byte 6 bit 2: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x4000000)
+  accepted: +0x35 byte 6 bit 3: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x8000000)
+  accepted: +0x35 byte 6 bit 4: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x10000000)
+  accepted: +0x35 byte 6 bit 5: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x20000000)
+  accepted: +0x35 byte 6 bit 6: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x40000000)
+  accepted: +0x35 byte 6 bit 7: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0xFFFFFFFF80000000)
+  accepted: +0x3C byte 0 bit 2: .mov 64 (.mem .rsp 0xC8) (.reg .rax)  ->  .mov 64 (.mem .rsp 0xC8) (.reg .r8)
+  accepted: +0x3C byte 1 bit 2: .mov 64 (.mem .rsp 0xC8) (.reg .rax)  ->  .lea .rax .rsp 0xC8
+  accepted: +0x3C byte 2 bit 3: .mov 64 (.mem .rsp 0xC8) (.reg .rax)  ->  .mov 64 (.mem .rsp 0xC8) (.reg .rcx)
+  accepted: +0x3C byte 2 bit 4: .mov 64 (.mem .rsp 0xC8) (.reg .rax)  ->  .mov 64 (.mem .rsp 0xC8) (.reg .rdx)
+  accepted: +0x3C byte 2 bit 5: .mov 64 (.mem .rsp 0xC8) (.reg .rax)  ->  .mov 64 (.mem .rsp 0xC8) (.reg .rsp)
+  accepted: +0x3C byte 4 bit 0: .mov 64 (.mem .rsp 0xC8) (.reg .rax)  ->  .mov 64 (.mem .rsp 0xC9) (.reg .rax)
+  accepted: +0x3C byte 4 bit 1: .mov 64 (.mem .rsp 0xC8) (.reg .rax)  ->  .mov 64 (.mem .rsp 0xCA) (.reg .rax)
+  accepted: +0x3C byte 4 bit 2: .mov 64 (.mem .rsp 0xC8) (.reg .rax)  ->  .mov 64 (.mem .rsp 0xCC) (.reg .rax)
+  accepted: +0x3C byte 4 bit 4: .mov 64 (.mem .rsp 0xC8) (.reg .rax)  ->  .mov 64 (.mem .rsp 0xD8) (.reg .rax)
+  accepted: +0x3C byte 4 bit 5: .mov 64 (.mem .rsp 0xC8) (.reg .rax)  ->  .mov 64 (.mem .rsp 0xE8) (.reg .rax)
+  accepted: +0x3C byte 4 bit 6: .mov 64 (.mem .rsp 0xC8) (.reg .rax)  ->  .mov 64 (.mem .rsp 0x88) (.reg .rax)
+  accepted: +0x3C byte 4 bit 7: .mov 64 (.mem .rsp 0xC8) (.reg .rax)  ->  .mov 64 (.mem .rsp 0x48) (.reg .rax)
+  accepted: +0x44 byte 0 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .r8) (.imm 0x0)
+  accepted: +0x44 byte 2 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rcx) (.imm 0x0)
+  accepted: +0x44 byte 2 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rdx) (.imm 0x0)
+  accepted: +0x44 byte 3 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x1)
+  accepted: +0x44 byte 3 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x2)
+  accepted: +0x44 byte 3 bit 2: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x4)
+  accepted: +0x44 byte 3 bit 3: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x8)
+  accepted: +0x44 byte 3 bit 4: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x10)
+  accepted: +0x44 byte 3 bit 5: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x20)
+  accepted: +0x44 byte 3 bit 6: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x40)
+  accepted: +0x44 byte 3 bit 7: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x80)
+  accepted: +0x44 byte 4 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x100)
+  accepted: +0x44 byte 4 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x200)
+  accepted: +0x44 byte 4 bit 2: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x400)
+  accepted: +0x44 byte 4 bit 3: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x800)
+  accepted: +0x44 byte 4 bit 4: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x1000)
+  accepted: +0x44 byte 4 bit 5: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x2000)
+  accepted: +0x44 byte 4 bit 6: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x4000)
+  accepted: +0x44 byte 4 bit 7: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x8000)
+  accepted: +0x44 byte 5 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x10000)
+  accepted: +0x44 byte 5 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x20000)
+  accepted: +0x44 byte 5 bit 2: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x40000)
+  accepted: +0x44 byte 5 bit 3: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x80000)
+  accepted: +0x44 byte 5 bit 4: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x100000)
+  accepted: +0x44 byte 5 bit 5: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x200000)
+  accepted: +0x44 byte 5 bit 6: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x400000)
+  accepted: +0x44 byte 5 bit 7: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x800000)
+  accepted: +0x44 byte 6 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x1000000)
+  accepted: +0x44 byte 6 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x2000000)
+  accepted: +0x44 byte 6 bit 2: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x4000000)
+  accepted: +0x44 byte 6 bit 3: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x8000000)
+  accepted: +0x44 byte 6 bit 4: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x10000000)
+  accepted: +0x44 byte 6 bit 5: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x20000000)
+  accepted: +0x44 byte 6 bit 6: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x40000000)
+  accepted: +0x44 byte 6 bit 7: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0xFFFFFFFF80000000)
+  accepted: +0x4B byte 0 bit 2: .mov 64 (.mem .rsp 0xD0) (.reg .rax)  ->  .mov 64 (.mem .rsp 0xD0) (.reg .r8)
+  accepted: +0x4B byte 1 bit 2: .mov 64 (.mem .rsp 0xD0) (.reg .rax)  ->  .lea .rax .rsp 0xD0
+  accepted: +0x4B byte 2 bit 3: .mov 64 (.mem .rsp 0xD0) (.reg .rax)  ->  .mov 64 (.mem .rsp 0xD0) (.reg .rcx)
+  accepted: +0x4B byte 2 bit 4: .mov 64 (.mem .rsp 0xD0) (.reg .rax)  ->  .mov 64 (.mem .rsp 0xD0) (.reg .rdx)
+  accepted: +0x4B byte 2 bit 5: .mov 64 (.mem .rsp 0xD0) (.reg .rax)  ->  .mov 64 (.mem .rsp 0xD0) (.reg .rsp)
+  accepted: +0x4B byte 4 bit 0: .mov 64 (.mem .rsp 0xD0) (.reg .rax)  ->  .mov 64 (.mem .rsp 0xD1) (.reg .rax)
+  accepted: +0x4B byte 4 bit 1: .mov 64 (.mem .rsp 0xD0) (.reg .rax)  ->  .mov 64 (.mem .rsp 0xD2) (.reg .rax)
+  accepted: +0x4B byte 4 bit 2: .mov 64 (.mem .rsp 0xD0) (.reg .rax)  ->  .mov 64 (.mem .rsp 0xD4) (.reg .rax)
+  accepted: +0x4B byte 4 bit 3: .mov 64 (.mem .rsp 0xD0) (.reg .rax)  ->  .mov 64 (.mem .rsp 0xD8) (.reg .rax)
+  accepted: +0x4B byte 4 bit 5: .mov 64 (.mem .rsp 0xD0) (.reg .rax)  ->  .mov 64 (.mem .rsp 0xF0) (.reg .rax)
+  accepted: +0x4B byte 4 bit 6: .mov 64 (.mem .rsp 0xD0) (.reg .rax)  ->  .mov 64 (.mem .rsp 0x90) (.reg .rax)
+  accepted: +0x4B byte 4 bit 7: .mov 64 (.mem .rsp 0xD0) (.reg .rax)  ->  .mov 64 (.mem .rsp 0x50) (.reg .rax)
+  accepted: +0x53 byte 0 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .r8) (.imm 0x0)
+  accepted: +0x53 byte 2 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rcx) (.imm 0x0)
+  accepted: +0x53 byte 2 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rdx) (.imm 0x0)
+  accepted: +0x53 byte 3 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x1)
+  accepted: +0x53 byte 3 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x2)
+  accepted: +0x53 byte 3 bit 2: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x4)
+  accepted: +0x53 byte 3 bit 3: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x8)
+  accepted: +0x53 byte 3 bit 4: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x10)
+  accepted: +0x53 byte 3 bit 5: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x20)
+  accepted: +0x53 byte 3 bit 6: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x40)
+  accepted: +0x53 byte 3 bit 7: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x80)
+  accepted: +0x53 byte 4 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x100)
+  accepted: +0x53 byte 4 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x200)
+  accepted: +0x53 byte 4 bit 2: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x400)
+  accepted: +0x53 byte 4 bit 3: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x800)
+  accepted: +0x53 byte 4 bit 4: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x1000)
+  accepted: +0x53 byte 4 bit 5: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x2000)
+  accepted: +0x53 byte 4 bit 6: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x4000)
+  accepted: +0x53 byte 4 bit 7: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x8000)
+  accepted: +0x53 byte 5 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x10000)
+  accepted: +0x53 byte 5 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x20000)
+  accepted: +0x53 byte 5 bit 2: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x40000)
+  accepted: +0x53 byte 5 bit 3: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x80000)
+  accepted: +0x53 byte 5 bit 4: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x100000)
+  accepted: +0x53 byte 5 bit 5: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x200000)
+  accepted: +0x53 byte 5 bit 6: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x400000)
+  accepted: +0x53 byte 5 bit 7: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x800000)
+  accepted: +0x53 byte 6 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x1000000)
+  accepted: +0x53 byte 6 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x2000000)
+  accepted: +0x53 byte 6 bit 2: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x4000000)
+  accepted: +0x53 byte 6 bit 3: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x8000000)
+  accepted: +0x53 byte 6 bit 4: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x10000000)
+  accepted: +0x53 byte 6 bit 5: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x20000000)
+  accepted: +0x53 byte 6 bit 6: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x40000000)
+  accepted: +0x53 byte 6 bit 7: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0xFFFFFFFF80000000)
+  accepted: +0x5A byte 0 bit 2: .mov 64 (.mem .rsp 0xD8) (.reg .rax)  ->  .mov 64 (.mem .rsp 0xD8) (.reg .r8)
+  accepted: +0x5A byte 1 bit 2: .mov 64 (.mem .rsp 0xD8) (.reg .rax)  ->  .lea .rax .rsp 0xD8
+  accepted: +0x5A byte 2 bit 3: .mov 64 (.mem .rsp 0xD8) (.reg .rax)  ->  .mov 64 (.mem .rsp 0xD8) (.reg .rcx)
+  accepted: +0x5A byte 2 bit 4: .mov 64 (.mem .rsp 0xD8) (.reg .rax)  ->  .mov 64 (.mem .rsp 0xD8) (.reg .rdx)
+  accepted: +0x5A byte 2 bit 5: .mov 64 (.mem .rsp 0xD8) (.reg .rax)  ->  .mov 64 (.mem .rsp 0xD8) (.reg .rsp)
+  accepted: +0x5A byte 4 bit 0: .mov 64 (.mem .rsp 0xD8) (.reg .rax)  ->  .mov 64 (.mem .rsp 0xD9) (.reg .rax)
+  accepted: +0x5A byte 4 bit 1: .mov 64 (.mem .rsp 0xD8) (.reg .rax)  ->  .mov 64 (.mem .rsp 0xDA) (.reg .rax)
+  accepted: +0x5A byte 4 bit 2: .mov 64 (.mem .rsp 0xD8) (.reg .rax)  ->  .mov 64 (.mem .rsp 0xDC) (.reg .rax)
+  accepted: +0x5A byte 4 bit 3: .mov 64 (.mem .rsp 0xD8) (.reg .rax)  ->  .mov 64 (.mem .rsp 0xD0) (.reg .rax)
+  accepted: +0x5A byte 4 bit 4: .mov 64 (.mem .rsp 0xD8) (.reg .rax)  ->  .mov 64 (.mem .rsp 0xC8) (.reg .rax)
+  accepted: +0x5A byte 4 bit 5: .mov 64 (.mem .rsp 0xD8) (.reg .rax)  ->  .mov 64 (.mem .rsp 0xF8) (.reg .rax)
+  accepted: +0x5A byte 4 bit 6: .mov 64 (.mem .rsp 0xD8) (.reg .rax)  ->  .mov 64 (.mem .rsp 0x98) (.reg .rax)
+  accepted: +0x5A byte 4 bit 7: .mov 64 (.mem .rsp 0xD8) (.reg .rax)  ->  .mov 64 (.mem .rsp 0x58) (.reg .rax)
+  accepted: +0x9B byte 0 bit 0: .mov 64 (.reg .rax) (.imm 0x2)  ->  .mov 64 (.reg .r8) (.imm 0x2)
+  accepted: +0x9B byte 2 bit 0: .mov 64 (.reg .rax) (.imm 0x2)  ->  .mov 64 (.reg .rcx) (.imm 0x2)
+  accepted: +0x9B byte 2 bit 1: .mov 64 (.reg .rax) (.imm 0x2)  ->  .mov 64 (.reg .rdx) (.imm 0x2)
+  accepted: +0xAA byte 0 bit 2: .mov 64 (.reg .rax) (.mem .rsp 0xD8)  ->  .mov 64 (.reg .r8) (.mem .rsp 0xD8)
+  accepted: +0xAA byte 1 bit 1: .mov 64 (.reg .rax) (.mem .rsp 0xD8)  ->  .mov 64 (.mem .rsp 0xD8) (.reg .rax)
+  accepted: +0xAA byte 1 bit 7: .mov 64 (.reg .rax) (.mem .rsp 0xD8)  ->  .or 64 (.reg .rax) (.mem .rsp 0xD8)
+  accepted: +0xAA byte 2 bit 3: .mov 64 (.reg .rax) (.mem .rsp 0xD8)  ->  .mov 64 (.reg .rcx) (.mem .rsp 0xD8)
+  accepted: +0xAA byte 2 bit 4: .mov 64 (.reg .rax) (.mem .rsp 0xD8)  ->  .mov 64 (.reg .rdx) (.mem .rsp 0xD8)
+  accepted: +0xBF byte 0 bit 2: .mov 64 (.reg .rax) (.mem .rsp 0xD8)  ->  .mov 64 (.reg .r8) (.mem .rsp 0xD8)
+  accepted: +0xBF byte 1 bit 1: .mov 64 (.reg .rax) (.mem .rsp 0xD8)  ->  .mov 64 (.mem .rsp 0xD8) (.reg .rax)
+  accepted: +0xBF byte 1 bit 7: .mov 64 (.reg .rax) (.mem .rsp 0xD8)  ->  .or 64 (.reg .rax) (.mem .rsp 0xD8)
+  accepted: +0xBF byte 2 bit 3: .mov 64 (.reg .rax) (.mem .rsp 0xD8)  ->  .mov 64 (.reg .rcx) (.mem .rsp 0xD8)
+  accepted: +0xBF byte 2 bit 4: .mov 64 (.reg .rax) (.mem .rsp 0xD8)  ->  .mov 64 (.reg .rdx) (.mem .rsp 0xD8)
+  accepted: +0xCF byte 0 bit 2: .mov 64 (.reg .rax) (.mem .rsp 0xD8)  ->  .mov 64 (.reg .r8) (.mem .rsp 0xD8)
+  accepted: +0xCF byte 1 bit 1: .mov 64 (.reg .rax) (.mem .rsp 0xD8)  ->  .mov 64 (.mem .rsp 0xD8) (.reg .rax)
+  accepted: +0xCF byte 1 bit 7: .mov 64 (.reg .rax) (.mem .rsp 0xD8)  ->  .or 64 (.reg .rax) (.mem .rsp 0xD8)
+  accepted: +0xCF byte 2 bit 3: .mov 64 (.reg .rax) (.mem .rsp 0xD8)  ->  .mov 64 (.reg .rcx) (.mem .rsp 0xD8)
+  accepted: +0xCF byte 2 bit 4: .mov 64 (.reg .rax) (.mem .rsp 0xD8)  ->  .mov 64 (.reg .rdx) (.mem .rsp 0xD8)
+  accepted: +0xCF byte 4 bit 3: .mov 64 (.reg .rax) (.mem .rsp 0xD8)  ->  .mov 64 (.reg .rax) (.mem .rsp 0xD0)
+  accepted: +0xE2 byte 1 bit 3: .jmp 0x100AA  ->  .jmp 0x100B2
+  accepted: +0xE2 byte 1 bit 4: .jmp 0x100AA  ->  .jmp 0x100BA
+  accepted: +0x17B byte 2 bit 2: .mov 64 (.reg .rsi) (.reg .rbp)  ->  .mov 64 (.reg .rdx) (.reg .rbp)
+  accepted: +0x189 byte 0 bit 0: .mov 64 (.reg .r8) (.reg .r14)  ->  .mov 64 (.reg .rax) (.reg .r14)
+  accepted: +0x189 byte 2 bit 0: .mov 64 (.reg .r8) (.reg .r14)  ->  .mov 64 (.reg .r9) (.reg .r14)
+  accepted: +0x189 byte 2 bit 1: .mov 64 (.reg .r8) (.reg .r14)  ->  .mov 64 (.reg .r10) (.reg .r14)
+  accepted: +0x189 byte 2 bit 2: .mov 64 (.reg .r8) (.reg .r14)  ->  .mov 64 (.reg .r12) (.reg .r14)
+  accepted: +0x18C byte 2 bit 1: .mov 64 (.reg .r9) (.reg .r15)  ->  .mov 64 (.reg .r11) (.reg .r15)
+  accepted: +0x18F byte 1 bit 0: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 1 bit 1: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 1 bit 2: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 1 bit 3: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 1 bit 4: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 1 bit 5: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 1 bit 6: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 1 bit 7: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 2 bit 0: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 2 bit 1: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 2 bit 2: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 2 bit 3: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 2 bit 4: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 2 bit 5: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 2 bit 6: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 2 bit 7: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 3 bit 0: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 3 bit 1: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 3 bit 2: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 3 bit 3: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 3 bit 4: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 3 bit 5: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 3 bit 6: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 3 bit 7: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 4 bit 0: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 4 bit 1: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 4 bit 2: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 4 bit 3: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 4 bit 4: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 4 bit 5: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 4 bit 6: .call b3l_take  ->  .call b3l_take
+  accepted: +0x18F byte 4 bit 7: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 1 bit 0: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 1 bit 1: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 1 bit 2: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 1 bit 3: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 1 bit 4: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 1 bit 5: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 1 bit 6: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 1 bit 7: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 2 bit 0: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 2 bit 1: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 2 bit 2: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 2 bit 3: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 2 bit 4: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 2 bit 5: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 2 bit 6: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 2 bit 7: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 3 bit 0: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 3 bit 1: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 3 bit 2: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 3 bit 3: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 3 bit 4: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 3 bit 5: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 3 bit 6: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 3 bit 7: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 4 bit 0: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 4 bit 1: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 4 bit 2: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 4 bit 3: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 4 bit 4: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 4 bit 5: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 4 bit 6: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1BF byte 4 bit 7: .call b3l_take  ->  .call b3l_take
+  accepted: +0x1CD byte 2 bit 1: .xstoreu .rcx 0x0 0  ->  .xstoreu .rbx 0x0 0
+  accepted: +0x1D4 byte 2 bit 1: .xstoreu .rcx 0x10 0  ->  .xstoreu .rbx 0x10 0
+  accepted: +0x1D8 byte 2 bit 4: .mov 64 (.reg .rdi) (.reg .rbx)  ->  .mov 64 (.reg .rdi) (.reg .rcx)
+  accepted: +0x1F9 byte 1 bit 0: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 1 bit 1: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 1 bit 2: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 1 bit 3: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 1 bit 4: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 1 bit 5: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 1 bit 6: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 1 bit 7: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 2 bit 0: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 2 bit 1: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 2 bit 2: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 2 bit 3: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 2 bit 4: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 2 bit 5: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 2 bit 6: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 2 bit 7: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 3 bit 0: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 3 bit 1: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 3 bit 2: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 3 bit 3: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 3 bit 4: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 3 bit 5: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 3 bit 6: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 3 bit 7: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 4 bit 0: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 4 bit 1: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 4 bit 2: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 4 bit 3: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 4 bit 4: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 4 bit 5: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 4 bit 6: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x1F9 byte 4 bit 7: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
+  accepted: +0x203 byte 2 bit 0: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rax) (.imm 0x400)
+  accepted: +0x203 byte 3 bit 0: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x401)
+  accepted: +0x203 byte 3 bit 1: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x402)
+  accepted: +0x203 byte 3 bit 2: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x404)
+  accepted: +0x203 byte 3 bit 3: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x408)
+  accepted: +0x203 byte 3 bit 4: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x410)
+  accepted: +0x203 byte 3 bit 5: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x420)
+  accepted: +0x203 byte 3 bit 6: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x440)
+  accepted: +0x203 byte 3 bit 7: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x480)
+  accepted: +0x203 byte 4 bit 0: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x500)
+  accepted: +0x203 byte 4 bit 1: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x600)
+  accepted: +0x203 byte 4 bit 2: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x0)
+  accepted: +0x203 byte 4 bit 3: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0xC00)
+  accepted: +0x203 byte 4 bit 4: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x1400)
+  accepted: +0x203 byte 4 bit 5: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x2400)
+  accepted: +0x203 byte 4 bit 6: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x4400)
+  accepted: +0x203 byte 4 bit 7: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x8400)
+  accepted: +0x203 byte 5 bit 0: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x10400)
+  accepted: +0x203 byte 5 bit 1: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x20400)
+  accepted: +0x203 byte 5 bit 2: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x40400)
+  accepted: +0x203 byte 5 bit 3: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x80400)
+  accepted: +0x203 byte 5 bit 4: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x100400)
+  accepted: +0x203 byte 5 bit 5: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x200400)
+  accepted: +0x203 byte 5 bit 6: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x400400)
+  accepted: +0x203 byte 5 bit 7: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x800400)
+  accepted: +0x203 byte 6 bit 0: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x1000400)
+  accepted: +0x203 byte 6 bit 1: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x2000400)
+  accepted: +0x203 byte 6 bit 2: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x4000400)
+  accepted: +0x203 byte 6 bit 3: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x8000400)
+  accepted: +0x203 byte 6 bit 4: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x10000400)
+  accepted: +0x203 byte 6 bit 5: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x20000400)
+  accepted: +0x203 byte 6 bit 6: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0x40000400)
+  accepted: +0x203 byte 6 bit 7: .mov 64 (.reg .rcx) (.imm 0x400)  ->  .mov 64 (.reg .rcx) (.imm 0xFFFFFFFF80000400)
+  accepted: +0x20A byte 2 bit 1: .cmp 64 (.reg .rax) (.reg .rcx)  ->  .cmp 64 (.reg .rdx) (.reg .rcx)
+  accepted: +0x212 byte 2 bit 5: .mov 64 (.reg .rcx) (.reg .rbx)  ->  .mov 64 (.reg .rcx) (.reg .rdi)
+  accepted: +0x218 byte 2 bit 1: .xstoreu .rcx 0x0 0  ->  .xstoreu .rbx 0x0 0
+  accepted: +0x21F byte 2 bit 1: .xstoreu .rcx 0x10 0  ->  .xstoreu .rbx 0x10 0
+  accepted: +0x23E byte 2 bit 2: .mov 64 (.reg .rsi) (.reg .rbp)  ->  .mov 64 (.reg .rdx) (.reg .rbp)
+  accepted: +0x241 byte 0 bit 0: .mov 64 (.reg .rdx) (.reg .r12)  ->  .mov 64 (.reg .r10) (.reg .r12)
+  accepted: +0x241 byte 2 bit 1: .mov 64 (.reg .rdx) (.reg .r12)  ->  .mov 64 (.reg .rax) (.reg .r12)
+  accepted: +0x24F byte 2 bit 1: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r11) (.imm 0x5)
+  accepted: +0x24F byte 2 bit 2: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r13) (.imm 0x5)
+  accepted: +0x24F byte 3 bit 0: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x4)
+  accepted: +0x24F byte 3 bit 1: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x7)
+  accepted: +0x24F byte 3 bit 2: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x1)
+  accepted: +0x24F byte 3 bit 3: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0xD)
+  accepted: +0x24F byte 3 bit 4: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x15)
+  accepted: +0x24F byte 3 bit 5: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x25)
+  accepted: +0x24F byte 3 bit 6: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x45)
+  accepted: +0x24F byte 3 bit 7: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x85)
+  accepted: +0x24F byte 4 bit 0: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x105)
+  accepted: +0x24F byte 4 bit 1: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x205)
+  accepted: +0x24F byte 4 bit 2: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x405)
+  accepted: +0x24F byte 4 bit 3: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x805)
+  accepted: +0x24F byte 4 bit 4: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x1005)
+  accepted: +0x24F byte 4 bit 5: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x2005)
+  accepted: +0x24F byte 4 bit 6: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x4005)
+  accepted: +0x24F byte 4 bit 7: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x8005)
+  accepted: +0x24F byte 5 bit 0: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x10005)
+  accepted: +0x24F byte 5 bit 1: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x20005)
+  accepted: +0x24F byte 5 bit 2: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x40005)
+  accepted: +0x24F byte 5 bit 3: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x80005)
+  accepted: +0x24F byte 5 bit 4: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x100005)
+  accepted: +0x24F byte 5 bit 5: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x200005)
+  accepted: +0x24F byte 5 bit 6: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x400005)
+  accepted: +0x24F byte 5 bit 7: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x800005)
+  accepted: +0x24F byte 6 bit 0: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x1000005)
+  accepted: +0x24F byte 6 bit 1: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x2000005)
+  accepted: +0x24F byte 6 bit 2: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x4000005)
+  accepted: +0x24F byte 6 bit 3: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x8000005)
+  accepted: +0x24F byte 6 bit 4: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x10000005)
+  accepted: +0x24F byte 6 bit 5: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x20000005)
+  accepted: +0x24F byte 6 bit 6: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x40000005)
+  accepted: +0x24F byte 6 bit 7: .mov 64 (.reg .r9) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0xFFFFFFFF80000005)
+  accepted: +0x256 byte 1 bit 0: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 1 bit 1: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 1 bit 2: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 1 bit 3: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 1 bit 4: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 1 bit 5: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 1 bit 6: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 1 bit 7: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 2 bit 0: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 2 bit 1: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 2 bit 2: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 2 bit 3: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 2 bit 4: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 2 bit 5: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 2 bit 6: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 2 bit 7: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 3 bit 0: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 3 bit 1: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 3 bit 2: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 3 bit 3: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 3 bit 4: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 3 bit 5: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 3 bit 6: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 3 bit 7: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 4 bit 0: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 4 bit 1: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 4 bit 2: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 4 bit 3: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 4 bit 4: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 4 bit 5: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 4 bit 6: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x256 byte 4 bit 7: .call b3l_chunk_node  ->  .call b3l_chunk_node
+  accepted: +0x269 byte 0 bit 0: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .r9) (.imm 0x5)
+  accepted: +0x269 byte 2 bit 0: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rax) (.imm 0x5)
+  accepted: +0x269 byte 2 bit 1: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rbx) (.imm 0x5)
+  accepted: +0x269 byte 2 bit 2: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rbp) (.imm 0x5)
+  accepted: +0x269 byte 3 bit 0: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x4)
+  accepted: +0x269 byte 3 bit 1: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x7)
+  accepted: +0x269 byte 3 bit 2: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x1)
+  accepted: +0x269 byte 3 bit 3: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0xD)
+  accepted: +0x269 byte 3 bit 4: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x15)
+  accepted: +0x269 byte 3 bit 5: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x25)
+  accepted: +0x269 byte 3 bit 6: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x45)
+  accepted: +0x269 byte 3 bit 7: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x85)
+  accepted: +0x269 byte 4 bit 0: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x105)
+  accepted: +0x269 byte 4 bit 1: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x205)
+  accepted: +0x269 byte 4 bit 2: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x405)
+  accepted: +0x269 byte 4 bit 3: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x805)
+  accepted: +0x269 byte 4 bit 4: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x1005)
+  accepted: +0x269 byte 4 bit 5: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x2005)
+  accepted: +0x269 byte 4 bit 6: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x4005)
+  accepted: +0x269 byte 4 bit 7: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x8005)
+  accepted: +0x269 byte 5 bit 0: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x10005)
+  accepted: +0x269 byte 5 bit 1: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x20005)
+  accepted: +0x269 byte 5 bit 2: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x40005)
+  accepted: +0x269 byte 5 bit 3: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x80005)
+  accepted: +0x269 byte 5 bit 4: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x100005)
+  accepted: +0x269 byte 5 bit 5: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x200005)
+  accepted: +0x269 byte 5 bit 6: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x400005)
+  accepted: +0x269 byte 5 bit 7: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x800005)
+  accepted: +0x269 byte 6 bit 0: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x1000005)
+  accepted: +0x269 byte 6 bit 1: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x2000005)
+  accepted: +0x269 byte 6 bit 2: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x4000005)
+  accepted: +0x269 byte 6 bit 3: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x8000005)
+  accepted: +0x269 byte 6 bit 4: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x10000005)
+  accepted: +0x269 byte 6 bit 5: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x20000005)
+  accepted: +0x269 byte 6 bit 6: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0x40000005)
+  accepted: +0x269 byte 6 bit 7: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rcx) (.imm 0xFFFFFFFF80000005)
+  accepted: +0x270 byte 1 bit 0: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 1 bit 1: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 1 bit 2: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 1 bit 3: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 1 bit 4: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 1 bit 5: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 1 bit 6: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 1 bit 7: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 2 bit 0: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 2 bit 1: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 2 bit 2: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 2 bit 3: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 2 bit 4: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 2 bit 5: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 2 bit 6: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 2 bit 7: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 3 bit 0: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 3 bit 1: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 3 bit 2: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 3 bit 3: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 3 bit 4: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 3 bit 5: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 3 bit 6: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 3 bit 7: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 4 bit 0: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 4 bit 1: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 4 bit 2: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 4 bit 3: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 4 bit 4: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 4 bit 5: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 4 bit 6: .call b3l_node_out  ->  .call b3l_node_out
+  accepted: +0x270 byte 4 bit 7: .call b3l_node_out  ->  .call b3l_node_out
+control: the unchanged object on this processor, the lengths and 200 more: same
+control: a change no proof was found for, on this processor: DIFFERS: an official vector (1025 bytes, keyed) is not what hashr gives
+the 442 accepted changes on this processor: 442 same
+for scale, 300 of the changes stopped or refused, on this processor: 199 CRASHES, 68 DIFFERS, 33 same
