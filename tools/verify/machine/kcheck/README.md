@@ -49,13 +49,14 @@ assembler and no linker is relied on.
 
 **Programs other than the hash** (`programs/`, November 15: to find what the two languages lack). Each has
 its own specification and public contract, code in Ode, and is checked from its bytes
-(`python3 programs/check_programs.py`: ten functions, 1,595 instructions, 15 s, 12 of them the base-64
+(`python3 programs/check_programs.py`: eleven functions, 1,759 instructions, 17 s, 12 of them the base-64
 encoder's):
 
 | | the public contract's `ensures` and `returns` | instructions | proof | checked in |
 |---|---|---|---|---|
 | Adler-32 | `returns adler32(input)` | 55 | 1 place, 7 lines | 5 ms |
 | Adler-32, the sums reduced once in 5,552 bytes | the same line, the same specification | 116 | 2 places, 25 lines | 0.2 s |
+| the same, four bytes a turn | the same | 164 | 3 places, 38 lines | 2 s |
 | LZ4 block decoder | `returns if failed(lz4(input, cap)) then NO else len(lz4(input, cap))`; `ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap) if !failed(lz4(input, cap))` | 267 | 5 places, 96 lines | 0.54 s |
 | LZ4 encoder, literals only | `ensures lz4(out[0 .. r], n) == input if r != NO`; `ensures r != NO if cap >= n + n / 255 + 16` | 132 | 2 places, 26 lines | 34 ms |
 | LZ4 encoder with matches | the same two lines | 360 | 6 places, 129 lines | 1.9 s |
@@ -423,13 +424,13 @@ something BLAKE3 does not have: a result that is a number, a loop whose count is
 that may be malformed, output that depends on earlier output, an answer that may be "no", and a contract
 that is no way to compute anything.
 
-    python3 programs/check_programs.py          # the ten functions from their bytes: 1,595 instructions, 15 s
+    python3 programs/check_programs.py          # the eleven functions from their bytes: 1,759 instructions, 17 s
     python3 programs/test_specs.py              # each specification against someone else's answers
     python3 test_kbyte.py                       # changed specifications, contracts, proofs and instructions
 
 | folder | specification (lines a reader reads, with comments and contract) | checked against | code |
 |---|---|---|---|
-| `adler32/` | 27 | zlib's `adler32` | `ode_adler32`, `ode_adler32_blocks` |
+| `adler32/` | 34 | zlib's `adler32` | `ode_adler32`, `ode_adler32_blocks`, `ode_adler32_blocks4` |
 | `lz4/` | 111: the block format, its two ways to fail, three contracts | a decoder written in the test as decoders are (a loop over the block), on blocks an encoder of the test's made and on damaged ones | `ode_lz4_decode`, `ode_lz4_store`, `ode_lz4_pack` |
 | `varint/` | 12 | LEB128 written another way | `ode_varint` |
 | `common/` | 15 | the same in Python | `ode_common` |
@@ -488,7 +489,7 @@ that is no way to compute anything.
   `requires` at all: from 2^49 bytes on the function says NO and
   reads nothing (`returns if n < 562949953421312 then checksum(input) else NO`). That is one compare in
   principle; here it is four shifts and a compare, because the decoder reads no constant above 32 bits and
-  the machine no shift by more than 16: two more things the checker lacks.
+  the machine read no shift by more than 16 (it does now; the code is as it was audited).
 
 **`kbyte.py`** (910 lines) is the checker for these: `kfn.py`'s machine, with memory as bytes and lists of
 bytes in parts, numbers that depend on counts, and places. A proof (`programs/NAME/FUNCTION.proof`) is a
@@ -518,7 +519,7 @@ bytes and the proof's offsets), takes the proof from the file, and checks:
 
 | file | bytes | functions | checked in |
 |---|---|---|---|
-| `adler32/odeadler32.o` | 2,776 | 2 | 0.2 s |
+| `adler32/odeadler32.o` | 4,576 | 3 | 2.4 s |
 | `lz4/odelz4.o` | 14,808 (3,088 of code, 11,002 of proof) | 3 | 2.5 s |
 | `varint/odevarint.o` | 1,032 | 1 | 0.2 s |
 | `utf8/odeutf8.o` | 2,624 | 1 | 0.17 s |
@@ -602,21 +603,25 @@ and with a wrong one the check fails.
   or a place may run 1,000 instructions before it comes to a place or returns (the longest here runs 286),
   and that loop is refused in four seconds for the right reason. This only refuses more.
 
-**Speed** (pinned runs `night-speed2-*`, under the bench lock, one thread; `programs/bench.c`, which links
-the files shipped, `odeadler32.o` and `odelz4.o`, after `check_file.py` has checked them in the same run):
+**Speed** (pinned runs `night-speed3-*`, under the bench lock, one thread, 1 MiB; `programs/bench.c`, which
+links the files shipped, `odeadler32.o` and `odelz4.o`, after `check_file.py` has checked them in the same
+run; the median of three rounds):
 
 | | Ryzen 7 9700X | EPYC 9255 |
 |---|---|---|
-| Adler-32, `ode_adler32` (a remainder at every byte) | 1,166 MB/s | 916 MB/s |
-| Adler-32, `ode_adler32_blocks` (the sums put off for 5,552 bytes) | 2,729 MB/s | 2,161 MB/s |
-| Adler-32, the usual C (the same, compiled by GCC 15.2 at -O2) | 5,321 MB/s | 4,227 MB/s |
-| LZ4 decoding, `ode_lz4_decode` | 2,138 MB/s | 1,726 MB/s |
-| `LZ4_decompress_safe` | 16,143 MB/s | 13,026 MB/s |
+| Adler-32, `ode_adler32` (a remainder at every byte) | 1,206 MB/s | 953 MB/s |
+| Adler-32, `ode_adler32_blocks` (the sums put off for 5,552 bytes) | 3,164 MB/s | 2,309 MB/s |
+| Adler-32, `ode_adler32_blocks4` (the same, four bytes a turn) | 4,644 MB/s | 3,689 MB/s |
+| Adler-32, the usual C (the sums put off; GCC 15.2 at -O2) | 5,315 MB/s | 4,228 MB/s |
+| LZ4 decoding, `ode_lz4_decode` | 2,109 MB/s | 1,706 MB/s |
+| `LZ4_decompress_safe` | 16,011 MB/s | 13,074 MB/s |
 
-The plain Adler-32 is at 22% of the usual C; the one that puts its sums off, at 51%; the LZ4 decoder at 13%.
-What is left has two causes, neither in the method: the Ode compiler keeps every variable but six in memory
-and makes no instruction do two things; and the decoder copies a byte at a time. The hash, whose time is
-spent in kernels, is at 97% of the library.
+Adler-32 written to be proved runs at 87% of the usual C on both machines; the plain one at 23%; the LZ4
+decoder at 13%. (The middle row moved between rounds and between files: 2,729 in the run before, with the
+function elsewhere in the file; one round of three here read 2,718. The others did not move.) What is left
+has two causes, neither in the method: the Ode compiler keeps every variable but six in memory and makes
+no instruction do two things; and the decoder copies a byte at a time. The hash, whose time is spent in
+kernels, is at 97% of the library.
 
 **The fast Adler-32 needed nothing new.** `programs/adler32/blocks.ode` adds bytes into the two sums for a
 block of 5,552 and only then brings each below 65521 (two steps of "what is above 16 bits counts 15
@@ -633,11 +638,18 @@ number with a quotient beside it, and the arithmetic knows a number has only one
 
 **Devon's Adler-32** (BLAKE3 #377; `tools/verify/machine/experiments/adler32/adler32.ode` on his branch,
 proved in Lean with 133 lines of lemmas) compiles to the same 55 instructions as the one here but one: he
-joins the two sums with `|` where this one adds them. `kbyte.py` stops at that instruction ("or of ..."):
-that two numbers with no bit in common have their sum for their `or` is a rule the machine does not have.
+joins the two sums with `|` where this one adds them. `kbyte.py` stopped at that instruction ("or of
+..."). It has the rule now (two numbers with no bit in common have their sum for their `or`), and his
+code as he wrote it meets the contract here, with the same place of 7 lines (`test_kbyte.py` tries the
+`or` with a shift of 16, of 15 and of none).
+
+**Three things it lacked and has since 15:00**, each found by a program that wanted it: `or` of two numbers
+with no bit in common (Devon's Adler-32); a shift right by more than 16 (the checksum's bound); a
+sequence's value a few places after a known one, taken a place at a time (the fast Adler-32 with four
+bytes a turn, which was refused before and is `programs/adler32/blocks4.ode` now).
 
 **Not done.** Sigil has no code. No prover searches for places: each was written from the checker's
-refusals. And what `kbyte.py` lacks, each found by a program that wanted it:
+refusals. And what `kbyte.py` still lacks, each found by a program that wanted it:
 
 - calls (`kfn.py` follows them, and knows no places and no bytes in parts: they should be one checker);
 - tables of constants beside the code, and multiplication in Ode (Sigil);
@@ -645,13 +657,10 @@ refusals. And what `kbyte.py` lacks, each found by a program that wanted it:
   grows; that the least place two runs differ is where a walk over them stops. Those specifications were
   written as walks over the input so as not to need them. (A fact of arithmetic it does show: that four
   folds of the carries are a one's complement sum.)
-- reads and writes of more than a byte at a time, for speed; and a sequence's value more than one place
-  after a known one (the fast Adler-32 with four bytes a turn was refused: the checker steps `s1` from
-  place i to i + 1, not to i + 4);
+- reads and writes of more than a byte at a time, for speed;
 - taking a specification's question both ways where the code's path does not answer it (UTF-8), and
   joining paths that have come to the same state (base 64);
-- that two numbers with no bit in common have their sum for their `or` (Devon's Adler-32); a constant
-  above 32 bits and a shift by more than 16 (the checksum's own bound);
+- a constant above 32 bits in the code (the checksum's own bound; it asks in four shifts);
 - in-place work: a byte the function may write and has not yet written is unknown to it, so a function
   that reads and writes one buffer cannot be shown (tried: ASCII made upper-case in place, 44 instructions:
   refused).
