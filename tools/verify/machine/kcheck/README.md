@@ -645,7 +645,9 @@ refusals. And what `kbyte.py` lacks, each found by a program that wanted it:
   grows; that the least place two runs differ is where a walk over them stops. Those specifications were
   written as walks over the input so as not to need them. (A fact of arithmetic it does show: that four
   folds of the carries are a one's complement sum.)
-- reads and writes of more than a byte at a time, for speed;
+- reads and writes of more than a byte at a time, for speed; and a sequence's value more than one place
+  after a known one (the fast Adler-32 with four bytes a turn was refused: the checker steps `s1` from
+  place i to i + 1, not to i + 4);
 - taking a specification's question both ways where the code's path does not answer it (UTF-8), and
   joining paths that have come to the same state (base 64);
 - that two numbers with no bit in common have their sum for their `or` (Devon's Adler-32); a constant

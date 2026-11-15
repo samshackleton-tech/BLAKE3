@@ -40,7 +40,9 @@ class Adler32(unittest.TestCase):
         self.assertEqual(self.p.verdict(), "accepted")
 
     def test_a_branch_on_the_bytes_must_be_said(self):
-        v = self.p.verdict(spec=self.p.spec.replace("    trace depends on input\n", ""))
+        line = "    trace depends on input\n    stack 40"
+        self.assertEqual(self.p.spec.count(line), 1)
+        v = self.p.verdict(spec=self.p.spec.replace(line, "    stack 40"))
         self.assertTrue(v.startswith("refused: a branch that depends on bytes in memory"), v)
 
     def test_a_changed_specification_or_contract_is_refused(self):
@@ -48,7 +50,7 @@ class Adler32(unittest.TestCase):
                                       ("(s[i] + bytes[i]) % 65521", "(s[i] + bytes[i] + 1) % 65521"), ("s1(bytes)[i + 1]) % 65521", "s1(bytes)[i]) % 65521"),
                                       ("65536 * s2(bytes)[len(bytes)] + s1(bytes)[len(bytes)]", "65536 * s1(bytes)[len(bytes)] + s2(bytes)[len(bytes)]"), ("65536 * s2", "65535 * s2"),
                                       ("s2(bytes)[len(bytes)] + s1(bytes)[len(bytes)]", "s2(bytes)[len(bytes)] + s1(bytes)[len(bytes) - 1]"), ("stack 40", "stack 39"),
-                                      ("returns adler32(input)", "returns adler32(input) + 1")])
+                                      ("returns adler32(input)\n    trace depends on input\n    stack 40", "returns adler32(input) + 1\n    trace depends on input\n    stack 40")])
 
     def test_a_changed_proof_is_refused(self):
         self.p.changed(self, "proof", [("    fact i <= len\n", ""), ("fact i <= len", "fact i <= len + 1"), ("r12 = s1(input)[i]", "r12 = s2(input)[i]"), ("r13 = s2(input)[i]", "r13 = s2(input)[i + 1]"),
