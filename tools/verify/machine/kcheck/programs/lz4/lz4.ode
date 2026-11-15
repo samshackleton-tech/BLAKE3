@@ -2,8 +2,8 @@
 // bytes written at out, or NO where the input is no block or what it decodes to has more than cap bytes.
 //
 // `state`: 0 while it goes on; 1 at the block's end; 2 where it gives NO. `count`: the literals, then the
-// match's bytes, still to be written. A count is never let above n (a block cannot hold more literals than it
-// has bytes) nor above cap, so no sum here can pass 64 bits.
+// match's bytes, still to be written. It refuses where the specification fails, and nowhere else: each test
+// here is one of the specification's. (A count read from a block of less than 2^56 bytes is less than 2^64.)
 
 const NO = 0xFFFFFFFFFFFFFFFF
 
@@ -24,17 +24,13 @@ fn lz4_decode(out, cap, input, n)
       i = i + 1
       count = token >> 4
       if count >= 15 {
-        if n < 15 { state = 2 } else {
-          more = 1
-          while more == 1 {
-            if i >= n { state = 2  more = 0 } else {
-              b = u8[input + i]
-              i = i + 1
-              if b > n - count { state = 2  more = 0 } else {
-                count = count + b
-                if b < 255 { more = 0 }
-              }
-            }
+        more = 1
+        while more == 1 {
+          if i >= n { state = 2  more = 0 } else {
+            b = u8[input + i]
+            i = i + 1
+            count = count + b
+            if b < 255 { more = 0 }
           }
         }
       }
@@ -55,17 +51,13 @@ fn lz4_decode(out, cap, input, n)
                   if offset > o { state = 2 } else {
                     count = token & 15
                     if count >= 15 {
-                      if cap < 15 { state = 2 } else {
-                        more = 1
-                        while more == 1 {
-                          if i >= n { state = 2  more = 0 } else {
-                            b = u8[input + i]
-                            i = i + 1
-                            if b > cap - count { state = 2  more = 0 } else {
-                              count = count + b
-                              if b < 255 { more = 0 }
-                            }
-                          }
+                      more = 1
+                      while more == 1 {
+                        if i >= n { state = 2  more = 0 } else {
+                          b = u8[input + i]
+                          i = i + 1
+                          count = count + b
+                          if b < 255 { more = 0 }
                         }
                       }
                     }

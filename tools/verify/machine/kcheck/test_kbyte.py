@@ -92,16 +92,27 @@ class Lz4Decode(unittest.TestCase):
             ("count(bytes, at + 1, bytes[at] / 16)", "count(bytes, at + 1, bytes[at] % 16)"), ("count(bytes, at + 1, bytes[at] / 16)", "count(bytes, at + 2, bytes[at] / 16)"),
             ("let with_literals = out ++ bytes[literals.next .. end]", "let with_literals = out ++ bytes[literals.next .. end] ++ [0]"),
             ("let with_literals = out ++ bytes[literals.next .. end]", "let with_literals = bytes[literals.next .. end] ++ out"),
-            ("match(bytes, end, bytes[at] % 16, with_literals)", "match(bytes, end, bytes[at] / 16, with_literals)"), ("match(bytes, end, bytes[at] % 16, with_literals)", "match(bytes, end, bytes[at] % 16, out)"),
+            ("match(bytes, end, bytes[at] % 16, with_literals, cap)", "match(bytes, end, bytes[at] / 16, with_literals, cap)"), ("match(bytes, end, bytes[at] % 16, with_literals, cap)", "match(bytes, end, bytes[at] % 16, out, cap)"),
             ("let offset = bytes[at] + 256 * bytes[at + 1]", "let offset = 256 * bytes[at] + bytes[at + 1]"), ("let offset = bytes[at] + 256 * bytes[at + 1]", "let offset = bytes[at] + 255 * bytes[at + 1]"),
             ("let n = count(bytes, at + 2, low)", "let n = count(bytes, at + 3, low)"),
-            ("copied(out, offset, n.value + 4))", "copied(out, offset, n.value + 3))"), ("copied(out, offset, n.value + 4))", "copied(out, offset + 1, n.value + 4))"),
+            ("copied(out, offset, n.value + 4), cap)", "copied(out, offset, n.value + 3), cap)"), ("copied(out, offset, n.value + 4), cap)", "copied(out, offset + 1, n.value + 4), cap)"),
             ("sequences(bytes, n.next, copied", "sequences(bytes, n.next + 1, copied"),
-            ("def lz4(bytes) { sequences(bytes, 0, []) }", "def lz4(bytes) { sequences(bytes, 0, [0]) }"), ("def lz4(bytes) { sequences(bytes, 0, []) }", "def lz4(bytes) { sequences(bytes, 1, []) }"),
+            ("def lz4(bytes, cap) { sequences(bytes, 0, [], cap) }", "def lz4(bytes, cap) { sequences(bytes, 0, [0], cap) }"), ("def lz4(bytes, cap) { sequences(bytes, 0, [], cap) }", "def lz4(bytes, cap) { sequences(bytes, 1, [], cap) }"),
             ("if end == len(bytes) then with_literals else", "if end == len(bytes) then out else"),
-            ("ensures r = len(lz4(input)) if r != NO", "ensures r = len(lz4(input)) + 1 if r != NO"), ("ensures out[0 .. r] = lz4(input) if r != NO", "ensures out[0 .. r] = lz4(input) ++ [0] if r != NO"),
-            ("ensures out[0 .. r] = lz4(input) if r != NO", "ensures out[0 .. r] = lz4(input)"), ("ensures r = len(lz4(input)) if r != NO", "ensures r = len(lz4(input))"),
-            ("    requires cap < NO\n", ""), ("    trace depends on input\n", ""), ("stack 104", "stack 96"), ("    requires apart(out, input)\n", ""),
+            # where it fails: a test of the specification left out, or made another
+            ("    fails MALFORMED if at >= len(bytes)\n    let literals", "    let literals"), ("    fails MALFORMED if end > len(bytes)\n", ""), ("    fails ROOM if len(out) + literals.value > cap\n", ""),
+            ("    fails MALFORMED if at + 2 > len(bytes)\n", ""), ("    fails MALFORMED if offset == 0 || offset > len(out)\n", ""), ("    fails ROOM if len(out) + n.value + 4 > cap\n", ""),
+            ("fails MALFORMED if offset == 0 || offset > len(out)", "fails MALFORMED if offset > len(out)"), ("fails MALFORMED if offset == 0 || offset > len(out)", "fails MALFORMED if offset == 0 || offset >= len(out)"),
+            ("fails ROOM if len(out) + literals.value > cap", "fails ROOM if len(out) + literals.value >= cap"), ("fails ROOM if len(out) + n.value + 4 > cap", "fails ROOM if len(out) + n.value + 3 > cap"),
+            ("fails MALFORMED if end > len(bytes)", "fails MALFORMED if end >= len(bytes)"), ("fails MALFORMED if at + 2 > len(bytes)", "fails MALFORMED if at + 1 > len(bytes)"),
+            # the contract
+            ("returns if failed(lz4(input, cap)) then NO else len(lz4(input, cap))", "returns if failed(lz4(input, cap)) then NO else len(lz4(input, cap)) + 1"),
+            ("returns if failed(lz4(input, cap)) then NO else len(lz4(input, cap))", "returns if failed(lz4(input, cap)) then 0 else len(lz4(input, cap))"),
+            ("returns if failed(lz4(input, cap)) then NO else len(lz4(input, cap))", "returns NO"), ("returns if failed(lz4(input, cap)) then NO else len(lz4(input, cap))", "returns len(lz4(input, cap))"),
+            ("ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap) if !failed(lz4(input, cap))", "ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap) ++ [0] if !failed(lz4(input, cap))"),
+            ("ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap) if !failed(lz4(input, cap))", "ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap)"),
+            ("lz4(input, cap) if !failed(lz4(input, cap))", "lz4(input, cap + 1) if !failed(lz4(input, cap))"),
+            ("    requires n < 72057594037927936\n", ""), ("    trace depends on input\n", ""), ("stack 104", "stack 96"), ("    requires apart(out, input)\n", ""),
             ("out: cap bytes, cap: number, input: n bytes", "out: cap bytes, cap: number, input: cap bytes"), ("out: cap bytes, cap: number, input: n bytes", "out: n bytes, cap: number, input: n bytes")])
 
     def test_a_proof_without_one_of_its_lines_is_refused(self):
@@ -120,14 +131,13 @@ class Lz4Decode(unittest.TestCase):
             for c in changes:
                 rows = list(self.p.rows); rows[k] = (a, z, c)
                 if self.p.verdict(rows=rows) == "accepted": accepted.append((i.split()[0], c.split()[0]))
-        # Of 349. Those accepted: moves that put somewhere what is there already or is not read again; and seven
-        # jumps left out, after which the decoder gives NO where it need not. The contract is of the counts it
-        # returns, and says so (lz4.spec): the processor's word on each such change is in audit/.
+        # Of 309. The 19 accepted are moves left out: of something to where it is already, of a first value that is
+        # not read before it is given again, and one `state = 2` after which the decoder still comes to give NO.
         self.assertEqual(len(accepted), ACCEPTED)
-        self.assertEqual(sorted(set(accepted)), [(".jae", ".nop"), (".jmp", ".nop"), (".jne", ".nop"), (".mov", ".nop")])
+        self.assertEqual(sorted(set(accepted)), [(".mov", ".nop")])
 
 
-ACCEPTED = 36
+ACCEPTED = 19
 
 
 if __name__ == "__main__":
