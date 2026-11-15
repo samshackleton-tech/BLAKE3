@@ -23,7 +23,7 @@ argument).
 
 **`requires`**: what the caller makes true. `requires apart(a, b, ...)`: the things at those addresses do not
 overlap one another. One thing is required of every caller and not written: the stack is the machine's own,
-and nothing an argument addresses lies in it.
+and nothing an argument addresses lies in it. Of a call that does not keep these, nothing is said.
 
 **If the caller does that, the function returns**, and then:
 
@@ -42,12 +42,13 @@ way. Both are the language's own (LANGUAGE.md) and a specification may not defin
 
 **And it has done nothing else.**
 
-- It has read no memory but what its arguments address, and its own stack.
+- It has read no memory but what its arguments address, its own stack, and constants that lie in the
+  binary beside its code.
 - It has written no memory but what an `ensures` or a `writes` names (`writes X`: X may hold anything
   afterwards), and at most `stack` bytes below the caller's stack pointer.
 - The registers the calling convention says a callee keeps are as they were.
 - It has run no instructions but those every x86-64 processor has, and those a `needs` line names
-  (`needs F if C`: only where C holds).
+  (`needs F if C`: only where C holds). That the processor has them is the caller's to know.
 - Which instructions it ran, and which addresses it touched, depend on the numbers it was given and not on the
   bytes in memory: unless a line `trace depends on X` says they may depend on the bytes at X.
 
@@ -58,9 +59,10 @@ thing.
 (`fails REASON if C`, in the order written). `failed(E)` says whether E has no value. A contract speaks of a
 failing input through it: `returns if failed(lz4(input)) then NO else ...`.
 
-**What the checker does with it** (check_binary.py, check_all.py): it shows all of the above from the
-binary's bytes, for everything the `requires` lines allow, or it refuses. The contracts of the functions
-inside (proofs/inner.spec) are steps of that showing, in the same form; a reader need not read them.
+**What the checker does with it** (check_binary.py for the hash; programs/check_file.py for the others): it
+shows all of the above from the binary's bytes, for everything the `requires` lines allow, or it refuses.
+The contracts of the functions inside (proofs/inner.spec) are steps of that showing, in the same form, with
+two lines of their own (`decreases`, `calls`); a reader need not read them.
 
 **Not yet so** (November 15). There are two checkers of functions: `kfn.py` for the hash (words, vectors,
 calls by contract) and `kbyte.py` for the programs of `programs/` (bytes, numbers, loops with places). The

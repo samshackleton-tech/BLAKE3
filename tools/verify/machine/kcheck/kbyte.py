@@ -50,6 +50,7 @@ from ode import Err
 
 BASE, DATA, G64, KEPT, ARGS, WORD64 = kfn.BASE, kfn.DATA, kfn.G64, kfn.KEPT, kfn.ARGS, kfn.WORD64
 STEPS = 2000000
+PATH = 1000             # instructions on one path from the entry or a place to the next place or the return (the longest here: 286)
 HELD = tuple(KEPT) + ("rsp",)        # at a place, what these hold is kept if it was the same on every path; the others are unknown unless the place says
 FRESH = itertools.count()
 DEBUG = bool(os.environ.get("KBYTE_DEBUG"))
@@ -781,6 +782,7 @@ def run(m, places, budget):
         while True:
             if m.pc is None or (m.pc in places and m.steps > m.since): ends.append(m); break
             if budget[0] <= 0: raise Fail(f"still running after {STEPS} instructions: a loop that needs a place")
+            if m.steps - m.since > PATH: raise Fail(f"a path of more than {PATH} instructions that comes to no place and does not return: a loop that needs a place")
             try:
                 m.one(); budget[0] -= 1
             except kfn.Fork as f:

@@ -585,6 +585,12 @@ and with a wrong one the check fails.
   facts cannot all hold; `test_kbyte.py` tries 3,000 small systems against all values. The hash's checkers
   ask as before. "Not shown" was never "shown wrong", but a prover should not have to learn an order. (Still
   to do: a search that returns multipliers, which the checker then only adds up.)
+- The weak arithmetic had been doing a second job. A loop with no place (Adler-32 with an empty proof) used
+  to be refused in a fifth of a second, because after two dozen turns the arithmetic could no longer show
+  that a sum fits 64 bits. With the stronger arithmetic it could, and the checker ran on, slower each
+  turn: no verdict in ten minutes. What should have stopped it was never there. Now a path from the entry
+  or a place may run 1,000 instructions before it comes to a place or returns (the longest here runs 286),
+  and that loop is refused in four seconds for the right reason. This only refuses more.
 
 **Speed** (pinned runs, under the bench lock, one thread; `programs/bench.c`):
 
