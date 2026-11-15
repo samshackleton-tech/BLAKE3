@@ -72,6 +72,33 @@ class Binary(unittest.TestCase):
         self.assertEqual(sorted(kdecode.Settled(e).at), sorted(self.where))
         for symbol in QUICK: self.assertEqual(verdict(shipped, symbol), "accepted", symbol)
 
+    def test_the_proof_carried_in_the_file(self):
+        import hashlib
+        with open(os.path.join(HERE, "b3hashr.o"), "rb") as f: shipped = f.read()
+        with open(os.path.join(HERE, "blake3.spec"), "rb") as f: spec = f.read()
+        e = kdecode.Elf(shipped)
+        proof = check_binary.carried(e.bytes_of(".ode.proof"))
+        self.assertEqual(proof["spec"], hashlib.sha256(spec).hexdigest(), "the file shipped was made with the specification here")
+        self.assertEqual(proof["at"], kdecode.Settled(e).at)
+        self.assertEqual(proof["code"][:2], (len(e.bytes_of(".text")), hashlib.sha256(e.bytes_of(".text")).hexdigest()))
+        self.assertEqual(sorted(proof["files"]), ["proofs/inner.spec", "proofs/k32.json", "proofs/p16.json", "proofs/p32.json"])
+        try:
+            # the proof is not trusted: one of its contracts changed, and the function it is of is refused
+            self.assertTrue(check_binary.take(proof, os.path.join(HERE, "blake3.spec")))
+            self.assertEqual(verdict(shipped, "b3l_chunk_node"), "accepted")
+            inner = proof["files"]["proofs/inner.spec"]
+            self.assertEqual(inner.count(b"requires len <= 1024\n"), 1)
+            changed = dict(proof, files=dict(proof["files"], **{"proofs/inner.spec": inner.replace(b"requires len <= 1024\n", b"requires len <= 1025\n")}))
+            check_binary.take(changed, os.path.join(HERE, "blake3.spec"))
+            self.assertTrue(verdict(shipped, "b3l_chunk_node").startswith("refused"))
+            # and a reader with another specification is told so
+            other = os.path.join(self.dir, "other.spec")
+            with open(other, "wb") as f: f.write(spec + b"\n// a reader's note\n")
+            self.assertFalse(check_binary.take(proof, other))
+        finally:
+            import kspec, kone, kloop, kfn, ode
+            kspec.SPEC = ode.load(); kone.CONTRACTS = kone.contracts(); kloop.KERNELS = kloop.kernels(); kfn.CONTRACTS.clear(); check_binary.PLACES.clear()
+
     def test_what_a_loader_would_not_map_so_is_not_read(self):
         size = kdecode.Elf(self.blob).sections[1]["size"]
         for what, so in (("leave to write", shared(self.blob, flags=7)),

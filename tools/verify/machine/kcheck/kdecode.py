@@ -83,6 +83,7 @@ class Elf:
 
 
 PAGE = 4096
+GIVEN = {}          # names a proof gives to addresses of a file whose own names are gone (check_binary.py): {name: address}
 
 
 class Named:
@@ -143,6 +144,7 @@ class Settled:
         places = {}
         for s in e.symbols:
             if s["name"] and s["type"] in (0, 2) and inside(s): places.setdefault(s["name"], set()).add(s["value"] - self.lo)
+        for name, value in GIVEN.items(): places.setdefault(name, set()).add(value - self.lo)        # names a proof gives: as the file's own
         self.at = {name: min(where) for name, where in places.items() if len(where) == 1}
         self.names = {}
         for name, v in self.at.items(): self.names.setdefault(v, []).append(name)

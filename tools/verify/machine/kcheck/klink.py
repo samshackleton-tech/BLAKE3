@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """klink: the functions the hash is made of, and nothing else, as one object with nothing left to fill in.
 
-    python3 klink.py FOLDER OUT.o
+    python3 klink.py FOLDER OUT.o [OUT.proof]
 
 FOLDER holds the objects an assembler made (as check_all.py's: lib32.o, avx512.o, sse41.o, and one for each
 function of hash.ode). This takes from each the bytes of the functions the hash calls, from the function's
@@ -11,7 +11,7 @@ written. OUT.o is an ELF object with one section of code and constants, the func
 relocations: a linker has only to place it, on a 64-byte boundary.
 
 Nothing here is trusted. check_binary.py reads OUT.o, or whatever a linker makes of it, from its bytes."""
-import os, struct, sys
+import hashlib, os, struct, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import kdecode
@@ -74,9 +74,29 @@ def link(folder):
     return bytes(image), where, {b["symbol"]: b["size"] for b in bodies}, widest
 
 
+PROOF = ["proofs/inner.spec", "proofs/k32.json", "proofs/p32.json", "proofs/p16.json"]
+
+
+def proof(image, where):
+    """What a checker needs beside the code and the specification, to be carried in the file: the contracts of
+    the functions inside and the kernels' places; where each function is in the code (for a file whose names
+    have been stripped); and which specification the maker had (a reader compares it with his own)."""
+    with open(os.path.join(HERE, "blake3.spec"), "rb") as f: spec = f.read()
+    out = b"ode proof 1\n"
+    out += f"specification sha256 {hashlib.sha256(spec).hexdigest()}\n".encode()
+    out += f"code {len(image)} sha256 {hashlib.sha256(image).hexdigest()} begins {image[:32].hex()}\n".encode()
+    for name, at in sorted(where.items(), key=lambda x: x[1]): out += f"at {at} {name}\n".encode()
+    for name in PROOF:
+        with open(os.path.join(HERE, name), "rb") as f: text = f.read()
+        out += f"file {name} {len(text)}\n".encode() + text
+    return out
+
+
 def elf(image, where, sizes, align):
-    """An ELF object: .text (code and constants), the names, and the note that the stack is not to be run."""
-    shstr = b"\0.text\0.note.GNU-stack\0.symtab\0.strtab\0.shstrtab\0"
+    """An ELF object: .text (code and constants), the names, the proof (a section that is not loaded), and the
+    note that the stack is not to be run."""
+    shstr = b"\0.text\0.note.GNU-stack\0.symtab\0.strtab\0.shstrtab\0.ode.proof\0"
+    carried = proof(image, where)
     strtab, syms = bytearray(b"\0"), bytearray(24)
     for name, at in sorted(where.items(), key=lambda x: x[1]):
         syms += struct.pack("<IBBHQQ", len(strtab), (1 << 4) | 2, 0, 1, at, sizes.get(name, 0))       # global, a function, in section 1
@@ -85,7 +105,7 @@ def elf(image, where, sizes, align):
     def put(blob, boundary):
         out.extend(bytes(up(len(out), boundary) - len(out)))
         at = len(out); out.extend(blob); return at
-    text_at = put(image, align); syms_at = put(syms, 8); str_at = put(strtab, 1); shstr_at = put(shstr, 1)
+    text_at = put(image, align); syms_at = put(syms, 8); str_at = put(strtab, 1); shstr_at = put(shstr, 1); proof_at = put(carried, 1)
     shoff = up(len(out), 8); out.extend(bytes(shoff - len(out)))
     sec = lambda name, typ, flags, off, size, link, info, boundary, entsize: struct.pack("<IIQQQQIIQQ", shstr.index(name), typ, flags, 0, off, size, link, info, boundary, entsize)
     out += bytes(64)
@@ -94,7 +114,8 @@ def elf(image, where, sizes, align):
     out += sec(b".symtab\0", 2, 0, syms_at, len(syms), 4, 1, 8, 24)
     out += sec(b".strtab\0", 3, 0, str_at, len(strtab), 0, 0, 1, 0)
     out += sec(b".shstrtab\0", 3, 0, shstr_at, len(shstr), 0, 0, 1, 0)
-    out[:64] = b"\x7fELF\x02\x01\x01" + bytes(9) + struct.pack("<HHIQQQIHHHHHH", 1, 62, 1, 0, 0, shoff, 0, 64, 0, 0, 64, 6, 5)
+    out += sec(b".ode.proof\0", 1, 0, proof_at, len(carried), 0, 0, 1, 0)
+    out[:64] = b"\x7fELF\x02\x01\x01" + bytes(9) + struct.pack("<HHIQQQIHHHHHH", 1, 62, 1, 0, 0, shoff, 0, 64, 0, 0, 64, 7, 5)
     return bytes(out)
 
 
@@ -102,7 +123,10 @@ def main():
     folder, path = sys.argv[1], sys.argv[2]
     image, where, sizes, align = link(folder)
     with open(path, "wb") as f: f.write(elf(image, where, sizes, align))
-    print(f"{os.path.basename(path)}: {len(where)} names, {sum(sizes.values())} bytes of code in {len(sizes)} bodies, {len(image)} bytes in all, on a {align}-byte boundary; no relocations")
+    if len(sys.argv) > 3:
+        with open(sys.argv[3], "wb") as f: f.write(proof(image, where))        # the proof by itself, for a file that has lost its own
+    print(f"{os.path.basename(path)}: {len(where)} names, {sum(sizes.values())} bytes of code in {len(sizes)} bodies, {len(image)} bytes in all, on a {align}-byte boundary; no relocations; "
+          f"the proof ({len(proof(image, where))} bytes) in a section that is not loaded")
     return 0
 
 
