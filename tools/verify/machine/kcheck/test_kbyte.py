@@ -112,8 +112,8 @@ class Lz4Decode(unittest.TestCase):
             ("ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap) if !failed(lz4(input, cap))", "ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap) ++ [0] if !failed(lz4(input, cap))"),
             ("ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap) if !failed(lz4(input, cap))", "ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap)"),
             ("lz4(input, cap) if !failed(lz4(input, cap))", "lz4(input, cap + 1) if !failed(lz4(input, cap))"),
-            ("    requires n < 72057594037927936\n", ""), ("    trace depends on input\n", ""), ("stack 104", "stack 96"), ("    requires apart(out, input)\n", ""),
-            ("out: cap bytes, cap: number, input: n bytes", "out: cap bytes, cap: number, input: cap bytes"), ("out: cap bytes, cap: number, input: n bytes", "out: n bytes, cap: number, input: n bytes")])
+            ("    requires n < 72057594037927936\n", ""), ("    trace depends on input\n", ""), ("stack 104", "stack 96"), ("    requires apart(out, input)\n    requires n <", "    requires n <"),
+            ("ode_lz4_decode(out: cap bytes, cap: number, input: n bytes", "ode_lz4_decode(out: cap bytes, cap: number, input: cap bytes"), ("ode_lz4_decode(out: cap bytes, cap: number, input: n bytes", "ode_lz4_decode(out: n bytes, cap: number, input: n bytes")])
 
     def test_a_proof_without_one_of_its_lines_is_refused(self):
         lines, needless = self.p.proof.split("\n"), []
@@ -151,6 +151,45 @@ def instructions_changed(p):
             rows = list(p.rows); rows[k] = (a, z, c); n += 1
             if p.verdict(rows=rows) == "accepted": accepted.append((i, c))
     return n, accepted
+
+
+class Lz4Store(unittest.TestCase):
+    """The encoder against a contract that is not a way to compute: what it writes decodes to the input."""
+    @classmethod
+    def setUpClass(cls): cls.p = Program("lz4", "lz4_store", "ode_lz4_store")
+
+    def test_it_meets_its_contract(self):
+        self.assertEqual(self.p.verdict(), "accepted")
+
+    def test_a_changed_specification_or_contract_is_refused(self):
+        self.p.changed(self, "spec", [
+            ("{value: sum + bytes[at], next: at + 1}", "{value: sum + bytes[at] + 1, next: at + 1}"), ("{value: sum + bytes[at], next: at + 1}", "{value: sum + bytes[at], next: at + 2}"),
+            ("counted(bytes, at + 1, sum + 255)", "counted(bytes, at + 1, sum + 254)"), ("if bytes[at] < 255 then", "if bytes[at] < 254 then"),
+            ("if first < 15 then {value: first, next: at} else counted(bytes, at, 15)", "if first < 14 then {value: first, next: at} else counted(bytes, at, 15)"),
+            ("else counted(bytes, at, 15) }", "else counted(bytes, at, 16) }"),
+            ("count(bytes, at + 1, bytes[at] / 16)", "count(bytes, at + 1, bytes[at] % 16)"), ("count(bytes, at + 1, bytes[at] / 16)", "count(bytes, at + 2, bytes[at] / 16)"),
+            ("let with_literals = out ++ bytes[literals.next .. end]", "let with_literals = out ++ bytes[literals.next .. end] ++ [0]"),
+            ("if end == len(bytes) then with_literals else", "if end == len(bytes) then out else"),
+            ("def lz4(bytes, cap) { sequences(bytes, 0, [], cap) }", "def lz4(bytes, cap) { sequences(bytes, 0, [0], cap) }"), ("def lz4(bytes, cap) { sequences(bytes, 0, [], cap) }", "def lz4(bytes, cap) { sequences(bytes, 1, [], cap) }"),
+            ("fails ROOM if len(out) + literals.value > cap", "fails ROOM if len(out) + literals.value >= cap"),
+            ("ensures lz4(out[0 .. r], n) == input if r != NO", "ensures lz4(out[0 .. r], n) == input ++ [0] if r != NO"),
+            ("ensures lz4(out[0 .. r], n) == input if r != NO", "ensures lz4(out[0 .. r], n) == input"),
+            ("ensures lz4(out[0 .. r], n) == input if r != NO", "ensures lz4(out[0 .. r + 1], n) == input if r != NO"),
+            ("    writes out\n    stack 88", "    stack 88"), ("stack 88", "stack 80")])
+
+    def test_a_proof_without_one_of_its_lines_is_refused(self):
+        lines, needless = self.p.proof.split("\n"), []
+        for k, line in enumerate(lines):
+            if not line.strip() or line.strip().startswith(("//", "place", "}", "any ")): continue
+            if self.p.verdict(proof="\n".join(lines[:k] + lines[k + 1:])) == "accepted": needless.append(line.strip())
+        self.assertEqual(needless, [])
+
+    def test_a_changed_instruction_is_refused_unless_it_keeps_the_contract(self):
+        # Of 142, 17 accepted: moves left out that change nothing, and a jump and a compare left out on the way to
+        # NO (the contract is of the counts it gives).
+        n, accepted = instructions_changed(self.p)
+        self.assertEqual((n, len(accepted)), (142, 17))
+        self.assertEqual(sorted(c for i, c in accepted if not i.startswith(".mov")), [".nop"] * 2)
 
 
 class Varint(unittest.TestCase):

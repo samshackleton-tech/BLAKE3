@@ -75,3 +75,19 @@ contract ode_lz4_decode(out: cap bytes, cap: number, input: n bytes, n: number) 
     trace depends on input
     stack 104
 }
+
+// =========================================================================================================
+// An encoder's public contract: what it writes is a block that decodes to the input.
+//
+// This says nothing of how the block is made, and it is not a way to make one: it is true of every encoder
+// that is right. `ode_lz4_store` is the plainest: it holds the n bytes as they are, in one sequence. It
+// returns the count of bytes written at `out`, or NO where the room is too small (and that it gives NO only
+// then is not said, so not shown).
+contract ode_lz4_store(out: cap bytes, cap: number, input: n bytes, n: number) {
+    requires apart(out, input)
+    requires cap < NO
+    returns r
+    ensures lz4(out[0 .. r], n) == input if r != NO
+    writes out
+    stack 88
+}

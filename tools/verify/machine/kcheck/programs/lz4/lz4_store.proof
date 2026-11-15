@@ -1,0 +1,37 @@
+// The two loops of ode_lz4_store. e: bytes written; rest: what of the count of literals is still to be
+// written; j: literals copied. In the stack: [0] j, [8] state, [16] more.
+//
+// R is whatever will be written after what is written now: the facts hold for any R, so they hold when more
+// has been written.
+
+// the count's bytes are written: a block that begins with what is written (H) has, from here with n - rest
+// read so far, the count it has from its second byte with 15
+place +0xdc {
+    name e = r14
+    name rest = r15
+    name more = stack[16]
+    list H = out[0 .. e]
+    future R = out
+    fact more == 1
+    fact e >= 1
+    fact rest + 15 <= n
+    fact H[0] == 240
+    fact counted(H ++ R, e, n - rest) == counted(H ++ R, 1, 15)
+    decreases 2, rest
+}
+
+// the literals are copied: a block that begins with the header (HDR) and the j bytes copied has n literals,
+// which begin after the header
+place +0x196 {
+    name e = r14
+    name j = stack[0]
+    ghost list HDR = out[0 .. e]
+    future R = out
+    fact j < n
+    fact e >= 1
+    fact e + n <= cap
+    out[0 .. e + j] = HDR ++ input[0 .. j]
+    fact count(HDR ++ input[0 .. j] ++ R, 1, HDR[0] / 16) == {value: n, next: e}
+    any r15, stack[16]
+    decreases 1, n - j
+}

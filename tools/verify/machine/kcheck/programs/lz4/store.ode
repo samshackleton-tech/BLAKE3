@@ -1,0 +1,49 @@
+// An LZ4 block that holds n bytes as they are: one sequence, all literals. Written to be proved against
+// lz4.spec: what it writes decodes to the input. It gives the count of bytes written, or NO where the room
+// is too small.
+const NO = 0xFFFFFFFFFFFFFFFF
+
+fn lz4_store(out, cap, input, n)
+  reg out, cap, input, n, e, rest
+{
+  var e = 0
+  var rest = 0
+  var j = 0
+  var state = 0
+  var more = 0
+  if cap < 1 { state = 2 } else {
+    if n < 15 {
+      u8[out] = n << 4
+      e = 1
+    } else {
+      u8[out] = 240
+      e = 1
+      rest = n - 15
+      more = 1
+      while more == 1 {
+        if e >= cap { state = 2  more = 0 } else {
+          if rest < 255 {
+            u8[out + e] = rest
+            e = e + 1
+            more = 0
+          } else {
+            u8[out + e] = 255
+            e = e + 1
+            rest = rest - 255
+          }
+        }
+      }
+    }
+  }
+  if state == 0 {
+    if n > cap - e { state = 2 } else {
+      while j < n {
+        u8[out + e + j] = u8[input + j]
+        j = j + 1
+      }
+    }
+  }
+  var result = NO
+  if state == 0 { result = e + n }
+  return result
+}

@@ -182,7 +182,7 @@ class Parser:
         self.take("("); args = []
         while not self.maybe(")"):
             arg = self.take(kind="name"); self.take(":"); args.append((arg, self.kind())); self.maybe(",")
-        c = dict(args=args, asks=[], given=[], leaves=[], spoils=[], returns=None, stack=None, calls=[], needs=[], decreases=None, apart=None, trace=[])
+        c = dict(args=args, asks=[], given=[], leaves=[], spoils=[], returns=None, stack=None, calls=[], needs=[], decreases=None, apart=None, trace=[], conditions=[])
         self.take("{")
         while not self.maybe("}"):
             clause = self.take(kind="name")
@@ -202,11 +202,17 @@ class Parser:
             elif clause == "ensures":
                 # ensures NAME = E; ensures NAME[I] = E for I in A..B (each place of what NAME addresses);
                 # ensures NAME[A .. B] = E (those bytes of it). Any of them `if C`: only where C holds.
-                name, index, each, part = self.take(kind="name"), None, None, None
-                if self.maybe("["):
+                # Or: ensures CONDITION (something that is true or false of the result and of what is in memory).
+                save = self.i
+                name, index, each, part = self.take(kind="name") if self.peek(kind="name") else None, None, None, None
+                if name is not None and self.maybe("["):
                     if self.peek(kind="name") and self.t[self.i + 1][1] == "]": index = self.take(kind="name")
                     else: a = self.expr(); self.take(".."); part = (a, self.expr())
                     self.take("]")
+                if name is None or not self.peek("="):
+                    self.i = save
+                    cond = self.expr()
+                    c["conditions"].append((cond, self.expr() if self.maybe("if") else None)); continue
                 self.take("="); e = self.expr()
                 if index is not None:
                     self.take("for")
@@ -231,7 +237,7 @@ class Parser:
                 # needs FEATURE [if E]: it runs instructions of that kind (only where E holds)
                 name = self.take(kind="name"); c["needs"].append((name, self.expr(1) if self.maybe("if") else None))
             else: raise Err(f"line {self.t[self.i - 1][2]}: requires, ensures, writes, returns, stack, trace, calls, needs or decreases expected, not {clause!r}")
-        if c["stack"] is None or not (c["leaves"] or c["spoils"] or c["returns"] is not None): raise Err("a contract says its stack, and what it ensures, writes or returns")
+        if c["stack"] is None or not (c["leaves"] or c["spoils"] or c["conditions"] or c["returns"] is not None): raise Err("a contract says its stack, and what it ensures, writes or returns")
         return c
 
     def params(self):

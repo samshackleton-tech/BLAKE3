@@ -155,7 +155,7 @@ class Contract:
             n = bytes_kind(kind)
             if isinstance(n, str) and self.kind.get(n) != "number": raise Fail(f"{symbol}: {name} is {kind}, and {n} is not a number among the arguments")
             if lanes_kind(kind, "inputs") is not None and self.kind.get("n") != "number": raise Fail(f"{symbol}: {name} is {kind}, and no number n says how many blocks each input has")
-        if any(leaf.get("part") is not None or leaf.get("cond") is not None for leaf in c["leaves"]) or c.get("trace"):
+        if any(leaf.get("part") is not None or leaf.get("cond") is not None for leaf in c["leaves"]) or c.get("trace") or c.get("conditions"):
             raise Fail(f"{symbol}: a contract with `ensures X[a .. b]`, `ensures ... if C` or `trace depends on`: not this checker's yet")
         for leaf in c["leaves"]:
             if leaf["index"] is not None and (lanes_kind(self.kind.get(leaf["name"], ""), "cvs") is None or leaf["each"] != (("num", 0), ("num", lanes_kind(self.kind[leaf["name"]], "cvs")))):
