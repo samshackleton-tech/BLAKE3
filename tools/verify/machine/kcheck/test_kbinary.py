@@ -100,6 +100,25 @@ class Binary(unittest.TestCase):
             import kspec, kone, kloop, kfn, ode
             kspec.SPEC = ode.load(); kone.CONTRACTS = kone.contracts(); kloop.KERNELS = kloop.kernels(); kfn.CONTRACTS.clear(); check_binary.PLACES.clear()
 
+    def test_a_proof_cannot_put_another_contract_in_the_place_of_the_readers(self):
+        """The proof carries the contracts of the functions inside, which are read after the reader's
+        specification. A proof whose part gives the public function a second, weaker contract (or a
+        definition a second meaning) is refused: until November 15 the second took the first one's place."""
+        import re, subprocess, tempfile
+        with open(os.path.join(HERE, "b3hashr.o"), "rb") as f: c = kdecode.Elf(f.read()).bytes_of(".ode.proof")
+        m = re.search(rb"file proofs/inner.spec (\d+)\n", c)
+        n = int(m.group(1))
+        weaker = b"\ncontract b3l_hashr(out: 32 bytes, input: len bytes, len: number, key: 32 bytes, flags: byte, plat: any) {\n    requires apart(out, input, key)\n    writes out\n    stack 18688 + 384 * bits(len / 1024)\n    needs sse41\n    needs avx512 if plat == 5\n}\n"
+        for extra in (weaker, b"\nconst ROOT = 0\n", b"\ndef round(v, m) { v }\n"):
+            with tempfile.TemporaryDirectory() as d:
+                path = os.path.join(d, "p")
+                with open(path, "wb") as f: f.write(c[:m.start()] + b"file proofs/inner.spec %d\n" % (n + len(extra)) + c[m.end():m.end() + n] + extra + c[m.end() + n:])
+                for spec in (["--spec", os.path.join(HERE, "blake3.spec")], []):
+                    r = subprocess.run([sys.executable, os.path.join(HERE, "check_binary.py"), os.path.join(HERE, "b3hashr.o"), "--proof", path] + spec, capture_output=True, text=True)
+                    self.assertNotEqual(r.returncode, 0, r.stdout)
+                    self.assertIn("defined twice", r.stdout + r.stderr)
+                    self.assertNotIn("meets its public contract", r.stdout)
+
     def test_what_a_loader_would_not_map_so_is_not_read(self):
         size = kdecode.Elf(self.blob).sections[1]["size"]
         for what, so in (("leave to write", shared(self.blob, flags=7)),

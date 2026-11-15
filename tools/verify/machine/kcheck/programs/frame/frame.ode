@@ -1,0 +1,27 @@
+// A frame opened: an LZ4 block decoded and the Adler-32 after it compared, by two functions used through
+// their contracts. Written to be proved against frame.spec. It gives the count of bytes at out, or NO.
+
+const NO = 0xFFFFFFFFFFFFFFFF
+
+extern lz4_decode/4 = "ode_lz4_decode"
+extern adler32/2    = "ode_adler32_blocks4"
+
+fn unframe(out, cap, input, n)
+  reg out, cap, input, n
+{
+  var result = NO
+  var m = 0
+  var r = 0
+  var s = 0
+  var t = 0
+  if n >= 4 {
+    m = n - 4
+    r = lz4_decode(out, cap, input, m)
+    if r != NO {
+      s = adler32(out, r)
+      t = (u8[input + m] << 24) + (u8[input + m + 1] << 16) + (u8[input + m + 2] << 8) + u8[input + m + 3]
+      if s == t { result = r }
+    }
+  }
+  return result
+}

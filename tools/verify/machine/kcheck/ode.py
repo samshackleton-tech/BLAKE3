@@ -73,18 +73,25 @@ class Parser:
 
     def file(self):
         consts, fns, machines, self.contracts, self.layouts, self.kinds, self.seqs = {}, {}, {}, {}, {}, {}, {}
+        said = set()
+        def once(what, name):
+            # A name is given its meaning once. (A second `def` or `contract` of a name would take the first
+            # one's place without a word: and a text may be two texts put end to end, one of them not the reader's.)
+            if (what, name) in said: raise Err(f"line {self.t[self.i - 1][2]}: {name} is defined twice")
+            said.add((what, name))
+            return name
         while not self.peek(kind="end"):
             if self.maybe("const"):
-                name = self.take(kind="name"); self.take("="); consts[name] = self.expr()
+                name = once("value", self.take(kind="name")); self.take("="); consts[name] = self.expr()
             elif self.maybe("def"):
                 # a definition: equations (`let`) and a value; nothing is assigned twice, nothing loops
-                name = self.take(kind="name"); params = self.params()
-                if self.maybe(":"): self.kinds[name] = self.kind()
+                name = once("value", self.take(kind="name")); params = self.params()
+                if self.maybe(":"): self.kinds[once("kind", name)] = self.kind()
                 fns[name] = (params, self.definition())
             elif self.maybe("sequence"):
                 # NAME(args) { h[0] = FIRST   h[b + 1] = NEXT   for b in 0..n }: a sequence by its first value and
                 # each next one from the one before; NAME(args) is its last, h[n]
-                name = self.take(kind="name"); params = self.params(); self.take("{")
+                name = once("value", self.take(kind="name")); params = self.params(); self.take("{")
                 h = self.take(kind="name"); self.take("["); zero = self.take(kind="num"); self.take("]"); self.take("=")
                 if zero != 0: raise Err(f"sequence {name}: its first equation is of {h}[0]")
                 first = self.expr()
@@ -102,11 +109,11 @@ class Parser:
                 machines[name] = dict(params=params, states=[h], state=h, init=first, inits=[first], loop=("for", b, a, n),
                                       turn=[("set", h, self.before(nxt, h, b, name))])
             elif self.maybe("layout"):
-                name = self.take(kind="name"); self.layouts[name] = self.layout()
+                name = once("layout", self.take(kind="name")); self.layouts[name] = self.layout()
             elif self.maybe("kind"):
-                name = self.take(kind="name"); self.take(":"); self.kinds[name] = self.kind()
+                name = once("kind", self.take(kind="name")); self.take(":"); self.kinds[name] = self.kind()
             elif self.maybe("machine"):
-                name = self.take(kind="name"); params = self.params(); self.take("on"); state = [self.take(kind="name")]
+                name = once("value", self.take(kind="name")); params = self.params(); self.take("on"); state = [self.take(kind="name")]
                 while self.maybe(","): state.append(self.take(kind="name"))
                 init = None
                 if self.maybe("="):
@@ -121,7 +128,7 @@ class Parser:
                 machines[name] = dict(params=params, states=state, state=state[0] if len(state) == 1 else None,
                                       init=init[0] if init is not None and len(state) == 1 else None, inits=init, loop=loop, turn=turn)
             elif self.maybe("contract"):
-                name = self.take(kind="name"); self.contracts[name] = self.contract()
+                name = once("contract", self.take(kind="name")); self.contracts[name] = self.contract()
             else: raise Err(f"line {self.t[self.i][2]}: const, def, sequence, contract, layout, kind or machine expected")
         return consts, fns, machines
 

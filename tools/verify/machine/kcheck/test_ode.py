@@ -100,6 +100,16 @@ class Ode(unittest.TestCase):
             with self.assertRaises(ode.Err, msg=name):
                 spec.call(ode.Numbers(), name, 1)
 
+    def test_a_name_has_one_meaning(self):
+        """A second definition of a name does not take the first one's place: the text is refused. (A text may
+        be the reader's with a proof's contracts put after it: the proof's part must not change the reader's.)"""
+        first = "const N = 4\ndef f(x) { x + N }\nsequence s(b) { t[0] = 1   t[i + 1] = t[i] + b[i] }\ncontract g(v: number) {\n    returns f(v)\n    stack 8\n}\n"
+        ode.Spec(first)
+        for again in ("const N = 5\n", "def f(x) { x }\n", "def N(x) { x }\n", "const f = 1\n", "sequence s(b) { t[0] = 2   t[i + 1] = t[i] }\n", "sequence f(b) { t[0] = 2   t[i + 1] = t[i] }\n",
+                      "contract g(v: number) {\n    returns r\n    stack 8\n}\n"):
+            with self.assertRaises(ode.Err, msg=again) as e: ode.Spec(first + again)
+            self.assertIn("defined twice", str(e.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

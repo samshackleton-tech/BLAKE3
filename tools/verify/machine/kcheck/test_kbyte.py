@@ -20,6 +20,7 @@ class Program:
         assemble(os.path.join(HERE, "programs", folder, name + ".S"), os.path.join(self.dir, name + ".o"))
         self.rows = kbyte.load(os.path.join(self.dir, name + ".o"), symbol)
         self.spec, self.proof, self.symbol = text(folder, folder + ".spec"), text(folder, name + ".proof"), symbol
+        if os.path.exists(os.path.join(HERE, "programs", folder, name + ".inner")): self.spec += "\n" + text(folder, name + ".inner")   # the contracts of what it calls
         shutil.rmtree(self.dir)
     def verdict(self, spec=None, proof=None, rows=None):
         try: kbyte.check(rows or self.rows, ode.Spec(spec or self.spec), self.symbol, self.proof if proof is None else proof); return "accepted"
@@ -218,6 +219,94 @@ def instructions_changed(p):
             rows = list(p.rows); rows[k] = (a, z, c); n += 1
             if p.verdict(rows=rows) == "accepted": accepted.append((i, c))
     return n, accepted
+
+
+class Frame(unittest.TestCase):
+    """A function made of two others, each used through its contract alone."""
+    @classmethod
+    def setUpClass(cls): cls.p = Program("frame", "unframe", "ode_unframe")
+
+    def test_it_meets_its_contract(self):
+        self.assertEqual(self.p.verdict(), "accepted")
+
+    def test_no_line_of_the_public_contract_can_go(self):
+        for line in ("    requires apart(out, input)\n    requires n < 72057594037927936\n    requires cap < NO\n", "    requires n < 72057594037927936\n    requires cap < NO\n",
+                     "    requires cap < NO\n", "    trace depends on input\n    stack 184\n"):
+            self.assertEqual(self.p.spec.count(line), 1, line)
+            first = line.split("\n")[0] + "\n"
+            v = self.p.verdict(spec=self.p.spec.replace(line, line[len(first):]))
+            self.assertTrue(v.startswith("refused"), f"without {first!r}: {v}")
+
+    def test_a_changed_specification_or_contract_is_refused(self):
+        self.p.changed(self, "spec", [
+            ("    stack 184", "    stack 183"),
+            ("fails SHORT if len(bytes) < 4", "fails SHORT if len(bytes) < 5"), ("fails SHORT if len(bytes) < 4", "fails SHORT if len(bytes) < 3"),
+            ("    fails SHORT if len(bytes) < 4\n", ""), ("    fails SUM if adler32(body) != be32(bytes[len(bytes) - 4 .. len(bytes)])\n", ""),
+            ("lz4(bytes[0 .. len(bytes) - 4], cap)", "lz4(bytes[0 .. len(bytes) - 3], cap)"), ("lz4(bytes[0 .. len(bytes) - 4], cap)", "lz4(bytes[1 .. len(bytes) - 4], cap)"),
+            ("lz4(bytes[0 .. len(bytes) - 4], cap)", "lz4(bytes[0 .. len(bytes) - 4], cap + 1)"), ("lz4(bytes[0 .. len(bytes) - 4], cap)", "lz4(bytes, cap)"),
+            ("adler32(body) != be32(", "adler32(body) == be32("), ("adler32(body) != be32(", "adler32(bytes) != be32("), ("adler32(body) != be32(", "adler32(body) + 1 != be32("),
+            ("be32(bytes[len(bytes) - 4 .. len(bytes)])", "be32(bytes[len(bytes) - 5 .. len(bytes)])"), ("be32(bytes[len(bytes) - 4 .. len(bytes)])", "be32(bytes[0 .. 4])"),
+            ("16777216 * b[0] + 65536 * b[1] + 256 * b[2] + b[3]", "16777216 * b[3] + 65536 * b[2] + 256 * b[1] + b[0]"), ("16777216 * b[0]", "16777215 * b[0]"), ("256 * b[2] + b[3]", "256 * b[2] + b[2]"),
+            ("    body\n}", "    body ++ [0]\n}"), ("    body\n}", "    bytes\n}"),
+            ("returns if failed(unframe(input, cap)) then NO else len(unframe(input, cap))", "returns if failed(unframe(input, cap)) then NO else len(unframe(input, cap)) + 1"),
+            ("returns if failed(unframe(input, cap)) then NO else len(unframe(input, cap))", "returns if failed(unframe(input, cap)) then 0 else len(unframe(input, cap))"),
+            ("returns if failed(unframe(input, cap)) then NO else len(unframe(input, cap))", "returns len(unframe(input, cap))"),
+            ("ensures out[0 .. len(unframe(input, cap))] = unframe(input, cap) if !failed(unframe(input, cap))", "ensures out[0 .. len(unframe(input, cap))] = unframe(input, cap)"),
+            ("ensures out[0 .. len(unframe(input, cap))] = unframe(input, cap) if !failed(unframe(input, cap))", "ensures out[0 .. len(unframe(input, cap))] = input[0 .. len(unframe(input, cap))] if !failed(unframe(input, cap))"),
+            ("contract ode_unframe(out: cap bytes, cap: number, input: n bytes, n: number)", "contract ode_unframe(out: cap bytes, cap: number, input: cap bytes, n: number)"),
+            ])
+
+    def test_what_the_parts_are_is_not_the_callers_to_show(self):
+        """With another Adler-32, or another LZ4, in the definitions, the caller is still shown: it uses the two
+        functions by what their contracts say, whatever that is. It is the function called that no longer
+        meets its contract (programs/check_programs.py checks each against the same text)."""
+        for old, new, part in (("s[0] = 1 ", "s[0] = 2 ", ("adler32", "adler32_blocks4")), ("fails ROOM if len(out) + n.value + 4 > cap", "fails ROOM if len(out) + n.value + 3 > cap", ("lz4", "lz4_decode"))):
+            self.assertEqual(self.p.spec.count(old), 1, old)
+            spec = self.p.spec.replace(old, new)
+            self.assertEqual(self.p.verdict(spec=spec), "accepted")
+            q = Program(part[0], part[1], "ode_" + part[1])
+            self.assertTrue(q.verdict(spec=spec).startswith("refused"), part)
+            self.assertEqual(q.verdict(spec=self.p.spec), "accepted")           # and against the frame's text unchanged it is shown
+
+    def test_a_callee_is_used_by_its_contract_and_nothing_else(self):
+        """What the caller is shown to do rests on each line of the contracts of what it calls: with one weaker, or
+        one that asks more, or one that says another thing, the caller is refused."""
+        dec = "returns if failed(lz4(input, cap)) then NO else len(lz4(input, cap))\n    ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap) if !failed(lz4(input, cap))\n    trace depends on input\n    stack 104"
+        self.assertEqual(self.p.spec.count(dec), 1)
+        sums = "contract ode_adler32_blocks4(input: len bytes, len: number) {\n    returns adler32(input)\n"
+        self.assertEqual(self.p.spec.count(sums), 1)
+        for old, new in ((dec, dec.replace("    ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap) if !failed(lz4(input, cap))\n", "    writes out\n")),      # the decoder says nothing of the bytes
+                         (dec, dec.replace("then NO else", "then 0 else")), (dec, dec.replace("else len(lz4(input, cap))\n", "else len(lz4(input, cap)) + 1\n")),
+                         (dec, dec.replace("= lz4(input, cap) if", "= lz4(input, cap + 1) if")), (dec, dec.replace("ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap) if !failed", "ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap) if failed")),
+                         (dec, dec.replace("stack 104", "stack 105")),                                                                                               # the decoder may use more stack
+                         (dec, "returns r\n    trace depends on input\n    writes out\n    stack 104"),                                                             # nothing said of the result
+                         ("    requires n < 72057594037927936\n    returns if failed(lz4", "    requires n < 72057594037927931\n    returns if failed(lz4"),      # the decoder asks more than the caller shows (n - 4 < 2^56 - 4 it does show)
+                         ("    requires n < 72057594037927936\n    returns if failed(lz4", "    requires n < 72057594037927936\n    requires cap >= 1\n    returns if failed(lz4"),
+                         (sums, sums.replace("adler32(input)", "adler32(input) + 1")), (sums, sums.replace("returns adler32(input)", "returns r")),
+                         (sums, sums.replace("input: len bytes, len: number", "len: number, input: len bytes")),                                                   # the arguments the other way round
+                         (sums, sums.replace("returns adler32(input)\n", "requires len >= 1\n    returns adler32(input)\n")),
+                         (sums, "contract ode_adler32_blocks5(input: len bytes, len: number) {\n    returns adler32(input)\n")):                                    # no contract for what is called
+            self.assertEqual(self.p.spec.count(old), 1, old)
+            v = self.p.verdict(spec=self.p.spec.replace(old, new))
+            self.assertTrue(v.startswith("refused"), f"{old[:60]!r} -> {new[:90]!r}: {v}")
+
+    def test_the_code_changed(self):
+        n, accepted = instructions_changed(self.p)
+        # the thirteen accepted do nothing: a variable set to 0 that is set again before it is read (eight); a
+        # register given what it already holds (n in rax; the first call's three arguments; r in rax)
+        self.assertEqual((n, len(accepted)), (83, 13), f"{n} changes; accepted: {accepted}")
+        self.assertTrue(all(c == ".nop" and i.startswith(".mov") for i, c in accepted), accepted)
+
+    def test_the_definitions_are_those_of_the_parts(self):
+        """frame.spec's first two parts are the definitions of lz4.spec and adler32.spec, word for word; the
+        contracts of the functions called are those files' public contracts."""
+        lz, ad = text("lz4", "lz4.spec"), text("adler32", "adler32.spec")
+        frame, inner = text("frame", "frame.spec"), text("frame", "unframe.inner")
+        self.assertIn(lz[lz.index("const MALFORMED"):lz.index("const NO = ")].rstrip(), frame)
+        self.assertIn(ad[ad.index("sequence s1"):ad.index("// ====")].rstrip(), frame)
+        for whole, name in ((lz, "ode_lz4_decode"), (ad, "ode_adler32_blocks4")):
+            c = whole[whole.index(f"contract {name}("):]
+            self.assertIn(c[:c.index("\n}\n") + 3], inner)
 
 
 class Lz4Store(unittest.TestCase):

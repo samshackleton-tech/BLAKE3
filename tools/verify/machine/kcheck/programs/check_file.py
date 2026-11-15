@@ -48,7 +48,10 @@ def main():
         with open(spec_path) as f: text = f.read()
         print(f"the proof: {where}; the specification is the reader's ({os.path.basename(spec_path)}), " + ("the one the maker had" if hashlib.sha256(text.encode()).hexdigest() == proof.get("spec") else "NOT the one the maker had"))
     same = hashlib.sha256(text.encode()).hexdigest() == proof.get("spec")
-    spec = ode.Spec(text)
+    # a program made of others: the proof carries the contracts of the functions called (steps of the proof)
+    inner = "".join("\n" + body.decode() for name, body in sorted(proof["files"].items()) if name.endswith(".inner"))
+    public = set(ode.Spec(text).contracts)
+    spec = ode.Spec(text + inner)
     wanted = [name for name in spec.contracts if name in proof["at"]]
     if not wanted: print("the specification has a contract for no function the proof speaks of"); return 1
     if any(name not in s.at for name in wanted):
@@ -59,8 +62,9 @@ def main():
         s = kdecode.Settled(e)
         print(f"the file does not name the functions: the code the proof is of is found by its bytes at {s.lo + hit:#x}, and the proof's names are taken for them")
     failed, count, t_all, record = 0, 0, time.time(), []
+    calls = {}
     def contract_text(symbol):
-        lines = text.split("\n")
+        lines = (text + inner).split("\n")
         a = next(k for k, l in enumerate(lines) if l.startswith(f"contract {symbol}("))
         return "\n".join(lines[a:next(k for k in range(a, len(lines)) if lines[k].startswith("}")) + 1])
     for symbol in wanted:
@@ -68,20 +72,29 @@ def main():
         try:
             rows = kbyte.load(path, symbol)
             places = proof["files"].get(symbol[len("ode_"):] + ".proof", b"").decode()
-            kbyte.check(rows, spec, symbol, places)
+            calls[symbol] = kbyte.check(rows, spec, symbol, places)["calls"]
         except (kcheck.Fail, kdecode.Stop, ode.Err) as err:
             failed += 1; print(f"  {symbol}: NOT shown: {err}")
             record.append(dict(name=symbol, verdict="NOT shown", why=str(err), contract=contract_text(symbol))); continue
         count += len(rows)
-        record.append(dict(name=symbol, verdict="meets its public contract", at=s.lo + s.at[symbol], bytes=rows[-1][1] - rows[0][0], instructions=len(rows), places=places.count("place +"), contract=contract_text(symbol)))
-        print(f"  {symbol:<18} at {s.lo + s.at[symbol]:#8x}  {len(rows):>4} instructions  {places.count('place +')} places  {1000 * (time.time() - t0):7.1f} ms  meets its public contract")
+        said = "meets its public contract" if symbol in public else "meets its contract (a step of the proof)"
+        record.append(dict(name=symbol, verdict=said, calls=calls[symbol], at=s.lo + s.at[symbol], bytes=rows[-1][1] - rows[0][0], instructions=len(rows), places=places.count("place +"), contract=contract_text(symbol)))
+        print(f"  {symbol:<18} at {s.lo + s.at[symbol]:#8x}  {len(rows):>4} instructions  {places.count('place +')} places  {1000 * (time.time() - t0):7.1f} ms  {said}" + (f"; calls {', '.join(calls[symbol])} by contract" if calls[symbol] else ""))
     if "--json" in sys.argv:
         with open(sys.argv[sys.argv.index("--json") + 1], "w") as f:
             json.dump(dict(file=os.path.basename(path), file_sha256=hashlib.sha256(e.b).hexdigest(), kind=kind, specification=os.path.basename(spec_path),
                            specification_sha256=hashlib.sha256(text.encode()).hexdigest(), specification_is_the_makers=same, proof=("the file's own section" if given is None else "given beside the file"),
                            functions=record, shown=not failed), f, indent=1)
+    # every function called is one of those checked here; and none is called by what it calls
+    for symbol, called in calls.items():
+        for name in called:
+            if name not in calls: failed += 1; print(f"  {symbol} calls {name}, which is not shown here to meet the contract used")
+    def rings(symbol, above):
+        if symbol in above: return True
+        return any(rings(name, above | {symbol}) for name in calls.get(symbol, ()))
+    if any(rings(symbol, frozenset()) for symbol in calls): failed += 1; print("  a function is called by what it calls: nothing here shows such calls come to an end")
     if failed: print(f"NOT shown ({failed} of {len(wanted)} failed)"); return 1
-    print(f"{len(wanted)} function(s) in this file, {count} instructions, each meets its public contract ({os.path.basename(spec_path)}), from the file's bytes, in {time.time() - t_all:.2f} s")
+    print(f"{len(wanted)} function(s) in this file, {count} instructions, each meets its {'public ' if not inner else ''}contract ({os.path.basename(spec_path)}{', with the contracts of the functions called that the proof carries' if inner else ''}), from the file's bytes, in {time.time() - t_all:.2f} s")
     return 0
 
 

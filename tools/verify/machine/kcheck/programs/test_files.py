@@ -32,6 +32,38 @@ class Files(unittest.TestCase):
             total += sum(1 for line in out.split("\n") if line.endswith("meets its public contract"))
         self.assertEqual(total, len(PROGRAMS))
 
+    def test_a_program_made_of_others(self):
+        """The frame's file: three functions, one specification; the function that calls the two others is
+        shown by their contracts, which the proof carries, and each of the two is shown to meet the contract used."""
+        obj, spec = self.paths("frame")
+        for args in ((obj, spec), (obj,)):
+            code, out = run(*args)
+            self.assertEqual(code, 0, out)
+            self.assertIn("ode_unframe", out); self.assertIn("calls ode_adler32_blocks4, ode_lz4_decode by contract", out)
+            self.assertEqual(out.count("meets its contract (a step of the proof)"), 2, out)
+        carried = kdecode.Elf(obj).bytes_of(".ode.proof")
+        with open(os.path.join(HERE, "frame", "unframe.inner"), "rb") as f: inner = f.read()
+        self.assertEqual(carried.count(inner), 1)
+        def with_inner(new):
+            head = b"file unframe.inner %d\n" % len(inner)
+            self.assertEqual(carried.count(head), 1)
+            with tempfile.TemporaryDirectory() as d:
+                path = os.path.join(d, "p")
+                with open(path, "wb") as f: f.write(carried.replace(head + inner, b"file unframe.inner %d\n" % len(new) + new))
+                return run(obj, spec, "--proof", path)
+        # the proof's part cannot give the public function another contract, nor a definition another meaning
+        for extra in (b"contract ode_unframe(out: cap bytes, cap: number, input: n bytes, n: number) {\n    requires apart(out, input)\n    returns r\n    writes out\n    trace depends on input\n    stack 184\n}\n", b"def be32(b) { 0 }\n"):
+            code, out = with_inner(inner + extra)
+            self.assertNotEqual(code, 0, out); self.assertNotIn("meets its public contract", out)
+        # a contract in the proof that says more of a function called than that function does: the caller is shown by it, the function is not
+        stronger = inner.replace(b"    returns adler32(input)\n", b"    returns adler32(input) + 1\n")
+        self.assertNotEqual(stronger, inner)
+        code, out = with_inner(stronger)
+        self.assertEqual(code, 1, out); self.assertIn("ode_adler32_blocks4: NOT shown", out)
+        # a proof with no contract for a function called
+        code, out = with_inner(inner[:inner.index(b"contract ode_adler32_blocks4")])
+        self.assertEqual(code, 1, out); self.assertIn("ode_unframe: NOT shown", out)
+
     def test_the_proof_carried_is_the_folders(self):
         for name in NAMES:
             obj, spec = self.paths(name)

@@ -36,7 +36,12 @@ the same path gives the same name to the same byte. Numbers are compared by addi
 name; at the place after one that is known it is the sequence's own equation of it.
 
 The machine's instructions are kfn.py's reading of them (this file is a second kind of memory under the same
-machine: bytes with a length, in place of BLAKE3's words). Calls are not followed yet.
+machine: bytes with a length, in place of BLAKE3's words).
+
+A call of another function is by that function's contract (`Machine.call`): what it requires is shown at the
+call; what it ensures is so after it; nothing else of it is used, and it is checked apart. The specification
+given must hold the callee's contract. `check` returns the names called: whoever runs it sees that each is
+checked too, and that no function is called by what it calls.
 
 WHAT IS NOT CHECKED HERE: this checker (Python, unverified)."""
 import itertools, os, re, sys, time
@@ -236,7 +241,7 @@ class Algebra:
     def known(self, x, depth=0):
         """What a named thing is known to be on this path (itself, if nothing)."""
         if isinstance(x, Opaque) and depth < 20:
-            for k, v in self.m.equal:
+            for k, v in self.m.learned + self.m.equal:
                 if self.alike(x, k): return self.known(v, depth + 1)
         return x
     def alike(self, a, b):
@@ -274,7 +279,10 @@ class Algebra:
             if DEBUG: print(f"      {name}: named, not worked out: {err}")
             return me
     def defined(self, v):
-        if isinstance(self.known(v), Opaque): raise Err("the specification asks whether something has a value, and the code's path does not say")
+        v = self.known(v)
+        if not isinstance(v, Opaque) or any(self.alike(v, k) for k in self.m.fine): return
+        if self.m.calling: raise Undecided("a callee's contract asks whether something has a value, and the path does not say", "defined", v)
+        raise Err("the specification asks whether something has a value, and the code's path does not say")
     def element(self, spec, seq, i):
         """A sequence's value at place i. At a place the path fixes: worked out. At a place one after a place
         whose value is known: the sequence's equation of it. Else: a number, or a list, with a name."""
@@ -311,6 +319,8 @@ class Algebra:
                 if d is not None and 2 <= d <= 16:
                     for m in range(1, d): self.element(spec, seq, plain(Lin.of(j) + m))
                     break
+        if n is not None and n > 4096 and not any(self.facts.zero(i - j - 1) is True for j, _ in table):
+            raise Err(f"place {n} of a sequence, with no place near it known: more places than this checker works out one by one")
         below = Lin.of(n - 1) if n is not None and n > 0 else next((j for j, _ in table if self.facts.zero(i - j - 1) is True), None)
         if n == 0: v = spec.eval(self, seq.first, seq.env)
         elif below is not None:
@@ -352,6 +362,8 @@ class Machine(kfn.Machine):
         self.named = {}                                      # the names given to bytes: {region or list: [(where, name)]}
         self.halves = []                                     # the names given to quotients: [(of what, by what, the name)]
         self.elements, self.lists = set(), {}                # the names given to lists of sequences; what such a list is known to be
+        self.fine, self.calling = [], False                  # named things known to have a value (a callee's contract said so); within a call
+        self.learned = []                                    # named things and what a callee's contract has made them known to be
         for reg, kind, name in c.args:
             if kind == "number":
                 x = sym(name); self.facts.add(x); self.facts.add(WORD64 - x)
@@ -371,7 +383,7 @@ class Machine(kfn.Machine):
     def clone(self):
         c = super().clone()
         c.secret, c.bytes, c.seqs = set(self.secret), set(self.bytes), [(n, a, list(tb)) for n, a, tb in self.seqs]
-        c.elements, c.lists = set(self.elements), dict(self.lists)
+        c.elements, c.lists, c.fine, c.learned = set(self.elements), dict(self.lists), list(self.fine), list(self.learned)
         c.held, c.equal, c.named, c.halves = dict(self.held), list(self.equal), {k: list(v) for k, v in self.named.items()}, list(self.halves)
         return c
 
@@ -480,7 +492,133 @@ class Machine(kfn.Machine):
             raise Fail("a branch that depends on bytes in memory: the contract does not say the trace may depend on them")
         return super().branch(op)
 
-    def call(self, name): raise Fail(f"a call of {name}: this checker does not follow calls yet")
+    # -- a call of another function: by its contract, and by nothing else of it
+    def call(self, name):
+        """What the callee's contract requires is shown here; what it ensures is taken as so after it. Nothing
+        else is known of the callee (it is checked apart, against the same contract). A question its contract
+        asks that this path does not answer (has the specification's value failed? how do two numbers compare?)
+        is taken both ways, each as a path of its own."""
+        sp = self.g["rsp"][2]
+        self.calling = True
+        try: used = self.call_contract(name, callee(self.contract.spec, name))
+        except Undecided as u: raise kfn.Fork(u.kind, u.x)
+        except ode.Fails as e: raise Fail(f"a call of {name}: its contract speaks of something the specification gives no value (it fails with {e.reason})")
+        except Err as e: raise Fail(f"a call of {name}: {e}")
+        finally: self.calling = False
+        CALLED.add(name)
+        self.low = min(self.low, sp - used)
+        for r in G64:
+            if r not in KEPT and r not in ("rsp", "rax"): self.g[r] = ("q", "left by a call")
+        self.x, self.flags = {}, None
+
+    def public(self, v, what):
+        """A list given to a callee holds nothing the trace may not depend on."""
+        for q in Algebra(self).parts(v):
+            if q[0] == "one" and self.tainted(q[1]): raise Fail(f"{what}: a byte of it depends on bytes the contract does not let the trace depend on")
+            if q[0] == "view" and q[1] not in self.readonly: raise Fail(f"{what}: bytes of {q[1]} of which nothing is kept")
+
+    def entitled(self, A, v, title, a_list):
+        """A value of the specification that this path cannot work out, as a list or a number with a name: the
+        same name wherever the same definition of the same things is asked for again."""
+        v = A.known(v)
+        if not isinstance(v, Opaque): return v
+        if a_list:
+            n = sym("#" + title); self.facts.add(n)
+            w = Rope([("list", title, n)])
+        else:
+            w = sym(title); self.facts.add(w)
+        self.learned.append((v, w))
+        return w
+
+    def call_contract(self, name, c):
+        mine, spec, F, A = self.contract, self.contract.spec, self.facts, Algebra(self)
+        if name == mine.name: raise Fail("the function calls itself: not this checker's")
+        for _, kind, arg in mine.args:
+            if kind != "number" and arg not in mine.writes and arg not in mine.trace:
+                raise Fail(f"this function is given {arg} to read and its contract does not let the trace depend on it: what a callee does with such bytes is not followed")
+        env, spans = {}, {}
+        for reg, kind, arg in c.args:
+            if kind != "number": continue
+            x = lin(self.g[reg])
+            if x is None: raise Fail(f"{arg} is given {self.g[reg]}: not a number")
+            if not self.facts.ge0(x): raise Fail(f"{arg} is given {x}: not shown to be a number not below zero")
+            if self.tainted(x): raise Fail(f"{arg} is given a number that depends on bytes the contract does not let the trace depend on")
+            env[arg] = plain(x)
+        for reg, kind, arg in c.args:
+            if kind == "number": continue
+            a, n = self.g[reg], kfn.bytes_kind(kind)
+            if a[0] != "a" or a[1] not in self.len: raise Fail(f"{arg} is given {a}: not an address in something this function was given")
+            region, off, count = a[1], Lin.of(a[2]), Lin.of(env[n] if isinstance(n, str) else n)
+            if not F.ge0(off) or not F.ge0(self.len[region] - off - count): raise Fail(f"{arg}: {count} bytes at {region} + {off} are not shown to be within its {self.len[region]} bytes")
+            if self.tainted(off): raise Fail(f"{arg}: where it is depends on bytes the contract does not let the trace depend on")
+            spans[arg] = (region, off, count)
+            if arg in c.writes:
+                if region in self.readonly: raise Fail(f"{arg} is written by {name}, and {region} is given to this function to read")
+            elif region in self.readonly: env[arg] = View(region, off, count)
+            else:
+                rope = self.held.get(region)
+                if rope is None or not F.ge0(Lin.of(A.length(rope)) - off - count): raise Fail(f"{arg}: the {count} bytes at {region} + {off} are not all bytes this function is known to have written")
+                env[arg] = A.slice(rope, off, plain(off + count))
+                self.public(env[arg], arg)
+        # what the callee requires
+        given_apart, ap = set(mine.text["apart"] or ()), c.text["apart"] or []
+        for k, x in enumerate(ap):
+            for y in ap[k + 1:]:
+                (r1, o1, n1), (r2, o2, n2) = spans[x], spans[y]
+                if r1 == r2:
+                    if not F.ge0(o2 - o1 - n1) and not F.ge0(o1 - o2 - n2): raise Fail(f"{x} and {y} are not shown to be apart")
+                elif r1 not in given_apart or r2 not in given_apart: raise Fail(f"{x} and {y}: this function's own contract does not require {r1} and {r2} to be apart")
+        for e in c.text["asks"]:
+            for f in order(spec, A, e, env):
+                if not F.ge0(f): raise Fail(f"what {name} requires is not shown here ({f} >= 0)")
+        # what it ensures
+        tag = f"{name} #{self.steps}"
+        after, result, new = dict(env), None, {}
+        decided = lambda guard: guard is None or spec.eval(A, guard, after) is True
+        if c.result is not None:
+            result = sym(f"the result of {tag}"); after[c.result] = plain(result)
+        for leaf in c.text["leaves"]:
+            if leaf["name"] == c.result or not decided(leaf["cond"]): continue
+            arg, (a, b) = leaf["name"], leaf["part"] or (("num", 0), ("num", None))
+            v = self.entitled(A, spec.eval(A, leaf["expr"], after), f"{arg} of {tag}", True)
+            if not isinstance(v, (Rope, View, list)): raise Fail(f"what {name} ensures of {arg} is not a list of bytes")
+            if spec.eval(A, a, after) != 0: raise Fail(f"`ensures {arg}[a .. b]` with a that is not 0: not this checker's")
+            n = spans[arg][2] if b == ("num", None) else numb(spec.eval(A, b, after))
+            if F.zero(Lin.of(A.length(v)) - n) is not True: raise Fail(f"what {name} ensures of {arg}: {n} bytes are said to be a list not shown to be of that length")
+            F.add(spans[arg][2] - n)                                # they are within what it was given: its own check showed each write to be
+            new[arg] = after[arg] = v
+        if c.result is None and c.text["returns"] is not None:
+            result = numb(self.entitled(A, spec.eval(A, c.text["returns"], after), f"the result of {tag}", False))
+        for leaf in c.text["leaves"]:
+            if leaf["name"] == c.result and decided(leaf["cond"]):
+                d = result - numb(self.entitled(A, spec.eval(A, leaf["expr"], after), f"the result of {tag}, said", False))
+                F.add(d); F.add(-d)
+        for cond, guard in c.conditions:
+            if not decided(guard): continue
+            try: facts = order(spec, A, cond, after)
+            except Undecided: raise
+            except (Err, ode.Fails): continue                       # not an order of two numbers this path can read: nothing is learned of it
+            for f in facts: F.add(f)
+        # now what the call has changed (nothing above has changed the registers or the bytes held)
+        for arg in c.writes:
+            region, off, count = spans[arg]
+            old = self.held.get(region)
+            if F.zero(off) is True: before = Rope()
+            elif old is not None and F.ge0(Lin.of(A.length(old)) - off): before = A.slice(old, 0, plain(off))
+            else: before = None
+            self.held[region] = None if before is None else before if arg not in new else A.rope(A.parts(before) + A.parts(new[arg]))
+        if result is not None:
+            F.add(result); F.add(WORD64 - result)
+            self.g["rax"] = value(result)
+        else: self.g["rax"] = ("q", "left by a call")
+        return 8 + c.stack
+
+
+CALLED, CALLEES = set(), {}
+def callee(spec, name):
+    key = (id(spec), name)
+    if key not in CALLEES: CALLEES[key] = (spec, Contract(spec, name))       # (the specification is kept, so that its id is its own)
+    return CALLEES[key][1]
 
 
 def numb(x):
@@ -803,6 +941,7 @@ def run(m, places, budget):
                 yes, no = m.clone(), m.clone()
                 if f.kind == "zero": yes.facts.assume_zero(f.x); no.facts.assume_nonzero(f.x)
                 elif f.kind == "ge": yes.facts.add(f.x); no.facts.add(-f.x - 1)
+                elif f.kind == "defined": yes.fine.append(f.x); no.learned.append((f.x, Failure(Opaque("reason", (f.x,)))))
                 else: yes.conds[f.x] = True; no.conds[f.x] = False
                 work += [side for side in (yes, no) if side.facts.consistent()]; break
     return ends
@@ -869,6 +1008,7 @@ def check(rows, spec, symbol, proof=""):
     """The function's instructions meet its contract. Raises Fail; returns a tally."""
     c, T = Contract(spec, symbol), kcheck.Terms()
     places = read_proof(proof, c)
+    CALLED.clear()
     for at in places:
         if at not in {a for a, _, _ in rows}: raise Fail(f"the proof: no instruction at +{at - BASE:#x}")
     entry = Machine(T, rows, c); entry.pc = rows[0][0]
@@ -895,7 +1035,7 @@ def check(rows, spec, symbol, proof=""):
             if origin is not None: less(e, spec, places[origin].decreases, env0, p.decreases, env, f"{where} to +{e.pc - BASE:#x}")
     if set(places) - set(first): raise Fail("the proof has a place the code does not come to")
     if not tally["return"]: raise Fail("no path returns")
-    tally["instructions"] = STEPS - budget[0]
+    tally["instructions"], tally["calls"] = STEPS - budget[0], sorted(CALLED)
     return tally
 
 
