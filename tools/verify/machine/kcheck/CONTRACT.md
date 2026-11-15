@@ -17,9 +17,11 @@ contract NAME(ARGUMENT: KIND, ...) {
 ```
 
 **The arguments** are in the registers of the calling convention, in the order written: rdi, rsi, rdx, rcx,
-r8, r9. An argument is a number (`number`; `byte`: a number below 256; `any`: 64 bits of which nothing is
-asked) or the address of bytes in memory (`N bytes`; `len bytes`: as many as the number `len`, another
-argument).
+r8, r9. An argument is a number (`number`: what a register holds, 0 to 2^64 - 1; `byte`: a number below
+256; `any`: 64 bits of which nothing is asked) or the address of bytes in memory (`N bytes`; `len bytes`:
+as many as the number `len`, another argument). The number a function returns is of the same size. (In a
+specification a number is of any size and never wraps: LANGUAGE.md. It is only an argument or a result
+that a register bounds.)
 
 **`requires`**: what the caller makes true. `requires apart(a, b, ...)`: the things at those addresses do not
 overlap one another. One thing is required of every caller and not written: the stack is the machine's own,
