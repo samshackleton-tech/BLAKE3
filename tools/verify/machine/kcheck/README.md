@@ -228,7 +228,7 @@ anything on a path where the caller's own condition holds.
 **Speed.** One thread, under the bench lock, on two machines with AVX-512 (pinned runs
 `hashr-speed2-9700x-…-e2270d95` and `hashr-speed2-epyc9255-…-30c5450b`; `hash.ode` at commit `1cf60f0e`, GNU
 as 2.46's objects; the library at `next` `3ec37f0e`, rustc 1.99.1). `khash_bench.c`: GiB a second, the best
-of 7 passes; the median of three rounds (the three were within 2% of one another in every cell). "library":
+of 7 passes; the median of three rounds (the three were within 3% of one another in every cell). "library":
 BLAKE3-Servil's own one-shot hash on the calling thread (`b3_hash` of `capi/b3.h`). `hashf`: the earlier Ode
 code (`levels/levels.ode`: levels over groups of 32 chunks, written for speed, proved in Lean with a
 stand-in). The three give the same hashes.
@@ -246,7 +246,7 @@ stand-in). The three give the same hashes.
 
 So the code written to be proved, on the library's own kernels, runs at 87% to 89% of the library's speed
 from 1 MiB up, 93% to 97% at 64 KiB, and about 60% at 16 and 32 KiB; and it is no slower than the earlier Ode
-code anywhere (30% to 59% faster between 16 and 64 KiB). What the library does that `hash.ode` does not yet:
+code anywhere (30% to 60% faster between 16 and 64 KiB). What the library does that `hash.ode` does not yet:
 it has a 16-lane path for 16 chunks or fewer (here the 32-lane kernel runs half empty), and it makes parents
 many to a call of the parent kernel all the way up (here a whole tree of 32 chunks spends five calls on 31
 parents, and the parents over smaller parts and above the 32-chunk trees are compressed one at a time).
