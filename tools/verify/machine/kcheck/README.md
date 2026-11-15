@@ -49,7 +49,8 @@ assembler and no linker is relied on.
 
 **Programs other than the hash** (`programs/`, November 15: to find what the two languages lack). Each has
 its own specification and public contract, code in Ode, and is checked from its bytes
-(`python3 programs/check_programs.py`: eight functions, 1,391 instructions, 18 s, 14 of them the last):
+(`python3 programs/check_programs.py`: nine functions, 1,467 instructions, 18 s, 14 of them the base-64
+encoder's):
 
 | | the public contract's `ensures` and `returns` | instructions | proof | checked in |
 |---|---|---|---|---|
@@ -61,6 +62,7 @@ its own specification and public contract, code in Ode, and is checked from its 
 | first difference of two runs of bytes | `returns common(a, b)` | 45 | 1 place, 8 lines | 3 ms |
 | UTF-8: is it well-formed, and how many code points | `returns if failed(utf8(input)) then NO else utf8(input)` | 300 | 1 place, 11 lines | 0.17 s |
 | Base 64 encoder | `requires cap >= 4 * ((n + 2) / 3)`; `returns 4 * ((n + 2) / 3)`; `ensures out[0 .. 4 * ((n + 2) / 3)] = base64(input)` | 197 | 1 place, 12 lines | 13 s |
+| the Internet checksum (RFC 1071) | `requires n < 562949953421312`; `returns checksum(input)`; and no `trace` line: its timing does not depend on the bytes | 76 | 1 place, 7 lines | 0.13 s |
 
 What is shown of BLAKE3, from the bytes (`python3 check_all.py`, of the objects an assembler makes of the
 sources: 18 functions, 3,831 instructions, 19 s):
@@ -420,7 +422,7 @@ something BLAKE3 does not have: a result that is a number, a loop whose count is
 that may be malformed, output that depends on earlier output, an answer that may be "no", and a contract
 that is no way to compute anything.
 
-    python3 programs/check_programs.py          # the eight functions from their bytes: 1,391 instructions, 18 s
+    python3 programs/check_programs.py          # the nine functions from their bytes: 1,467 instructions, 18 s
     python3 programs/test_specs.py              # each specification against someone else's answers
     python3 test_kbyte.py                       # changed specifications, contracts, proofs and instructions
 
@@ -432,6 +434,7 @@ that is no way to compute anything.
 | `common/` | 15 | the same in Python | `ode_common` |
 | `utf8/` | 61: a code point is 0 to 0x10FFFF and no surrogate, written in the fewest of one to four bytes | Python's strict decoder | `ode_utf8` |
 | `base64/` | 38: RFC 4648's words: 24 bits as four groups of six, a letter each; "=" at the end | Python's `base64` | `ode_base64` |
+| `inet/` | 34: RFC 1071's words: pairs of bytes summed, what is carried out of 16 bits added back in | the RFC's own example and its C code's way, in Python | `ode_inet` |
 | `sigil/` | 175: John's Sigil 0.1 (the data with two marker bits, times a check prime, written in base 2,048 as letters) | the 220 good vectors of its repository | none: it multiplies a number of 258 bits by a prime and looks letters up in a table of 2,048; Ode has no multiplication yet, and `kbyte.py` reads no table of constants |
 
 **What each made the languages gain.**
@@ -468,6 +471,15 @@ that is no way to compute anything.
   letter is a choice of five; the four letters of a group are written in a loop the checker runs through;
   that is 625 paths a turn, and the check takes 13 s where the others take a fraction of one. A place
   inside the group would join them; so would a checker that joined paths that end alike.
+- *The Internet checksum*: nothing in the languages (written with the checker frozen, accepted on its
+  first run). It is the one program here whose contract has no `trace` line: no branch and no address
+  depends on the bytes, and the checker shows it (it refuses Adler-32 without the line). And the checker
+  did arithmetic its author had wrong: I wrote `requires n < 2^32` with four folds of the carries; a
+  changed specification with three folds was accepted (three do suffice below 2^32), and so was `n < 2^49`
+  with four (the sum then still fits 64 bits, and four folds bring any such sum within 16). The contract
+  now says 2^49, and one byte more is refused. What it could not show is what the folds amount to (the
+  sum's remainder by 65535): that is a fact about numbers, tried on examples (`test_specs.py`) and shown
+  nowhere.
 
 **`kbyte.py`** (910 lines) is the checker for these: `kfn.py`'s machine, with memory as bytes and lists of
 bytes in parts, numbers that depend on counts, and places. A proof (`programs/NAME/FUNCTION.proof`) is a
@@ -502,6 +514,7 @@ bytes and the proof's offsets), takes the proof from the file, and checks:
 | `varint/odevarint.o` | 1,032 | 1 | 0.2 s |
 | `utf8/odeutf8.o` | 2,624 | 1 | 0.17 s |
 | `base64/odebase64.o` | 2,304 | 1 | 13 s |
+| `inet/odeinet.o` | 1,536 | 1 | 0.13 s |
 | `common/odecommon.o` | 1,320 | 1 | 0.01 s |
 | `programs/lz4-rust/main.rs` linked with `odelz4.o` (rustc 1.99.1) | 4,568,904 | 3 | 4.4 s on the Threadripper |
 | the same after `strip` | 364,504 | 3, found by their bytes | 4.4 s |

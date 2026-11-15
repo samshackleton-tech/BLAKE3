@@ -1,0 +1,10 @@
+// The loop of ode_inet, where it asks whether a pair is left: i bytes are taken, a whole number of pairs,
+// and r13 holds their plain sum, which is at most 65535 a pair (so it stays far within 64 bits).
+place +0x24 {
+    name i = r12
+    fact i <= n
+    fact i % 2 == 0
+    r13 = sums(input)[i / 2]
+    fact sums(input)[i / 2] <= 32768 * i
+    decreases n - i
+}

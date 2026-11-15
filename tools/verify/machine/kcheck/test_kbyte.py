@@ -340,6 +340,45 @@ class Base64(unittest.TestCase):
         self.assertEqual(needless, [])
 
 
+class Inet(unittest.TestCase):
+    """The Internet checksum: the one program here whose contract has no `trace` line: no branch and no address
+    depends on the bytes. Written with the checker frozen: no change to it."""
+    @classmethod
+    def setUpClass(cls): cls.p = Program("inet", "inet", "ode_inet")
+
+    def test_it_meets_its_contract(self):
+        self.assertEqual(self.p.verdict(), "accepted")
+        self.assertNotIn("trace", self.p.spec.split("contract ode_inet")[1])
+
+    def test_a_changed_specification_or_contract_is_refused(self):
+        pair = "s[k + 1] = s[k] + 256 * bytes[2 * k] + bytes[2 * k + 1]"
+        total = "if len(bytes) % 2 == 0 then sums(bytes)[pairs] else sums(bytes)[pairs] + 256 * bytes[len(bytes) - 1]"
+        whole = "65535 - fold(fold(fold(fold(total(bytes)))))"
+        self.p.changed(self, "spec", [
+            ("s[0] = 0   " + pair, "s[0] = 1   " + pair), (pair, "s[k + 1] = s[k] + bytes[2 * k] + 256 * bytes[2 * k + 1]"), (pair, pair.replace("256", "255")), (pair, pair.replace("bytes[2 * k + 1]", "bytes[2 * k]")),
+            (total, total.replace("+ 256 * bytes[len(bytes) - 1]", "+ bytes[len(bytes) - 1]")), (total, total.replace("else sums(bytes)[pairs] + 256 * bytes[len(bytes) - 1]", "else sums(bytes)[pairs]")),
+            (total, total.replace("% 2 == 0", "% 2 == 1")), ("let pairs = len(bytes) / 2", "let pairs = (len(bytes) + 1) / 2"),
+            ("def fold(s) { s % 65536 + s / 65536 }", "def fold(s) { s % 65536 }"), ("def fold(s) { s % 65536 + s / 65536 }", "def fold(s) { s % 65535 + s / 65535 }"), ("def fold(s) { s % 65536 + s / 65536 }", "def fold(s) { s % 65536 + s / 65536 + 1 }"),
+            # three folds are too few for a sum of 2^49 bytes (the checker shows they would do for 2^32, and that a fifth changes nothing)
+            (whole, "65535 - fold(fold(fold(total(bytes))))"), (whole, "fold(fold(fold(fold(total(bytes)))))"), (whole, "65536 - fold(fold(fold(fold(total(bytes)))))"),
+            # one byte more than 2^49 and the plain sum is not shown to stay within 64 bits
+            ("    requires n < 562949953421312\n", ""), ("requires n < 562949953421312", "requires n < 562949953421314"), ("stack 40", "stack 32"), ("returns checksum(input)", "returns checksum(input) + 1")])
+        self.assertEqual(self.p.verdict(spec=self.p.spec.replace("requires n < 562949953421312", "requires n < 4294967296").replace(whole, "65535 - fold(fold(fold(total(bytes))))")), "accepted")
+
+    def test_a_proof_without_one_of_its_lines_is_refused(self):
+        lines, needless = self.p.proof.split("\n"), []
+        for k, line in enumerate(lines):
+            if not line.strip() or line.strip().startswith(("//", "place", "}", "any ")): continue
+            if self.p.verdict(proof="\n".join(lines[:k] + lines[k + 1:])) == "accepted": needless.append(line.strip())
+        self.assertEqual(needless, [])
+
+    def test_a_changed_instruction_is_refused_unless_it_keeps_the_contract(self):
+        # Of 86, 4 accepted: moves of what is already there.
+        n, accepted = instructions_changed(self.p)
+        self.assertEqual((n, len(accepted)), (86, 4))
+        self.assertTrue(all(i.startswith(".mov") and c == ".nop" for i, c in accepted))
+
+
 class Arithmetic(unittest.TestCase):
     """klin.py asked again (kbyte.py's facts are `thorough`): by bounds, and by elimination with more room."""
     def test_a_quotient_gets_its_value_from_bounds_whatever_else_is_known(self):

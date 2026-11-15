@@ -1,0 +1,18 @@
+// The Internet checksum of n bytes (fewer than 2^49), written to be proved against inet.spec.
+// No branch and no address depends on the bytes: only on n.
+fn inet(input, n)
+  reg input, n, i, s
+{
+  var i = 0
+  var s = 0
+  while n - i > 1 {
+    s = s + (u8[input + i] << 8) + u8[input + i + 1]
+    i = i + 2
+  }
+  if n - i == 1 { s = s + (u8[input + i] << 8) }
+  s = (s & 65535) + (s >> 16)
+  s = (s & 65535) + (s >> 16)
+  s = (s & 65535) + (s >> 16)
+  s = (s & 65535) + (s >> 16)
+  return 65535 - s
+}

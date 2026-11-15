@@ -158,6 +158,19 @@ class Specs(unittest.TestCase):
             self.assertEqual(value(s, "base64", list(data)), ("ok", list(base64.b64encode(data))), n)
         for v in range(64): self.assertEqual(value(s, "letter", v), ("ok", b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[v]))
 
+    def test_inet_is_rfc1071s(self):
+        s, r = spec("inet"), random.Random(3)
+        def rfc(data):
+            t = sum(data[i] << 8 | data[i + 1] for i in range(0, len(data) - 1, 2)) + (data[-1] << 8 if len(data) % 2 else 0)
+            while t >> 16: t = (t & 0xFFFF) + (t >> 16)
+            return ~t & 0xFFFF
+        self.assertEqual(value(s, "checksum", [0x00, 0x01, 0xf2, 0x03, 0xf4, 0xf5, 0xf6, 0xf7]), ("ok", 0xFFFF - 0xddf2))        # the RFC's own example
+        for data in [b"", b"\x00", b"\xff", b"\xff\xff"] + [bytes(r.randrange(256) for _ in range(r.randrange(0, 300))) for _ in range(200)] + [b"\xff" * n for n in range(1, 40)] + [b"\xff" * 20001]:
+            self.assertEqual(value(s, "checksum", list(data)), ("ok", rfc(data)), len(data))
+            # what the folds come to: the sum's remainder by 65535, with 65535 in place of 0 for a sum that is not 0
+            t = s.call(ode.Numbers(), "total", list(data))
+            self.assertEqual(65535 - s.call(ode.Numbers(), "checksum", list(data)), 0 if t == 0 else (t - 1) % 65535 + 1)
+
     def test_sigil_is_the_repositorys(self):
         path = os.path.join(sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/tmp/night/sigil"), "vectors.tsv")
         if not os.path.exists(path): self.skipTest("no vectors.tsv: give the sigil checkout")

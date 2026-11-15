@@ -20,7 +20,8 @@ PROGRAMS = [("adler32", "adler32", "Adler-32 of any bytes"),
             ("varint", "varint", "a number's varint"),
             ("common", "common", "how many bytes two runs have alike at their start"),
             ("utf8", "utf8", "the count of code points of well-formed UTF-8, or NO"),
-            ("base64", "base64", "bytes written in base 64, the room the caller's to give")]
+            ("base64", "base64", "bytes written in base 64, the room the caller's to give"),
+            ("inet", "inet", "the Internet checksum; its trace does not depend on the bytes")]
 
 
 def main():
