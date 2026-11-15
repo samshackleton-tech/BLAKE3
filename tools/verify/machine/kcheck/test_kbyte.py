@@ -300,6 +300,46 @@ class Utf8(unittest.TestCase):
         self.assertEqual({c for i, c in accepted}, {".nop"})
 
 
+class Base64(unittest.TestCase):
+    """An encoder whose room is the caller's to give (`requires cap >= 4 * ((n + 2) / 3)`), in groups of three
+    bytes. Written, like the UTF-8 validator, while the checker was frozen: no change to it. (A check takes 13 s:
+    the four letters of a group are five-way branches, 625 paths a turn. Its changed instructions are left to the
+    single-bit audit.)"""
+    @classmethod
+    def setUpClass(cls): cls.p = Program("base64", "base64", "ode_base64")
+
+    def test_it_meets_its_contract(self):
+        self.assertEqual(self.p.verdict(), "accepted")
+
+    def test_a_changed_specification_or_contract_is_refused(self):
+        letter = "if v < 26 then 65 + v else if v < 52 then 71 + v else if v < 62 then v - 4 else if v == 62 then 43 else 47"
+        quad = "[letter(a / 4), letter(16 * (a % 4) + b / 16), letter(4 * (b % 16) + c / 64), letter(c % 64)]"
+        one = "[letter(bytes[at] / 4), letter(16 * (bytes[at] % 4)), 61, 61]"
+        two = "[letter(bytes[at] / 4), letter(16 * (bytes[at] % 4) + bytes[at + 1] / 16), letter(4 * (bytes[at + 1] % 16)), 61]"
+        whole = "groups(bytes)[len(bytes) / 3] ++ rest(bytes, 3 * (len(bytes) / 3))"
+        self.p.changed(self, "spec", [
+            (letter, letter.replace("v < 26", "v < 25")), (letter, letter.replace("65 + v", "66 + v")), (letter, letter.replace("71 + v", "70 + v")), (letter, letter.replace("v < 52", "v < 53")),
+            (letter, letter.replace("v - 4", "v - 5")), (letter, letter.replace("then 43 else 47", "then 47 else 43")), (letter, letter.replace("then 43 else 47", "then 45 else 95")),
+            (quad, quad.replace("letter(a / 4)", "letter(a % 64)")), (quad, quad.replace("16 * (a % 4) + b / 16", "16 * (a % 4) + b % 16")), (quad, quad.replace("4 * (b % 16) + c / 64", "4 * (b % 16)")),
+            (quad, quad.replace("letter(c % 64)]", "letter(c / 4)]")), (quad, quad.replace("16 * (a % 4)", "8 * (a % 4)")),
+            ("quad(bytes[3 * k], bytes[3 * k + 1], bytes[3 * k + 2])", "quad(bytes[3 * k], bytes[3 * k + 2], bytes[3 * k + 1])"), ("s[0] = []   s[k + 1] = s[k] ++ quad", "s[0] = [61]   s[k + 1] = s[k] ++ quad"),
+            (one, one.replace("61, 61]", "61]")), (one, one.replace("16 * (bytes[at] % 4)", "bytes[at] % 4")), (two, two.replace(", 61]", ", 61, 61]")), (two, two.replace("letter(4 * (bytes[at + 1] % 16))", "letter(bytes[at + 1] % 16)")),
+            ("if at == len(bytes) then []", "if at == len(bytes) then [61]"), ("else if at + 1 == len(bytes) then", "else if at + 2 == len(bytes) then"),
+            (whole, "groups(bytes)[len(bytes) / 3]"), (whole, "groups(bytes)[len(bytes) / 3] ++ rest(bytes, len(bytes))"),
+            # the room is the caller's to give: not left out, not a letter less; and the count is of all the letters
+            ("    requires apart(out, input)\n", ""), ("    requires cap >= 4 * ((n + 2) / 3)\n", ""), ("requires cap >= 4 * ((n + 2) / 3)", "requires cap >= 4 * ((n + 2) / 3) - 1"), ("requires cap >= 4 * ((n + 2) / 3)", "requires cap >= 4 * (n / 3)"),
+            ("returns 4 * ((n + 2) / 3)", "returns 4 * (n / 3)"), ("returns 4 * ((n + 2) / 3)", "returns 4 * ((n + 2) / 3) + 1"),
+            ("ensures out[0 .. 4 * ((n + 2) / 3)] = base64(input)", "ensures out[0 .. 4 * ((n + 2) / 3)] = base64(input) ++ [61]"),
+            ("    trace depends on input\n", ""), ("stack 120", "stack 112")])
+
+    def test_a_proof_without_one_of_its_lines_is_refused(self):
+        lines, needless = self.p.proof.split("\n"), []
+        for k, line in enumerate(lines):
+            if not line.strip() or line.strip().startswith(("//", "place", "}", "any ")): continue
+            if self.p.verdict(proof="\n".join(lines[:k] + lines[k + 1:])) == "accepted": needless.append(line.strip())
+        self.assertEqual(needless, [])
+
+
 class Arithmetic(unittest.TestCase):
     """klin.py asked again (kbyte.py's facts are `thorough`): by bounds, and by elimination with more room."""
     def test_a_quotient_gets_its_value_from_bounds_whatever_else_is_known(self):

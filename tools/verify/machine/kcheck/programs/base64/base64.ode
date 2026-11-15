@@ -1,0 +1,58 @@
+// Base 64 of n bytes, written to be proved against base64.spec. The caller gives room for the letters. It
+// returns their count.
+//
+// i: bytes taken; o: letters written. Three bytes are four numbers below 64 (s0 to s3), each written as its
+// letter; what is left at the end (one byte or two) is two or three letters and "=" to make four.
+fn base64(out, cap, input, n)
+  reg out, cap, input, n, i, o
+{
+  var i = 0
+  var o = 0
+  var s0 = 0
+  var s1 = 0
+  var s2 = 0
+  var s3 = 0
+  var k = 0
+  var v = 0
+  var left = 0
+  var go = 1
+  while go == 1 {
+    left = n - i
+    if left == 0 { go = 0 } else {
+      // the numbers of this group: k of them are letters, the rest "="
+      s0 = u8[input + i] >> 2
+      s1 = (u8[input + i] & 3) << 4
+      s2 = 64
+      s3 = 64
+      if left >= 2 {
+        s1 = s1 + (u8[input + i + 1] >> 4)
+        s2 = (u8[input + i + 1] & 15) << 2
+        if left >= 3 {
+          s2 = s2 + (u8[input + i + 2] >> 6)
+          s3 = u8[input + i + 2] & 63
+        }
+      }
+      k = 0
+      while k < 4 {
+        v = s0
+        if k == 1 { v = s1 }
+        if k == 2 { v = s2 }
+        if k == 3 { v = s3 }
+        if v < 26 { v = v + 65 } else {
+          if v < 52 { v = v + 71 } else {
+            if v < 62 { v = v - 4 } else {
+              if v == 62 { v = 43 } else {
+                if v == 63 { v = 47 } else { v = 61 }
+              }
+            }
+          }
+        }
+        u8[out + o + k] = v
+        k = k + 1
+      }
+      o = o + 4
+      if left >= 3 { i = i + 3 } else { go = 0 }
+    }
+  }
+  return o
+}

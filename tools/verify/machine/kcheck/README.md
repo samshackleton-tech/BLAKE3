@@ -49,7 +49,7 @@ assembler and no linker is relied on.
 
 **Programs other than the hash** (`programs/`, November 15: to find what the two languages lack). Each has
 its own specification and public contract, code in Ode, and is checked from its bytes
-(`python3 programs/check_programs.py`: seven functions, 1,194 instructions, 3.4 s):
+(`python3 programs/check_programs.py`: eight functions, 1,391 instructions, 18 s, 14 of them the last):
 
 | | the public contract's `ensures` and `returns` | instructions | proof | checked in |
 |---|---|---|---|---|
@@ -60,6 +60,7 @@ its own specification and public contract, code in Ode, and is checked from its 
 | a number's varint | `returns r`; `ensures out[0 .. r] = varint(v)` | 35 | none | 0.1 s |
 | first difference of two runs of bytes | `returns common(a, b)` | 45 | 1 place, 8 lines | 3 ms |
 | UTF-8: is it well-formed, and how many code points | `returns if failed(utf8(input)) then NO else utf8(input)` | 300 | 1 place, 11 lines | 0.17 s |
+| Base 64 encoder | `requires cap >= 4 * ((n + 2) / 3)`; `returns 4 * ((n + 2) / 3)`; `ensures out[0 .. 4 * ((n + 2) / 3)] = base64(input)` | 197 | 1 place, 12 lines | 13 s |
 
 What is shown of BLAKE3, from the bytes (`python3 check_all.py`, of the objects an assembler makes of the
 sources: 18 functions, 3,831 instructions, 19 s):
@@ -419,7 +420,7 @@ something BLAKE3 does not have: a result that is a number, a loop whose count is
 that may be malformed, output that depends on earlier output, an answer that may be "no", and a contract
 that is no way to compute anything.
 
-    python3 programs/check_programs.py          # the seven functions from their bytes: 1,194 instructions, 3.4 s
+    python3 programs/check_programs.py          # the eight functions from their bytes: 1,391 instructions, 18 s
     python3 programs/test_specs.py              # each specification against someone else's answers
     python3 test_kbyte.py                       # changed specifications, contracts, proofs and instructions
 
@@ -430,6 +431,7 @@ that is no way to compute anything.
 | `varint/` | 12 | LEB128 written another way | `ode_varint` |
 | `common/` | 15 | the same in Python | `ode_common` |
 | `utf8/` | 61: a code point is 0 to 0x10FFFF and no surrogate, written in the fewest of one to four bytes | Python's strict decoder | `ode_utf8` |
+| `base64/` | 38: RFC 4648's words: 24 bits as four groups of six, a letter each; "=" at the end | Python's `base64` | `ode_base64` |
 | `sigil/` | 175: John's Sigil 0.1 (the data with two marker bits, times a check prime, written in base 2,048 as letters) | the 220 good vectors of its repository | none: it multiplies a number of 258 bits by a prime and looks letters up in a table of 2,048; Ode has no multiplication yet, and `kbyte.py` reads no table of constants |
 
 **What each made the languages gain.**
@@ -460,6 +462,12 @@ that is no way to compute anything.
   compare, and the code's path does not say"). The answer would have been the same either way. The code
   was changed. The checker could instead take such a question both ways, as it does for a contract's
   `if`; it does not yet.
+- *Base 64*: nothing in the languages either (also written with the checker frozen; accepted on its first
+  run, three minutes after its specification was begun). It is the first whose room is the caller's to
+  give (`requires cap >= 4 * ((n + 2) / 3)`), so it has no NO. One thing it showed: **paths multiply.** A
+  letter is a choice of five; the four letters of a group are written in a loop the checker runs through;
+  that is 625 paths a turn, and the check takes 13 s where the others take a fraction of one. A place
+  inside the group would join them; so would a checker that joined paths that end alike.
 
 **`kbyte.py`** (910 lines) is the checker for these: `kfn.py`'s machine, with memory as bytes and lists of
 bytes in parts, numbers that depend on counts, and places. A proof (`programs/NAME/FUNCTION.proof`) is a
@@ -493,6 +501,7 @@ bytes and the proof's offsets), takes the proof from the file, and checks:
 | `lz4/odelz4.o` | 14,808 (3,088 of code, 11,002 of proof) | 3 | 2.5 s |
 | `varint/odevarint.o` | 1,032 | 1 | 0.2 s |
 | `utf8/odeutf8.o` | 2,624 | 1 | 0.17 s |
+| `base64/odebase64.o` | 2,304 | 1 | 13 s |
 | `common/odecommon.o` | 1,320 | 1 | 0.01 s |
 | `programs/lz4-rust/main.rs` linked with `odelz4.o` (rustc 1.99.1) | 4,568,904 | 3 | 4.4 s on the Threadripper |
 | the same after `strip` | 364,504 | 3, found by their bytes | 4.4 s |

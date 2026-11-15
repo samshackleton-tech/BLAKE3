@@ -1,0 +1,15 @@
+// The loop of ode_base64, at the first instruction of its body: i bytes are taken, a whole number of
+// threes, and the o letters written are those of that many groups.
+// In the stack: [0] s0, [8] s1, [16] s2, [24] s3, [32] k, [40] v, [48] left, [56] go.
+place +0xa2 {
+    name i = r14
+    name o = r15
+    name go = stack[56]
+    fact go == 1
+    fact i <= n
+    fact i % 3 == 0
+    fact o == 4 * (i / 3)
+    out[0 .. o] = groups(input)[i / 3]
+    any stack[0], stack[8], stack[16], stack[24], stack[32], stack[40], stack[48]
+    decreases n - i
+}

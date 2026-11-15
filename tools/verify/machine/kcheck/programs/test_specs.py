@@ -150,6 +150,14 @@ class Specs(unittest.TestCase):
             self.assertEqual(value(s, "utf8", list(data)), want, data.hex())
         self.assertGreater(good, 500)
 
+    def test_base64_is_pythons(self):
+        import base64
+        s, r = spec("base64"), random.Random(11)
+        for n in list(range(0, 80)) + [r.randrange(80, 700) for _ in range(40)]:
+            data = bytes(r.randrange(256) for _ in range(n))
+            self.assertEqual(value(s, "base64", list(data)), ("ok", list(base64.b64encode(data))), n)
+        for v in range(64): self.assertEqual(value(s, "letter", v), ("ok", b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[v]))
+
     def test_sigil_is_the_repositorys(self):
         path = os.path.join(sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/tmp/night/sigil"), "vectors.tsv")
         if not os.path.exists(path): self.skipTest("no vectors.tsv: give the sigil checkout")
