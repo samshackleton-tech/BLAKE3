@@ -1,0 +1,37 @@
+#!/bin/sh
+# Every single-bit audit of kcheck/, with this machine's processor as the judge, on this tree as it is.
+#
+#     sh audit.sh [JOBS]          (needs AVX-512 F and VL, python3, cc, clang)
+#
+# For each function: every bit of its code is flipped in turn; a change the decoder knows and a proof is found
+# for (or, for a kernel, that the checker accepts) is linked with BLAKE3 written out in C and run on the
+# processor on inputs the contract allows. The outputs go to audit/*.txt; the last lines here are one a
+# function. Exit 1 if any accepted change is told from BLAKE3 by the processor, or any change has no verdict.
+# Run it after any change of kdecode.py, kcheck.py, kloop.py, kglue.py, kone.py, kspec.py, ode.py, klin.py or
+# blake3.ode: an unverified checker is worth what its audits are worth.
+set -u
+here=$(cd "$(dirname "$0")" && pwd); cd "$here"
+root=$(cd ../../../.. && pwd)
+jobs=${1:-$(nproc)}
+grep -q avx512vl /proc/cpuinfo || { echo "this machine has no AVX-512 VL: the processor cannot judge"; exit 2; }
+work=$(mktemp -d); mkdir -p "$work/glue" audit
+clang -c -o "$work/lib32.o" "$root/c/blake3_avx512_32.S" && clang -c -o "$work/out16.o" "$root/c/blake3_output16.S" || exit 2
+for f in push merge add; do clang -c -o "$work/glue/$f.o" "glue/$f.S" || exit 2; done
+cc -c -o "$work/glue/avx512.o" "$root/c/blake3_avx512_x86-64_unix.S" && cc -c -o "$work/glue/sse41.o" "$root/c/blake3_sse41_x86-64_unix.S" || exit 2
+bad=0
+run() {     # OUTPUT COMMAND...
+    out=$1; shift
+    "$@" > "audit/$out" 2>&1 || { bad=1; echo "FAILED: $out"; }
+}
+for k in p16 k32 p32; do
+    run "kflip-$k.txt" python3 kflip.py $k "$work/lib32.o" --jobs "$jobs" --native 1000 --refused-sample 400 --detail
+    run "kflip-general-$k.txt" python3 kflip.py $k "$work/lib32.o" --jobs "$jobs" --native 1000 --refused-sample 400 --detail --general
+done
+run "kflip-o16.txt" python3 kflip.py o16 "$work/out16.o" --jobs "$jobs" --native 2000 --refused-sample 400 --detail
+for f in push merge add; do run "kglue-flip-$f.txt" python3 kglue_flip.py $f "$work/glue" --jobs "$jobs" --native 3000; done
+for f in avx512 sse41; do run "kone-flip-$f.txt" python3 kglue_flip.py $f "$work/glue" --jobs "$jobs" --native 20000; done
+rm -rf "$work"
+grep -H "single-bit changes" audit/kflip-*.txt audit/kglue-flip-*.txt audit/kone-flip-*.txt | sed "s|^audit/||" | cut -c1-250
+grep -h "accepted changes on this processor" audit/*.txt | sort | uniq -c | cut -c1-160
+echo "audit: $([ $bad = 0 ] && echo 'every accepted change runs as the specification on this processor' || echo 'FAILED')"
+exit $bad
