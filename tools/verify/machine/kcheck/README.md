@@ -30,8 +30,8 @@ this way, not all programs. The languages are our own.
   with the specification's definition. Terms are compared by identity, numbers by adding linear facts up.
   No solver.
 
-**The binary is one file, `b3hashr.o`** (30,888 bytes): the thirteen bodies of code the hash is made of,
-their constants, their names, the proof, and nothing for a linker to fill in.
+**The binary is one file, `b3hashr.o`** (40,856 bytes): the thirteen bodies of code the hash is made of,
+their constants, their names, the specification, the proof, and nothing for a linker to fill in.
 `python3 check_binary.py b3hashr.o` reads it, follows every call from `b3l_hashr`, and says in 19 s on an
 Apple M6 that `b3l_hashr` in that file meets its public contract:
 
@@ -342,7 +342,7 @@ checker took those from the relocation's name, and a linker was trusted to write
   thirteen bodies `hashr` runs (the nine functions of `hash.ode`, the two one-block kernels, K32 with its
   second entry, P16), from each one's first byte to its `ret`, and the read-only data of the three objects
   that have any; lays them out in one section, each on the boundary it had; and writes the distances itself.
-  **`b3hashr.o`**: 30,888 bytes, of which 16,788 are code and 11,524 the proof; fourteen names; no
+  **`b3hashr.o`**: 40,856 bytes, of which 16,788 are code and 21,494 the specification and the proof; fourteen names; no
   relocations. A linker has only to place it on a 64-byte boundary. The library's other functions that share a source file with a kernel
   (`hash_many`, the XOF's) are not in it.
 - **`kdecode.py` reads a file whose addresses are settled** (an object with no relocation left for its code,
@@ -361,7 +361,7 @@ checker took those from the relocation's name, and a linker was trusted to write
 
 | file | made by | bytes | `b3l_hashr` in it |
 |---|---|---|---|
-| `b3hashr.o` | `klink.py`, of Apple clang 21's objects | 30,888 | meets its public contract |
+| `b3hashr.o` | `klink.py`, of Apple clang 21's objects | 40,856 | meets its public contract |
 | a shared object of it | GNU ld 2.46 | 41,640 | meets it |
 | a shared object of it | lld 21 | 32,776 | meets it |
 | `khash_native.c` with it (an executable loaded anywhere) | GCC 15.2, GNU ld | 58,168 | meets it |
@@ -374,8 +374,11 @@ checker took those from the relocation's name, and a linker was trusted to write
 contracts, the wide kernels' places, where each function begins, and the SHA-256 of the specification the
 maker had. A linker carries the section into what it makes. `check_binary.py` takes the proof from there
 (or from `--proof FILE`, or from `proofs/`), and trusts none of it: a wrong inner contract or place makes
-the check fail. The specification is never taken from the file: it is the reader's own `blake3.spec`, and
-the check says whether it is the one the maker had. In a file without names the functions are found by the
+the check fail. **The file carries the specification too** (since November 15, at Sam's word), so that a
+reader with the file alone has everything: `--show-spec` prints it. It is the one thing in the file he must
+read, because it is what is shown: with no `--spec` the check is against the text the file carries and
+says so; with `--spec` it is against his own, and the check says whether that is the one the maker had.
+(The sizes of the linked files in the table above are from before the specification was added.) In a file without names the functions are found by the
 proof's offsets and the code's own bytes; a proof of other code is refused ("the code the proof is of is
 not in it").
 
@@ -519,13 +522,13 @@ bytes and the proof's offsets), takes the proof from the file, and checks:
 
 | file | bytes | functions | checked in |
 |---|---|---|---|
-| `adler32/odeadler32.o` | 4,576 | 3 | 2.4 s |
-| `lz4/odelz4.o` | 14,808 (3,088 of code, 11,002 of proof) | 3 | 2.5 s |
-| `varint/odevarint.o` | 1,032 | 1 | 0.2 s |
-| `utf8/odeutf8.o` | 2,624 | 1 | 0.17 s |
-| `base64/odebase64.o` | 2,304 | 1 | 13 s |
-| `inet/odeinet.o` | 1,632 | 1 | 0.17 s |
-| `common/odecommon.o` | 1,320 | 1 | 0.01 s |
+| `adler32/odeadler32.o` | 6,032 | 3 | 2.4 s |
+| `lz4/odelz4.o` | 20,712 (3,088 of code) | 3 | 2.5 s |
+| `varint/odevarint.o` | 1,664 | 1 | 0.2 s |
+| `utf8/odeutf8.o` | 5,400 | 1 | 0.17 s |
+| `base64/odebase64.o` | 4,336 | 1 | 13 s |
+| `inet/odeinet.o` | 4,104 | 1 | 0.17 s |
+| `common/odecommon.o` | 2,008 | 1 | 0.01 s |
 | `programs/lz4-rust/main.rs` linked with `odelz4.o` (rustc 1.99.1) | 4,568,904 | 3 | 4.4 s on the Threadripper |
 | the same after `strip` | 364,504 | 3, found by their bytes | 4.4 s |
 
@@ -820,7 +823,7 @@ specification. (The hash above does not use them: it has no stack.)
 | `DESIGN.md` | 175 | the design: what is wanted and given up, the rules for code written to be proved, how it stands to types-as-proofs |
 | `proofs/inner.spec`, `proofs/*.json` | 185 | the inner contracts (of the functions inside), the layouts of two records; the wide kernels' and `merge`'s places |
 | `hash.ode`, `glue/*.S` | 332 | the hash written to be proved; the assembly the Ode compiler prints of it (and of the stack's three functions) |
-| `b3hashr.o` | | the binary: 30,888 bytes, the proof in it |
+| `b3hashr.o` | | the binary: 40,856 bytes, the specification and the proof in it |
 | `check_binary.py` | 140 | what a reader runs on the binary, or on what a linker made of it |
 | `programs/` | | six other programs (Sigil a specification only): each its specification and public contract, its Ode source, the compiler's assembly, its proof, a harness for the processor; `check_programs.py`, `test_specs.py`, `bench.c`; `blake3-rust/` |
 | `kbyte.py`, `test_kbyte.py` | 910 + 326 | the checker of those programs (bytes, numbers, places); its tests |

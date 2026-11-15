@@ -3,6 +3,7 @@
 for a linker to fill in.
 
     python3 check_binary.py FILE [FUNCTION] [--proof PROOF] [--spec SPEC]      (FUNCTION: b3l_hashr)
+    python3 check_binary.py FILE --show-spec                                   the specification the file carries
 
 The claim (the last lines of blake3.spec) is about FUNCTION. Its bytes are read from the file as a loader
 maps it (kdecode.py: whole pages, the parts without leave to write), and so are the bytes of every function
@@ -14,9 +15,13 @@ The proof may be in the file: klink.py puts it in a section that is not loaded (
 carries that section into what it makes. It holds the contracts of the functions inside and the kernels'
 places, and where each function is in the code, for a file whose names have been stripped. If the file has
 none (a `strip` takes it out with the names), `--proof` gives it (klink.py's OUT.proof), and without that
-the files of proofs/ are read. The proof is not trusted: a wrong one makes the check fail. The specification
-is never taken from the file: it is the reader's (blake3.spec here, or `--spec`), and the check says whether
-it is the one the maker had.
+the files of proofs/ are read. The proof is not trusted: a wrong one makes the check fail.
+
+The specification is what the reader relies on, so it is his to read. With `--spec` it is his own file, and
+the check says whether it is the one the maker had. Without it, the specification the file carries is used
+(the file holds it beside the proof, so that a reader with the file alone can check it), and the check says
+so: what is then shown is that the code meets THAT text, whatever it says. `--show-spec` prints it. (A file
+that carries none is checked against blake3.spec here.)
 
 Then what else the file holds: how many of the bytes it loads to be run are of the functions checked. (The
 claim does not need the rest to be nothing: FUNCTION never leaves the functions checked. A reader may want
@@ -50,9 +55,12 @@ def carried(text):
 
 
 def take(proof, spec_path):
-    """The reader's specification with the proof's contracts of the functions inside; the kernels' places."""
+    """The specification (the reader's file; or, with no path, the one the proof carries) with the proof's
+    contracts of the functions inside; the kernels' places. True: it is the one the maker had."""
     global WIDE, ONE
-    with open(spec_path) as f: mine = f.read()
+    if spec_path is None: mine = proof["files"]["specification"].decode()
+    else:
+        with open(spec_path) as f: mine = f.read()
     kspec.SPEC = ode.Spec(mine + "\n" + proof["files"]["proofs/inner.spec"].decode())
     kone.CONTRACTS = kone.contracts(); kloop.KERNELS = kloop.kernels(); kfn.CONTRACTS.clear()
     WIDE = {kloop.KERNELS[n]["symbol"]: n for n in ("k32", "p32", "p16")}
@@ -98,8 +106,16 @@ def main():
         with open(option("--proof"), "rb") as f: proof, where = carried(f.read()), option("--proof")
     elif ".ode.proof" in e.index: proof, where = carried(e.bytes_of(".ode.proof")), "the file's own section .ode.proof"
     if proof is not None:
-        same = take(proof, option("--spec") or os.path.join(HERE, "blake3.spec"))
-        print(f"the proof: {where}; the specification is the reader's, " + ("the one the maker had" if same else "NOT the one the maker had"))
+        if "--show-spec" in sys.argv:
+            if "specification" not in proof["files"]: print("the file carries no specification"); return 1
+            sys.stdout.write(proof["files"]["specification"].decode()); return 0
+        if option("--spec") is None and "specification" in proof["files"]:
+            same = take(proof, None)
+            text = proof["files"]["specification"]
+            print(f"the proof: {where}; the specification is the one the file carries ({text.count(10)} lines, SHA-256 {hashlib.sha256(text).hexdigest()[:16]}...): read it (--show-spec), for it is what is shown")
+        else:
+            same = take(proof, option("--spec") or os.path.join(HERE, "blake3.spec"))
+            print(f"the proof: {where}; the specification is the reader's, " + ("the one the maker had" if same else "NOT the one the maker had"))
         if top not in s.at:
             # no names in the file: the code is looked for by its bytes, and the proof says where each function is in it
             size, digest, begins = proof["code"]
@@ -132,7 +148,7 @@ def main():
     print(f"of the {run} bytes loaded to be run: {sum(inside)} are the {len(covered)} bodies checked ({count} instructions), {zeros} are zero, {len(rest) - zeros} are others"
           + (" (constants the functions read; what lies between functions; whatever else the file holds)" if len(rest) - zeros else ""))
     if failed: print(f"{top}: NOT shown ({failed} failed)"); return 1
-    print(f"{top} in this file meets its public contract (blake3.spec), with all it calls: {len(done)} functions, from the file's bytes, in {time.time() - t_all:.2f} s")
+    print(f"{top} in this file meets its public contract ({'the specification the file carries' if proof is not None and option('--spec') is None and 'specification' in proof['files'] else 'blake3.spec'}), with all it calls: {len(done)} functions, from the file's bytes, in {time.time() - t_all:.2f} s")
     return 0
 
 

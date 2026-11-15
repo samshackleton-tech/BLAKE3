@@ -3,11 +3,14 @@
 executable) against a specification of this folder: every function the specification has a public contract
 for is found in the file, read from the file's bytes as a loader maps them, and checked by kbyte.py.
 
-    python3 programs/check_file.py FILE SPEC [--proof PROOF] [--json OUT.json]
+    python3 programs/check_file.py FILE [SPEC] [--proof PROOF] [--json OUT.json]
+    python3 programs/check_file.py FILE --show-spec
 
     python3 programs/check_file.py programs/lz4/odelz4.o programs/lz4/lz4.spec
 
-The specification is the reader's and is never taken from the file. The proof (the places of the loops) is
+The specification is what the reader relies on. Given SPEC, it is his own file, and the check says whether
+it is the one the maker had. Without SPEC the specification the file carries is used, and the check says so:
+what is then shown is that the code meets THAT text; `--show-spec` prints it for him to read. The proof (the places of the loops) is
 taken from the file's section `.ode.proof`, where kpack.py puts it and a linker carries it, or from PROOF;
 it is not trusted: a wrong one makes the check fail. In a file whose names have been stripped the code is
 looked for by its bytes, and the proof says where each function begins in it.
@@ -23,10 +26,8 @@ import check_binary, kbyte, kcheck, kdecode, ode
 
 def main():
     args = [a for k, a in enumerate(sys.argv[1:], 1) if not a.startswith("--") and sys.argv[k - 1] not in ("--proof", "--json")]
-    path, spec_path = args[0], args[1]
+    path, spec_path = args[0], args[1] if len(args) > 1 else None
     given = sys.argv[sys.argv.index("--proof") + 1] if "--proof" in sys.argv else None
-    with open(spec_path) as f: text = f.read()
-    spec = ode.Spec(text)
     e = kdecode.Elf(path)
     if not kdecode.settled(e): print(f"{os.path.basename(path)}: its code has relocations for a linker to fill in"); return 2
     s = kdecode.Settled(e)
@@ -36,8 +37,18 @@ def main():
         with open(given, "rb") as f: proof, where = check_binary.carried(f.read()), given
     elif ".ode.proof" in e.index: proof, where = check_binary.carried(e.bytes_of(".ode.proof")), "the file's own section .ode.proof"
     else: print("no proof: the file has no section .ode.proof, and none is given (--proof)"); return 2
+    if "--show-spec" in sys.argv:
+        if "specification" not in proof["files"]: print("the file carries no specification"); return 1
+        sys.stdout.write(proof["files"]["specification"].decode()); return 0
+    if spec_path is None:
+        if "specification" not in proof["files"]: print("no specification: the file carries none, and none is given"); return 2
+        text, spec_path = proof["files"]["specification"].decode(), "the specification the file carries"
+        print(f"the proof: {where}; the specification is the one the file carries ({text.count(chr(10))} lines, SHA-256 {hashlib.sha256(text.encode()).hexdigest()[:16]}...): read it (--show-spec), for it is what is shown")
+    else:
+        with open(spec_path) as f: text = f.read()
+        print(f"the proof: {where}; the specification is the reader's ({os.path.basename(spec_path)}), " + ("the one the maker had" if hashlib.sha256(text.encode()).hexdigest() == proof.get("spec") else "NOT the one the maker had"))
     same = hashlib.sha256(text.encode()).hexdigest() == proof.get("spec")
-    print(f"the proof: {where}; the specification is the reader's ({os.path.basename(spec_path)}), " + ("the one the maker had" if same else "NOT the one the maker had"))
+    spec = ode.Spec(text)
     wanted = [name for name in spec.contracts if name in proof["at"]]
     if not wanted: print("the specification has a contract for no function the proof speaks of"); return 1
     if any(name not in s.at for name in wanted):

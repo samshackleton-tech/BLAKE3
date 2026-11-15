@@ -37,6 +37,7 @@ def pack(program, folder):
     carried = b"ode proof 1\n" + f"specification sha256 {hashlib.sha256(spec).hexdigest()}\n".encode()
     carried += f"code {len(image)} sha256 {hashlib.sha256(image).hexdigest()} begins {bytes(image[:32]).hex()}\n".encode()
     for name, at in sorted(where.items(), key=lambda x: x[1]): carried += f"at {at} {name}\n".encode()
+    carried += f"file specification {len(spec)}\n".encode() + spec          # the specification itself, for a reader who has the file alone
     for name, text in files: carried += f"file {name} {len(text)}\n".encode() + text
     return klink.elf(bytes(image), where, sizes, 16, carried), carried, where, len(image)
 

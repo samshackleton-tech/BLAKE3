@@ -37,7 +37,11 @@ class Files(unittest.TestCase):
             obj, spec = self.paths(name)
             e = kdecode.Elf(obj)
             proof = check_binary.carried(e.bytes_of(".ode.proof"))
-            with open(spec, "rb") as f: self.assertEqual(proof["spec"], hashlib.sha256(f.read()).hexdigest(), name)
+            with open(spec, "rb") as f: text = f.read()
+            self.assertEqual(proof["spec"], hashlib.sha256(text).hexdigest(), name)
+            self.assertEqual(proof["files"]["specification"], text, "the specification the file carries is the folder's")
+            code, out = run(obj)                                        # with the file alone: against what it carries, and it says so
+            self.assertEqual(code, 0, out); self.assertIn("the specification is the one the file carries", out)
             text = e.bytes_of(".text")
             self.assertEqual(proof["code"][:2], (len(text), hashlib.sha256(text).hexdigest()))
             self.assertEqual(sorted(proof["at"]), sorted("ode_" + f for p, f, _ in PROGRAMS if p == name))
@@ -67,6 +71,13 @@ class Files(unittest.TestCase):
             with open(other, "wb") as f: f.write(kdecode.Elf(self.paths("adler32")[0]).bytes_of(".ode.proof"))
             code, out = run(obj, spec, "--proof", other)
             self.assertNotEqual(code, 0, out)
+            # a file that carries a specification that is not the one its code meets: with the file alone, refused
+            wrong = carried.replace(b"copies(out, offset)[n.value + 4], cap)", b"copies(out, offset)[n.value + 3], cap)")
+            self.assertNotEqual(wrong, carried)
+            path = os.path.join(d, "wrong.proof")
+            with open(path, "wb") as f: f.write(wrong)
+            code, out = run(obj, "--proof", path)
+            self.assertEqual(code, 1, out); self.assertIn("NOT shown", out)
             # a reader's own specification, not the maker's: he is told, and the check is against his
             mine = os.path.join(d, "mine.spec")
             with open(spec) as f: text = f.read()

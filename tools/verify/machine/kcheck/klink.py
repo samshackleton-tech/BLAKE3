@@ -86,6 +86,7 @@ def proof(image, where):
     out += f"specification sha256 {hashlib.sha256(spec).hexdigest()}\n".encode()
     out += f"code {len(image)} sha256 {hashlib.sha256(image).hexdigest()} begins {image[:32].hex()}\n".encode()
     for name, at in sorted(where.items(), key=lambda x: x[1]): out += f"at {at} {name}\n".encode()
+    out += f"file specification {len(spec)}\n".encode() + spec          # the specification itself: a reader with the file alone can read what it is shown to meet
     for name in PROOF:
         with open(os.path.join(HERE, name), "rb") as f: text = f.read()
         out += f"file {name} {len(text)}\n".encode() + text
