@@ -177,7 +177,7 @@ class Parser:
         self.take("("); args = []
         while not self.maybe(")"):
             arg = self.take(kind="name"); self.take(":"); args.append((arg, self.kind())); self.maybe(",")
-        c = dict(args=args, asks=[], given=[], leaves=[], spoils=[], returns=None, stack=None, calls=[], needs=[])
+        c = dict(args=args, asks=[], given=[], leaves=[], spoils=[], returns=None, stack=None, calls=[], needs=[], decreases=None)
         self.take("{")
         while not self.maybe("}"):
             clause = self.take(kind="name")
@@ -208,10 +208,11 @@ class Parser:
                 c["stack"] = e[1] if e[0] == "num" else ("grows", e)
             elif clause == "calls":
                 name = self.take(kind="name"); self.take("if"); c["calls"].append((name, self.expr(1)))
+            elif clause == "decreases": c["decreases"] = self.expr()            # a number that is less at every call of itself
             elif clause == "needs":
                 # needs FEATURE [if E]: it runs instructions of that kind (only where E holds)
                 name = self.take(kind="name"); c["needs"].append((name, self.expr(1) if self.maybe("if") else None))
-            else: raise Err(f"line {self.t[self.i - 1][2]}: asks, leaves, spoils, returns, stack, calls or needs expected, not {clause!r}")
+            else: raise Err(f"line {self.t[self.i - 1][2]}: asks, leaves, spoils, returns, stack, calls, needs or decreases expected, not {clause!r}")
         if c["stack"] is None or not c["leaves"]: raise Err("a contract says its stack, and what it leaves")
         return c
 

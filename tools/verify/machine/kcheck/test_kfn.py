@@ -29,7 +29,7 @@ TEXT = [
     ("node_out", "leaves out = node_value(nd, root)", "leaves out = node_value(nd, 0)"),
     ("node_out", "counter(node.counter), node.length, node.flags | root)", "counter(node.counter), 64, node.flags | root)"),
     ("node_out", "counter: number at 96, length: number at 104", "counter: number at 104, length: number at 96"),
-    ("subtree", "leaves out = subtree(kf.key, kf.flags, t, input)\n    stack 16896", "leaves out = subtree(kf.key, kf.flags, t + 1, input)\n    stack 16896"),
+    ("subtree", "leaves out = subtree(kf.key, kf.flags, t, input)\n    decreases len\n    stack 16896", "leaves out = subtree(kf.key, kf.flags, t + 1, input)\n    decreases len\n    stack 16896"),
     ("subtree", "t: number, plat: any) {\n    asks len >= 1\n    asks 1024 * t + len <= 18446744073709551615", "t: number, plat: any) {\n    asks len >= 1\n    asks t <= 18446744073709551615"),         # the chunks' numbers may then pass 64 bits
     ("subtree", "stack 16896 + 384 * bits((len - 1) / 1024)", "stack 16896 + 320 * bits((len - 1) / 1024)"),
     ("subtree", "stack 16896 + 384 * bits((len - 1) / 1024)\n    needs sse41\n    needs avx512 if plat == 5", "stack 16896 + 384 * bits((len - 1) / 1024)\n    needs sse41\n    needs avx512 if plat == 4"),
@@ -55,6 +55,8 @@ TEXT = [
     ("wide128", "asks 1024 * t + 131072 <= 18446744073709551615\n    leaves out = subtree(kf.key, kf.flags, t, input)\n    stack 16384", "asks 1024 * t + 131072 <= 18446744073709551615\n    leaves out = subtree(kf.key, kf.flags, t, input)\n    stack 8192"),
     ("wide128", "contract b3l_wide128(out: cv, input: 131072 bytes,", "contract b3l_wide128(out: cv, input: 131071 bytes,"),
     ("wide128", "compress(key, children(key, flags, t, bytes), counter(0), 64, flags | PARENT)", "compress(key, children(key, flags, t, bytes), counter(0), 64, flags)"),
+    ("subtree", "    decreases len\n    stack 16896", "    stack 16896"),                           # it calls itself: on what that is less?
+    ("take", "    decreases len\n    stack 640", "    decreases t\n    stack 640"),
     # an array with a type: what each value at cvs is
     ("take", "asks cvs[i] == node_value(chunk_node(kf.key, t + i, kf.flags, input[1024 * i .. 1024 * i + 1024]), 0) for i in 0..len / 1024", "asks cvs[i] == node_value(chunk_node(kf.key, t + i + 1, kf.flags, input[1024 * i .. 1024 * i + 1024]), 0) for i in 0..len / 1024"),
     ("take", "asks cvs[i] == node_value(chunk_node(kf.key, t + i, kf.flags, input[1024 * i .. 1024 * i + 1024]), 0) for i in 0..len / 1024", "asks cvs[i] == node_value(chunk_node(kf.key, t + i, kf.flags, input[1024 * i .. 1024 * i + 1024]), 0) for i in 0..len / 1024 - 1"),

@@ -127,8 +127,9 @@ Not done, in the order I would take them:
 2. **The checker's own worth.** It is 3,920 lines of Python, tested and audited, not proved. Smaller; a
    second one written apart; or proved once. Undecided.
 3. **The source's checker** (above), and the compiler printing bytes, not assembly (BLAKE3 #396).
-4. **What is shown is what holds if the function returns.** Each loop is bounded and each call of itself is on
-   fewer bytes, but the checker does not say so.
+4. **That the functions return** is now shown as far as the kernels (a `decreases` line where a function
+   calls itself; no ring of calls; every loop run to its end). That the wide kernels return for every number
+   of blocks is not: they are called with 16 and with 1, for which they are run to their end.
 5. **AArch64.**
 6. **An incremental hasher** (bytes arriving in pieces) holds subtrees between calls: a stack by nature. Either
    that one algorithm's mathematics is done once (Lean has it for a twin), or the interface is designed so

@@ -57,6 +57,25 @@ def hash_function(folder, name):
     return "b3l_" + name, len(rows), 0, "everything its contract allows" + (": every length of message" if name in ("subtree", "hashr") else "")
 
 
+HASH = ["pad", "chunk_node", "node_out", "wide32", "wide128", "take", "part32", "subtree", "hashr"]
+
+
+def no_ring(folder):
+    """The functions of hash.ode call one another without a ring. (A function may call itself: kfn.py then asks
+    that its contract name a number that decreases, and shows it less at each such call. With every loop
+    run to its end on every path, each function returns if what it calls returns.)"""
+    calls = {}
+    for name in HASH:
+        calls["b3l_" + name] = {i.split()[1] for _, _, i in kfn.load(os.path.join(folder, name + ".o"), name) if i.split()[0] == ".call"}
+    def visit(f, above):
+        for g in calls.get(f, ()):
+            if g == f: continue
+            if g in above: raise kcheck.Fail(f"{g} and {f} call one another in a ring: not shown to end")
+            visit(g, above | {g})
+    for f in calls: visit(f, {f})
+    return sorted(f for f in calls if f in calls[f])
+
+
 CHECKS = [("the wide kernels", [lambda f: kernel_any_count(f, "k32"), lambda f: kernel_any_count(f, "p32"), lambda f: kernel_any_count(f, "p16"),
                                 lambda f: kernel_fixed(f, "o16", "out16.o")]),
           ("the one-block kernels", [lambda f: one_block(f, "avx512"), lambda f: one_block(f, "sse41")]),
@@ -85,6 +104,11 @@ def main():
                     bodies[kloop.KERNELS[symbol[-3:]]["start"] if symbol[-3:] in ("k32", "p32") else symbol] = n; count += 1       # K32 and P32: two entries of one body
                 except kcheck.Fail as e:
                     failed += 1; print(f"  NOT shown: {e}")
+        try:
+            own = no_ring(folder)
+            print(f"hash.ode's functions call one another without a ring; {', '.join(own)} call themselves, each time on fewer bytes")
+        except kcheck.Fail as e:
+            failed += 1; print(f"  NOT shown: {e}")
     finally:
         if made: shutil.rmtree(folder)
     print(f"{count} functions, {sum(bodies.values())} instructions (K32 and P32 are two entries of one body), against blake3.spec, in {time.time() - t_all:.2f} s"

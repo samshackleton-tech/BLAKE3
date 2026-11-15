@@ -21,7 +21,8 @@ THE CHECKER runs the code on symbols from its entry, forward along every path, t
     is refused;
   - at a call: the callee's contract. What it asks is shown from the caller's facts; what it leaves replaces
     what was there; the registers a call may change are forgotten. A function that calls itself is taken by
-    its own contract (so what is shown is what holds if it returns; the stack it may use bounds how deep);
+    its own contract, and its contract names a number that is shown less at each such call (`decreases`), so
+    the calls of itself come to an end;
   - at the return: each thing the contract says is left is the specification's value of it, evaluated on the
     same path (where the specification asks how two numbers compare, the path must have asked too); the
     result, the registers a callee keeps, the stack pointer, and the stack used.
@@ -616,6 +617,16 @@ class Machine:
         self.g["rax"] = ("q", "left by a call")
         return 8
 
+    def lessens(self, A, name, c, env):
+        """A call of the function by itself: the number its contract says decreases is less than it was. (So
+        the calls of itself come to an end: with every loop bounded, the function returns if what else it calls
+        does.)"""
+        if c.text["decreases"] is None: raise Fail(f"{name} calls itself, and its contract names no number that decreases")
+        try:
+            mine, its = Lin.of(kspec.SPEC.eval(self.A(), c.text["decreases"], dict(self.given))), Lin.of(kspec.SPEC.eval(A, c.text["decreases"], env))
+        except Err as e: raise Fail(f"{name}: the number that decreases cannot be read: {e}")
+        if not self.facts.ge0(its) or not self.facts.ge0(mine - 1 - its): raise Fail(f"{name} calls itself with {its}, not shown to be less than {mine}")
+
     def call_contract(self, A, name, c):
         v, later, where = {}, {}, {}
         # what the callee calls only on a condition, this function calls only on its own: the callee's
@@ -669,6 +680,7 @@ class Machine:
             if arg not in c.writes and n is not None: later[arg]()             # bytes given to read are there to be read
         for arg in c.writes: self.apart(name, spans[arg], [s for other, ss in spans.items() if other != arg for s in ss])
         env = Env(v, later)
+        if name == self.contract.name: self.lessens(A, name, c, env)
         for arg, clause in c.given.items(): self.told(A, name, c, clause, where[arg], env)
         for f in kspec.asked(c.text, A, env):
             if not self.facts.ge0(f): raise Fail(f"{name}: the caller does not show what it asks ({f} >= 0)")

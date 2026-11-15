@@ -116,6 +116,7 @@ contract b3l_take(out: cv, input: len bytes, len: number, kf: keyed, t: number, 
     asks 1024 * t + len <= 18446744073709551615
     asks cvs[i] == node_value(chunk_node(kf.key, t + i, kf.flags, input[1024 * i .. 1024 * i + 1024]), 0) for i in 0..len / 1024
     leaves out = subtree(kf.key, kf.flags, t, input)
+    decreases len
     stack 640 + 384 * bits((len - 1) / 1024)
     needs sse41
     needs avx512
@@ -135,6 +136,7 @@ contract b3l_subtree(out: cv, input: len bytes, len: number, kf: keyed, t: numbe
     asks len >= 1
     asks 1024 * t + len <= 18446744073709551615
     leaves out = subtree(kf.key, kf.flags, t, input)
+    decreases len
     stack 16896 + 384 * bits((len - 1) / 1024)
     needs sse41
     needs avx512 if plat == 5

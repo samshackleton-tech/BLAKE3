@@ -198,7 +198,7 @@ processor the caller's contract allows there.
 - *Changed code* (`test_kfn.py`): every call left out and every branch turned round, in all nine
   functions (of `wide128`'s thirty branches, which are fifteen copies of one loop, the first four): each
   refused.
-- *Changed text* (`test_kfn.py`): 44 changes of the contracts, the layouts and the specification: each
+- *Changed text* (`test_kfn.py`): 46 changes of the contracts, the layouts and the specification: each
   refuses the function that met the text.
 - *Every single-bit change of each function's code, with a processor as the judge* (`kfn_flip.py`,
   `khash_native.c`). A change for which a proof is found is linked with the other four functions and the
@@ -265,8 +265,12 @@ the 32 chunks again by halves, and wrote the same value a second time. The check
 at the return is not what the contract says: it holds the parent of two named halves where the contract's
 tree had been named whole by the call. Right hash, wrong code; an `else` fixed it.
 
-**Not shown:** that `hashr` ends (each loop is bounded and each call of itself is on fewer bytes, so it
-does, but the checker shows only what holds if it returns, and the stack it uses on the way); AArch64. The parents over a part of fewer than 32 chunks are compressed one at a time (those over
+**That it ends** is shown this far: every loop is run to its end on every path; a function that calls
+itself (`subtree`, `take`) names in its contract a number that decreases (`decreases len`), and each such
+call is shown to be on fewer bytes; the functions call one another without a ring (`check_all.py`); and the
+wide kernels are called with 16 blocks and with 1, for which `kcheck.py` runs them to their end.
+
+**Not shown:** AArch64; AVX2 and narrower machines (they get the one-block SSE4.1 kernel). The parents over a part of fewer than 32 chunks are compressed one at a time (those over
 a whole tree of 32 go to the 16-lane kernel).
 
 ## The library's wide kernels, each run to its end (`kcheck.py`, the first trial)
@@ -523,7 +527,8 @@ an 8-bit `or` read as 32 bits.
   claim says so: its caller's part).
 - What the functions inside are claimed to do (`proofs/inner.spec`) is not relied on: a wrong contract there
   makes the checker refuse the function it is of, or a function that calls it.
-- For a function that calls itself: what is shown is what holds if it returns.
+- For the wide kernels with a number of blocks other than those they are called with here: what is shown
+  is what holds if they return.
 - That the regions are apart (the contract's own condition: the stack and the output apart from everything).
 - One arithmetic fact taken as the specification's form of a lane's counter: low word + index, high word + carry.
   Lean proves it equal to the 64-bit counter plus the index (`lang/K32Lemmas.lean`, `counter_lo`, `counter_hi`);
