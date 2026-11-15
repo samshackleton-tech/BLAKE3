@@ -34,8 +34,9 @@ THE CHECKER runs the code from its entry and from each place, forward along ever
 No solver. A stack is a named unknown stack with some places replaced, and two are compared place by place;
 whether two places are one, or a place is below the count, is decided by adding linear facts up.
 
-WHAT IS NOT CHECKED HERE: the one-block kernels themselves (their contract is taken: COMPRESS), and that the
-merge machine is BLAKE3's tree (alg/Stack.lean proves that of the same machine: `merge_lazy`)."""
+The one-block kernels `merge` calls are checked against the same specification by kone.py, and what they ask
+of their caller is read from there. WHAT IS NOT CHECKED HERE: that the merge machine is BLAKE3's tree
+(alg/Stack.lean proves that of the same machine: `merge_lazy`)."""
 import copy, json, os, sys, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import kcheck, kdecode, kspec, ode
@@ -108,14 +109,15 @@ CONTRACTS = {
                                                               v["st"].put(T, facts, v["st"].count, v["new"], v["st"].count + 1)), stack=512),
 }
 SYMBOLS = {"b3l_push": "push", "b3l_merge": "merge", "b3l_add": "add"}
-# The one-block kernels, by their contract (not checked here): (cv, block, block_len, counter, flags): the 32
-# bytes at cv become the first eight words of compress(cv, the 64 bytes at block, counter, block_len, flags);
-# they use no stack but their return address. The AVX-512 kernel takes the low byte of block_len and of flags
-# (`movzx`). The SSE4.1 kernel takes all of EDX and of R8D (`shl r8, 32; add rdx, r8`): its caller must show
-# both are below 256. (This file first said "the low byte" of both: kglue_flip.py found 24 changes of
-# merge's `mov rdx, 64` accepted that the processor told from the machine. lang/Kernels.lean has it right,
-# because it was proved from the kernels' code: a contract taken on trust is a hole until it is checked.)
-COMPRESS = {"blake3_servil_compress_in_place_avx512": "low byte", "blake3_servil_compress_in_place_sse41": "whole word"}
+# The one-block kernels, by their contract: (cv, block, block_len, counter, flags): the 32 bytes at cv become
+# the first eight words of compress(cv, the 64 bytes at block, counter, block_len, flags); no stack but the
+# return address. Where each reads the length and the flags from is CHECKED against the kernels' bytes by
+# kone.py, and read from there: the AVX-512 kernel takes the low byte of each; the SSE4.1 kernel takes all of
+# EDX (and RDX must be below 2^32) and the low word of R8. (This file first said "the low byte" of both, by
+# hand: kglue_flip.py found 24 changes of merge's `mov rdx, 64` accepted that the processor told from the
+# machine. A contract taken on trust is a hole until it is checked.)
+import kone
+COMPRESS = {c["symbol"]: c for c in kone.CONTRACTS.values()}
 
 
 # ---------------------------------------------------------------------------------------------------------
@@ -257,10 +259,11 @@ class Machine:
                 # found by reading kglue_flip.py's accepted changes: `mov rcx, 5` could become any number and
                 # the AVX-512 kernel be called on a machine without it, with the contract none the wiser
                 raise Fail("the AVX-512 kernel is called on a path that does not say the platform word is 5 (AVX-512)")
-            if COMPRESS[name] == "whole word" and (length[1] >= 256 or any(b != 0 for b in flags[1][1:])):
-                raise Fail(f"{name} reads all of EDX and R8D: the caller does not show the length and the flags are below 256")
+            wide = COMPRESS[name]["length"] == "whole word"
+            if wide and (length[1] >= 1 << 32 or any(b != 0 for b in flags[1][1:4])):
+                raise Fail(f"{name} reads all of EDX and of R8D: the caller does not show the length is below 2^32 and the flags below 256")
             A = kspec.Symbols(T, self.facts)
-            out = kspec.terms(kspec.SPEC.call(A, "compress", kspec.words(state), kspec.words(message), A.counter(counter[1]), length[1] & 0xFF, ode.Word(byte_term(T, flags[1][0]))))
+            out = kspec.terms(kspec.SPEC.call(A, "compress", kspec.words(state), kspec.words(message), A.counter(counter[1]), length[1] if wide else length[1] & 0xFF, ode.Word(byte_term(T, flags[1][0]))))
             self.store(cv[1], cv[2], 16, tuple(out[:4])); self.store(cv[1], cv[2] + 16, 16, tuple(out[4:]))
             used = 8
         else:

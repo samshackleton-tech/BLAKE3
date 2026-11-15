@@ -125,6 +125,85 @@ def decode(code, at, relocs, rodata, rodata_at, base, start):
         if reg != 0: raise Stop("0F 1F with another digit")
         return p - at, ".nop"
     if op == 0xC5 and code[at + 1:at + 3] == b"\xf8\x77": return 3, ".vzeroupper"
+
+    def words128(field, end):
+        off = data_at(field, end)
+        return " ".join(f"0x{int.from_bytes(rodata[off + 4 * i:off + 4 * i + 4], 'little'):X}" for i in range(4))
+
+    def xmm_form(sse66, opc, W, R, X, B, v):
+        """An instruction of 128-bit registers, as legacy SSE writes it (v None: the destination is the first
+        source) or as VEX does (v: the first source). Rows name the destination and both sources."""
+        nonlocal p
+        if opc == 0x38:
+            if u8() != 0x00 or not sse66: raise Stop("0F 38 other than PSHUFB")
+            mod, reg, rm, mem = modrm(R, X, B, evex=True)
+            if rm is None: raise Stop("a shuffle by a mask in memory")
+            return f".xpshufb {reg} {reg if v is None else v} {rm}"
+        if opc == 0x3A:
+            if u8() != 0x0E or not sse66: raise Stop("0F 3A other than PBLENDW")
+            mod, reg, rm, mem = modrm(R, X, B, evex=True)
+            if rm is None: raise Stop("a blend from memory")
+            return f".xpblendw {reg} {reg if v is None else v} {rm} {imm(1)}"
+        mod, reg, rm, mem = modrm(R, X, B, evex=True)       # X: of an index only (a register operand has no fifth bit here)
+        if rm is not None and X: raise Stop("X set with no index")
+        a = reg if v is None else v
+        if W != (1 if (sse66, opc) == (True, 0x6E) else 0): raise Stop("W set where it has no meaning, or clear on a 64-bit move")
+        if not sse66 and opc in (0x10, 0x11) or sse66 == "f3" and opc in (0x6F, 0x7F):
+            # sixteen bytes between a register and memory, any alignment (MOVUPS, VMOVUPS, VMOVDQU)
+            if rm is not None or mem[0] == "rip" or mem[1]: raise Stop("an unaligned 128-bit move other than with [base + displacement]")
+            if v not in (None, 0): raise Stop("a second source where there is none")
+            return f".xloadu {reg} .{mem[0]} {bv(mem[2])}" if opc in (0x10, 0x6F) else f".xstoreu .{mem[0]} {bv(mem[2])} {reg}"
+        if not sse66 and opc == 0x28 or sse66 is True and opc in (0x6F, 0x7F):
+            # MOVAPS, MOVDQA: a register to a register, or (0x28) sixteen bytes of the object's read-only data
+            if v not in (None, 0): raise Stop("a second source where there is none")
+            if rm is not None: return f".xmov {rm} {reg}" if opc == 0x7F else f".xmov {reg} {rm}"
+            if opc != 0x28 or mem[0] != "rip": raise Stop("an aligned 128-bit move with memory that is not read-only data")
+            return f".xconst {reg} {words128(mem[1], p)}"
+        if not sse66 and opc == 0xC6:
+            if rm is None: raise Stop("a shuffle from memory")
+            return f".xshufps {reg} {a} {rm} {imm(1)}"
+        if sse66 is not True: raise Stop("a 128-bit instruction this does not know")
+        if opc == 0x6E:
+            if rm is None or v not in (None, 0): raise Stop("a 64-bit move into a vector register from memory")
+            return f".xmovq {reg} .{G[rm]}"
+        if rm is None: raise Stop("a 128-bit operation from memory")
+        three = {0x6C: "xpunpcklqdq", 0x62: "xpunpckldq", 0x6A: "xpunpckhdq", 0xFE: "xpaddd", 0xEF: "xpxor", 0xEB: "xpor"}
+        if opc in three: return f".{three[opc]} {reg} {a} {rm}"
+        if opc == 0x70:
+            if v not in (None, 0): raise Stop("a second source where there is none")
+            return f".xpshufd {reg} {rm} {imm(1)}"
+        if opc == 0x72:
+            if reg not in (2, 6) or v is not None: raise Stop("0F 72 with another digit")
+            return f".{'xpsrld' if reg == 2 else 'xpslld'} {rm} {rm} {imm(1)}"
+        raise Stop(f"a 128-bit instruction this does not know: 0F {opc:02X}")
+
+    if op in (0xC4, 0xC5):      # VEX: 128 bits only
+        b1 = u8()
+        if op == 0xC5: R, X, B, mm, W, b2 = (~b1 >> 7) & 1, 0, 0, 1, 0, b1
+        else:
+            R, X, B, mm = (~b1 >> 7) & 1, (~b1 >> 6) & 1, (~b1 >> 5) & 1, b1 & 31
+            b2 = u8(); W = b2 >> 7
+        v, L, pp = (~b2 >> 3) & 15, (b2 >> 2) & 1, b2 & 3
+        if L: raise Stop("a VEX form of 256 bits")
+        opc = u8()
+        if mm == 3 and pp == 1 and opc == 0x02:
+            if W: raise Stop("VPBLENDD with W set")
+            mod, reg, rm, mem = modrm(R, X, B, evex=True)
+            if rm is None or X: raise Stop("a blend from memory")
+            return p - at + 1, f".xpblendd {reg} {v} {rm} {imm(1)}"
+        if mm != 1 or pp == 3: raise Stop("a VEX instruction this does not know")
+        text = xmm_form({0: False, 1: True, 2: "f3"}[pp], opc, W, R, X, B, v)
+        return p - at, text
+    q = at
+    sse66 = code[q] == 0x66
+    if sse66: q += 1
+    rexq = code[q] if 0x40 <= code[q] <= 0x4F else 0
+    if rexq: q += 1
+    if code[q] == 0x0F and (sse66 and code[q + 1] in (0x6E, 0x6C, 0x62, 0x6A, 0xFE, 0xEF, 0xEB, 0x70, 0x72, 0x6F, 0x38, 0x3A) or not sse66 and code[q + 1] in (0x10, 0x11, 0x28, 0xC6)):
+        if rexq and not rexq & 0x0F: raise Stop("an empty REX prefix")
+        p = q + 1
+        text = xmm_form(sse66, u8(), (rexq >> 3) & 1, (rexq >> 2) & 1, (rexq >> 1) & 1, rexq & 1, None)
+        return p - at, text
     if op == 0x62:      # EVEX
         p0, p1, p2 = u8(), u8(), u8()
         if p0 & 0x08 or not p1 & 0x04: raise Stop("not an EVEX prefix")
@@ -137,10 +216,16 @@ def decode(code, at, relocs, rodata, rodata_at, base, start):
         scalar = (mm, opc) == (2, 0x58)
         # 512 bits everywhere, but for one form: the unaligned load of 256 bits (eight words) into a register's low half
         half = LL == 1 and (mm, pp, W, opc) == (1, 2, 0, 0x6F)
-        if LL != 2 and not half: raise Stop("an EVEX form other than 512 bits")
-        mod, reg, rm, mem = modrm(R, X, B, 4 if scalar else 32 if half else 64, evex=True)
+        narrow = LL == 0 and (mm, pp, W, opc) in ((1, 1, 0, 0xEF), (1, 1, 0, 0x72))       # VPXORD, VPRORD of XMM registers
+        if LL != 2 and not half and not narrow: raise Stop("an EVEX form other than 512 bits")
+        mod, reg, rm, mem = modrm(R, X, B, 4 if scalar else 32 if half else 16 if narrow else 64, evex=True)
         reg |= R2 << 4
         if rm is not None: rm |= X << 4          # a register operand: X is its fifth bit
+        if narrow:
+            if aaa or rm is None: raise Stop("a masked or memory form of a 128-bit instruction")
+            if opc == 0xEF: return p - at, f".xpxor {reg} {v} {rm}"
+            if reg != 0: raise Stop("0F 72 with another digit, or R set beside a digit")
+            return p - at + 1, f".xprord {v} {rm} {imm(1)}"
         key = (mm, pp, W, opc)
         tail = lambda: imm(1)
         def no_mask():
@@ -226,6 +311,11 @@ def decode(code, at, relocs, rodata, rodata_at, base, start):
     if 0x50 <= op <= 0x57: only_b(); return p - at, f".push .{G[(op - 0x50) | (B << 3)]}"
     if 0x58 <= op <= 0x5F: only_b(); return p - at, f".pop .{G[(op - 0x58) | (B << 3)]}"
     if op == 0xC3: no_rex(); return p - at, ".ret"
+    if op == 0xB0: no_rex(); return p - at + 1, f".mov 8 (.reg .rax) (.imm {bv(imm(1))})"         # MOV AL, a byte
+    if op == 0xFE:
+        mod, reg, rm, mem = modrm(R, X, B)
+        if rex or rm != 0 or reg != 1: raise Stop("FE other than DEC AL")
+        return p - at, ".decb .rax"
     if 0xB8 <= op <= 0xBF:
         only_b()
         return p - at + 4, f".mov 32 {r64((op - 0xB8) | (B << 3))} (.imm {bv(imm(4))})"
@@ -241,19 +331,13 @@ def decode(code, at, relocs, rodata, rodata_at, base, start):
         op2 = u8()
         if op2 in (0x84, 0x85): no_rex(); d = sx(imm(4), 32); return p - at, f".{'je' if op2 == 0x84 else 'jne'} {here(p + d)}"
         if op2 in (0x82, 0x83): no_rex(); d = sx(imm(4), 32); return p - at, f".{'jb' if op2 == 0x82 else 'jae'} {here(p + d)}"
-        if op2 in (0x10, 0x11):
-            # MOVUPS: sixteen bytes between an XMM register (0 to 7 here) and memory, any alignment
-            no_rex()
-            mod, reg, rm, mem = modrm(R, X, B)
-            if rm is not None or mem[0] == "rip" or mem[1]: raise Stop("a movups other than with [base + displacement]")
-            return p - at, (f".xloadu {reg} .{mem[0]} {bv(mem[2])}" if op2 == 0x10 else f".xstoreu .{mem[0]} {bv(mem[2])} {reg}")
         if op2 == 0xB6:
             mod, reg, rm, mem = modrm(R, X, B)
             if W: raise Stop("a movzx this does not know")
             if rm is None:
                 if mem[0] == "rip": raise Stop("a movzx of read-only data")
                 return p - at, f".movzx8 .{G[reg]} {memop(mem)}"
-            if rm > 3: raise Stop("a movzx this does not know")
+            if 4 <= rm <= 7: raise Stop("a movzx of AH, CH, DH, BH or their REX namesakes: not known here")
             return p - at, f".movzx8 .{G[reg]} {r64(rm)}"
         if op2 == 0x18:
             mod, reg, rm, mem = modrm(R, X, B)

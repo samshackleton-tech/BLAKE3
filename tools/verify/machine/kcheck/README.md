@@ -162,9 +162,21 @@ thing: `mov rcx, 5` (the platform word that selects the AVX-512 kernel) could be
 AVX-512 kernel be called on a machine without it, with the contract none the wiser. The contract now says the
 AVX-512 kernel is called only where the platform word is 5.
 
-Not shown here: the one-block kernels themselves (their contract is taken); that the merge machine is BLAKE3's
-tree (`alg/Stack.lean` proves that of the same machine); buffers of bytes with a symbolic length. The
-machine is `blake3.ode`'s; the contracts are Python inside `kglue.py`: not yet in the language.
+**The kernels `merge` calls are checked too** (`kone.py`, written after that finding): the library's
+`blake3_servil_compress_in_place_avx512` (76 instructions) and `_sse41` (94), each against `compress` of
+`blake3.ode` for every chaining value, block and counter, in 3 ms. What each asks of its caller is now read
+from that check, not written by hand: the AVX-512 kernel takes the low byte of RDX and of R8; the SSE4.1
+kernel takes all of EDX (RDX must be below 2^32) and the low word of R8. `test_kone.py`: 19 changed kernels
+refused, and each kernel refused against the other's contract. On the processor (`kone_native.c`): 200,000
+cases each as their contracts say. Single-bit audit: 3,016 changes of the AVX-512 kernel, 48 accepted, each
+as BLAKE3 on 20,000 cases; 3,528 of the SSE4.1 kernel, 116 accepted, each as BLAKE3.
+
+So for `add` everything it runs is checked against the one specification: `add`, `push`, `merge`, and the two
+kernels, 316 instructions in all, in under 20 ms.
+
+Not shown here: that the merge machine is BLAKE3's tree (`alg/Stack.lean` proves that of the same machine);
+buffers of bytes with a symbolic length. The machine is `blake3.ode`'s; the contracts are Python inside
+`kglue.py`: not yet in the language.
 
 ## The parts
 
@@ -178,6 +190,7 @@ machine is `blake3.ode`'s; the contracts are Python inside `kglue.py`: not yet i
 | `kflip.py`, `kflip_native.c`, `kflip_thunk.S` | 204 + 160 + 66 | the audit below: every single-bit change of a kernel, and the processor's word on each one accepted |
 | `kloop.py`, `test_kloop.py` | 410 + 94 | every number of blocks: the prover, the proof's form, the checker by induction; its tests |
 | `kglue.py`, `kglue_flip.py`, `kglue_native.c`, `test_kglue.py` | 541 + 129 + 109 + 92 | the stack's functions: contracts, prover, checker; the audit; the tests |
+| `kone.py`, `kone_native.c`, `test_kone.py` | 205 + 86 + 72 | the one-block kernels: the checker (XMM registers as four terms), the processor run, the tests |
 | `kremove.py` | 41 | which instructions can be replaced by a no-op with the contract still met: for a person to read |
 | `test_kcheck.py`, `test_ode.py` | 148 + 64 | the four kernels and the controls, from the sources; the specification on the vectors |
 

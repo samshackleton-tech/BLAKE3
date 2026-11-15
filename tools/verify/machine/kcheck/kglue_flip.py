@@ -2,7 +2,9 @@
 """kglue_flip: every single-bit change of push, merge or add, given to the decoder, the prover and the checker,
 and the processor's word on each change a proof is found for.
 
-    python3 kglue_flip.py push|merge|add FOLDER [--jobs N] [--native CASES]
+    python3 kglue_flip.py push|merge|add|avx512|sse41 FOLDER [--jobs N] [--native CASES]
+
+(avx512, sse41: the one-block kernels, checked by kone.py and run by kone_native.c.)
 
 FOLDER holds push.o, merge.o, add.o (lang/NAME.S assembled) and the one-block kernels' objects (*.o beside
 them: they are linked in, not changed). As kflip.py: each bit of the function's code is flipped in turn;
@@ -12,7 +14,10 @@ random stacks and arguments the contract allows: an accepted change the processo
 machine is an error of the decoder or the checker, and the exit status is 1."""
 import multiprocessing, os, signal, subprocess, sys, tempfile, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import kcheck, kdecode, kglue
+import kcheck, kdecode, kglue, kone
+
+
+def symbol(name): return kone.CONTRACTS[name]["symbol"] if name in kone.CONTRACTS else "b3l_" + name
 
 LIMIT = 30
 
@@ -26,11 +31,12 @@ def time_up(*_): raise TimeUp()
 
 def verdict(obj, name):
     try:
-        rows, _ = kdecode.read(obj, "b3l_" + name, kglue.BASE, kglue.DATA)
+        rows, _ = kdecode.read(obj, symbol(name), kglue.BASE, kglue.DATA)
     except kdecode.Stop as e: return "stopped", str(e)
     except (IndexError, ValueError, KeyError, StopIteration) as e: return "stopped", f"the decoder ran off the bytes ({type(e).__name__})"
     try:
-        kglue.find(rows, name)
+        if name in kone.CONTRACTS: kone.check(rows, name)
+        else: kglue.find(rows, name)
     except kcheck.Fail as e: return "refused", str(e)
     except (KeyError, IndexError, ValueError, TypeError, AssertionError, RecursionError) as e: return "refused", f"the checker cannot run it ({type(e).__name__}: {e})"
     return "ACCEPTED", ""
@@ -78,8 +84,8 @@ def main():
     if v[0] != "ACCEPTED": return 1
     e = kdecode.Elf(obj)
     sec = e.sections[e.index[".text"]]
-    start = kdecode.address(obj, "b3l_" + name)
-    rows, _ = kdecode.read(obj, "b3l_" + name, kglue.BASE, kglue.DATA)
+    start = kdecode.address(obj, symbol(name))
+    rows, _ = kdecode.read(obj, symbol(name), kglue.BASE, kglue.DATA)
     size = rows[-1][1] - kglue.BASE
     first = (sec["off"] + start) * 8
     t0 = time.time()
@@ -95,7 +101,7 @@ def main():
         at = bit // 8 - sec["off"] - start
         row = next(r for r in rows if r[0] - kglue.BASE <= at < r[1] - kglue.BASE)
         b = bytearray(obj); b[bit // 8] ^= 1 << (bit % 8)
-        rows2, _ = kdecode.read(bytes(b), "b3l_" + name, kglue.BASE, kglue.DATA)
+        rows2, _ = kdecode.read(bytes(b), symbol(name), kglue.BASE, kglue.DATA)
         new = next((x[2] for x in rows2 if x[0] == row[0]), "?")
         print(f"  accepted: +0x{row[0] - kglue.BASE:X} byte {at - (row[0] - kglue.BASE)} bit {bit % 8}: {row[2]}  ->  {new}")
     if "--native" in sys.argv:
@@ -103,10 +109,10 @@ def main():
         here = os.path.dirname(os.path.abspath(__file__))
         work = tempfile.mkdtemp(prefix="kglue-flip-")
         cc = os.environ.get("CC", "cc")
-        subprocess.run([cc, "-O1", "-c", "-o", f"{work}/h.o", f"{here}/kglue_native.c"], check=True)
+        subprocess.run([cc, "-O1", "-c", "-o", f"{work}/h.o", f"{here}/{'kone' if name in kone.CONTRACTS else 'kglue'}_native.c"], check=True)
         subprocess.run([cc, "-c", "-o", f"{work}/t.o", f"{here}/kflip_thunk.S"], check=True)
         print(f"control: the unchanged object on this processor, {cases} cases: {native((name, obj, None, folder, work, cases))[1]}")
-        refused = next((bit for bit, (v, why) in results if v == "refused" and ("not one turn" in why or "not what the contract says" in why)), None)
+        refused = next((bit for bit, (v, why) in results if v == "refused" and ("not one turn" in why or "not what the contract says" in why or "not the specification's" in why)), None)
         print(f"control: a change no proof was found for, on this processor: {native((name, obj, refused, folder, work, cases))[1] if refused is not None else 'NONE FOUND'}")
         with multiprocessing.Pool(jobs) as pool:
             ran = pool.map(native, [(name, obj, b, folder, work, cases) for b in accepted], chunksize=1)
