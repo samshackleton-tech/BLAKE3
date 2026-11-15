@@ -103,6 +103,27 @@ contract b3l_wide32(out: cv, input: 32768 bytes, kf: keyed, t: number) {
     needs avx512
 }
 
+// `cvs`: the address of chaining values, one after another, of which the contract says what each is.
+contract b3l_take(out: cv, input: len bytes, len: number, kf: keyed, t: number, cvs: cvs) {
+    asks len >= 1
+    asks 1024 * t + len <= 18446744073709551615
+    asks cvs[i] == node_value(chunk_node(kf.key, t + i, kf.flags, input[1024 * i .. 1024 * i + 1024]), 0) for i in 0..len / 1024
+    leaves out = subtree(kf.key, kf.flags, t, input)
+    stack 640 + 384 * bits((len - 1) / 1024)
+    needs sse41
+    needs avx512
+}
+
+contract b3l_part32(out: cv, input: len bytes, len: number, kf: keyed, t: number) {
+    asks len >= 1025
+    asks len <= 32768
+    asks 1024 * t + len <= 18446744073709551615
+    leaves out = subtree(kf.key, kf.flags, t, input)
+    stack 8192
+    needs sse41
+    needs avx512
+}
+
 contract b3l_subtree(out: cv, input: len bytes, len: number, kf: keyed, t: number, plat: any) {
     asks len >= 1
     asks 1024 * t + len <= 18446744073709551615

@@ -72,6 +72,28 @@ def lanes_kind(kind, what):
     return int(p[0]) if len(p) == 2 and p[1] == what and p[0].isdigit() else None
 
 
+class Given:
+    """Chaining values at an address, of which a contract says what each IS: `asks NAME[i] == E for i in a..b`."""
+    def __init__(self, clause, env): self.clause, self.env = clause, env
+    def get(self, m, i):
+        """The i-th, in the specification's terms, on the path of the machine m (which shows i within a..b)."""
+        A, i = m.A(), Lin.of(i)
+        a, b = (Lin.of(kspec.SPEC.eval(A, e, self.env)) for e in self.clause["each"])
+        if not m.facts.ge0(i - a) or not m.facts.ge0(b - 1 - i): raise Err(f"value {i} of those at {self.clause['name']}: not shown to be one the contract speaks of")
+        A.fold = True                                       # what a definition with a kind gives is named here, not worked out
+        return kspec.SPEC.eval(A, self.clause["expr"], dict(self.env, **{self.clause["index"]: plain(i)}))
+
+
+class Lanes:
+    """What a wide kernel leaves, a chaining value a lane: each is worked out when something reads it."""
+    def __init__(self, n, each): self.n, self.each, self.memo = n, each, {}
+    def __len__(self): return self.n
+    def __getitem__(self, i):
+        if not isinstance(i, int) or not 0 <= i < self.n: raise Err(f"lane {i} of {self.n}")
+        if i not in self.memo: self.memo[i] = self.each(i)
+        return self.memo[i]
+
+
 def packed_kind(kind):
     """`bytes a b c d`: the names of a word's four low bytes; None for other kinds."""
     p = kind.split()
@@ -127,7 +149,7 @@ class Contract:
         self.args = [(reg, kind, name) for reg, (name, kind) in zip(ARGS, c["args"])]
         self.kind = {name: kind for _, kind, name in self.args}
         for _, kind, name in self.args:
-            if (kind not in ("number", "byte", "any", "cv", "block", "counter", "low byte", "word", "low word") and kind not in kspec.SPEC.layouts and bytes_kind(kind) is None
+            if (kind not in ("number", "byte", "any", "cv", "cvs", "block", "counter", "low byte", "word", "low word") and kind not in kspec.SPEC.layouts and bytes_kind(kind) is None
                     and lanes_kind(kind, "inputs") is None and lanes_kind(kind, "cvs") is None and packed_kind(kind) is None): raise Fail(f"{symbol}: {name} is of a kind this checker does not know: {kind}")
             n = bytes_kind(kind)
             if isinstance(n, str) and self.kind.get(n) != "number": raise Fail(f"{symbol}: {name} is {kind}, and {n} is not a number among the arguments")
@@ -136,6 +158,10 @@ class Contract:
             if leaf["index"] is not None and (lanes_kind(self.kind.get(leaf["name"], ""), "cvs") is None or leaf["each"] != (("num", 0), ("num", lanes_kind(self.kind[leaf["name"]], "cvs")))):
                 raise Fail(f"{symbol}: it leaves each of some values that are not all the chaining values at an address")
         self.writes = {leaf["name"] for leaf in c["leaves"]} | set(c["spoils"])
+        # `asks NAME[i] == E for i in a..b`: what each of the chaining values at an address is
+        self.given = {g["name"]: g for g in c["given"]}
+        if any(self.kind.get(name) != "cvs" for name in self.given) or any(kind == "cvs" and name not in self.given for _, kind, name in self.args) or self.writes & set(self.given):
+            raise Fail(f"{symbol}: `cvs` is the kind of chaining values the contract says each one of (`asks NAME[i] == E for i in a..b`), given to read")
         # `needs F`: it runs instructions of the kind F; `needs F if NAME == NUMBER`: only where that holds
         self.needs = {}
         for feature, cond in c["needs"]:
@@ -204,7 +230,8 @@ class Machine:
                 raise Fail(f"{c.name}: {name} is {kind}: a kernel's argument, and kernels are checked by kloop.py")
             self.g[reg] = ("a", name, 0)
             n = bytes_kind(kind)
-            if kind == "block": v = [Word(T.mk("part", name, w)) for w in range(16)]
+            if kind == "cvs": v = None                                      # made below, when everything else it speaks of is
+            elif kind == "block": v = [Word(T.mk("part", name, w)) for w in range(16)]
             elif n is None: v = A.of_kind(kspec.SPEC, kind, name)
             elif name in c.writes:
                 if not isinstance(n, int): raise Fail(f"{c.name}: {name} is written, and its length is not a plain number")
@@ -216,6 +243,8 @@ class Machine:
         try:
             for f in kspec.asked(c.text, A, self.given): self.facts.add(f)
         except Err as e: raise Fail(f"{c.name}: what it asks cannot be read: {e}")
+        for name, clause in c.given.items():
+            self.mem[name] = {0: (None, "cvs", Given(clause, self.given))}
 
     def A(self): return kspec.Symbols(self.T, self.facts, self.memo)
 
@@ -254,6 +283,10 @@ class Machine:
                 if size == 16 and isinstance(off, int) and off % 16 == 0 and 0 <= off < 4 * len(v): return tuple(w.v for w in v[off // 4:off // 4 + 4])
             elif lanes_kind(kind, "cvs") is not None:
                 if size == 16 and isinstance(off, int) and off % 16 == 0 and 0 <= off < 32 * len(v): return tuple(w.v for w in v[off // 32][off % 32 // 4:off % 32 // 4 + 4])
+            elif kind == "cvs":
+                for half in (0, 16):
+                    i = (Lin.of(off) - half).over(32)
+                    if i is not None and size == 16: return tuple(w.v for w in v.get(self, i))[half // 4:half // 4 + 4]
             elif kind == "number":
                 if off == 0 and size == 8: return value(v)
             elif kind == "byte":
@@ -540,6 +573,32 @@ class Machine:
                     raise Fail(f"{name}: what it writes and something else it is given are both in {region}, and are not shown to be apart")
                 if off < o + n and o < off + size: raise Fail(f"{name}: what it writes at {region} + {off} lies across something else it is given, at {region} + {o}")
 
+    def told(self, A, name, c, clause, at, env):
+        """`asks NAME[i] == E for i in a..b` of a callee: each of those values in this function's memory is E.
+        Where a and b are plain numbers, each i in turn; else for a number i of which nothing is known but
+        that it is within a..b."""
+        region, off, _ = at
+        a, b = (kspec.SPEC.eval(A, e, env) for e in clause["each"])
+        for k in env.later:
+            if k not in c.writes and k not in c.given: env[k]               # what the callee is given to read, read now
+        def one(i):
+            got = self.view(region, plain(Lin.of(off) + Lin.of(i).scale(32)), "cv")       # first: what the memory holds names what it can
+            want = kspec.SPEC.eval(self.A(), clause["expr"], dict(env, **{clause["index"]: plain(i)}))
+            if not kspec.same(self.A(), got, want): raise Fail(f"{name}: the value {i} at {clause['name']} is not shown to be what it asks")
+        if region != "frame" and self.mem[region][0][1] == "cvs":
+            # this function's memory there is itself such values (of which its own contract says what each is):
+            # shown for a number i of which nothing is known but that it is within a..b
+            mine, i = self.facts, sym(f"any {clause['index']} #{next(FRESH)}")
+            self.facts = mine.clone()
+            try:
+                self.facts.add(i - a); self.facts.add(Lin.of(b) - 1 - i)
+                if self.facts.consistent(): one(i)                              # (no such i: nothing is asked)
+            finally: self.facts = mine
+            return
+        a, b = A.plain(a), A.plain(b)
+        if b - a > 64: raise Fail(f"{name}: {b - a} values asked of, one by one: more than this checker takes")
+        for i in range(a, b): one(i)
+
     def call_kernel(self, A, name, k):
         """(cv, block, length, counter, flags): the 32 bytes at cv become compress(cv, the 64 bytes at block,
         counter, length, flags). Where the kernel reads the length and the flags from is its contract's."""
@@ -600,11 +659,17 @@ class Machine:
                 v[arg] = [[self.view(e[1], plain(Lin.of(e[2]) + 64 * b), "block") for b in range(blocks)] for e in table]
                 spans[arg] = [(a[1], a[2], 8 * lanes)] + [(e[1], e[2], 64 * blocks) for e in table]
                 continue
-            spans[arg] = [(a[1], a[2], count if n is not None else size_of(kind))]
+            if kind == "cvs":
+                # as many values as the contract speaks of, where that is a plain number here
+                try: extent = 32 * A.plain(kspec.SPEC.eval(A, c.given[arg]["each"][1], v))
+                except Err: extent = None
+                spans[arg] = [(a[1], a[2], extent)]
+            else: spans[arg] = [(a[1], a[2], count if n is not None else size_of(kind))]
             later[arg] = (lambda a=a, kind=kind, count=count: self.view(a[1], a[2], kind, count))
             if arg not in c.writes and n is not None: later[arg]()             # bytes given to read are there to be read
         for arg in c.writes: self.apart(name, spans[arg], [s for other, ss in spans.items() if other != arg for s in ss])
         env = Env(v, later)
+        for arg, clause in c.given.items(): self.told(A, name, c, clause, where[arg], env)
         for f in kspec.asked(c.text, A, env):
             if not self.facts.ge0(f): raise Fail(f"{name}: the caller does not show what it asks ({f} >= 0)")
         left = {}
@@ -616,7 +681,14 @@ class Machine:
                     # each of the chaining values at the address: `out[i] = E for i in 0..N`
                     for k in later:
                         if k not in c.writes: env[k]                    # what is read at an address: read now, for each lane
-                    left[leaf["name"]] = [kspec.SPEC.eval(A, leaf["expr"], dict(env, **{leaf["index"]: i})) for i in range(lanes_kind(c.kind[leaf["name"]], "cvs"))]
+                    frozen, facts, memo = dict(env), self.facts, self.memo
+                    def lane(i, leaf=leaf, frozen=frozen):
+                        # a lane's value, when something reads it: from what the kernel was given at the call
+                        # (no fact is needed for it but that the counter stays within 64 bits, shown here)
+                        return kspec.SPEC.eval(kspec.Symbols(self.T, facts, memo), leaf["expr"], dict(frozen, **{leaf["index"]: i}))
+                    for name, v in frozen.items():
+                        if isinstance(v, kspec.Count) and not self.facts.ge0(WORD64 - Lin.of(v.n) - lanes_kind(c.kind[leaf["name"]], "cvs")): raise Fail(f"{name}: the counter is not shown to stay within 64 bits over the lanes")
+                    left[leaf["name"]] = Lanes(lanes_kind(c.kind[leaf["name"]], "cvs"), lane)
         finally: A.fold = False
         for arg, new in left.items(): self.put(*where[arg], new)
         for arg in c.text["spoils"]: self.put(*where[arg], A.of_kind(kspec.SPEC, c.kind[arg], f"{arg} as {name} leaves it, #{next(FRESH)}"))

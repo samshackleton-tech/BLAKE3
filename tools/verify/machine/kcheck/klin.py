@@ -46,9 +46,9 @@ def sym(name): return Lin([(name, 1)])
 
 class Facts:
     """Numbers known to be >= 0, numbers known not to be 0, symbols known in terms of others. Whole numbers."""
-    def __init__(self): self.ge, self.ne, self.eq, self.below, self.bad, self.memo = [], [], {}, [], False, {}
+    def __init__(self): self.ge, self.ne, self.eq, self.below, self.bad, self.memo, self.asked = [], [], {}, [], False, {}, 0
     def clone(self):
-        f = Facts(); f.ge, f.ne, f.eq, f.below, f.bad, f.memo = list(self.ge), list(self.ne), dict(self.eq), list(self.below), self.bad, dict(self.memo)
+        f = Facts(); f.ge, f.ne, f.eq, f.below, f.bad, f.memo, f.asked = list(self.ge), list(self.ne), dict(self.eq), list(self.below), self.bad, dict(self.memo), self.asked
         return f
     @staticmethod
     def norm(f):
@@ -59,6 +59,7 @@ class Facts:
     def subst(self, x):
         """x with every symbol that is known in terms of others replaced."""
         x = Lin.of(x)
+        if x.c: self.asked += 1                 # something was asked of the facts (kspec.py: what is worked out without asking does not depend on the path)
         if not self.eq: return x
         while True:
             hit = next((s for s, _ in x.c if s in self.eq), None)
@@ -147,6 +148,7 @@ class Facts:
 
     # -- new facts
     def add(self, f):
+        self.asked += 1
         f = self.norm(self.subst(f))
         if not f.c:
             if f.k < 0: self.bad = True

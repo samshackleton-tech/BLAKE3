@@ -2,13 +2,13 @@
 """kfn_flip: every single-bit change of a function of hash.ode, given to the decoder, the prover and the checker,
 and the processor's word on each change a proof is found for.
 
-    python3 kfn_flip.py pad|chunk_node|node_out|wide32|subtree|hashr FOLDER [--jobs N] [--native CASES]
+    python3 kfn_flip.py pad|chunk_node|node_out|wide32|take|part32|subtree|hashr FOLDER [--jobs N] [--native CASES]
 
-FOLDER holds pad.o, chunk_node.o, node_out.o, wide32.o, subtree.o, hashr.o (glue/NAME.S assembled) and the
+FOLDER holds an object for each of those names (glue/NAME.S assembled) and the
 kernels' objects (*.o beside them: they are linked in, not changed). As kflip.py: each bit of the function's
 code is flipped in turn; "stopped" (the decoder does not know the bytes), "refused" (no proof is found),
 "ACCEPTED" (a proof is found and the checker takes it). With --native every accepted object is linked with
-the other five, the kernels and khash_native.c, and the whole hash is run on some two thousand lengths and
+the others, the kernels and khash_native.c, and the whole hash is run on some two thousand lengths and
 CASES more: an accepted change that the processor tells from BLAKE3 is an error of the decoder or the
 checker, and the exit status is 1. (The judge is the whole hash: a change that is wrong only where no hash
 goes is not seen by it.)"""

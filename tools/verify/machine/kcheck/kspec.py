@@ -255,6 +255,9 @@ class Symbols:
     def plain(self, x):
         """A number the path fixes, as a plain number."""
         n = self.facts.number(Lin.of(x)) if isinstance(x, (int, Lin)) else None
+        if n is None and isinstance(x, Lin):
+            # fixed by the facts together, not by one of them: a small number is looked for
+            n = next((c for c in range(65) if self.facts.zero(x - c) is True), None)
         if n is None: raise Err(f"a plain number expected, not {x!r}")
         return n
 
@@ -353,6 +356,15 @@ class Symbols:
         self.memo[instance] = result
         return result
 
+    def kept(self, name, args, body):
+        """A definition applied to plain words (and plain numbers) only: what it gives does not depend on
+        the path, and is kept with the terms."""
+        if not all(plain_words(a) for a in args): return body()
+        if not hasattr(self.T, "kept"): self.T.kept = {}
+        k = (name, tuple(self.key(a) for a in args))
+        if k not in self.T.kept: self.T.kept[k] = body()
+        return self.T.kept[k]
+
     def known(self, instance):
         """What was named or evaluated on this path for this application: by what it was given, as the path's
         facts now have the numbers in it (a length the path has since fixed is that number)."""
@@ -383,17 +395,24 @@ class Symbols:
         instance = (name, tuple(self.key(a) for a in args))
         known = self.known(instance)
         if known is not None: return known
+        if instance in getattr(self.T, "kept", ()):
+            result = self.memo[instance] = self.T.kept[instance]
+            return result
         if self.fold and self.depth == 0:
             # a call is taken by the callee's contract as it is written: what it leaves is not opened here.
             # (The caller's own specification, opened later on the same path, finds this name for the same
             # application.)
             result = self.memo[instance] = self.of_kind(spec, kind, f"{name}#{self.T.mk('named', *instance)}")
             return result
-        outer = spec.fuel
+        outer, asked = spec.fuel, self.facts.asked
         if outer is None: spec.fuel = FUEL
         self.depth += 1
         try:
             result = body()
+            if self.facts.asked == asked:
+                # worked out without asking anything of the path's facts: the same on every path
+                if not hasattr(self.T, "kept"): self.T.kept = {}
+                self.T.kept[instance] = result
         except Err:
             result = self.of_kind(spec, kind, f"{name}#{self.T.mk('named', *instance)}")
         finally:
@@ -423,6 +442,15 @@ class Symbols:
                     if f["below"] is not None: self.facts.add(f["below"] - 1 - out[field])
             return out
         raise Err(f"no kind {kind}")
+
+
+def plain_words(v):
+    """Words, a counter of words, plain numbers, or lists of them: nothing a path's facts could bear on."""
+    if isinstance(v, bool): return False
+    if isinstance(v, (Word, int)): return True
+    if isinstance(v, Counter): return not isinstance(getattr(v, "n", 0), Lin)
+    if isinstance(v, list): return all(plain_words(x) for x in v)
+    return False
 
 
 def halved(facts, x, d):

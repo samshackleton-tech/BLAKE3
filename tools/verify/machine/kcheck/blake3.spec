@@ -162,7 +162,7 @@ def bytes_of(ws) { [word_bytes(ws[i / 4])[i % 4] for i in 0..4 * len(ws)] }
 // or the function that relies on it.
 contract b3l_hashr(out: cv, input: len bytes, len: number, key: cv, flags: byte, plat: any) {
     leaves out = hash_words(key, flags, input)
-    stack 9216 + 384 * bits(len / 1024)
+    stack 10496 + 384 * bits(len / 1024)
     needs sse41
     needs avx512 if plat == 5
 }

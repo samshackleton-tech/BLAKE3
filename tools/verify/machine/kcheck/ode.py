@@ -177,11 +177,19 @@ class Parser:
         self.take("("); args = []
         while not self.maybe(")"):
             arg = self.take(kind="name"); self.take(":"); args.append((arg, self.kind())); self.maybe(",")
-        c = dict(args=args, asks=[], leaves=[], spoils=[], returns=None, stack=None, calls=[], needs=[])
+        c = dict(args=args, asks=[], given=[], leaves=[], spoils=[], returns=None, stack=None, calls=[], needs=[])
         self.take("{")
         while not self.maybe("}"):
             clause = self.take(kind="name")
-            if clause == "asks": c["asks"].append(self.expr())
+            if clause == "asks":
+                e = self.expr()
+                if self.maybe("for"):
+                    # asks NAME[i] == E for i in A..B: what each of some values at an address is
+                    if not (e[0] == "bin" and e[1] == "==" and e[2][0] == "index" and e[2][1][0] == "name" and e[2][2][0] == "name"): raise Err("`asks NAME[i] == E for i in A..B` expected")
+                    if self.take(kind="name") != e[2][2][1]: raise Err(f"`for {e[2][2][1]}` expected")
+                    self.take("in"); a = self.expr(); self.take("..")
+                    c["given"].append(dict(name=e[2][1][1], index=e[2][2][1], expr=e[3], each=(a, self.expr())))
+                else: c["asks"].append(e)
             elif clause == "leaves":
                 # leaves NAME = E, or leaves NAME[I] = E for I in A..B (each place of what NAME addresses)
                 name, index, each = self.take(kind="name"), None, None
@@ -441,6 +449,7 @@ class Spec:
                 if name in self.kinds and hasattr(A, "named"):
                     # on symbols: a function with a kind that cannot be evaluated here is named by what it was given
                     return A.named(self, name, self.kinds[name], args, lambda: self.body(A, body, env))
+                if hasattr(A, "kept"): return A.kept(name, args, lambda: self.body(A, body, env))
                 return self.body(A, body, env)
             finally: self.deep -= 1
         if name in self.machines:

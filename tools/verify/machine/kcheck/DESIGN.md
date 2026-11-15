@@ -20,9 +20,9 @@ writes the code so that it can be proved, as he writes it so that it is fast).
 |---|---|---|---|
 | the specification | what the result IS: definitions by equations, in a language made for specifications | the auditor | `blake3.spec`, 147 lines |
 | the claim | the contract of each function a user calls | the auditor | 18 lines, one function |
-| the code | written in the specification's shape, in Ode | nobody has to | `hash.ode`, 190 lines |
+| the code | written in the specification's shape, in Ode | nobody has to | `hash.ode`, 274 lines |
 | the proof | what the checker needs beside the binary: what the functions inside do; a place for a loop of unfixed count | nobody has to | `proofs/inner.spec`; for the hash, no place |
-| the checker | runs the binary on symbols and compares with the specification; does not search | the auditor, once, for every program | 3,772 lines of Python, unverified |
+| the checker | runs the binary on symbols and compares with the specification; does not search | the auditor, once, for every program | 3,883 lines of Python, unverified |
 
 The auditor reads the specification and the claim, and runs the checker on the binary. If a contract of a
 function inside were wrong, the checker would refuse that function, or one that calls it: the contracts
@@ -54,6 +54,10 @@ What that has meant so far, as rules a programmer (or an AI) follows the way he 
   blocks, 54 doublings). A loop whose count is not fixed must follow a sequence of the specification turn by
   turn (the wide kernels' loop over blocks does; the proof is then one place, which a prover finds), or
   become a recursion.
+- **Say what the memory holds, in the specification's words.** `take` is given an array of chunk values that
+  a kernel made; one line of its contract says what each element is
+  (`asks cvs[i] == node_value(chunk_node(...)) for i in 0..len / 1024`). That line is the array's type. The
+  checker reads elements as that term inside the function, and shows the line at every call.
 - **Each function does something the specification has a word for.** Its contract is one line in the
   specification's definitions. A function for which no such line can be written is cut in the wrong place.
 - **Numbers stay linear.** Sums, differences, multiples by plain numbers, halvings. "The greatest power of
@@ -99,11 +103,11 @@ checked in about 3 seconds; audits with a processor as judge (README.md).
 
 Not done, in the order I would take them:
 
-1. **Speed.** A whole tree of 32 chunks now goes to the wide kernels (`wide32`: the definition opened to 32
-   chunks is the term the kernels' contracts give; no new idea was needed). Smaller parts, and so every
-   message of 32 KiB or less and up to the last 31 chunks of every message, still go one block at a time.
-   Next: parts of 2 to 31 chunks through the same kernels.
-2. **The checker's own worth.** It is 3,772 lines of Python, tested and audited, not proved. Smaller; a
+1. **Speed** is no longer first here: every part of more than one chunk goes through the 32-lane chunk
+   kernel, a whole tree of 32 chunks through the 16-lane parent kernel too, and a first look has `hashr` no
+   slower than the earlier `hashf` at any size tried (README.md). To do: a timing under the bench lock,
+   against the library; the parents of small parts through the parent kernel; AVX2 and narrower machines.
+2. **The checker's own worth.** It is 3,883 lines of Python, tested and audited, not proved. Smaller; a
    second one written apart; or proved once. Undecided.
 3. **The source's checker** (above), and the compiler printing bytes, not assembly (BLAKE3 #396).
 4. **What is shown is what holds if the function returns.** Each loop is bounded and each call of itself is on
