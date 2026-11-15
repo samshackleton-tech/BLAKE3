@@ -145,7 +145,7 @@ stays the auditor's.
 Done: the whole hash of a message, every length, from the binary's bytes, with nothing assumed of a callee,
 checked in 19 seconds; seven other programs with their own specifications and contracts (Adler-32, an LZ4
 decoder and two encoders, a varint, a first difference, a UTF-8 validator, a base-64 encoder, the Internet
-checksum), 1,479 instructions, checked in 15 seconds; the
+checksum), ten functions, 1,595 instructions, checked in 15 seconds; the
 proof carried in the binary; a C and a Rust program linked with it and checked as files; audits with a
 processor as judge (README.md).
 
@@ -167,8 +167,8 @@ Not done, in the order I would take them:
    calls itself; no ring of calls; every loop run to its end). That the wide kernels return for every number
    of blocks is not: they are called with 16 and with 1, for which they are run to their end.
 5. **AArch64.**
-6. **The programs' speed**: a fifth and an eighth of the usual C (README.md): the Ode compiler's doing and
-   the plainest code's. Faster code needs facts modulo a number, which the checker cannot yet carry.
+6. **The programs' speed**: Adler-32 at half the usual C's with its sums put off (a fifth without), the LZ4
+   decoder at an eighth (README.md): the Ode compiler's doing, and a decoder that copies a byte at a time.
 7. **Sigil** (John's encoding of 32 bytes): specified, not coded: it multiplies a number of 258 bits by a
    prime and looks letters up in a table; Ode has no multiplication yet and `kbyte.py` reads no table.
 8. **An incremental hasher** (bytes arriving in pieces) holds subtrees between calls: a stack by nature. Either

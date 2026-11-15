@@ -49,12 +49,13 @@ assembler and no linker is relied on.
 
 **Programs other than the hash** (`programs/`, November 15: to find what the two languages lack). Each has
 its own specification and public contract, code in Ode, and is checked from its bytes
-(`python3 programs/check_programs.py`: nine functions, 1,479 instructions, 15 s, 12 of them the base-64
+(`python3 programs/check_programs.py`: ten functions, 1,595 instructions, 15 s, 12 of them the base-64
 encoder's):
 
 | | the public contract's `ensures` and `returns` | instructions | proof | checked in |
 |---|---|---|---|---|
 | Adler-32 | `returns adler32(input)` | 55 | 1 place, 7 lines | 5 ms |
+| Adler-32, the sums reduced once in 5,552 bytes | the same line, the same specification | 116 | 2 places, 25 lines | 0.2 s |
 | LZ4 block decoder | `returns if failed(lz4(input, cap)) then NO else len(lz4(input, cap))`; `ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap) if !failed(lz4(input, cap))` | 267 | 5 places, 96 lines | 0.54 s |
 | LZ4 encoder, literals only | `ensures lz4(out[0 .. r], n) == input if r != NO`; `ensures r != NO if cap >= n + n / 255 + 16` | 132 | 2 places, 26 lines | 34 ms |
 | LZ4 encoder with matches | the same two lines | 360 | 6 places, 129 lines | 1.9 s |
@@ -422,13 +423,13 @@ something BLAKE3 does not have: a result that is a number, a loop whose count is
 that may be malformed, output that depends on earlier output, an answer that may be "no", and a contract
 that is no way to compute anything.
 
-    python3 programs/check_programs.py          # the nine functions from their bytes: 1,479 instructions, 15 s
+    python3 programs/check_programs.py          # the ten functions from their bytes: 1,595 instructions, 15 s
     python3 programs/test_specs.py              # each specification against someone else's answers
     python3 test_kbyte.py                       # changed specifications, contracts, proofs and instructions
 
 | folder | specification (lines a reader reads, with comments and contract) | checked against | code |
 |---|---|---|---|
-| `adler32/` | 19 | zlib's `adler32` | `ode_adler32` |
+| `adler32/` | 27 | zlib's `adler32` | `ode_adler32`, `ode_adler32_blocks` |
 | `lz4/` | 111: the block format, its two ways to fail, three contracts | a decoder written in the test as decoders are (a loop over the block), on blocks an encoder of the test's made and on damaged ones | `ode_lz4_decode`, `ode_lz4_store`, `ode_lz4_pack` |
 | `varint/` | 12 | LEB128 written another way | `ode_varint` |
 | `common/` | 15 | the same in Python | `ode_common` |
@@ -517,7 +518,7 @@ bytes and the proof's offsets), takes the proof from the file, and checks:
 
 | file | bytes | functions | checked in |
 |---|---|---|---|
-| `adler32/odeadler32.o` | 1,376 | 1 | 0.01 s |
+| `adler32/odeadler32.o` | 2,776 | 2 | 0.2 s |
 | `lz4/odelz4.o` | 14,808 (3,088 of code, 11,002 of proof) | 3 | 2.5 s |
 | `varint/odevarint.o` | 1,032 | 1 | 0.2 s |
 | `utf8/odeutf8.o` | 2,624 | 1 | 0.17 s |
@@ -595,20 +596,34 @@ and with a wrong one the check fails.
   or a place may run 1,000 instructions before it comes to a place or returns (the longest here runs 286),
   and that loop is refused in four seconds for the right reason. This only refuses more.
 
-**Speed** (pinned runs, under the bench lock, one thread; `programs/bench.c`):
+**Speed** (pinned runs `night-speed2-*`, under the bench lock, one thread; `programs/bench.c`, which links
+the files shipped, `odeadler32.o` and `odelz4.o`, after `check_file.py` has checked them in the same run):
 
 | | Ryzen 7 9700X | EPYC 9255 |
 |---|---|---|
-| Adler-32, ours | 1,166 MB/s | 922 MB/s |
-| Adler-32, the usual C (a modulo every 5,552 bytes) | 5,318 MB/s | 4,221 MB/s |
-| LZ4 decoding, ours | 1,908 MB/s | 1,528 MB/s |
-| `LZ4_decompress_safe` | 16,368 MB/s | 13,084 MB/s |
+| Adler-32, `ode_adler32` (a remainder at every byte) | 1,166 MB/s | 916 MB/s |
+| Adler-32, `ode_adler32_blocks` (the sums put off for 5,552 bytes) | 2,729 MB/s | 2,161 MB/s |
+| Adler-32, the usual C (the same, compiled by GCC 15.2 at -O2) | 5,321 MB/s | 4,227 MB/s |
+| LZ4 decoding, `ode_lz4_decode` | 2,138 MB/s | 1,726 MB/s |
+| `LZ4_decompress_safe` | 16,143 MB/s | 13,026 MB/s |
 
-A fifth and an eighth of the usual code's speed. Two causes, neither in the method: the Ode compiler keeps
-every variable but six in memory and makes no instruction do two things; and the code is the plainest that
-is right (a byte at a time, a modulo at every byte). The hash, whose time is spent in kernels, is at 97% of
-the library. Faster code needs facts the checker cannot yet carry (a sum that is only reduced now and then
-is equal to the specification's modulo 65521, not equal to it).
+The plain Adler-32 is at 22% of the usual C; the one that puts its sums off, at 51%; the LZ4 decoder at 13%.
+What is left has two causes, neither in the method: the Ode compiler keeps every variable but six in memory
+and makes no instruction do two things; and the decoder copies a byte at a time. The hash, whose time is
+spent in kernels, is at 97% of the library.
+
+**The fast Adler-32 needed nothing new.** `programs/adler32/blocks.ode` adds bytes into the two sums for a
+block of 5,552 and only then brings each below 65521 (two steps of "what is above 16 bits counts 15
+times", and one subtraction). Its contract is the plain one's, against the same specification, which
+reduces at every byte. The proof is two places; the inner one says the sums' remainders by 65521 are the
+specification's and bounds them by the bytes taken in the block:
+
+    fact a % 65521 == s1(input)[i]
+    fact a <= 65520 + 255 * (i - i0)
+
+It was accepted on its first run, in 0.2 s, with the checker frozen. I had written here that this needed
+"facts modulo a number, which the checker cannot carry". It carries them as they are: a remainder is a
+number with a quotient beside it, and the arithmetic knows a number has only one of each.
 
 **Devon's Adler-32** (BLAKE3 #377; `tools/verify/machine/experiments/adler32/adler32.ode` on his branch,
 proved in Lean with 133 lines of lemmas) compiles to the same 55 instructions as the one here but one: he
@@ -624,8 +639,7 @@ refusals. And what `kbyte.py` lacks, each found by a program that wanted it:
   grows; that the least place two runs differ is where a walk over them stops. Those specifications were
   written as walks over the input so as not to need them. (A fact of arithmetic it does show: that four
   folds of the carries are a one's complement sum.)
-- facts modulo a number (a sum reduced only now and then), and reads of more than a byte at a time: both
-  for speed;
+- reads and writes of more than a byte at a time, for speed;
 - taking a specification's question both ways where the code's path does not answer it (UTF-8), and
   joining paths that have come to the same state (base 64);
 - that two numbers with no bit in common have their sum for their `or` (Devon's Adler-32); a constant
