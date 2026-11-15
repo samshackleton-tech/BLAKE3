@@ -72,39 +72,62 @@ class Adler32(unittest.TestCase):
 
 
 class Lz4Decode(unittest.TestCase):
-    """The decoder against the contract of November 15: for any input, it writes nothing but the cap bytes at
-    out, reads nothing but the n bytes at input, and returns."""
+    """The decoder against its public contract: a count returned is the count of the bytes the block decodes
+    to, and they are at out; and on any input it reads and writes nothing else, and returns."""
     @classmethod
     def setUpClass(cls): cls.p = Program("lz4", "lz4_decode", "ode_lz4_decode")
 
     def test_it_meets_its_contract(self):
         self.assertEqual(self.p.verdict(), "accepted")
 
-    def test_a_changed_contract_is_refused(self):
-        self.p.changed(self, "spec", [("    writes out\n", ""), ("    trace depends on input\n", ""), ("stack 104", "stack 103"), ("    requires apart(out, input)\n", ""),
-                                      ("out: cap bytes, cap: number, input: n bytes", "out: cap bytes, cap: number, input: cap bytes"),
-                                      ("out: cap bytes, cap: number, input: n bytes", "out: n bytes, cap: number, input: n bytes")])
+    def test_a_changed_specification_or_contract_is_refused(self):
+        self.p.changed(self, "spec", [
+            ("{value: sum + bytes[at], next: at + 1}", "{value: sum + bytes[at] + 1, next: at + 1}"), ("{value: sum + bytes[at], next: at + 1}", "{value: sum + bytes[at], next: at + 2}"),
+            ("counted(bytes, at + 1, sum + 255)", "counted(bytes, at + 1, sum + 254)"), ("if bytes[at] < 255 then", "if bytes[at] < 254 then"),
+            ("if first < 15 then {value: first, next: at} else counted(bytes, at, 15)", "if first < 14 then {value: first, next: at} else counted(bytes, at, 15)"),
+            ("else counted(bytes, at, 15) }", "else counted(bytes, at, 16) }"),
+            ("copied(out ++ [out[len(out) - offset]], offset, n - 1)", "copied(out ++ [out[len(out) - offset + 1]], offset, n - 1)"),
+            ("copied(out ++ [out[len(out) - offset]], offset, n - 1)", "copied(out ++ [out[len(out) - offset]] ++ [0], offset, n - 1)"),
+            ("if n == 0 then out else", "if n == 1 then out else"),
+            ("count(bytes, at + 1, bytes[at] / 16)", "count(bytes, at + 1, bytes[at] % 16)"), ("count(bytes, at + 1, bytes[at] / 16)", "count(bytes, at + 2, bytes[at] / 16)"),
+            ("let with_literals = out ++ bytes[literals.next .. end]", "let with_literals = out ++ bytes[literals.next .. end] ++ [0]"),
+            ("let with_literals = out ++ bytes[literals.next .. end]", "let with_literals = bytes[literals.next .. end] ++ out"),
+            ("match(bytes, end, bytes[at] % 16, with_literals)", "match(bytes, end, bytes[at] / 16, with_literals)"), ("match(bytes, end, bytes[at] % 16, with_literals)", "match(bytes, end, bytes[at] % 16, out)"),
+            ("let offset = bytes[at] + 256 * bytes[at + 1]", "let offset = 256 * bytes[at] + bytes[at + 1]"), ("let offset = bytes[at] + 256 * bytes[at + 1]", "let offset = bytes[at] + 255 * bytes[at + 1]"),
+            ("let n = count(bytes, at + 2, low)", "let n = count(bytes, at + 3, low)"),
+            ("copied(out, offset, n.value + 4))", "copied(out, offset, n.value + 3))"), ("copied(out, offset, n.value + 4))", "copied(out, offset + 1, n.value + 4))"),
+            ("sequences(bytes, n.next, copied", "sequences(bytes, n.next + 1, copied"),
+            ("def lz4(bytes) { sequences(bytes, 0, []) }", "def lz4(bytes) { sequences(bytes, 0, [0]) }"), ("def lz4(bytes) { sequences(bytes, 0, []) }", "def lz4(bytes) { sequences(bytes, 1, []) }"),
+            ("if end == len(bytes) then with_literals else", "if end == len(bytes) then out else"),
+            ("ensures r = len(lz4(input)) if r != NO", "ensures r = len(lz4(input)) + 1 if r != NO"), ("ensures out[0 .. r] = lz4(input) if r != NO", "ensures out[0 .. r] = lz4(input) ++ [0] if r != NO"),
+            ("ensures out[0 .. r] = lz4(input) if r != NO", "ensures out[0 .. r] = lz4(input)"), ("ensures r = len(lz4(input)) if r != NO", "ensures r = len(lz4(input))"),
+            ("    requires cap < NO\n", ""), ("    trace depends on input\n", ""), ("stack 104", "stack 96"), ("    requires apart(out, input)\n", ""),
+            ("out: cap bytes, cap: number, input: n bytes", "out: cap bytes, cap: number, input: cap bytes"), ("out: cap bytes, cap: number, input: n bytes", "out: n bytes, cap: number, input: n bytes")])
 
-    def test_a_proof_without_one_of_its_facts_is_refused(self):
+    def test_a_proof_without_one_of_its_lines_is_refused(self):
         lines, needless = self.p.proof.split("\n"), []
         for k, line in enumerate(lines):
-            if not line.strip().startswith(("fact ", "decreases ", "name ")): continue
+            if not line.strip() or line.strip().startswith(("//", "place", "}", "any ")): continue
             if self.p.verdict(proof="\n".join(lines[:k] + lines[k + 1:])) == "accepted": needless.append(line.strip())
-        self.assertEqual(needless, ["fact offset >= 1"])       # where the match's count is read; the copy asks it again
+        self.assertEqual(needless, [])
 
-    def test_a_check_taken_out_of_the_code_is_refused(self):
-        # every conditional jump turned round, or left out: those that guard a read, a write or a loop's end are missed
-        refused = 0
+    def test_a_changed_instruction_is_refused_unless_it_keeps_the_contract(self):
+        accepted = []
         for k, (a, z, i) in enumerate(self.p.rows):
-            for old, new in ((".jae", ".jb"), (".jne", ".je")):
-                if not i.startswith(old): continue
-                for c in (i.replace(old, new), ".nop"):
-                    rows = list(self.p.rows); rows[k] = (a, z, c)
-                    refused += self.p.verdict(rows=rows) != "accepted"
-        self.assertEqual(refused, REFUSED_JUMPS)
+            changes = [".nop"] if not (i.startswith(".push") or i.startswith(".pop") or i == ".ret") else []
+            changes += [i.replace(x, y) for x, y in ((".jae", ".jb"), (".jne", ".je"), (".add", ".sub")) if i.startswith(x)]
+            if i.startswith(".sub"): changes.append(i.replace(".sub", ".add"))
+            for c in changes:
+                rows = list(self.p.rows); rows[k] = (a, z, c)
+                if self.p.verdict(rows=rows) == "accepted": accepted.append((i.split()[0], c.split()[0]))
+        # Of 349. Those accepted: moves that put somewhere what is there already or is not read again; and seven
+        # jumps left out, after which the decoder gives NO where it need not. The contract is of the counts it
+        # returns, and says so (lz4.spec): the processor's word on each such change is in audit/.
+        self.assertEqual(len(accepted), ACCEPTED)
+        self.assertEqual(sorted(set(accepted)), [(".jae", ".nop"), (".jmp", ".nop"), (".jne", ".nop"), (".mov", ".nop")])
 
 
-REFUSED_JUMPS = 38         # of 54; the 16 accepted change what is decoded, of which this contract says nothing
+ACCEPTED = 36
 
 
 if __name__ == "__main__":

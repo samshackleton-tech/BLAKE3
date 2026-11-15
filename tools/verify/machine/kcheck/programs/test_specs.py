@@ -7,6 +7,7 @@ Adler-32 against zlib's; LZ4 against a decoder written here another way (a loop,
 a small compressor here makes, on the format document's examples, and on damaged blocks; Sigil against the
 220 good vectors of its repository. A specification that disagrees with them is wrong, or they are."""
 import os, random, sys, unittest, zlib
+sys.setrecursionlimit(60000)            # a definition of itself on smaller things is followed as deep as its count
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
 import ode

@@ -52,11 +52,30 @@ BASE, DATA, G64, KEPT, ARGS, WORD64 = kfn.BASE, kfn.DATA, kfn.G64, kfn.KEPT, kfn
 STEPS = 2000000
 HELD = tuple(KEPT) + ("rsp",)        # at a place, what these hold is kept if it was the same on every path; the others are unknown unless the place says
 FRESH = itertools.count()
+DEBUG = bool(os.environ.get("KBYTE_DEBUG"))
 
 
 class View:
     """n bytes of the memory an argument addresses, from the offset `off`."""
     def __init__(self, region, off, n): self.region, self.off, self.n = region, Lin.of(off), Lin.of(n)
+
+
+class Rope:
+    """Bytes in order, in parts: ("view", region, off, n): n bytes of memory given to read; ("list", name, n): n
+    bytes with a name; ("one", x): one byte, the number x."""
+    def __init__(self, parts=()): self.parts = tuple(parts)
+    def __repr__(self): return "rope(" + " ++ ".join(f"{p[1]}[{p[2]!r} +{p[3]!r}]" if p[0] == "view" else f"{p[1]}" if p[0] == "list" else f"[{p[1]!r}]" for p in self.parts) + ")"
+
+
+class Opaque:
+    """A definition applied to things, where the path does not let it be worked out: named by what it is of."""
+    def __init__(self, name, args): self.name, self.args = name, tuple(args)
+    def __repr__(self): return f"{self.name}({', '.join(map(repr, self.args))})"
+
+
+class Failure:
+    """A definition that fails, as a value (so that it can be what something is known to be)."""
+    def __init__(self, reason): self.reason = reason
 
 
 class Contract:
@@ -74,10 +93,16 @@ class Contract:
         addresses = [name for _, kind, name in self.args if kind != "number"]
         if len(addresses) > 1 and sorted(c["apart"] or []) != sorted(addresses):
             raise Fail(f"{symbol}: the contract does not say `requires apart({', '.join(addresses)})`: the things at the addresses it is given are taken to be apart")
-        if c["leaves"]: raise Fail(f"{symbol}: `ensures` of what is in memory: not this checker's yet (it knows `writes` and `returns`)")
         if c["calls"] or c["needs"] or c["given"] or c["decreases"] is not None: raise Fail(f"{symbol}: a clause this checker does not know")
         if not isinstance(c["stack"], int): raise Fail(f"{symbol}: the stack it may use is not a plain number")
-        self.stack, self.writes, self.trace = c["stack"], set(c["spoils"]), set(c["trace"])
+        # `returns r`, r a name the specification does not have: the number returned is called r, and `ensures` lines speak of it
+        r = c["returns"]
+        self.result = r[1] if r is not None and r[0] == "name" and r[1] not in self.kind and r[1] not in spec.consts else None
+        for leaf in c["leaves"]:
+            if leaf["index"] is not None: raise Fail(f"{symbol}: `ensures X[i] = ... for i`: not this checker's")
+            if leaf["name"] != self.result and self.kind.get(leaf["name"]) in (None, "number"): raise Fail(f"{symbol}: it ensures something of {leaf['name']}, which is not at an address among its arguments nor the result")
+        self.held = {leaf["name"] for leaf in c["leaves"] if leaf["name"] != self.result}        # what the checker keeps the bytes of
+        self.stack, self.writes, self.trace = c["stack"], set(c["spoils"]) | self.held, set(c["trace"])
         for name in self.writes | self.trace:
             if self.kind.get(name) in (None, "number"): raise Fail(f"{symbol}: {name} is not something at an address among its arguments")
 
@@ -88,8 +113,16 @@ class Algebra:
     def __init__(self, m): self.m, self.facts, self.T = m, m.facts, m.T
     def word(self, n): raise Err("a word: this checker's programs are of bytes and numbers")
     counter = add = xor = or_ = rotr = words = word
+    def num(self, x):
+        if isinstance(x, bool) or not isinstance(x, (int, Lin)): raise Err("a number expected")        # a thing with a name only is none
+        return x
+    def plus(self, x, y): return plain(Lin.of(self.num(x)) + Lin.of(self.num(y)))
     def compare(self, op, a, b):
-        if isinstance(a, bool) or isinstance(b, bool) or not isinstance(a, (int, Lin)) or not isinstance(b, (int, Lin)): raise Err("a comparison of things that are not numbers")
+        numbers = lambda x: isinstance(x, (int, Lin)) and not isinstance(x, bool)
+        if not (numbers(a) and numbers(b)):
+            # two things that are not numbers: the same if they are shown to be; never shown to differ
+            if op == "==" and self.same(a, b): return True
+            raise Err("the specification asks whether two things are the same, and the code's path does not show it")
         d = self.facts.subst(Lin.of(a) - Lin.of(b))
         if not d.c: return {"==": d.k == 0, "!=": d.k != 0, "<": d.k < 0, "<=": d.k <= 0, ">": d.k > 0, ">=": d.k >= 0}[op]
         if op in ("==", "!="):
@@ -101,23 +134,23 @@ class Algebra:
         if yes is None: raise Err(f"the specification asks how {Lin.of(a)} and {Lin.of(b)} compare, and the code's path does not say")
         return yes if op in (">=", ">") else not yes
     def minus(self, x, y):
-        d = Lin.of(x) - Lin.of(y)
+        d = Lin.of(self.num(x)) - Lin.of(self.num(y))
         if not self.facts.ge0(d): raise Err(f"the specification takes {Lin.of(y)} from {Lin.of(x)}, and the code's path does not show the result is not below zero")
         return plain(d)
     def mul(self, x, y):
-        x, y = plain(x), plain(y)
+        x, y = plain(self.num(x)), plain(self.num(y))
         if isinstance(x, int): return plain(Lin.of(y).scale(x))
         if isinstance(y, int): return plain(x.scale(y))
         raise Err("a product of two numbers that both depend on counts")
     def quotient(self, x, d):
         """(x / d, x % d) for a plain d: by the path's facts; for a power of two, a number with a name."""
-        d, x = ode.Spec.number(d), Lin.of(x)
+        d, x = ode.Spec.number(d), Lin.of(self.num(x))
         if d < 1: raise Err("a division by nothing")
         if not x.c: return x.k // d, x.k % d
         for q in range(4):                                  # the path says which multiple of d it is at or above
             if self.facts.ge0(x - q * d) and self.facts.ge0(q * d + d - 1 - x): return q, plain(x - q * d)
         if d & (d - 1) == 0:
-            q = halved(self.facts, x, d)
+            q = self.m.halve(x, d)
             return plain(Lin.of(q)), plain(x - Lin.of(q).scale(d))
         raise Err(f"{x} divided by {d}: the code's path does not say how many times")
     def div(self, x, d): return self.quotient(x, d)[0]
@@ -126,8 +159,23 @@ class Algebra:
         n = self.facts.number(Lin.of(x)) if isinstance(x, (int, Lin)) and not isinstance(x, bool) else None
         if n is None: raise Err(f"a plain number expected, not {x!r}")
         return n
-    def length(self, x): return plain(x.n) if isinstance(x, View) else len(x)
+    def length(self, x):
+        if isinstance(x, Rope): return plain(sum((Lin.of(1) if q[0] == "one" else q[-1] for q in x.parts), Lin.of(0)))
+        if isinstance(x, View): return plain(x.n)
+        if not isinstance(x, list): raise Err("the length of something that is not a list")
+        return len(x)
     def index(self, x, i):
+        if isinstance(x, Rope):
+            i, c = Lin.of(self.num(i)), Lin.of(0)
+            for q in x.parts:
+                n = Lin.of(1) if q[0] == "one" else q[-1]
+                if self.facts.ge0(i - c) and self.facts.ge0(c + n - 1 - i):
+                    if q[0] == "one": return plain(q[1])
+                    if q[0] == "view": return plain(self.m.byte(q[1], q[2] + i - c))
+                    return plain(self.m.item(q[1], i - c))
+                if not self.facts.ge0(i - c - n): raise Err(f"place {i} of a list in parts: the path does not say which part it is in")
+                c = c + n
+            raise Err(f"place {i} of a list: not shown to be one of its places")
         if isinstance(x, View):
             i = Lin.of(i)
             if not self.facts.ge0(i) or not self.facts.ge0(x.n - 1 - i): raise Err(f"byte {i} of {x.n} bytes: not shown to be one of them")
@@ -140,8 +188,67 @@ class Algebra:
             return View(x.region, x.off + a, b - a)
         return ode.part(x, a if isinstance(a, int) else self.plain(a), b if isinstance(b, int) else self.plain(b))
     def concat(self, x, y):
-        if not isinstance(x, list) or not isinstance(y, list): raise Err("++ of things that are not plain lists")
-        return x + y
+        if isinstance(x, list) and isinstance(y, list) and all(isinstance(v, int) for v in x + y): return x + y
+        return self.rope(self.parts(x) + self.parts(y))
+    def parts(self, x):
+        if isinstance(x, Rope): return list(x.parts)
+        if isinstance(x, View): return [("view", x.region, x.off, x.n)]
+        if isinstance(x, list): return [("one", Lin.of(self.num(v))) for v in x]
+        raise Err("a list expected")
+    def rope(self, parts):
+        """Parts as a rope: none of no bytes; bytes of memory that follow one another as one part."""
+        out = []
+        for q in parts:
+            n = Lin.of(1) if q[0] == "one" else q[-1]
+            if self.facts.zero(n) is True: continue
+            if out and out[-1][0] == "view":
+                _, r, off, k = out[-1]
+                if q[0] == "view" and q[1] == r and self.facts.zero(off + k - q[2]) is True: out[-1] = ("view", r, off, plain(Lin.of(k) + q[3])); continue
+                if q[0] == "one" and self.facts.subst(Lin.of(q[1])) == sym(self.m.byte_name(r, Lin.of(off) + k)): out[-1] = ("view", r, off, plain(Lin.of(k) + 1)); continue
+            out.append(q)
+        return Rope(out)
+    def known(self, x, depth=0):
+        """What a named thing is known to be on this path (itself, if nothing)."""
+        if isinstance(x, Opaque) and depth < 20:
+            for k, v in self.m.equal:
+                if self.alike(x, k): return self.known(v, depth + 1)
+        return x
+    def alike(self, a, b):
+        """Two named things are one thing: the same definition of the same things."""
+        return a.name == b.name and len(a.args) == len(b.args) and all(self.same(x, y) for x, y in zip(a.args, b.args))
+    def same(self, a, b):
+        """Are two values shown to be one? (Numbers by the facts; lists part by part; named things by their names.)"""
+        a, b = self.known(a), self.known(b)
+        numbers = lambda x: isinstance(x, (int, Lin)) and not isinstance(x, bool)
+        if numbers(a) and numbers(b): return self.facts.zero(Lin.of(a) - Lin.of(b)) is True
+        if isinstance(a, Opaque) or isinstance(b, Opaque): return isinstance(a, Opaque) and isinstance(b, Opaque) and self.alike(a, b)
+        if isinstance(a, Failure) or isinstance(b, Failure): return isinstance(a, Failure) and isinstance(b, Failure) and a.reason == b.reason
+        if isinstance(a, dict) or isinstance(b, dict): return isinstance(a, dict) and isinstance(b, dict) and sorted(a) == sorted(b) and all(self.same(a[k], b[k]) for k in a)
+        if isinstance(a, (Rope, View, list)) and isinstance(b, (Rope, View, list)):
+            try: x, y = self.rope(self.parts(a)).parts, self.rope(self.parts(b)).parts
+            except Err: return False
+            if len(x) != len(y): return False
+            for q, w in zip(x, y):
+                if q[0] != w[0]: return False
+                if q[0] == "one":
+                    if self.facts.zero(Lin.of(q[1]) - Lin.of(w[1])) is not True: return False
+                elif q[1] != w[1] or any(self.facts.zero(Lin.of(u) - Lin.of(v)) is not True for u, v in zip(q[2:], w[2:])): return False
+            return True
+        return a is b or (type(a) == type(b) and a == b)
+    def kept(self, name, args, body):
+        """A definition applied: what it is known to be; else worked out; else, where the path does not let it
+        be worked out, named by what it is of."""
+        me = Opaque(name, args)
+        v = self.known(me)
+        if v is not me:
+            if isinstance(v, Failure): raise ode.Fails(v.reason)
+            return v
+        try: return body()
+        except Err as err:
+            if DEBUG: print(f"      {name}: named, not worked out: {err}")
+            return me
+    def defined(self, v):
+        if isinstance(self.known(v), Opaque): raise Err("the specification asks whether something has a value, and the code's path does not say")
     def key(self, a):
         if isinstance(a, View): return ("view", a.region, repr(self.facts.subst(a.off)), repr(self.facts.subst(a.n)))
         if isinstance(a, list): return tuple(self.key(x) for x in a)
@@ -188,6 +295,10 @@ class Machine(kfn.Machine):
         self.readonly, self.given, self.len = set(), {}, {}
         self.low, self.pc, self.steps, self.back, self.since = 0, None, 0, {}, 0
         self.secret, self.bytes, self.seqs = set(), set(), {}
+        self.held = {name: Rope() for name in c.held}        # the bytes written at the start of what the contract ensures something of
+        self.equal = []                                      # at a path's end: named things and what they are known to be
+        self.named = {}                                      # the names given to bytes: {region or list: [(where, name)]}
+        self.halves = []                                     # the names given to quotients: [(of what, by what, the name)]
         for reg, kind, name in c.args:
             if kind == "number":
                 x = sym(name); self.facts.add(x); self.facts.add(WORD64 - x)
@@ -207,16 +318,47 @@ class Machine(kfn.Machine):
     def clone(self):
         c = super().clone()
         c.secret, c.bytes, c.seqs = set(self.secret), set(self.bytes), {k: list(v) for k, v in self.seqs.items()}
+        c.held, c.equal, c.named, c.halves = dict(self.held), list(self.equal), {k: list(v) for k, v in self.named.items()}, list(self.halves)
         return c
 
     # -- bytes
-    def byte(self, region, off):
-        """The byte at region + off as a number with a name: the same name for the same place."""
-        name = f"{region}[{self.facts.subst(Lin.of(off))!r}]"
+    def place_name(self, of, off):
+        """The name of place `off` of something (a region, a list): the name it was first given, whatever has
+        been learned since of the numbers that say where it is; None if it has none yet."""
+        off = Lin.of(off)
+        for other, name in self.named.get(of, ()):
+            if self.facts.zero(off - other) is True: return name
+        return None
+
+    def byte_name(self, region, off):
+        return self.place_name(region, off) or f"{region}[{self.facts.subst(Lin.of(off))!r}]"
+
+    def number_at(self, of, off, secret):
+        name = self.place_name(of, off)
+        if name is None:
+            name = f"{of}[{self.facts.subst(Lin.of(off))!r}]"
+            self.named.setdefault(of, []).append((Lin.of(off), name))
         if name not in self.bytes:
             self.bytes.add(name); self.facts.add(sym(name)); self.facts.add(255 - sym(name))
-            if region not in self.contract.trace: self.secret.add(name)
+            if secret: self.secret.add(name)
         return sym(name)
+
+    def item(self, name, i):
+        """Place i of a list with a name, as a number with a name."""
+        return self.number_at(name, i, True)
+
+    def byte(self, region, off):
+        """The byte at region + off as a number with a name: the same name for the same place."""
+        return self.number_at(region, off, region not in self.contract.trace)
+
+    def halve(self, x, d):
+        """x / d for d a power of two, as a number with a name: the name the same number was first given."""
+        x = Lin.of(x)
+        for other, d2, q in self.halves:
+            if d2 == d and self.facts.zero(x - other) is True: return q
+        q = halved(self.facts, x, d)
+        self.halves.append((x, d, q))
+        return q
 
     def tainted(self, x):
         """Does this number depend on bytes the contract does not let the trace depend on?"""
@@ -233,7 +375,13 @@ class Machine(kfn.Machine):
         if size != 1: raise Fail(f"a read of {size} bytes of {region}: this checker follows one byte at a time")
         off = Lin.of(off); self.inside(region, off, "read")
         if region in self.readonly: return ("l", self.byte(region, off))
-        name = f"{region}?{next(FRESH)}"                    # of what the function has written nothing is kept
+        rope = self.held.get(region)
+        if rope is not None:
+            A = Algebra(self)
+            if self.facts.ge0(Lin.of(A.length(rope)) - 1 - off):
+                try: return value(Lin.of(A.index(rope, off)))
+                except Err as e: raise Fail(f"a read at {region} + {off}: {e}")
+        name = f"{region}?{next(FRESH)}"                    # of what else the function has written nothing is kept
         self.facts.add(sym(name)); self.facts.add(255 - sym(name))
         if region not in self.contract.trace: self.secret.add(name)
         return ("l", sym(name))
@@ -243,13 +391,24 @@ class Machine(kfn.Machine):
         if region not in self.len: raise Fail(f"an address in {region}: no such memory")
         if region in self.readonly: raise Fail(f"a write to {region}, which the contract gives to read")
         if size != 1: raise Fail(f"a write of {size} bytes of {region}: this checker follows one byte at a time")
-        self.inside(region, Lin.of(off), "write")
+        off = Lin.of(off); self.inside(region, off, "write")
+        rope = self.held.get(region)
+        if rope is not None:
+            # the bytes kept are those from the start: a write at their end is one more; elsewhere, nothing is kept any more
+            A = Algebra(self)
+            v = lin(new)
+            if self.facts.zero(Lin.of(A.length(rope)) - off) is True and v is not None and self.facts.ge0(v) and self.facts.ge0(255 - v):
+                self.held[region] = A.rope(list(rope.parts) + [("one", Lin.of(v))])
+            else: self.held[region] = None
 
     # -- instructions: a mask that is the low bits; a branch that may depend only on what the contract lets it
     def arith(self, op, x, y):
-        if op == "and" and x[0] == "l" and y[0] == "n" and y[1] > 0 and (y[1] + 1) & y[1] == 0 and y[1] < 1 << 32:
-            try: return value(x[1] - Lin.of(halved(self.facts, x[1], y[1] + 1)).scale(y[1] + 1))
-            except Err as e: raise Fail(str(e))
+        try:
+            if op == "and" and x[0] == "l" and y[0] == "n" and y[1] > 0 and (y[1] + 1) & y[1] == 0 and y[1] < 1 << 32:
+                return value(x[1] - Lin.of(self.halve(x[1], y[1] + 1)).scale(y[1] + 1))
+            if op == "shr" and x[0] == "l" and 0 < y[1] <= 16 and not self.facts.ge0((1 << y[1]) - 1 - x[1]):
+                return value(self.halve(x[1], 1 << y[1]))
+        except Err as e: raise Fail(str(e))
         return super().arith(op, x, y)
 
     def branch(self, op):
@@ -260,17 +419,25 @@ class Machine(kfn.Machine):
     def call(self, name): raise Fail(f"a call of {name}: this checker does not follow calls yet")
 
 
+def numb(x):
+    """A value of the specification that must be a number (a thing with a name only is none)."""
+    if isinstance(x, bool) or not isinstance(x, (int, Lin)): raise Err("a number expected")
+    return Lin.of(x)
+
+
 def order(spec, A, e, env):
     """A comparison of two numbers as numbers known not to be below zero."""
     if e[0] != "bin" or e[1] not in (">=", "<=", ">", "<", "=="): raise Err("something that is not an order of two numbers")
-    x, y = Lin.of(spec.eval(A, e[2], env)), Lin.of(spec.eval(A, e[3], env))
+    x, y = numb(spec.eval(A, e[2], env)), numb(spec.eval(A, e[3], env))
     return {">=": [x - y], "<=": [y - x], ">": [x - y - 1], "<": [y - x - 1], "==": [x - y, y - x]}[e[1]]
 
 
 # ---------------------------------------------------------------------------------------------------------
 # Places.
 class Place:
-    def __init__(self, at): self.at, self.names, self.facts, self.says, self.any, self.decreases = at, [], [], {}, set(), []
+    def __init__(self, at):
+        self.at, self.names, self.facts, self.says, self.any, self.decreases = at, [], [], {}, set(), []
+        self.ghosts, self.lists, self.memory = [], [], {}       # (name, witness or None, is it a list); (name, region, length); region: (length, what it holds)
 
 
 def expression(text):
@@ -298,6 +465,16 @@ def read_proof(text, c):
         if m: p = Place(BASE + int(m.group(1), 16)); places[p.at] = p; continue
         if p is None: raise Fail(f"the proof: {line!r} outside a place")
         if line == "}": p = None; continue
+        m = re.fullmatch(r"ghost list (\w+)", line)
+        if m: p.ghosts.append((m.group(1), None, True)); continue
+        m = re.fullmatch(r"ghost (\w+)(?: = (.+))?", line)
+        if m: p.ghosts.append((m.group(1), expression(m.group(2)) if m.group(2) else None, False)); continue
+        m = re.fullmatch(r"list (\w+) = (\w+)\[0 \.\. (.+)\]", line)
+        if m:
+            if m.group(2) not in c.held: raise Fail(f"the proof: {line!r}: the contract ensures nothing of {m.group(2)}")
+            p.lists.append((m.group(1), m.group(2), expression(m.group(3)))); continue
+        m = re.fullmatch(r"(\w+)\[0 \.\. (.+?)\] = (.+)", line)
+        if m and m.group(1) in c.held: p.memory[m.group(1)] = (expression(m.group(2)), expression(m.group(3))); continue
         m = re.fullmatch(r"name (\w+) = ([\w\[\]]+)(?: - (\w+))?", line)
         if m:
             if m.group(3) is not None and c.kind.get(m.group(3)) in (None, "number"): raise Fail(f"the proof: {line!r}")
@@ -352,9 +529,33 @@ def same(F, v, w):
     return v == w
 
 
-def bind(e, p):
-    """The names of a place, as e holds them."""
-    env = dict(e.given)
+def outcome(spec, A, x, env):
+    """An expression's value, or the failure it is."""
+    try: return A.known(spec.eval(A, x, env))
+    except ode.Fails as f: return Failure(f.reason)
+
+
+def carry(e, spec, origin, env0):
+    """At a path's end: the facts of the place it began at that say two things are the same, worked out again
+    in that place's names with what the path has since learned. Each gives a named thing something it is."""
+    e.equal = []
+    if origin is None: return
+    A = Algebra(e)
+    for f in origin.facts:
+        if f[0] != "bin" or f[1] != "==": continue
+        try: x, y = outcome(spec, A, f[2], env0), outcome(spec, A, f[3], env0)
+        except Err as err:
+            if DEBUG: print("   carry: cannot read", err)
+            continue
+        if DEBUG: print(f"   carry from +{origin.at - BASE:#x} to {'the return' if e.pc is None else f'+{e.pc - BASE:#x}'}: {x!r}  ==  {y!r}")
+        if isinstance(x, Opaque) and not A.same(x, y): e.equal.append((x, y))
+        elif isinstance(y, Opaque) and not A.same(x, y): e.equal.append((y, x))
+
+
+def bind(e, p, spec, env0=None):
+    """The names of a place, as e holds them; its ghosts, as the place the path began at had them or as the
+    place says they are found."""
+    env, A = dict(e.given), Algebra(e)
     for name, loc, region in p.names:
         v = get(e, loc)
         if region is None:
@@ -364,6 +565,16 @@ def bind(e, p):
             if v[0] != "a" or v[1] != region: raise Fail(f"{show(loc)} holds {v}: not an address in {region}")
             env[name] = plain(Lin.of(v[2]))
         if e.tainted(env[name]): raise Fail(f"{name} depends on bytes the contract does not let the trace depend on")
+    try:
+        for name, region, n in p.lists:
+            rope = e.held.get(region)
+            if rope is None or e.facts.zero(Lin.of(A.length(rope)) - numb(spec.eval(A, n, env))) is not True: raise Fail(f"at +{p.at - BASE:#x}: the bytes written at {region} are not known to be {name}'s count")
+            env[name] = rope
+        for name, witness, is_list in p.ghosts:
+            if env0 is not None and name in env0: env[name] = env0[name]
+            elif witness is not None: env[name] = spec.eval(A, witness, env)
+            else: raise Fail(f"at +{p.at - BASE:#x}: nothing says what {name} is here")
+    except Err as err: raise Fail(f"at +{p.at - BASE:#x}: what the place says cannot be read: {err}")
     return env
 
 
@@ -372,12 +583,18 @@ def holds(e, p, env, spec, where):
     A = Algebra(e)
     try:
         for f in p.facts:
-            if spec.eval(A, f, env) is not True: raise Fail(f"{where}: a fact of the place at +{p.at - BASE:#x} does not hold")
+            try: ok = spec.eval(A, f, env) is True
+            except ode.Fails: ok = f[0] == "bin" and f[1] == "==" and A.same(outcome(spec, A, f[2], env), outcome(spec, A, f[3], env))
+            if not ok: raise Fail(f"{where}: a fact of the place at +{p.at - BASE:#x} does not hold")
         for loc, (region, x) in p.says.items():
-            want, v = Lin.of(spec.eval(A, x, env)), get(e, loc)
+            want, v = numb(spec.eval(A, x, env)), get(e, loc)
             if region is None:
                 if lin(v) is None or e.facts.zero(lin(v) - want) is not True: raise Fail(f"{where}: {show(loc)} holds {v}, the place says {want}")
             elif v[0] != "a" or v[1] != region or e.facts.zero(Lin.of(v[2]) - want) is not True: raise Fail(f"{where}: {show(loc)} holds {v}, the place says {region} + {want}")
+        for region, (n, x) in p.memory.items():
+            rope = e.held.get(region)
+            if rope is None or e.facts.zero(Lin.of(A.length(rope)) - numb(spec.eval(A, n, env))) is not True or not A.same(rope, spec.eval(A, x, env)):
+                raise Fail(f"{where}: the bytes written at {region} are not what the place at +{p.at - BASE:#x} says ({rope})")
     except Err as err: raise Fail(f"{where}: what the place at +{p.at - BASE:#x} says cannot be read on this path: {err}")
 
 
@@ -400,7 +617,7 @@ def kept(e, first, p, where):
 def start(entry, first, p, spec):
     """The machine at a place, for any numbers its names may be: (machine, the names)."""
     m = first.clone()
-    m.facts, m.secret, m.bytes, m.seqs = entry.facts.clone(), set(entry.secret), set(entry.bytes), {}
+    m.facts, m.secret, m.bytes, m.seqs, m.named, m.halves = entry.facts.clone(), set(entry.secret), set(entry.bytes), {}, {}, []
     m.x, m.flags, m.conds, m.back, m.pc, m.since = {}, None, {}, {}, p.at, m.steps
     if not stable(first, first.g["rsp"]): raise Fail("at a place the stack pointer is not the same on every path")
     for r in G64:
@@ -408,20 +625,35 @@ def start(entry, first, p, spec):
     for off, (size, kind, v) in list(m.mem["frame"].items()):
         if kind != "q": del m.mem["frame"][off]
         elif not stable(first, v): m.mem["frame"][off] = (size, "q", ("q", f"stack?{next(FRESH)}"))
-    env = dict(m.given)
+    env, tag = dict(m.given), f"@{p.at - BASE:#x}"
+    m.equal, m.held = [], {region: None for region in m.held}
     for name, loc, region in p.names:
-        s = sym(f"{name}@{p.at - BASE:#x}"); m.facts.add(s); m.facts.add(WORD64 - s)
+        s = sym(name + tag); m.facts.add(s); m.facts.add(WORD64 - s)
         env[name] = s
         put(m, loc, ("l", s) if region is None else ("a", region, s))
     A = Algebra(m)
     try:
+        for name, region, n in p.lists:                     # the bytes written so far: a list with a name, of the count said
+            env[name] = m.held[region] = Rope([("list", name + tag, numb(spec.eval(A, n, env)))])
+        for name, witness, is_list in p.ghosts:
+            s = sym(("#" if is_list else "") + name + tag); m.facts.add(s)
+            env[name] = Rope([("list", name + tag, s)]) if is_list else s
         for f in p.facts:
+            if f[0] == "bin" and f[1] == "==":
+                # two things said to be the same: if they are numbers here, a fact; else it waits for the path's end (carry)
+                try: x, y = outcome(spec, A, f[2], env), outcome(spec, A, f[3], env)
+                except Err: continue
+                if not all(isinstance(v, (int, Lin)) and not isinstance(v, bool) for v in (x, y)): continue
             for x in order(spec, A, f, env): m.facts.add(x)
+        for region, (n, x) in p.memory.items():
+            rope = A.rope(A.parts(spec.eval(A, x, env)))
+            d = Lin.of(A.length(rope)) - numb(spec.eval(A, n, env))
+            m.facts.add(d); m.facts.add(-d); m.held[region] = rope
         for loc, (region, x) in p.says.items():
             v = spec.eval(A, x, env)
             put(m, loc, value(Lin.of(v)) if region is None else ("a", region, plain(Lin.of(v))))
         for x in p.decreases:
-            if not m.facts.ge0(Lin.of(spec.eval(A, x, env))): raise Fail(f"a number the place at +{p.at - BASE:#x} says decreases is not shown to stay at or above zero")
+            if not m.facts.ge0(numb(spec.eval(A, x, env))): raise Fail(f"a number the place at +{p.at - BASE:#x} says decreases is not shown to stay at or above zero")
     except Err as err: raise Fail(f"what the place at +{p.at - BASE:#x} says cannot be read: {err}")
     for loc in p.any: put(m, loc, ("q", f"{show(loc)}?{next(FRESH)}"))
     if not m.facts.consistent(): raise Fail(f"the facts of the place at +{p.at - BASE:#x} cannot all hold")
@@ -435,7 +667,7 @@ def less(e, spec, before, env0, after, env, where):
     if not before or not after: raise Fail(f"{where}: the code goes from a place to a place, and one of them names no number that decreases")
     try:
         for x, y in zip(before, after):
-            x, y = Lin.of(spec.eval(A, x, env0)), Lin.of(spec.eval(A, y, env))
+            x, y = numb(spec.eval(A, x, env0)), numb(spec.eval(A, y, env))
             if e.facts.ge0(x - 1 - y): return
             if not e.facts.ge0(x - y): break
     except Err as err: raise Fail(f"{where}: the numbers that decrease cannot be read: {err}")
@@ -462,11 +694,27 @@ def run(m, places, budget):
 
 
 def returned(e, c, where):
-    A = Algebra(e)
-    if c.text["returns"] is not None:
-        try: want = Lin.of(c.spec.eval(A, c.text["returns"], dict(e.given)))
-        except (Err, ode.Fails) as err: raise Fail(f"{where}: the specification cannot be followed on this path: {err}")
-        if lin(e.g["rax"]) is None or e.facts.zero(lin(e.g["rax"]) - want) is not True: raise Fail(f"{where}: the result is {e.g['rax']}, the contract says {want}")
+    A, env, spec = Algebra(e), dict(e.given), c.spec
+    try:
+        if c.result is not None:
+            if lin(e.g["rax"]) is None: raise Fail(f"{where}: the result is {e.g['rax']}: not a number")
+            env[c.result] = plain(lin(e.g["rax"]))
+        elif c.text["returns"] is not None:
+            want = numb(spec.eval(A, c.text["returns"], env))
+            if lin(e.g["rax"]) is None or e.facts.zero(lin(e.g["rax"]) - want) is not True: raise Fail(f"{where}: the result is {e.g['rax']}, the contract says {want}")
+        for leaf in c.text["leaves"]:
+            if leaf["cond"] is not None and spec.eval(A, leaf["cond"], env) is not True: continue        # (a condition the path does not decide is an Err)
+            want = spec.eval(A, leaf["expr"], env)
+            if leaf["name"] == c.result:
+                if not A.same(env[c.result], want): raise Fail(f"{where}: the result is {env[c.result]}, the contract says {want}")
+                continue
+            rope, (a, b) = e.held.get(leaf["name"]), leaf["part"] or (("num", 0), ("num", None))
+            n = e.len[leaf["name"]] if b == ("num", None) else numb(spec.eval(A, b, env))
+            if spec.eval(A, a, env) != 0: raise Fail(f"{where}: `ensures {leaf['name']}[a .. b]` with a that is not 0: not this checker's")
+            if rope is None or e.facts.zero(Lin.of(A.length(rope)) - n) is not True or not A.same(rope, want):
+                raise Fail(f"{where}: the bytes at {leaf['name']} are not what the contract says: they are {rope}, it says {want}")
+    except ode.Fails as err: raise Fail(f"{where}: the contract speaks of something the specification gives no value (it fails with {err.reason})")
+    except Err as err: raise Fail(f"{where}: the specification cannot be followed on this path: {err}")
     for r in KEPT:
         if e.g[r] != ("q", r + " at entry"): raise Fail(f"{where}: {r} is not restored")
     within(e, c, where)
@@ -489,11 +737,12 @@ def check(rows, spec, symbol, proof=""):
         origin, env0, m0 = work.pop()
         where = "from the entry" if origin is None else f"from the place at +{origin - BASE:#x}"
         for e in run(m0, places, budget):
+            carry(e, spec, places.get(origin), env0)
             if e.pc is None:
                 tally["return"] += 1; returned(e, c, where); continue
             tally["place"] += 1
             p = places[e.pc]
-            env = bind(e, p)
+            env = bind(e, p, spec, env0)
             if e.pc not in first:
                 first[e.pc] = e
                 m, names = start(base, e, p, spec)

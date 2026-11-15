@@ -378,6 +378,10 @@ def part(xs, a, b):
     return xs[a:b]
 
 
+class Tail:
+    def __init__(self, name, args): self.name, self.args = name, args
+
+
 class Fails(Exception):
     """A definition that has no value for what it was given, and says why (`fails REASON if C`)."""
     def __init__(self, reason): self.reason = reason
@@ -451,7 +455,15 @@ class Spec:
                     # on symbols: a function with a kind that cannot be evaluated here is named by what it was given
                     return A.named(self, name, self.kinds[name], args, lambda: self.body(A, body, env))
                 if hasattr(A, "kept"): return A.kept(name, args, lambda: self.body(A, body, env))
-                return self.body(A, body, env)
+                # on numbers: a definition whose value is another definition's (or its own on something smaller)
+                # is followed without going deeper
+                while True:
+                    r = self.run(A, body, env, tail=True)
+                    if not isinstance(r, Tail): return r
+                    self.spend()
+                    params, body = self.fns[r.name]
+                    if len(params) != len(r.args): raise Err(f"{r.name}: {len(params)} arguments expected")
+                    env = dict(zip(params, r.args))
             finally: self.deep -= 1
         if name in self.seqs:
             params, h, var, first, nxt = self.seqs[name]
@@ -508,7 +520,7 @@ class Spec:
         if not isinstance(x, int) or isinstance(x, bool): raise Err(f"a plain number expected, not {x!r}")
         return x
 
-    def run(self, A, body, env):
+    def run(self, A, body, env, tail=False):
         last = None
         for s in body:
             kind = s[0]
@@ -525,8 +537,17 @@ class Spec:
                 if kind == "first": seq.first = s[2]
                 else: seq.var, seq.next = s[2], s[3]
                 last = None
-            else: last = self.eval(A, s[1], env)
+            else: last = self.last(A, s[1], env) if tail else self.eval(A, s[1], env)
         return last
+
+    def last(self, A, e, env):
+        """A definition's value: where it is another definition applied, that application is given back to be followed."""
+        if e[0] == "ifx":
+            c = self.eval(A, e[1], env)
+            if c is not True and c is not False: raise Err("a condition that is not true or false")
+            return self.last(A, e[2] if c else e[3], env)
+        if e[0] == "call" and e[1] in self.fns: return Tail(e[1], [self.eval(A, a, env) for a in e[2]])
+        return self.eval(A, e, env)
 
     def eval(self, A, e, env):
         kind = e[0]
@@ -537,8 +558,9 @@ class Spec:
             raise Err(f"no name {e[1]}")
         if kind == "call" and e[1] in ("failed", "reason") and len(e[2]) == 1:
             # failed(E): E has no value; reason(E): why (a definition's `fails REASON if C`)
-            try: self.eval(A, e[2][0], env)
+            try: v = self.eval(A, e[2][0], env)
             except Fails as f: return True if e[1] == "failed" else f.reason
+            if hasattr(A, "defined"): A.defined(v)             # on symbols: a thing with a name only is not known to have a value
             if e[1] == "reason": raise Err("the reason of something that has a value")
             return False
         if kind == "call": return self.apply(A, e[1], [self.eval(A, a, env) for a in e[2]])
@@ -578,7 +600,10 @@ class Spec:
             c = self.eval(A, e[1], env)
             if c is not True and c is not False: raise Err("a condition that is not true or false")
             return self.eval(A, e[2] if c else e[3], env)
-        if kind == "not": return not self.eval(A, e[1], env)
+        if kind == "not":
+            c = self.eval(A, e[1], env)
+            if c is not True and c is not False: raise Err("a condition that is not true or false")
+            return not c
         op, x = e[1], self.eval(A, e[2], env)
         if op == "&&": return x is True and self.eval(A, e[3], env) is True
         if op == "||": return x is True or self.eval(A, e[3], env) is True
@@ -592,7 +617,7 @@ class Spec:
         if op == "^": return A.xor(self.as_word(A, x), self.as_word(A, y))
         if op == "|" and words: return A.or_(self.as_word(A, x), self.as_word(A, y))
         if isinstance(x, Word) or isinstance(y, Word): raise Err(f"{op} of words")
-        if op == "+": return x + y
+        if op == "+": return A.plus(x, y) if hasattr(A, "plus") else x + y
         if op == "-": return A.minus(x, y)
         if op == "*": return A.mul(x, y)
         if op == "/": return A.div(x, y)

@@ -63,7 +63,9 @@ _ode_lz4_decode:
     mov rax, qword ptr [rsp + 16]
     mov rcx, 15
     cmp rax, rcx
-    jne .Lode_lz4_decode_4
+    jae .Lode_lz4_decode_4
+    jmp .Lode_lz4_decode_5
+.Lode_lz4_decode_4:
     mov rax, r13
     mov rcx, 15
     cmp rax, rcx
@@ -122,7 +124,7 @@ _ode_lz4_decode:
     jmp .Lode_lz4_decode_8
 .Lode_lz4_decode_9:
 .Lode_lz4_decode_7:
-.Lode_lz4_decode_4:
+.Lode_lz4_decode_5:
     mov rax, qword ptr [rsp + 0]
     mov rcx, 0
     cmp rax, rcx
@@ -219,7 +221,9 @@ _ode_lz4_decode:
     mov rax, qword ptr [rsp + 16]
     mov rcx, 15
     cmp rax, rcx
-    jne .Lode_lz4_decode_32
+    jae .Lode_lz4_decode_32
+    jmp .Lode_lz4_decode_33
+.Lode_lz4_decode_32:
     mov rax, rbp
     mov rcx, 15
     cmp rax, rcx
@@ -278,7 +282,7 @@ _ode_lz4_decode:
     jmp .Lode_lz4_decode_36
 .Lode_lz4_decode_37:
 .Lode_lz4_decode_35:
-.Lode_lz4_decode_32:
+.Lode_lz4_decode_33:
     mov rax, qword ptr [rsp + 0]
     mov rcx, 0
     cmp rax, rcx

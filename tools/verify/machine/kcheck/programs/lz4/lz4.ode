@@ -23,7 +23,7 @@ fn lz4_decode(out, cap, input, n)
       token = u8[input + i]
       i = i + 1
       count = token >> 4
-      if count == 15 {
+      if count >= 15 {
         if n < 15 { state = 2 } else {
           more = 1
           while more == 1 {
@@ -54,7 +54,7 @@ fn lz4_decode(out, cap, input, n)
                 if offset == 0 { state = 2 } else {
                   if offset > o { state = 2 } else {
                     count = token & 15
-                    if count == 15 {
+                    if count >= 15 {
                       if cap < 15 { state = 2 } else {
                         more = 1
                         while more == 1 {

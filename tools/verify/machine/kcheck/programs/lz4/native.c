@@ -1,12 +1,13 @@
 // ode_lz4_decode on this machine's processor, against an LZ4 block decoder written here another way.
 //
-//   cc -O1 -o run native.c lz4_decode.o && ./run CASES safety|full
+//   cc -O1 -o run native.c lz4_decode.o && ./run CASES safety|sound|full
 //
 // The input ends where a page that faults begins, and so does the room for the output; the bytes before the
-// output are looked at afterwards. `safety`: what the contract of November 15 says and no more: the function
-// returns, and has written nothing but the cap bytes at out (a read past the input, or a write past the
-// output, is a crash; a write before it is seen). `full`: also the result and the bytes are the reference
-// decoder's (the count, and those bytes; NO for no block or no room). Exit 0: so in every case; 1: not so.
+// output are looked at afterwards. `safety`: the function returns, and has written nothing but the cap bytes
+// at out (a read past the input, or a write past the output, is a crash; a write before it is seen).
+// `sound`: what the public contract says: and a count it gives is the count of the bytes the block decodes
+// to, which are then at out. `full`: and it gives NO only where the reference decoder does (no block, or no
+// room). Exit 0: so in every case; 1: not so.
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -65,7 +66,7 @@ static size_t compress(const uint8_t *d, size_t n, uint8_t *out) {
 
 int main(int argc, char **argv) {
     long cases = argc > 1 ? atol(argv[1]) : 2000;
-    int full = argc > 2 && !strcmp(argv[2], "full");
+    int full = argc > 2 && !strcmp(argv[2], "full"), sound = full || (argc > 2 && !strcmp(argv[2], "sound"));
     size_t room = 1 << 16;
     uint8_t *in = mmap(0, room + 4096, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     uint8_t *outs = mmap(0, room + 4096, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
@@ -98,12 +99,15 @@ int main(int argc, char **argv) {
         memset(outs, 0xA5, room);
         uint64_t got = ode_lz4_decode(dst, cap, src, n);
         for (uint8_t *p = outs; p < dst; p++) if (*p != 0xA5) { printf("case %ld: a byte before the output was written\n", c); return 1; }
+        if (sound && got != NO) {
+            if (whole == NO || got != whole || got > cap || memcmp(dst, want, got)) { printf("case %ld: %llu bytes in: it gives %llu, which is not the count of what the block decodes to, or the bytes are not those\n", c, (unsigned long long)n, (unsigned long long)got); return 1; }
+        }
         if (full) {
             if (got != expect) { printf("case %ld: %llu bytes in, room for %llu: the result is %llu, the reference says %llu\n", c, (unsigned long long)n, (unsigned long long)cap, (unsigned long long)got, (unsigned long long)expect); return 1; }
             if (got != NO && memcmp(dst, want, got)) { printf("case %ld: the %llu bytes are not the reference's\n", c, (unsigned long long)got); return 1; }
         }
         blocks += expect != NO; refused += expect == NO;
     }
-    printf("%ld blocks decoded and %ld refused, %s\n", blocks, refused, full ? "as the reference decoder does" : "nothing written but the output");
+    printf("%ld blocks decoded and %ld refused, %s\n", blocks, refused, full ? "as the reference decoder does" : sound ? "every count given and its bytes the reference decoder's" : "nothing written but the output");
     return 0;
 }

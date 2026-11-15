@@ -1,79 +1,116 @@
-// The five loops of ode_lz4_decode. i: bytes of the input taken; o: bytes written at out; state: 0 going on,
-// 1 at the block's end, 2 no block or no room; count: bytes still to write (or the count being read).
-// In the stack: [0] state, [8] token, [16] count, [24] the byte just read, [32] offset, [40] more, [48] result.
+// The five loops of ode_lz4_decode, each at the first instruction of its body.
+//
+// i: bytes of the input taken; o: bytes written at out; state: 0 while it goes on; count: bytes still to be
+// written, or the count being read. In the stack: [0] state, [8] token, [16] count, [24] the byte just
+// read, [32] offset, [40] more, [48] result.
+//
+// What carries the specification through the loops is one kind of fact: the rest of the specification from
+// here is the whole (`sequences(input, i, O) == lz4(input)`: the block decodes to what its sequences from i
+// on decode to, after O).
 
-// a sequence begins
-place +0x75 {
+// a sequence begins: O is what is decoded so far
+place +0x89 {
     name i = r14
     name o = r15
     name state = stack[0]
+    list O = out[0 .. o]
+    fact state == 0
     fact i <= n
     fact o <= cap
-    fact state <= 2
+    fact sequences(input, i, O) == lz4(input)
     any stack[8], stack[16], stack[24], stack[32], stack[40]
-    decreases n - i, 2 - state
+    decreases n - i, 2
 }
 
-// the count of literals is read: more bytes while each is 255
-place +0xfe {
+// the count of literals is read, a byte a turn: the token was at t; the count from here with `count` read
+// so far is the count from the token's next byte with 15
+place +0x114 {
     name i = r14
     name o = r15
     name state = stack[0]
     name token = stack[8]
     name count = stack[16]
     name more = stack[40]
+    list O = out[0 .. o]
+    ghost t = i - 1
+    fact state == 0
+    fact more == 1
+    fact t + 1 <= i
     fact i <= n
     fact o <= cap
-    fact state <= 2
     fact count <= n
+    fact token == input[t]
+    fact token >= 240
+    fact counted(input, i, count) == counted(input, t + 1, 15)
+    fact sequences(input, t, O) == lz4(input)
     any stack[24], stack[32]
-    decreases n - i, 4 + more
+    decreases n - i, 4
 }
 
-// the literals are copied
-place +0x1ff {
+// the literals are copied, a byte a turn: they began at s; O was decoded before this sequence
+place +0x211 {
     name i = r14
     name o = r15
     name state = stack[0]
     name token = stack[8]
     name count = stack[16]
+    ghost list O
+    ghost t = i - 1
+    ghost s = i
+    fact state == 0
+    fact count >= 1
+    fact t < s
+    fact s <= i
     fact i + count <= n
     fact o + count <= cap
-    fact state <= 2
+    fact token == input[t]
+    out[0 .. o] = O ++ input[s .. i]
+    fact count(input, t + 1, input[t] / 16) == {value: i - s + count, next: s}
+    fact sequences(input, t, O) == lz4(input)
     any stack[24], stack[32], stack[40]
-    decreases n - i, 3
+    decreases n - i, 4
 }
 
-// the count of the match is read
-place +0x33a {
+// the count of the match is read: the offset was at a; M is what is decoded, with this sequence's literals
+place +0x351 {
     name i = r14
     name o = r15
     name state = stack[0]
     name count = stack[16]
     name offset = stack[32]
     name more = stack[40]
+    list M = out[0 .. o]
+    ghost a = i - 2
+    fact state == 0
+    fact more == 1
+    fact a + 2 <= i
     fact i <= n
     fact o <= cap
-    fact state <= 2
     fact count <= cap
     fact offset >= 1
     fact offset <= o
+    fact offset == input[a] + 256 * input[a + 1]
+    fact counted(input, i, count) == counted(input, a + 2, 15)
+    fact match(input, a, 15, M) == lz4(input)
     any stack[8], stack[24]
-    decreases n - i, 4 + more
+    decreases n - i, 4
 }
 
-// the match is copied, a byte at a time, from `offset` before
-place +0x449 {
+// the match is copied, a byte a turn, from `offset` before: what is decoded is M with `count` more to copy
+place +0x45c {
     name i = r14
     name o = r15
     name state = stack[0]
     name count = stack[16]
     name offset = stack[32]
+    list M = out[0 .. o]
+    fact state == 0
+    fact count >= 1
     fact i <= n
     fact o + count <= cap
-    fact state <= 2
     fact offset >= 1
     fact offset <= o
+    fact sequences(input, i, copied(M, offset, count)) == lz4(input)
     any stack[8], stack[24], stack[40]
     decreases n - i, 3, count
 }
