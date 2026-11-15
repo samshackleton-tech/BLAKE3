@@ -16,7 +16,7 @@
 //   bytes a b c d    a word whose four low bytes are named a, b, c, d
 //   byte, number, counter, any       a number below 256; a number; 64 bits of a counter; any 64 bits
 //   low byte, word, low word         how much of a register a kernel reads (word: the number is below 2^32)
-// `asks`: what a caller must show. `leaves`: what the memory named holds afterwards (`x[i] = ... for i in a..b`:
+// `requires`: what a caller must show. `ensures`: what the memory named holds afterwards (`x[i] = ... for i in a..b`:
 // each of its values); all else is as it was. `returns`: the result. `stack`: the bytes of stack the function
 // may use below its return address (`bits(n)`: the length of n in bits). `calls F if C`: the function calls F
 // only where C holds (the platform word 5 means the machine has AVX-512, which its caller answers for).
@@ -34,41 +34,41 @@ layout keyed 40 { key: cv at 0, flags: byte at 32 }
 // The wide kernels: each lane's chunk, for any number of blocks n. K32 gives lane i the counter t + i;
 // P32 is the same code entered a little later, and gives every lane t; P16 has sixteen lanes.
 contract blake3_servil_avx512_k32(inputs: 32 inputs, n: number, key: cv, t: counter, packed: bytes flags start end length, out: 32 cvs) {
-    asks n >= 1
-    leaves out[i] = chunk(key, t + i, flags, start, end, length, n, inputs[i]) for i in 0..32
+    requires n >= 1
+    ensures out[i] = chunk(key, t + i, flags, start, end, length, n, inputs[i]) for i in 0..32
     stack 4096
     needs avx512
 }
 
 contract blake3_servil_avx512_p32(inputs: 32 inputs, n: number, key: cv, t: counter, packed: bytes flags start end length, out: 32 cvs) {
-    asks n >= 1
-    leaves out[i] = chunk(key, t, flags, start, end, length, n, inputs[i]) for i in 0..32
+    requires n >= 1
+    ensures out[i] = chunk(key, t, flags, start, end, length, n, inputs[i]) for i in 0..32
     stack 4096
     needs avx512
 }
 
 contract blake3_servil_avx512_p16(inputs: 16 inputs, n: number, key: cv, t: counter, packed: bytes flags start end length, out: 16 cvs) {
-    asks n >= 1
-    leaves out[i] = chunk(key, t, flags, start, end, length, n, inputs[i]) for i in 0..16
+    requires n >= 1
+    ensures out[i] = chunk(key, t, flags, start, end, length, n, inputs[i]) for i in 0..16
     stack 4096
     needs avx512
 }
 
 // Sixteen compressions, each node with its own chaining value, block, length and flags, counter 0.
 contract blake3_servil_output16(nodes: 16 descriptors, out: 16 cvs) {
-    leaves out[i] = compress(nodes[i].cv, nodes[i].block, counter(0), nodes[i].length, nodes[i].flags) for i in 0..16
+    ensures out[i] = compress(nodes[i].cv, nodes[i].block, counter(0), nodes[i].length, nodes[i].flags) for i in 0..16
     stack 4096
     needs avx512
 }
 
 contract blake3_servil_compress_in_place_avx512(h: cv, m: block, length: low byte, t: counter, flags: low byte) {
-    leaves h = compress(h, m, t, length, flags)
+    ensures h = compress(h, m, t, length, flags)
     stack 0
     needs avx512
 }
 
 contract blake3_servil_compress_in_place_sse41(h: cv, m: block, length: word, t: counter, flags: low word) {
-    leaves h = compress(h, m, t, length, flags)
+    ensures h = compress(h, m, t, length, flags)
     stack 0
     needs sse41
 }
@@ -76,46 +76,52 @@ contract blake3_servil_compress_in_place_sse41(h: cv, m: block, length: word, t:
 // The hash of a message, written to be proved (hash.ode): a chunk's node and its value, and the tree by the
 // specification's own two parts.
 contract b3l_pad(block: 64 bytes, src: n bytes, n: number) {
-    asks n <= 64
-    leaves block = padded(src)
+    requires apart(block, src)
+    requires n <= 64
+    ensures block = padded(src)
     stack 48
 }
 
 contract b3l_chunk_node(nd: node, input: len bytes, len: number, t: number, flags: byte, plat: any) {
-    asks len <= 1024
-    leaves nd = chunk_node(nd.h, t, flags, input)
+    requires apart(nd, input)
+    requires len <= 1024
+    ensures nd = chunk_node(nd.h, t, flags, input)
     stack 256
     needs sse41
     needs avx512 if plat == 5
 }
 
 contract b3l_node_out(out: cv, nd: node, root: byte, plat: any) {
-    leaves out = node_value(nd, root)
+    requires apart(out, nd)
+    ensures out = node_value(nd, root)
     stack 128
     needs sse41
     needs avx512 if plat == 5
 }
 
 contract b3l_wide32(out: cv, input: 32768 bytes, kf: keyed, t: number) {
-    asks 1024 * t + 32768 <= 18446744073709551615
-    leaves out = subtree(kf.key, kf.flags, t, input)
+    requires apart(out, input, kf)
+    requires 1024 * t + 32768 <= 18446744073709551615
+    ensures out = subtree(kf.key, kf.flags, t, input)
     stack 8192
     needs avx512
 }
 
 contract b3l_wide128(out: cv, input: 131072 bytes, kf: keyed, t: number) {
-    asks 1024 * t + 131072 <= 18446744073709551615
-    leaves out = subtree(kf.key, kf.flags, t, input)
+    requires apart(out, input, kf)
+    requires 1024 * t + 131072 <= 18446744073709551615
+    ensures out = subtree(kf.key, kf.flags, t, input)
     stack 16384
     needs avx512
 }
 
 // `cvs`: the address of chaining values, one after another, of which the contract says what each is.
 contract b3l_take(out: cv, input: len bytes, len: number, kf: keyed, t: number, cvs: cvs) {
-    asks len >= 1
-    asks 1024 * t + len <= 18446744073709551615
-    asks cvs[i] == node_value(chunk_node(kf.key, t + i, kf.flags, input[1024 * i .. 1024 * i + 1024]), 0) for i in 0..len / 1024
-    leaves out = subtree(kf.key, kf.flags, t, input)
+    requires apart(out, input, kf, cvs)
+    requires len >= 1
+    requires 1024 * t + len <= 18446744073709551615
+    requires cvs[i] == node_value(chunk_node(kf.key, t + i, kf.flags, input[1024 * i .. 1024 * i + 1024]), 0) for i in 0..len / 1024
+    ensures out = subtree(kf.key, kf.flags, t, input)
     decreases len
     stack 640 + 384 * bits((len - 1) / 1024)
     needs sse41
@@ -123,19 +129,21 @@ contract b3l_take(out: cv, input: len bytes, len: number, kf: keyed, t: number, 
 }
 
 contract b3l_part32(out: cv, input: len bytes, len: number, kf: keyed, t: number) {
-    asks len >= 1025
-    asks len <= 32768
-    asks 1024 * t + len <= 18446744073709551615
-    leaves out = subtree(kf.key, kf.flags, t, input)
+    requires apart(out, input, kf)
+    requires len >= 1025
+    requires len <= 32768
+    requires 1024 * t + len <= 18446744073709551615
+    ensures out = subtree(kf.key, kf.flags, t, input)
     stack 8192
     needs sse41
     needs avx512
 }
 
 contract b3l_subtree(out: cv, input: len bytes, len: number, kf: keyed, t: number, plat: any) {
-    asks len >= 1
-    asks 1024 * t + len <= 18446744073709551615
-    leaves out = subtree(kf.key, kf.flags, t, input)
+    requires apart(out, input, kf)
+    requires len >= 1
+    requires 1024 * t + len <= 18446744073709551615
+    ensures out = subtree(kf.key, kf.flags, t, input)
     decreases len
     stack 16896 + 384 * bits((len - 1) / 1024)
     needs sse41
@@ -155,23 +163,23 @@ machine merge(key, flags, target) on s {
 }
 
 contract b3l_push(st: stack, new: cv) {
-    asks len(st) <= 54
-    leaves st = st ++ [new]
+    requires len(st) <= 54
+    ensures st = st ++ [new]
     stack 64
 }
 
 contract b3l_merge(st: stack, key: cv, flags: byte, plat: any, target: number) {
-    asks target >= 1
-    leaves st = merge(key, flags, target, st)
+    requires target >= 1
+    ensures st = merge(key, flags, target, st)
     returns len(st)
     stack 256
     calls blake3_servil_compress_in_place_avx512 if plat == 5
 }
 
 contract b3l_add(st: stack, key: cv, flags: byte, plat: any, new: cv, target: number) {
-    asks len(st) <= 54
-    asks target >= 1
-    leaves st = merge(key, flags, target, st ++ [new])
+    requires len(st) <= 54
+    requires target >= 1
+    ensures st = merge(key, flags, target, st ++ [new])
     returns len(st)
     stack 512
 }

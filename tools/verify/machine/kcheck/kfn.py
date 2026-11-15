@@ -155,6 +155,8 @@ class Contract:
             n = bytes_kind(kind)
             if isinstance(n, str) and self.kind.get(n) != "number": raise Fail(f"{symbol}: {name} is {kind}, and {n} is not a number among the arguments")
             if lanes_kind(kind, "inputs") is not None and self.kind.get("n") != "number": raise Fail(f"{symbol}: {name} is {kind}, and no number n says how many blocks each input has")
+        if any(leaf.get("part") is not None or leaf.get("cond") is not None for leaf in c["leaves"]) or c.get("trace"):
+            raise Fail(f"{symbol}: a contract with `ensures X[a .. b]`, `ensures ... if C` or `trace depends on`: not this checker's yet")
         for leaf in c["leaves"]:
             if leaf["index"] is not None and (lanes_kind(self.kind.get(leaf["name"], ""), "cvs") is None or leaf["each"] != (("num", 0), ("num", lanes_kind(self.kind[leaf["name"]], "cvs")))):
                 raise Fail(f"{symbol}: it leaves each of some values that are not all the chaining values at an address")
@@ -217,6 +219,10 @@ class Machine:
         self.mem = {"frame": {0: (8, "q", ("q", "return address"))}}
         self.readonly, self.given = set(), {}
         self.low, self.pc, self.steps, self.back = 0, None, 0, {}
+        # the things at the addresses given are taken to be apart: the contract must ask it of the caller
+        addresses = [name for _, kind, name in c.args if kind not in ("number", "byte", "any")]
+        if len(addresses) > 1 and sorted(c.text["apart"] or []) != sorted(addresses):
+            raise Fail(f"{c.name}: the contract does not say `requires apart({', '.join(addresses)})`: the things at the addresses it is given are taken to be apart")
         A = self.A()
         for reg, kind, name in c.args:               # numbers first: a count of bytes may be named before it is given
             if kind == "number":

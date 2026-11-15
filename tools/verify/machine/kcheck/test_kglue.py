@@ -78,16 +78,16 @@ class Kglue(unittest.TestCase):
         import kspec, ode
         true = kspec.SPEC
         text = ode.source()
-        changes = [("push", "leaves st = st ++ [new]", "leaves st = st"),
-                   ("push", "asks len(st) <= 54\n    leaves st = st ++ [new]", "asks len(st) <= 55\n    leaves st = st ++ [new]"),
-                   ("push", "leaves st = st ++ [new]\n    stack 64\n", "leaves st = st ++ [new]\n    stack 16\n"),
-                   ("merge", "asks target >= 1\n    leaves st = merge(key, flags, target, st)", "asks target >= 0\n    leaves st = merge(key, flags, target, st)"),
+        changes = [("push", "ensures st = st ++ [new]", "ensures st = st"),
+                   ("push", "requires len(st) <= 54\n    ensures st = st ++ [new]", "requires len(st) <= 55\n    ensures st = st ++ [new]"),
+                   ("push", "ensures st = st ++ [new]\n    stack 64\n", "ensures st = st ++ [new]\n    stack 16\n"),
+                   ("merge", "requires target >= 1\n    ensures st = merge(key, flags, target, st)", "requires target >= 0\n    ensures st = merge(key, flags, target, st)"),
                    ("merge", "returns len(st)\n    stack 256", "returns len(st) + 1\n    stack 256"),
                    ("merge", "returns len(st)\n    stack 256", "returns len(st)\n    stack 100"),
                    ("merge", "returns len(st)\n    stack 256\n    calls blake3_servil_compress_in_place_avx512 if plat == 5", "returns len(st)\n    stack 256\n    calls blake3_servil_compress_in_place_avx512 if plat == 4"),
-                   ("merge", "leaves st = merge(key, flags, target, st)", "leaves st = merge(key, flags, target + 1, st)"),
-                   ("add", "leaves st = merge(key, flags, target, st ++ [new])", "leaves st = merge(key, flags, target, st)"),
-                   ("add", "leaves st = merge(key, flags, target, st ++ [new])", "leaves st = merge(new, flags, target, st ++ [new])"),
+                   ("merge", "ensures st = merge(key, flags, target, st)", "ensures st = merge(key, flags, target + 1, st)"),
+                   ("add", "ensures st = merge(key, flags, target, st ++ [new])", "ensures st = merge(key, flags, target, st)"),
+                   ("add", "ensures st = merge(key, flags, target, st ++ [new])", "ensures st = merge(new, flags, target, st ++ [new])"),
                    ("add", "stack 512", "stack 300")]
         try:
             for name, old, new in changes:

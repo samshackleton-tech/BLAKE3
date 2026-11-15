@@ -13,7 +13,7 @@ evaluation stops). The same text is thus what gives BLAKE3's test vectors and wh
     sequence NAME(args) { h[0] = A   h[b + 1] = F(h[b])   for b in 0..n }
     layout NAME BYTES { FIELD: KIND at OFFSET [below N], FIELD[COUNT]: KIND at OFFSET, ... }
     kind NAME: KIND                               what sort of thing a definition gives
-    contract NAME(ARG: KIND, ...) { asks E | asks X[i] == E for i in A..B | leaves NAME = E | spoils NAME
+    contract NAME(ARG: KIND, ...) { requires E | requires X[i] == E for i in A..B | ensures NAME = E | writes NAME
                                     | returns E | stack E | needs F [if E] | decreases E | calls F if E }
     machine NAME(args) on STATE, ... [= INIT, ...] { while COND | for I in A..B   turn { STATE = E ... } }
                                                   (an algorithm, not a specification: proofs/inner.spec has one)
@@ -36,7 +36,7 @@ class Err(Exception):
 # ---------------------------------------------------------------------------------------------------------
 # Text to tree.
 TOKEN = re.compile(r"\s*(?:(//[^\n]*)|(0x[0-9A-Fa-f]+|\d+)|([A-Za-z_][A-Za-z_0-9]*)|(>>>|\+\+|\.\.|==|!=|<=|>=|&&|\|\||[-+*/%^|&<>=!(){}\[\],:.]))")
-KEYWORDS = {"const", "def", "sequence", "the", "machine", "contract", "layout", "kind", "on", "while", "for", "in", "turn", "if", "then", "else", "let"}
+KEYWORDS = {"const", "def", "sequence", "the", "machine", "contract", "layout", "kind", "on", "while", "for", "in", "turn", "if", "then", "else", "let", "fails"}
 LEVELS = [["||"], ["&&"], ["==", "!=", "<", "<=", ">", ">="], ["++"], ["|"], ["^"], ["&"], ["+", "-"], ["*", "/", "%"], [">>>"]]
 
 
@@ -131,9 +131,12 @@ class Parser:
         return e
 
     def definition(self):
-        """{ let NAME = E | let NAME[0] = E | let NAME[i + 1] = E ... VALUE }"""
+        """{ let NAME = E | let NAME[0] = E | let NAME[i + 1] = E | fails REASON if C ... VALUE }"""
         self.take("{"); out = []
-        while self.maybe("let"):
+        while self.peek("let") or self.peek("fails"):
+            if self.maybe("fails"):
+                reason = self.expr(); self.take("if"); out.append(("fails", reason, self.expr())); continue
+            self.take("let")
             name = self.take(kind="name")
             if self.maybe("["):
                 if self.peek(kind="num"):
@@ -172,36 +175,49 @@ class Parser:
         return dict(size=size, fields=fields)
 
     def contract(self):
-        """(arg: kind, ...) { asks E | leaves NAME = E | spoils NAME | returns E | stack N | calls F if E }"""
+        """(arg: kind, ...) { asks E | leaves NAME = E | writes NAME | returns E | stack N | calls F if E }"""
         self.take("("); args = []
         while not self.maybe(")"):
             arg = self.take(kind="name"); self.take(":"); args.append((arg, self.kind())); self.maybe(",")
-        c = dict(args=args, asks=[], given=[], leaves=[], spoils=[], returns=None, stack=None, calls=[], needs=[], decreases=None)
+        c = dict(args=args, asks=[], given=[], leaves=[], spoils=[], returns=None, stack=None, calls=[], needs=[], decreases=None, apart=None, trace=[])
         self.take("{")
         while not self.maybe("}"):
             clause = self.take(kind="name")
-            if clause == "asks":
+            if clause == "requires" and self.t[self.i][:2] == ("name", "apart") and self.t[self.i + 1][1] == "(":
+                # requires apart(a, b, ...): the things at those addresses do not overlap one another
+                self.take(); self.take("("); c["apart"] = []
+                while not self.maybe(")"): c["apart"].append(self.take(kind="name")); self.maybe(",")
+            elif clause == "requires":
                 e = self.expr()
                 if self.maybe("for"):
                     # asks NAME[i] == E for i in A..B: what each of some values at an address is
-                    if not (e[0] == "bin" and e[1] == "==" and e[2][0] == "index" and e[2][1][0] == "name" and e[2][2][0] == "name"): raise Err("`asks NAME[i] == E for i in A..B` expected")
+                    if not (e[0] == "bin" and e[1] == "==" and e[2][0] == "index" and e[2][1][0] == "name" and e[2][2][0] == "name"): raise Err("`requires NAME[i] == E for i in A..B` expected")
                     if self.take(kind="name") != e[2][2][1]: raise Err(f"`for {e[2][2][1]}` expected")
                     self.take("in"); a = self.expr(); self.take("..")
                     c["given"].append(dict(name=e[2][1][1], index=e[2][2][1], expr=e[3], each=(a, self.expr())))
                 else: c["asks"].append(e)
-            elif clause == "leaves":
-                # leaves NAME = E, or leaves NAME[I] = E for I in A..B (each place of what NAME addresses)
-                name, index, each = self.take(kind="name"), None, None
+            elif clause == "ensures":
+                # ensures NAME = E; ensures NAME[I] = E for I in A..B (each place of what NAME addresses);
+                # ensures NAME[A .. B] = E (those bytes of it). Any of them `if C`: only where C holds.
+                name, index, each, part = self.take(kind="name"), None, None, None
                 if self.maybe("["):
-                    index = self.take(kind="name"); self.take("]")
+                    if self.peek(kind="name") and self.t[self.i + 1][1] == "]": index = self.take(kind="name")
+                    else: a = self.expr(); self.take(".."); part = (a, self.expr())
+                    self.take("]")
                 self.take("="); e = self.expr()
                 if index is not None:
                     self.take("for")
                     if self.take(kind="name") != index: raise Err(f"line {self.t[self.i - 1][2]}: `for {index}` expected")
                     self.take("in"); a = self.expr(); self.take(".."); each = (a, self.expr())
-                c["leaves"].append(dict(name=name, index=index, expr=e, each=each))
+                cond = self.expr() if self.maybe("if") else None
+                c["leaves"].append(dict(name=name, index=index, expr=e, each=each, part=part, cond=cond))
             elif clause == "returns": c["returns"] = self.expr()
-            elif clause == "spoils": c["spoils"].append(self.take(kind="name"))
+            elif clause == "writes": c["spoils"].append(self.take(kind="name"))         # written, and nothing said of what
+            elif clause == "trace":
+                # trace depends on NAME, ...: which instructions run and which addresses are touched may depend on those bytes
+                if self.take(kind="name") != "depends": raise Err("`trace depends on NAME, ...` expected")
+                self.take("on"); c["trace"].append(self.take(kind="name"))
+                while self.maybe(","): c["trace"].append(self.take(kind="name"))
             elif clause == "stack":
                 e = self.expr()
                 c["stack"] = e[1] if e[0] == "num" else ("grows", e)
@@ -211,8 +227,8 @@ class Parser:
             elif clause == "needs":
                 # needs FEATURE [if E]: it runs instructions of that kind (only where E holds)
                 name = self.take(kind="name"); c["needs"].append((name, self.expr(1) if self.maybe("if") else None))
-            else: raise Err(f"line {self.t[self.i - 1][2]}: asks, leaves, spoils, returns, stack, calls, needs or decreases expected, not {clause!r}")
-        if c["stack"] is None or not c["leaves"]: raise Err("a contract says its stack, and what it leaves")
+            else: raise Err(f"line {self.t[self.i - 1][2]}: requires, ensures, writes, returns, stack, trace, calls, needs or decreases expected, not {clause!r}")
+        if c["stack"] is None or not (c["leaves"] or c["spoils"] or c["returns"] is not None): raise Err("a contract says its stack, and what it ensures, writes or returns")
         return c
 
     def params(self):
@@ -359,17 +375,23 @@ def part(xs, a, b):
     return xs[a:b]
 
 
+class Fails(Exception):
+    """A definition that has no value for what it was given, and says why (`fails REASON if C`)."""
+    def __init__(self, reason): self.reason = reason
+
+
 class Seq:
     """A sequence inside a definition: its first value, and each next from the one before."""
     def __init__(self): self.first, self.var, self.next, self.env, self.memo = None, None, None, None, {}
     def at(self, spec, A, i):
         if i not in self.memo:
             if self.first is None or self.next is None or i < 0: raise Err("a sequence without its two equations, or a place before its first")
-            if i == 0: self.memo[i] = spec.eval(A, self.first, self.env)
-            else:
-                self.at(spec, A, i - 1)
-                inner = dict(self.env); inner[self.var] = i - 1
-                self.memo[i] = spec.eval(A, self.next, inner)
+            k = i
+            while k > 0 and k - 1 not in self.memo: k -= 1                # from the last one known, upward
+            if k == 0 and 0 not in self.memo: self.memo[0] = spec.eval(A, self.first, self.env)
+            for j in range(max(k, 1), i + 1):
+                inner = dict(self.env); inner[self.var] = j - 1
+                self.memo[j] = spec.eval(A, self.next, inner)
         return self.memo[i]
 
 
@@ -463,6 +485,7 @@ class Spec:
         if name == "hi": return args[0].hi
         if name == "len": return A.length(args[0])
         if name == "ones": return bin(self.number(args[0])).count("1")
+        if name == "pow": return self.number(args[0]) ** self.number(args[1])
         if name == "word_bytes": return [(args[0].v >> (8 * i)) & 0xFF for i in range(4)]
         raise Err(f"no function {name}")
 
@@ -476,6 +499,11 @@ class Spec:
         for s in body:
             kind = s[0]
             if kind == "set": env[s[1]] = self.eval(A, s[2], env); last = None
+            elif kind == "fails":
+                c = self.eval(A, s[2], env)
+                if c is not True and c is not False: raise Err("a condition that is not true or false")
+                if c: raise Fails(self.eval(A, s[1], env))
+                last = None
             elif kind in ("first", "next"):
                 seq = env.get(s[1])
                 if not isinstance(seq, Seq): seq = env[s[1]] = Seq()
@@ -493,6 +521,12 @@ class Spec:
             if e[1] in env: return env[e[1]]
             if e[1] in self.consts: return self.consts[e[1]]
             raise Err(f"no name {e[1]}")
+        if kind == "call" and e[1] in ("failed", "reason") and len(e[2]) == 1:
+            # failed(E): E has no value; reason(E): why (a definition's `fails REASON if C`)
+            try: self.eval(A, e[2][0], env)
+            except Fails as f: return True if e[1] == "failed" else f.reason
+            if e[1] == "reason": raise Err("the reason of something that has a value")
+            return False
         if kind == "call": return self.apply(A, e[1], [self.eval(A, a, env) for a in e[2]])
         if kind == "index":
             x = self.eval(A, e[1], env)

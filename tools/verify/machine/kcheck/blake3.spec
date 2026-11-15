@@ -1,4 +1,4 @@
-// BLAKE3: what it is, and what is claimed of the binary.
+// BLAKE3: what it is, and the public contract of the binary's function.
 //
 // The first part is the specification. It says what the hash of a message IS, by definitions; it does not say
 // how to compute it. A reader checks it against the BLAKE3 paper, and a program (ode.py) checks that it gives
@@ -146,22 +146,38 @@ def iv_words() { [word(IV[i]) for i in 0..8] }
 def bytes_of(ws) { [word_bytes(ws[i / 4])[i % 4] for i in 0..4 * len(ws)] }
 
 // =========================================================================================================
-// What is claimed of the binary: the function a user calls (hash.ode's `hashr`).
+// The public contract: what the function in the binary does (hash.ode's `hashr`).
 //
-// Its arguments, in the order the machine's calling convention passes them: the address of 32 bytes the hash
-// goes to; the address of the message's bytes, and their count; the address of the 32 bytes of the key (the
-// IV, for the plain hash); the mode's flags (a number below 256); a word that says what the processor has.
-// The things at the three addresses are apart from one another and from the stack. `leaves`: what the 32
-// bytes hold afterwards, as the eight words lie in memory; everything else is as it was. `stack`: the bytes
-// of stack it may use (`bits(n)`: the length of n in bits). `needs`: it runs SSE4.1 instructions, and
-// AVX-512 instructions only where `plat` is 5 (its caller answers for the processor having them).
+// What a contract means. This is the same for every function; read it once.
 //
-// The checker (check_all.py) shows the claim from the binary's bytes. What it needs beside them is in proofs/:
-// what each function inside is claimed to do (proofs/inner.spec), and for a few loops a place. A reader of
-// the claim need not read those: if one of them were wrong, the checker would refuse the function it is of,
-// or the function that relies on it.
+//   The arguments are in the registers of the calling convention, in the order written (rdi, rsi, rdx, rcx,
+//   r8, r9). An argument is a number, or the address of something in memory.
+//   `requires`: what the caller makes true. `requires apart(a, b, ...)`: the things at those addresses do
+//   not overlap one another. The stack is the machine's own: none of them lies in it.
+//
+//   If the caller does that, the function returns, and then:
+//   `ensures X = E`: what is at X is E, a value of the specification above. `returns E`: the number it gives.
+//
+//   And it has done nothing else. It has read no memory but what its arguments address, and its own stack.
+//   It has written none but what an `ensures` names, and at most `stack` bytes below the caller's stack
+//   pointer. The registers a callee keeps are as they were. It has run no instructions but those every
+//   x86-64 processor has and those a `needs` line names (`needs F if C`: only where C holds). Which
+//   instructions it ran and which addresses it touched depend on the numbers it was given, and not on the
+//   bytes in memory.
+//
+//   A function that does more, or promises less, says so in its contract. Nothing is left to be understood.
+//
+// Here: `out` and `key` are each the address of 32 bytes, read as eight words, each word's lowest byte first
+// (`cv`); `input` is the address of `len` bytes; `flags` is a number below 256 (the mode's); `plat` is any
+// word (5 where the caller answers for the processor having AVX-512). `bits(n)`: the length of n in bits.
+//
+// The checker shows the contract from the binary's bytes (check_binary.py b3hashr.o). What it needs beside
+// them is in proofs/: the inner contracts, of the functions this one calls, and for a few loops a place. A
+// reader of this contract need not read those: if one were wrong, the checker would refuse the function it
+// is of, or the function that relies on it.
 contract b3l_hashr(out: cv, input: len bytes, len: number, key: cv, flags: byte, plat: any) {
-    leaves out = hash_words(key, flags, input)
+    requires apart(out, input, key)
+    ensures out = hash_words(key, flags, input)
     stack 18688 + 384 * bits(len / 1024)
     needs sse41
     needs avx512 if plat == 5

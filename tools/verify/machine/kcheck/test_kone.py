@@ -64,8 +64,8 @@ class Kone(unittest.TestCase):
         import kspec, ode
         true = kspec.SPEC
         text = ode.source()
-        head = {"avx512": "contract blake3_servil_compress_in_place_avx512(h: cv, m: block, length: low byte, t: counter, flags: low byte) {\n    leaves h = compress(h, m, t, length, flags)",
-                "sse41": "contract blake3_servil_compress_in_place_sse41(h: cv, m: block, length: word, t: counter, flags: low word) {\n    leaves h = compress(h, m, t, length, flags)"}
+        head = {"avx512": "contract blake3_servil_compress_in_place_avx512(h: cv, m: block, length: low byte, t: counter, flags: low byte) {\n    ensures h = compress(h, m, t, length, flags)",
+                "sse41": "contract blake3_servil_compress_in_place_sse41(h: cv, m: block, length: word, t: counter, flags: low word) {\n    ensures h = compress(h, m, t, length, flags)"}
         try:
             for name, old, new in (("avx512", "compress(h, m, t, length, flags)", "compress(h, m, t, flags, length)"),
                                    ("avx512", "compress(h, m, t, length, flags)", "compress(h, m, t + 1, length, flags)"),
@@ -89,9 +89,9 @@ class Kone(unittest.TestCase):
         self.assertEqual(kdecode.features(os.path.join(self.dir, "sse41.o"), "blake3_servil_compress_in_place_sse41"), {"sse41"})
         true, text = kspec.SPEC, ode.source()
         try:
-            for name, old, new in (("avx512", "leaves h = compress(h, m, t, length, flags)\n    stack 0\n    needs avx512\n", "leaves h = compress(h, m, t, length, flags)\n    stack 0\n"),
-                                   ("avx512", "leaves h = compress(h, m, t, length, flags)\n    stack 0\n    needs avx512\n", "leaves h = compress(h, m, t, length, flags)\n    stack 0\n    needs sse41\n"),
-                                   ("sse41", "leaves h = compress(h, m, t, length, flags)\n    stack 0\n    needs sse41\n", "leaves h = compress(h, m, t, length, flags)\n    stack 0\n")):
+            for name, old, new in (("avx512", "ensures h = compress(h, m, t, length, flags)\n    stack 0\n    needs avx512\n", "ensures h = compress(h, m, t, length, flags)\n    stack 0\n"),
+                                   ("avx512", "ensures h = compress(h, m, t, length, flags)\n    stack 0\n    needs avx512\n", "ensures h = compress(h, m, t, length, flags)\n    stack 0\n    needs sse41\n"),
+                                   ("sse41", "ensures h = compress(h, m, t, length, flags)\n    stack 0\n    needs sse41\n", "ensures h = compress(h, m, t, length, flags)\n    stack 0\n")):
                 self.assertEqual(text.count(old), 1, old)
                 kspec.SPEC = ode.Spec(text.replace(old, new))
                 with self.assertRaises(kcheck.Fail, msg=f"{name}: {new}"):
