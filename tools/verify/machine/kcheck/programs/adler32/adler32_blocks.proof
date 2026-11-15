@@ -1,0 +1,31 @@
+// The two loops of ode_adler32_blocks. r12: bytes taken; r13, r14: the two sums; r15: where the block ends.
+
+// Between blocks: the sums are the specification's.
+place +0x3c {
+    name i = r12
+    fact i <= len
+    r13 = s1(input)[i]
+    r14 = s2(input)[i]
+    any r15
+    decreases len - i, 1, 0
+}
+
+// Within a block that began at i0: the sums have not been brought below 65521 since, but their remainders
+// by 65521 are the specification's sums, and they are not large: a grows by at most 255 a byte, b by a.
+place +0x6f {
+    name i = r12
+    name a = r13
+    name b = r14
+    name end = r15
+    ghost i0 = i
+    fact i0 <= i
+    fact i <= end
+    fact i0 < end
+    fact end <= len
+    fact end <= i0 + 5552
+    fact a % 65521 == s1(input)[i]
+    fact a <= 65520 + 255 * (i - i0)
+    fact b % 65521 == s2(input)[i]
+    fact b <= 65520 + 1481280 * (i - i0)
+    decreases len - i0, 0, len - i
+}

@@ -14,6 +14,7 @@ import kbyte, kcheck, kdecode, ode
 from test_kcheck import assemble
 
 PROGRAMS = [("adler32", "adler32", "Adler-32 of any bytes"),
+            ("adler32", "adler32_blocks", "the same, the sums brought below 65521 once in 5552 bytes"),
             ("lz4", "lz4_decode", "an LZ4 block decoded: the count and the bytes, or NO where decoding fails; safe on any input"),
             ("lz4", "lz4_store", "an LZ4 block written that decodes to the input (all literals)"),
             ("lz4", "lz4_pack", "an LZ4 block written that decodes to the input (with matches)"),

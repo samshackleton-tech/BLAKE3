@@ -1,9 +1,10 @@
 // The speed of the two programs of this folder beside others' code for the same thing, one thread.
 //
-//   cc -O2 -I LZ4/lib -o bench bench.c adler32.o lz4_decode.o LZ4/lib/lz4.c && ./bench
+//   cc -O2 -I LZ4/lib -o bench bench.c adler32/odeadler32.o lz4/odelz4.o LZ4/lib/lz4.c && ./bench
 //
-// Adler-32 of 1 MiB: ode_adler32; and the usual C (sums put off for 5552 bytes, then one remainder), compiled
-// here. LZ4: a block made by the reference compressor of text that repeats (this file's own bytes, many times,
+// (The two .o files are the files shipped: what is timed is what check_file.py checked.)
+// Adler-32 of 1 MiB: ode_adler32 (a remainder at every byte); ode_adler32_blocks (the sums put off for 5552
+// bytes, as the usual code does); and the usual C (the same, with one remainder a block), compiled here. LZ4: a block made by the reference compressor of text that repeats (this file's own bytes, many times,
 // changed a little); ode_lz4_decode; and the reference decoder (LZ4_decompress_safe of lz4.c). The best of
 // 9 passes of each, in bytes decoded (or summed) a second. The two of each pair must agree first.
 #include <stdint.h>
@@ -13,6 +14,7 @@
 #include <time.h>
 #include "lz4.h"
 uint64_t ode_adler32(const uint8_t *input, uint64_t len);
+uint64_t ode_adler32_blocks(const uint8_t *input, uint64_t len);
 uint64_t ode_lz4_decode(uint8_t *out, uint64_t cap, const uint8_t *input, uint64_t n);
 
 static uint32_t c_adler32(const uint8_t *p, size_t len) {
@@ -34,9 +36,10 @@ int main(void) {
     static uint8_t data[1 << 20], text[1 << 20], block[(1 << 20) + 5000], out[1 << 20];
     uint64_t seed = 88172645463325252ull, sink = 0;
     for (size_t i = 0; i < sizeof data; i++) { seed ^= seed << 13; seed ^= seed >> 7; seed ^= seed << 17; data[i] = (uint8_t)seed; }
-    if (ode_adler32(data, sizeof data) != c_adler32(data, sizeof data)) { printf("the two Adler-32 differ\n"); return 1; }
+    if (ode_adler32(data, sizeof data) != c_adler32(data, sizeof data) || ode_adler32_blocks(data, sizeof data) != c_adler32(data, sizeof data)) { printf("the Adler-32s differ\n"); return 1; }
     int reps = 20;
     BEST("adler32, ode_adler32", sizeof data, sink += ode_adler32(data, sizeof data));
+    BEST("adler32, ode_adler32_blocks", sizeof data, sink += ode_adler32_blocks(data, sizeof data));
     BEST("adler32, C (sums put off)", sizeof data, sink += c_adler32(data, sizeof data));
     // text that repeats: this program's source, over and over, a byte in every 97 changed
     FILE *f = fopen(__FILE__, "rb");

@@ -17,3 +17,11 @@ contract ode_adler32(input: len bytes, len: number) {
     trace depends on input
     stack 40
 }
+
+// The same, of a function that brings the two sums below 65521 once in 5552 bytes (blocks.ode): the usual
+// way to make it fast. The specification above is not changed for it.
+contract ode_adler32_blocks(input: len bytes, len: number) {
+    returns adler32(input)
+    trace depends on input
+    stack 56
+}

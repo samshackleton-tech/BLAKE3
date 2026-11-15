@@ -71,6 +71,43 @@ class Adler32(unittest.TestCase):
         self.assertTrue(all(c == ".nop" and i.startswith(".mov 64 (.reg .r") for _, i, c in accepted), accepted)
 
 
+class Adler32Blocks(unittest.TestCase):
+    """Adler-32 the usual fast way: the two sums are brought below 65521 once in 5552 bytes, not at every byte.
+    The specification is the one above, unchanged: it reduces at every byte. The place says the sums' remainders
+    are the specification's and bounds them; the checker's arithmetic does the rest (a number has one quotient
+    and one remainder). Written with the checker frozen: no change to it."""
+    @classmethod
+    def setUpClass(cls): cls.p = Program("adler32", "adler32_blocks", "ode_adler32_blocks")
+
+    def test_it_meets_its_contract(self):
+        self.assertEqual(self.p.verdict(), "accepted")
+
+    def test_a_changed_specification_or_contract_is_refused(self):
+        tail = "\n    trace depends on input\n    stack 56"
+        self.p.changed(self, "spec", [
+            ("s[0] = 1 ", "s[0] = 0 "), ("s[0] = 0 ", "s[0] = 1 "), ("(s[i] + bytes[i]) % 65521", "(s[i] + bytes[i]) % 65520"), ("(s[i] + bytes[i]) % 65521", "(s[i] + bytes[i]) % 65536"),
+            ("(s[i] + s1(bytes)[i + 1]) % 65521", "(s[i] + s1(bytes)[i]) % 65521"), ("(s[i] + s1(bytes)[i + 1]) % 65521", "(s[i] + s1(bytes)[i + 1]) % 65522"),
+            ("65536 * s2(bytes)[len(bytes)] + s1(bytes)[len(bytes)]", "65536 * s1(bytes)[len(bytes)] + s2(bytes)[len(bytes)]"), ("65536 * s2(bytes)[len(bytes)] + s1(bytes)[len(bytes)]", "65535 * s2(bytes)[len(bytes)] + s1(bytes)[len(bytes)]"),
+            ("returns adler32(input)" + tail, "returns adler32(input) + 1" + tail), ("    trace depends on input\n    stack 56", "    stack 56"), ("stack 56", "stack 48")])
+
+    def test_a_changed_proof_is_refused(self):
+        lines, needless = self.p.proof.split("\n"), []
+        for k, line in enumerate(lines):
+            if not line.strip() or line.strip().startswith(("//", "place", "}", "any ")): continue
+            if self.p.verdict(proof="\n".join(lines[:k] + lines[k + 1:])) == "accepted": needless.append(line.strip())
+        self.assertEqual(needless, [])
+        # a block one byte longer, a bound a little too small, the sums said equal where they are only alike by 65521
+        self.p.changed(self, "proof", [("fact end <= i0 + 5552", "fact end <= i0 + 5553"), ("fact a <= 65520 + 255 * (i - i0)", "fact a <= 65520 + 254 * (i - i0)"),
+                                       ("fact b <= 65520 + 1481280 * (i - i0)", "fact b <= 65520 + 1481279 * (i - i0)"), ("fact a % 65521 == s1(input)[i]", "fact a == s1(input)[i]"),
+                                       ("fact b % 65521 == s2(input)[i]", "fact b % 65521 == s1(input)[i]"), ("decreases len - i0, 0, len - i", "decreases len - i, 0, 0")])
+
+    def test_a_changed_instruction_is_refused_unless_it_keeps_the_contract(self):
+        # Of 127, 11 accepted: moves of what is already there.
+        n, accepted = instructions_changed(self.p)
+        self.assertEqual((n, len(accepted)), (127, 11))
+        self.assertTrue(all(i.startswith(".mov") and c == ".nop" for i, c in accepted))
+
+
 class Lz4Decode(unittest.TestCase):
     """The decoder against its public contract: a count returned is the count of the bytes the block decodes
     to, and they are at out; and on any input it reads and writes nothing else, and returns."""
