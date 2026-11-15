@@ -681,11 +681,11 @@ class Machine:
                     # each of the chaining values at the address: `out[i] = E for i in 0..N`
                     for k in later:
                         if k not in c.writes: env[k]                    # what is read at an address: read now, for each lane
-                    frozen, facts, memo = dict(env), self.facts, self.memo
-                    def lane(i, leaf=leaf, frozen=frozen):
-                        # a lane's value, when something reads it: from what the kernel was given at the call
-                        # (no fact is needed for it but that the counter stays within 64 bits, shown here)
-                        return kspec.SPEC.eval(kspec.Symbols(self.T, facts, memo), leaf["expr"], dict(frozen, **{leaf["index"]: i}))
+                    frozen, facts, memo = dict(env), self.facts.clone(), dict(self.memo)
+                    def lane(i, leaf=leaf, frozen=frozen, facts=facts, memo=memo):
+                        # a lane's value, when something reads it: from what the kernel was given at the call,
+                        # and by the facts as they were at the call (a later path's facts are not asked)
+                        return kspec.SPEC.eval(kspec.Symbols(self.T, facts.clone(), dict(memo)), leaf["expr"], dict(frozen, **{leaf["index"]: i}))
                     for name, v in frozen.items():
                         if isinstance(v, kspec.Count) and not self.facts.ge0(WORD64 - Lin.of(v.n) - lanes_kind(c.kind[leaf["name"]], "cvs")): raise Fail(f"{name}: the counter is not shown to stay within 64 bits over the lanes")
                     left[leaf["name"]] = Lanes(lanes_kind(c.kind[leaf["name"]], "cvs"), lane)
