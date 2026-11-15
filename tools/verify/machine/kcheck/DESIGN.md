@@ -168,8 +168,8 @@ Not done, in the order I would take them:
 5. **AArch64.**
 6. **The programs' speed**: a fifth and an eighth of the usual C (README.md): the Ode compiler's doing and
    the plainest code's. Faster code needs facts modulo a number, which the checker cannot yet carry.
-7. **Sigil** (John's encoding of 32 bytes): specified, not coded: Ode cannot yet write arithmetic on numbers
-   of 258 bits.
+7. **Sigil** (John's encoding of 32 bytes): specified, not coded: it multiplies a number of 258 bits by a
+   prime and looks letters up in a table; Ode has no multiplication yet and `kbyte.py` reads no table.
 8. **An incremental hasher** (bytes arriving in pieces) holds subtrees between calls: a stack by nature. Either
    that one algorithm's mathematics is done once (Lean has it for a twin), or the interface is designed so
    that none is needed. Not thought through.

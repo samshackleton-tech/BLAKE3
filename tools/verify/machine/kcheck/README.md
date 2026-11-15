@@ -232,10 +232,10 @@ processor the caller's contract allows there.
 - *Changed code* (`test_kfn.py`): every call left out and every branch turned round, in all nine
   functions (of `wide128`'s thirty branches, which are fifteen copies of one loop, the first four): each
   refused.
-- *Changed text* (`test_kfn.py`): 46 changes of the contracts, the layouts and the specification: each
+- *Changed text* (`test_kfn.py`): 54 changes of the contracts, the layouts and the specification: each
   refuses the function that met the text.
 - *Every single-bit change of each function's code, with a processor as the judge* (`kfn_flip.py`,
-  `khash_native.c`). A change for which a proof is found is linked with the other four functions and the
+  `khash_native.c`). A change for which a proof is found is linked with the other eight functions and the
   kernels, and the whole hash is run on an AVX-512 processor against BLAKE3 written out in C another way (the
   reference's stack of subtrees; it and `hashr` first give six of the official vectors, plain and keyed):
   every length from 0 to 200, every seventh to 2,200, the three around each
@@ -428,7 +428,7 @@ that is no way to compute anything.
 | `lz4/` | 111: the block format, its two ways to fail, three contracts | a decoder written in the test as decoders are (a loop over the block), on blocks an encoder of the test's made and on damaged ones | `ode_lz4_decode`, `ode_lz4_store`, `ode_lz4_pack` |
 | `varint/` | 12 | LEB128 written another way | `ode_varint` |
 | `common/` | 15 | the same in Python | `ode_common` |
-| `sigil/` | 175: John's Sigil 0.1 (the data with two marker bits, times a check prime, written in base 2,048 as letters) | the 220 good vectors of its repository | none: for 32 bytes it needs arithmetic on a number of 275 bits, which Ode has no way to write yet |
+| `sigil/` | 175: John's Sigil 0.1 (the data with two marker bits, times a check prime, written in base 2,048 as letters) | the 220 good vectors of its repository | none: it multiplies a number of 258 bits by a prime and looks letters up in a table of 2,048; Ode has no multiplication yet, and `kbyte.py` reads no table of constants |
 
 **What each made the languages gain.**
 
@@ -486,7 +486,7 @@ bytes and the proof's offsets), takes the proof from the file, and checks:
 The Rust program packs with `ode_lz4_pack` at distances 1 to 8, keeps the smallest, unpacks with
 `ode_lz4_decode`, and relies on nothing but the contracts: with `n + n / 255 + 16` bytes of room the packer
 does not say NO; the decoder, given a block with a byte changed, says NO or gives something that fits (3 MB
-of zeros: 500,011 bytes; this page: 65,904 of 66,086). `programs/test_files.py`: the proof each file
+of zeros: 500,011 bytes; this page as it then was: 65,904 of 66,086). `programs/test_files.py`: the proof each file
 carries is the folder's and was made with the folder's specification; with one fact left out of one place
 the function it is of is refused and the others are not; a reader with another specification is told so,
 and with a wrong one the check fails.
@@ -731,7 +731,7 @@ specification. (The hash above does not use them: it has no stack.)
 | `kflip.py`, `kflip_native.c`, `kflip_thunk.S` | 206 + 160 + 66 | the kernels' single-bit audit, and the processor's word on each change accepted |
 | `kglue.py`, `kglue_flip.py`, `kglue_native.c`, `test_kglue.py` | 569 + 136 + 109 + 119 | the stack's functions (the earlier trial): prover, checker; the audit; the tests |
 | `kremove.py` | 41 | which instructions can be replaced by a no-op with the contract still met: for a person to read |
-| `test_ode.py` | 99 | the specification on the vectors, and 24 changes of its text |
+| `test_ode.py` | 105 | the specification on the vectors, and 24 changes of its text; what is not the language is refused |
 | `audit.sh`, `audit/` | 45 | every single-bit audit, with this machine's processor as the judge; their outputs |
 
 ## How
