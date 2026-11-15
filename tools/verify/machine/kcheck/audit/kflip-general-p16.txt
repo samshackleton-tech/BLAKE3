@@ -2,9 +2,9 @@ control: the unchanged object is ACCEPTED
 control: the unchanged object on this processor, 1000 cases: same
 control: the unchanged object given inputs shorter than it reads (a block too few, or a block a byte short), on this processor: CRASHES: status -11
 control: a change the checker refused (one block: word 0 of lane 0's chaining value is not the specification's), on this processor: DIFFERS: case 0: lane 0 word 0 is 670c1c09, BLAKE3's is 288531d7
-the 213 accepted changes on this processor, 1000 cases each (6 s): 213 same
+the 213 accepted changes on this processor, 1000 cases each (2 s): 213 same
 for scale, 400 of the changes stopped or refused, on this processor (200 cases each): 196 CRASHES, 184 DIFFERS, 20 same ("same": refused or not decoded, yet it works on these inputs)
-p16: 22144 single-bit changes of 2768 bytes of code (293 s, 12 at a time): 14328 stopped by the decoder, 7603 refused by the checker, 213 accepted, 0 with NO VERDICT (the time limit)
+p16: 22144 single-bit changes of 2768 bytes of code (67 s, 40 at a time): 14191 stopped by the decoder, 7740 refused by the checker, 213 accepted, 0 with NO VERDICT (the time limit)
 accepted, by where the change is: contract 13, linker 128, padding 72
 contract: the 8 instructions with a change the contract does not see (changes accepted in each):
   .sub 64 (.reg .rsp) (.imm 0x100) x5; .dec32 .r11 x2; .mov 64 (.reg .rbx) (.reg .r8) x1; .xor 32 (.reg .r14) (.reg .r14) x1; .mov 32 (.reg .r10) (.reg .rbx) x1; .mov 32 (.reg .rax) (.reg .r10) x1; .mov 32 (.reg .r10) (.reg .r8) x1; .jne 0x10091 x1

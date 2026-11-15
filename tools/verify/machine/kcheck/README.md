@@ -132,9 +132,9 @@ checked):
 
 | kernel | changes | stopped by the decoder | refused (no proof) | accepted | of those, as BLAKE3 on the processor |
 |---|---|---|---|---|---|
-| P16 | 22,144 | 14,340 | 7,591 | 213 | 213 (1,000 cases each) |
-| K32 | 35,824 | 22,321 | 11,753 | 1,750 | 1,750 |
-| P32 | 35,824 | 22,321 | 11,625 | 1,878 | 1,878 |
+| P16 | 22,144 | 14,191 | 7,740 | 213 | 213 (1,000 cases each) |
+| K32 | 35,824 | 22,163 | 11,910 | 1,751 | 1,751 |
+| P32 | 35,824 | 22,163 | 11,783 | 1,878 | 1,878 |
 
 With the whole interface in the specification, what the contract "does not see" in P16 falls from 142
 accepted changes to 13 (a larger frame, a 64-bit form of a 32-bit move): the statement now says what the code
@@ -240,9 +240,8 @@ same for every input.
 
 ## What has been done to find it wrong
 
-(The kernels' single-bit audits, in item 5 and in the section on every number of blocks, were run before the
-specification moved to `blake3.ode`; they are being run again on this state. The stack's functions' audit
-above was run on it.)
+(Every single-bit audit below and above was run again, by `sh audit.sh 40`, at commit `b3d52cc1`: the
+specification and all nine contracts in `blake3.ode`. `audit/` holds the outputs.)
 
 1. **Changed kernels** (`--mutants`): 15 of 15 refused (rotations, operands, the carry's mask, a message offset,
    a store's offset, a shuffle, a flag, a saved register, the frame's bound, the block step, one entry of the
@@ -266,13 +265,13 @@ above was run on it.)
 
    | kernel | changes | stopped by the decoder | refused by the checker | accepted | of those, as BLAKE3 on the processor |
    |---|---|---|---|---|---|
-   | P16 | 22,144 | 14,340 | 7,462 | 342 | 342 (1,000 cases each) |
-   | K32 | 35,824 | 22,321 | 11,748 | 1,755 | 1,755 (1,000 cases each) |
-   | P32 | 35,824 | 22,321 | 11,620 | 1,883 | 1,883 (1,000 cases each) |
-   | `output16` | 29,384 | 17,736 | 11,254 | 394 | 394 (2,000 cases each) |
+   | P16 | 22,144 | 14,191 | 7,611 | 342 | 342 (1,000 cases each) |
+   | K32 | 35,824 | 22,163 | 11,905 | 1,756 | 1,756 (1,000 cases each) |
+   | P32 | 35,824 | 22,163 | 11,778 | 1,883 | 1,883 (1,000 cases each) |
+   | `output16` | 29,384 | 17,597 | 11,393 | 394 | 394 (2,000 cases each) |
 
-   (Threadripper PRO 7975WX, clang 21.1.8's objects, the checker and decoder as they are in this commit;
-   19 s for P16, 51 s for `output16`, 17 minutes each for K32 and P32, 20 at a time, the four at once.
+   (Threadripper PRO 7975WX, clang 21.1.8's objects, the checker and decoder as they are at commit `b3d52cc1`;
+   16 s for P16, 26 s for `output16`, 13 minutes each for K32 and P32, 40 at a time.
    No change ended without a verdict. Controls in each run: the unchanged object is accepted and runs as BLAKE3;
    asked for a block more than its inputs hold it faults; a refused change of a rotation does not run as BLAKE3.)
 

@@ -1,5 +1,5 @@
 control: the unchanged object is ACCEPTED 
-sse41: 3528 single-bit changes of 441 bytes of code (1 s): 2487 stopped by the decoder, 925 refused (no proof), 116 accepted, 0 with NO VERDICT (the time limit)
+sse41: 3528 single-bit changes of 441 bytes of code (0 s): 2487 stopped by the decoder, 925 refused (no proof), 116 accepted, 0 with NO VERDICT (the time limit)
   accepted: +0xB byte 3 bit 0: .xconst 2 0x6A09E667 0xBB67AE85 0x3C6EF372 0xA54FF53A  ->  .xconst 2 0x6A09E667 0xBB67AE85 0x3C6EF372 0xA54FF53A
   accepted: +0xB byte 3 bit 1: .xconst 2 0x6A09E667 0xBB67AE85 0x3C6EF372 0xA54FF53A  ->  .xconst 2 0x6A09E667 0xBB67AE85 0x3C6EF372 0xA54FF53A
   accepted: +0xB byte 3 bit 2: .xconst 2 0x6A09E667 0xBB67AE85 0x3C6EF372 0xA54FF53A  ->  .xconst 2 0x6A09E667 0xBB67AE85 0x3C6EF372 0xA54FF53A
@@ -119,4 +119,4 @@ sse41: 3528 single-bit changes of 441 bytes of code (1 s): 2487 stopped by the d
 control: the unchanged object on this processor, 20000 cases: same
 control: a change no proof was found for, on this processor: DIFFERS: case 0: the chaining value is not BLAKE3's
 the 116 accepted changes on this processor, 20000 cases each: 116 same
-for scale, 300 of the changes stopped or refused, on this processor: 150 CRASHES, 142 DIFFERS, 8 same
+for scale, 300 of the changes stopped or refused, on this processor: 149 CRASHES, 143 DIFFERS, 8 same
