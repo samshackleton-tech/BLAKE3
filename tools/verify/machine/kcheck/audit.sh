@@ -38,8 +38,12 @@ for f in push merge add; do run "kglue-flip-$f.txt" python3 kglue_flip.py $f "$w
 for f in avx512 sse41; do run "kone-flip-$f.txt" python3 kglue_flip.py $f "$work/glue" --jobs "$jobs" --native 20000; done
 fi
 for f in pad chunk_node node_out wide32 wide128 take part32 subtree hashr; do run "kfn-flip-$f.txt" python3 kfn_flip.py $f "$work/hash" --jobs "$jobs" --native 200; done
+# the binary as one file: what a linker would have written, bit by bit; then the file shipped, on this processor
+python3 klink.py "$work/hash" "$work/blob.o" > /dev/null && run "klink-flip.txt" python3 klink_flip.py "$work/blob.o" --native 2000
+run "binary.txt" sh -c "python3 check_binary.py b3hashr.o && cc -O1 -o '$work/shipped' khash_native.c kflip_thunk.S b3hashr.o && '$work/shipped' 2000 say"
 rm -rf "$work"
 grep -H "single-bit changes" audit/kflip-*.txt audit/kglue-flip-*.txt audit/kone-flip-*.txt audit/kfn-flip-*.txt | sed "s|^audit/||" | cut -c1-250
 grep -h "accepted changes on this processor" audit/*.txt | sort | uniq -c | cut -c1-160
+tail -n 1 audit/binary.txt | sed "s|^|b3hashr.o on this processor: |"
 echo "audit: $([ $bad = 0 ] && echo 'every accepted change runs as the specification on this processor' || echo 'FAILED')"
 exit $bad

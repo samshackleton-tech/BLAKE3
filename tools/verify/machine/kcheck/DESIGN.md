@@ -14,17 +14,20 @@ mathematics; arbitrary kinds of computation; human programmers (an AI may write 
 languages; arbitrary assembly; and proofs for every program one could write in the language (the programmer
 writes the code so that it can be proved, as he writes it so that it is fast).
 
-## The five things
+## The six things
 
 | | what it is | who reads it | today |
 |---|---|---|---|
 | the specification | what the result IS: definitions by equations, in a language made for specifications | the auditor | `blake3.spec`, 147 lines |
 | the claim | the contract of each function a user calls | the auditor | 18 lines, one function |
 | the code | written in the specification's shape, in Ode | nobody has to | `hash.ode`, 332 lines |
+| the binary | one file: the code's bytes, its constants, its names; nothing for a linker to fill in | the checker | `b3hashr.o`, 19,288 bytes |
 | the proof | what the checker needs beside the binary: what the functions inside do; a place for a loop of unfixed count | nobody has to | `proofs/inner.spec`; for the hash, no place |
-| the checker | runs the binary on symbols and compares with the specification; does not search | the auditor, once, for every program | 3,890 lines of Python, unverified |
+| the checker | runs the binary on symbols and compares with the specification; does not search | the auditor, once, for every program | 3,990 lines of Python, unverified |
 
-The auditor reads the specification and the claim, and runs the checker on the binary. If a contract of a
+The auditor reads the specification and the claim, and runs the checker on the binary
+(`python3 check_binary.py b3hashr.o`, or on the shared object or the executable a linker made of it: 18 s).
+What made the binary (the Ode compiler, an assembler, `klink.py`, a linker) he does not rely on. If a contract of a
 function inside were wrong, the checker would refuse that function, or one that calls it: the contracts
 inside are steps of the proof, not things claimed to him.
 
@@ -124,9 +127,11 @@ Not done, in the order I would take them:
    is no slower than the earlier `hashf` anywhere (README.md). The rest is code not yet written: a 16-lane
    path for 16 chunks or fewer (a kernel to check); parents many to a call over small parts; AVX2 and
    narrower machines.
-2. **The checker's own worth.** It is 3,890 lines of Python, tested and audited, not proved. Smaller; a
+2. **The checker's own worth.** It is 3,990 lines of Python, tested and audited, not proved. Smaller; a
    second one written apart; or proved once. Undecided.
-3. **The source's checker** (above), and the compiler printing bytes, not assembly (BLAKE3 #396).
+3. **The source's checker** (above), and the compiler printing bytes, not assembly (BLAKE3 #396). (The
+   binary is already one file of settled bytes, made of an assembler's objects by `klink.py`; the checker
+   reads it as a loader maps it.)
 4. **That the functions return** is now shown as far as the kernels (a `decreases` line where a function
    calls itself; no ring of calls; every loop run to its end). That the wide kernels return for every number
    of blocks is not: they are called with 16 and with 1, for which they are run to their end.

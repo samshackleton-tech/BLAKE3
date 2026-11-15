@@ -25,8 +25,14 @@ this way, not all programs. The languages are our own.
   with the specification's definition, opened once. Terms are compared by identity, numbers by adding linear
   facts up. No solver.
 
-What is shown, from the binary's bytes (`python3 check_all.py`: 18 functions, 3,831 instructions, 19 s on an
-Apple M6):
+**The binary is one file, `b3hashr.o`** (19,288 bytes): the thirteen bodies of code the hash is made of,
+their constants, their names, and nothing for a linker to fill in. `python3 check_binary.py b3hashr.o` reads
+it, follows every call from `b3l_hashr`, and says in 18 s on an Apple M6 that `b3l_hashr` in that file
+meets the claim. It says the same of a shared object GNU ld makes of it, of one lld makes, and of an
+executable it is linked into: each read as a loader maps it. No assembler and no linker is relied on.
+
+What is shown, from the bytes (`python3 check_all.py`, of the objects an assembler makes of the sources: 18
+functions, 3,831 instructions, 19 s):
 
 - **`b3l_hashr`: BLAKE3 of a message of every length, under any key and flags** (the claim in `blake3.spec`),
   through the nine functions of `hash.ode` and the library's kernels: the two one-block ones, the 32-lane
@@ -39,9 +45,9 @@ Apple M6):
 - An earlier trial (`push`, `merge`, `add` of a stack of subtrees) against an algorithm, not the
   specification.
 
-What a reader relies on: `blake3.spec`, which he reads; the checker, 3,890 lines of unverified Python for the
-hash (4,459 with the stack's checker); the processor doing what the checker takes each instruction form
-to do; Python. Most of this page is what has been done to find where the checker is wrong,
+What a reader relies on: `blake3.spec`, which he reads; the checker, 3,990 lines of unverified Python for the
+hash (4,559 with the stack's checker); the processor doing what the checker takes each instruction form
+to do; a loader that maps the file as its headers say; Python. Most of this page is what has been done to find where the checker is wrong,
 and what that found.
 
 ## The specification: `blake3.spec`
@@ -274,6 +280,67 @@ wide kernels are called with 16 blocks and with 1, for which `kcheck.py` runs th
 **Not shown:** AArch64; AVX2 and narrower machines (they get the one-block SSE4.1 kernel). The parents over a part of fewer than 32 chunks are compressed one at a time (those over
 a whole tree of 32 go to the 16-lane kernel).
 
+## The binary: one file (`klink.py`, `check_binary.py`, `b3hashr.o`)
+
+Until here what was checked was the objects an assembler makes, one a source file, each with places left
+for a linker to fill in: how far away the function an instruction calls is, or the constant it reads. The
+checker took those from the relocation's name, and a linker was trusted to write them so. Now:
+
+- **`klink.py`** (110 lines, trusted for nothing) takes from the assembler's objects the bytes of the
+  thirteen bodies `hashr` runs (the nine functions of `hash.ode`, the two one-block kernels, K32 with its
+  second entry, P16), from each one's first byte to its `ret`, and the read-only data of the three objects
+  that have any; lays them out in one section, each on the boundary it had; and writes the distances itself.
+  **`b3hashr.o`**: 19,288 bytes, of which 16,788 are code; fourteen names; no relocations. A linker has only
+  to place it on a 64-byte boundary. The library's other functions that share a source file with a kernel
+  (`hash_many`, the XOF's) are not in it.
+- **`kdecode.py` reads a file whose addresses are settled** (an object with no relocation left for its code,
+  a shared object, an executable): an operand's or a call's target is where the instruction's own four bytes
+  say. A call must go to the start of something the file gives one name's worth of address to (a name given
+  to two places is no name). An operand must lie, with the 64 bytes after it, in what is loaded without
+  leave to write. For a linked file the bytes are those a loader maps: each `PT_LOAD` part in whole
+  4096-byte pages of the file. It stops if two parts share a page, if a part's place in the file and in
+  memory differ within the page, if a read-only part is longer in memory than in the file, if the
+  read-only parts do not lie side by side, if the code is not in a part that may be run, or if the file asks
+  the loader to change its code (`TEXTREL`).
+- **`check_binary.py FILE`** starts at `b3l_hashr`, checks it from the file's bytes with the checker for its
+  kind, and goes on to every function it calls, found by where the call goes: thirteen bodies, 3,102
+  instructions, 18 s. Then it says what else the file loads to be run: in `b3hashr.o`, beside the 16,788
+  bytes of the bodies, 859 zero bytes and 529 others (the constants, and what lies between functions).
+
+| file | made by | bytes | `b3l_hashr` in it |
+|---|---|---|---|
+| `b3hashr.o` | `klink.py`, of Apple clang 21's objects | 19,288 | meets the claim |
+| a shared object of it | GNU ld 2.46 | 30,040 | meets the claim |
+| a shared object of it | lld | 21,200 | meets the claim |
+| `khash_native.c` with it (an executable loaded anywhere) | GCC 15.2, GNU ld | 46,568 | meets the claim |
+| a shared object of twelve objects as an assembler made them | GNU ld 2.46 | 68,520 | meets the claim (37,214 other bytes are loaded to be run: the library's other functions among them) |
+| the same | lld | 62,808 | meets the claim |
+
+On the processor (Threadripper PRO 7975WX), `khash_native.c` linked with `b3hashr.o`, and loading each of the
+two shared objects made of it: 5,466 hashes each, as BLAKE3's, on both kernels.
+
+**What was done to find it wrong.** `test_kbinary.py`: the object and the same bytes under a program header
+give the same instructions; a part with leave to write, with no leave to run, off its page, longer in
+memory, sharing a page, or apart from the others stops the reading; `TEXTREL` stops it; a name given to two
+places is not found, and a call to it stops; each of `node_out`'s two calls sent to each of the other
+thirteen names is refused, but for one that is no fault (the AVX-512 kernel's call sent to the SSE4.1
+kernel: where the first may be run so may the second, and they give the same). `klink_flip.py`: every
+single-bit change of the 71 fields a linker would have written (52 calls, 19 operands): 2,272 changes,
+2,060 stopped by the decoder, 200 refused, 12 accepted; the twelve read the same constants from another
+place (the three objects' data each begin with BLAKE3's IV), and each, linked and run on the processor, hashes as
+BLAKE3.
+
+**What that found: an aligned read that nothing showed aligned.** The one-block kernels read sixteen bytes
+of constants with `MOVAPS`, which faults unless they start on a 16-byte boundary. The decoder took the
+bytes and did not ask where they lie: an object whose read-only data a linker may put on an 8-byte boundary,
+or an operand four bytes further on, was accepted. The single-bit audits could not have found it: they
+change the code, and this is in a section header or a relocation. It is asked now, of an assembler's object
+(its `.rodata`'s boundary and the operand's place in it) and of a settled file. The library's objects pass.
+
+**Not done:** an audit of every single-bit change of the whole file (its headers, its names); an
+executable's or a shared object's other contents are counted, not judged; the file is taken to be loaded
+by a loader that does what the program headers say and to be run where nothing else writes over it.
+
 ## The library's wide kernels, each run to its end (`kcheck.py`, the first trial)
 
 From the library's own assembly sources (`c/blake3_avx512_32.S`, `c/blake3_output16.S`), assembled, the
@@ -420,9 +487,12 @@ specification. (The hash above does not use them: it has no stack.)
 | `DESIGN.md` | 136 | the design: what is wanted and given up, the rules for code written to be proved, how it stands to types-as-proofs |
 | `proofs/inner.spec`, `proofs/*.json` | 175 | what the functions inside are claimed to do, the layouts of two records; the wide kernels' and `merge`'s places |
 | `hash.ode`, `glue/*.S` | 332 | the hash written to be proved; the assembly the Ode compiler prints of it (and of the stack's three functions) |
-| `check_all.py` | 120 | what a reader runs: every function from its bytes, and that the hash's functions end |
+| `b3hashr.o` | | the binary: 19,288 bytes |
+| `check_binary.py` | 78 | what a reader runs on the binary, or on what a linker made of it |
+| `klink.py`, `klink_flip.py`, `test_kbinary.py` | 110 + 72 + 148 | makes the binary of the assembler's objects (untrusted); every single-bit change of what a linker would have written; tests of the reading of a linked file |
+| `check_all.py` | 120 | every function from an assembler's objects, and that the hash's functions end |
 | `ode.py`, `kspec.py`, `klin.py` | 605 + 522 + 211 | the specification's reader; its algebra on symbols; numbers that depend on counts and the facts about them |
-| `kdecode.py` | 479 | reads the ELF object (sections, symbol, relocations) and decodes the instruction forms the code uses, and no others; no disassembler |
+| `kdecode.py` | 579 | reads the ELF file (an object's sections, names and relocations; a linked file as a loader maps it) and decodes the instruction forms the code uses, and no others; no disassembler |
 | `kfn.py`, `test_kfn.py` | 882 + 122 | the checker of functions; its tests |
 | `kfn_flip.py`, `khash_native.c` | 133 + 176 | its single-bit audit; the whole hash on a processor against BLAKE3 in C |
 | `khash_bench.c`, `earlier/*.S` | 37 | the speed of `hashr`, of the library, and of the earlier `hashf` (its assembly), in one harness |
@@ -528,7 +598,9 @@ an 8-bit `or` read as 32 bits.
 
 - The specification and the claim, `blake3.spec` (168 lines), and the programs that read it and the bytes:
   for the hash `ode.py`, `kspec.py`, `klin.py`, `kdecode.py`, `kcheck.py`, `kone.py`, `kloop.py`, `kfn.py`:
-  3,890 lines; with `kglue.py`, 4,459 (their provers, about 150 of those, need no trust). And Python.
+  3,990 lines; with `kglue.py`, 4,559 (their provers, about 150 of those, need no trust). And Python.
+- No assembler and no linker, when the file checked is the file run (`check_binary.py`). A loader that
+  maps the file as its program headers say, and nothing else in the process writing over the code.
 - That the things `hashr` is given the addresses of are apart from one another and from the stack (the
   claim says so: its caller's part).
 - What the functions inside are claimed to do (`proofs/inner.spec`) is not relied on: a wrong contract there

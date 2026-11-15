@@ -12,7 +12,13 @@ lifter's, instruction for instruction: two readings of the same bytes, made apar
 
 Decoding starts at SYMBOL and goes on, instruction after instruction, to the first `ret` (so a second entry
 that falls into the same body, as P32 into K32, is read with it). The object's read-only data is placed at
-RODATA, as the lifter places it; `lea reg, [rip + data]` is that data's address."""
+RODATA, as the lifter places it; `lea reg, [rip + data]` is that data's address.
+
+Two kinds of file. An object whose code has relocations (an assembler's output): an operand's or a call's
+target is what its relocation names. A file whose addresses are settled (`settled` below: an object with no
+relocation left for its code, a shared object, an executable): the target is where the instruction's own
+bytes say; the bytes read are those a loader maps without leave to write, whole pages of the file, and they
+are the read-only data too."""
 import struct, sys
 
 G = "rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r10 r11 r12 r13 r14 r15".split()
@@ -33,21 +39,27 @@ class Elf:
             with open(path, "rb") as f: self.b = f.read()
         b = self.b
         if b[:4] != b"\x7fELF" or b[4] != 2 or b[5] != 1 or struct.unpack_from("<H", b, 18)[0] != 62: raise Stop("not a little-endian x86-64 ELF object")
+        self.type, = struct.unpack_from("<H", b, 16)            # 1: an object to be linked; 2: an executable; 3: a shared object
         shoff, = struct.unpack_from("<Q", b, 40); shentsize, shnum, shstrndx = struct.unpack_from("<HHH", b, 58)
         self.sections = []
         for i in range(shnum):
             name, typ, flags, addr, off, size, link, info, align, entsize = struct.unpack_from("<IIQQQQIIQQ", b, shoff + i * shentsize)
-            self.sections.append(dict(name=name, type=typ, off=off, size=size, link=link, info=info))
+            self.sections.append(dict(name=name, type=typ, off=off, size=size, link=link, info=info, align=align))
         names = self.sections[shstrndx]
         cstr = lambda sec, at: b[sec["off"] + at:b.index(b"\0", sec["off"] + at)].decode()
         for s in self.sections: s["name"] = cstr(names, s["name"])
-        symtab = next(s for s in self.sections if s["type"] == 2)
-        strtab = self.sections[symtab["link"]]
         self.symbols = []
-        for i in range(symtab["size"] // 24):
-            name, info, other, shndx, value, size = struct.unpack_from("<IBBHQQ", b, symtab["off"] + 24 * i)
-            self.symbols.append(dict(name=cstr(strtab, name), type=info & 15, shndx=shndx, value=value))
+        for symtab in [s for s in self.sections if s["type"] in ((2,) if self.type == 1 else (2, 11))]:    # .symtab; in a linked file .dynsym too
+            strtab = self.sections[symtab["link"]]
+            for i in range(symtab["size"] // 24):
+                name, info, other, shndx, value, size = struct.unpack_from("<IBBHQQ", b, symtab["off"] + 24 * i)
+                self.symbols.append(dict(name=cstr(strtab, name), type=info & 15, bind=info >> 4, shndx=shndx, value=value))
         self.index = {s["name"]: i for i, s in enumerate(self.sections)}
+        phoff, = struct.unpack_from("<Q", b, 32); phentsize, phnum = struct.unpack_from("<HH", b, 54)
+        self.segments = []
+        for i in range(phnum if self.type != 1 else 0):
+            typ, flags, off, vaddr, paddr, filesz, memsz, align = struct.unpack_from("<IIQQQQQQ", b, phoff + i * phentsize)
+            self.segments.append(dict(type=typ, flags=flags, off=off, vaddr=vaddr, filesz=filesz, memsz=memsz))
 
     def bytes_of(self, name):
         if name not in self.index: return b""                 # an object with no read-only data
@@ -68,6 +80,93 @@ class Elf:
                     elif kind == 2: out[off] = (self.sections[sym["shndx"]]["name"], sym["value"] + addend)      # R_X86_64_PC32
                     else: raise Stop(f"a relocation of type {kind}")
         return out
+
+
+PAGE = 4096
+
+
+class Named:
+    """An object whose code has relocations: an operand's or a call's target is what its relocation names.
+    `align`: the boundary the read-only data starts on, wherever a linker puts it."""
+    def __init__(self, e):
+        self.table = e.relocations(".text")
+        self.align = e.sections[e.index[".rodata"]]["align"] if ".rodata" in e.index else 1
+
+    def data(self, code, field, end):
+        if field not in self.table: raise Stop("a RIP-relative operand with no relocation")
+        sec, off = self.table[field]
+        if sec != ".rodata": raise Stop(f"an operand in {sec}")
+        return off + (end - field)
+
+    def callee(self, code, field, end):
+        if self.table.get(field, ("", ""))[0] != "call": raise Stop("a call with no function named")
+        return self.table[field][1]
+
+
+class Settled:
+    """A file whose addresses are settled. `image`: the bytes a loader maps without leave to write, from the
+    lowest such address `lo` (for an object: its .text); `parts`: (from, to, executable) within the image;
+    `names`: the functions' names by where they start; `align`: the boundary the image starts on."""
+    def __init__(self, e):
+        if e.type == 1:
+            if ".text" not in e.index: raise Stop("an object with no .text")
+            text = e.bytes_of(".text")
+            self.image, self.lo, self.parts, self.align = text, 0, [(0, len(text), True)], e.sections[e.index[".text"]]["align"]
+            inside = lambda s: s["shndx"] == e.index[".text"]
+        else:
+            spans = []
+            for s in e.segments:
+                if s["type"] == 2:                               # PT_DYNAMIC: does the file ask the loader to change its code?
+                    for i in range(s["filesz"] // 16):
+                        tag, val = struct.unpack_from("<QQ", e.b, s["off"] + 16 * i)
+                        if tag == 0: break
+                        if tag == 22 or tag == 30 and val & 4: raise Stop("the file asks the loader to write into its code (TEXTREL)")
+                if s["type"] != 1: continue                      # PT_LOAD: what is mapped, in whole pages
+                if (s["vaddr"] - s["off"]) % PAGE: raise Stop("a part of the file is not where its page in memory is")
+                spans.append((s["vaddr"] // PAGE * PAGE, -(-(s["vaddr"] + s["memsz"]) // PAGE) * PAGE, s))
+            for i, (a, z, s) in enumerate(spans):
+                if any(a < z2 and a2 < z for a2, z2, _ in spans[i + 1:]): raise Stop("two parts of the file are loaded on one page")
+            keep = sorted(((a, z, s) for a, z, s in spans if not s["flags"] & 2), key=lambda x: x[0])      # without leave to write
+            if not keep: raise Stop("nothing in the file is loaded read-only")
+            if any(z != a2 for (_, z, _), (a2, _, _) in zip(keep, keep[1:])): raise Stop("the parts loaded read-only do not lie side by side")
+            self.lo, image, self.parts, self.align = keep[0][0], bytearray(), [], PAGE
+            for a, z, s in keep:
+                if s["memsz"] != s["filesz"]: raise Stop("a read-only part that is longer in memory than in the file")
+                first = s["off"] - (s["vaddr"] - a)
+                piece = e.b[first:first + z - a]                 # whole pages of the file, as a loader maps them; past the file's end, zeros
+                image += piece + bytes(z - a - len(piece))
+                self.parts.append((a - self.lo, z - self.lo, bool(s["flags"] & 1)))
+            self.image = bytes(image)
+            inside = lambda s: 0 < s["shndx"] < 0xFF00 and self.lo <= s["value"] < self.lo + len(self.image)      # in a section: a loader moves it with the file
+        # Names: of functions, and of labels an assembler gave no type. A name the file gives to two places
+        # (as an object's own names may be, once several objects are linked) is no name here.
+        places = {}
+        for s in e.symbols:
+            if s["name"] and s["type"] in (0, 2) and inside(s): places.setdefault(s["name"], set()).add(s["value"] - self.lo)
+        self.at = {name: min(where) for name, where in places.items() if len(where) == 1}
+        self.names = {}
+        for name, v in self.at.items(): self.names.setdefault(v, []).append(name)
+
+    def runs(self, a, z):
+        return any(x and lo <= a and z <= hi for lo, hi, x in self.parts)
+
+    def target(self, code, field, end):
+        return end + sx(int.from_bytes(code[field:field + 4], "little"), 32)
+
+    def data(self, code, field, end):
+        t = self.target(code, field, end)
+        if not any(lo <= t and t + 64 <= hi for lo, hi, _ in self.parts): raise Stop("an operand that is not in what is loaded read-only")
+        return t
+
+    def callee(self, code, field, end):
+        t = self.target(code, field, end)
+        if t not in self.names: raise Stop("a call to what is no function's start")
+        return sorted(self.names[t], key=lambda n: (n.startswith("_"), n))[0]
+
+
+def settled(e):
+    """The file's addresses are settled: no relocation is left for its code."""
+    return e.type != 1 or not any(s["type"] in (4, 9) and s["info"] == e.index.get(".text") for s in e.sections)
 
 
 def decode(code, at, relocs, rodata, rodata_at, base, start):
@@ -108,11 +207,7 @@ def decode(code, at, relocs, rodata, rodata_at, base, start):
         disp = 0 if mod == 0 else (sx(imm(1), 8) * scale8 if mod == 1 else sx(imm(4), 32))
         return mod, reg, None, (b, index, disp)
 
-    def data_at(field, end):
-        if field not in relocs: raise Stop("a RIP-relative operand with no relocation")
-        sec, off = relocs[field]
-        if sec != ".rodata": raise Stop(f"an operand in {sec}")
-        return off + (end - field)
+    def data_at(field, end): return relocs.data(code, field, end)
 
     op = u8()
     # no-ops: ENDBR64, the multi-byte NOPs an assembler pads with, PREFETCHT0
@@ -128,6 +223,8 @@ def decode(code, at, relocs, rodata, rodata_at, base, start):
 
     def words128(field, end):
         off = data_at(field, end)
+        # MOVAPS faults where the sixteen bytes do not start on a 16-byte boundary
+        if off % 16 or relocs.align % 16: raise Stop("sixteen bytes read as aligned from where they need not be on a 16-byte boundary")
         return " ".join(f"0x{int.from_bytes(rodata[off + 4 * i:off + 4 * i + 4], 'little'):X}" for i in range(4))
 
     def xmm_form(sse66, opc, W, R, X, B, v):
@@ -321,8 +418,7 @@ def decode(code, at, relocs, rodata, rodata_at, base, start):
         return p - at + 4, f".mov 32 {r64((op - 0xB8) | (B << 3))} (.imm {bv(imm(4))})"
     if op == 0xE8:
         no_rex(); field = p; imm(4)
-        if relocs.get(field, ("", ""))[0] != "call": raise Stop("a call with no function named")
-        return p - at, f".call {relocs[field][1]}"
+        return p - at, f".call {relocs.callee(code, field, p)}"
     if op in (0x72, 0x73): no_rex(); d = sx(imm(1), 8); return p - at, f".{'jb' if op == 0x72 else 'jae'} {here(p + d)}"
     if op == 0xEB: no_rex(); d = sx(imm(1), 8); return p - at, f".jmp {here(p + d)}"
     if op == 0xE9: no_rex(); d = sx(imm(4), 32); return p - at, f".jmp {here(p + d)}"
@@ -407,22 +503,28 @@ def decode(code, at, relocs, rodata, rodata_at, base, start):
     raise Stop(f"an instruction this does not know: {code[at:at + 6].hex()}")
 
 
-def address(obj, symbol):
-    e = Elf(obj)
+def place(e, symbol):
+    """(the bytes the code is in, where `symbol` starts in them, the relocations or the settled file, the read-only data)"""
+    if settled(e):
+        s = Settled(e)
+        if symbol not in s.at or not s.runs(s.at[symbol], s.at[symbol] + 1): raise Stop(f"no {symbol} in the file's code")
+        return s.image, s.at[symbol], s, s.image
     sym = next((s for s in e.symbols if s["name"] == symbol and e.sections[s["shndx"]]["name"] == ".text"), None)
     if sym is None: raise Stop(f"no {symbol} in the object's .text")
-    return sym["value"]
+    return e.bytes_of(".text"), sym["value"], Named(e), e.bytes_of(".rodata")
+
+
+def address(obj, symbol):
+    return place(Elf(obj), symbol)[1]
 
 
 def read(obj, symbol, base, rodata_at):
-    e = Elf(obj)
-    text, rodata, relocs = e.bytes_of(".text"), e.bytes_of(".rodata"), e.relocations(".text")
-    sym = next((s for s in e.symbols if s["name"] == symbol and e.sections[s["shndx"]]["name"] == ".text"), None)
-    if sym is None: raise Stop(f"no {symbol} in the object's .text")
-    start = at = sym["value"]
+    text, start, relocs, rodata = place(Elf(obj), symbol)
+    at = start
     rows = []
     while True:
         n, ins = decode(text, at, relocs, rodata, rodata_at, base, start)
+        if isinstance(relocs, Settled) and not relocs.runs(at, at + n): raise Stop("the code runs out of what is loaded to be run")
         rows.append((base + at - start, base + at - start + n, ins))
         at += n
         if ins == ".ret": break
@@ -434,9 +536,7 @@ def features(obj, symbol):
     """What kinds of instruction the function at `symbol` holds, by how each is encoded: "avx512" (an EVEX
     prefix), "avx" (a VEX prefix), "sse41" (the 0F 38 and 0F 3A maps of the older encoding: SSSE3 and
     SSE4.1). The rest are the instructions every x86-64 processor has."""
-    e = Elf(obj)
-    text = e.bytes_of(".text")
-    start = next(s["value"] for s in e.symbols if s["name"] == symbol and e.sections[s["shndx"]]["name"] == ".text")
+    text, start, _, _ = place(Elf(obj), symbol)
     rows, _ = read(obj, symbol, 0, 0)
     out = set()
     for at, _, _ in rows:
