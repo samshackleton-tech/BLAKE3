@@ -10,7 +10,11 @@ OBJDUMP = os.environ.get("OBJDUMP") or (shutil.which("llvm-objdump") or shutil.w
 
 
 def assemble_linux_x86(s_path, o_path):
-    """With clang where there is one (the assembler whose bytes Code_*.lean holds), else with `cc`."""
+    """With clang: the assembler whose bytes Code_*.lean holds. GNU as pads the loops' alignment with other
+    no-ops (6 + 11 bytes where clang writes 10 + 7), so its object is not the table's, and a comparison made
+    with it would fail for that reason alone: without clang this stops and says so."""
+    if not shutil.which("clang"):
+        raise RuntimeError("NO VERDICT: clang is not on this machine, and the code tables hold clang's bytes")
     for cc in (["clang", "--target=x86_64-unknown-linux-gnu"], ["cc", "-target", "x86_64-unknown-linux-gnu"]):
         if shutil.which(cc[0]) and subprocess.run(cc + ["-c", "-o", o_path, s_path], capture_output=True).returncode == 0:
             return
