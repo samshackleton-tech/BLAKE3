@@ -144,7 +144,9 @@ What "written to be proved" meant, each a choice the programmer made as one make
 - **The stack is bounded by the length**: `subtree` may use `8704 + 384 * bits((len - 1) / 1024)` bytes, a
   level of recursion for each halving of the count of chunks (and the wide kernels' frames).
 - **What the processor must have is in the contract**: `needs avx512 if plat == 5`. A function may call one
-  that needs AVX-512 only on a path where its own contract's condition holds, or hand it its own `plat`.
+  that needs AVX-512 only on a path where its own contract's condition holds, or hand it its own `plat`. At
+  the bottom it is read from the bytes: a function whose contract does not say `needs avx512` holds no
+  instruction with an EVEX prefix (nor, without `needs sse41`, one of the SSSE3 and SSE4.1 maps).
 
     python3 kfn.py subtree OBJECT          # the checker: the object's bytes, blake3.spec, proofs/inner.spec
     python3 test_kfn.py                    # 4 tests, 2 minutes
@@ -253,9 +255,7 @@ at the return is not what the contract says: it holds the parent of two named ha
 tree had been named whole by the call. Right hash, wrong code; an `else` fixed it.
 
 **Not shown:** that `hashr` ends (each loop is bounded and each call of itself is on fewer bytes, so it
-does, but the checker shows only what holds if it returns, and the stack it uses on the way); that a
-function without `needs avx512` holds no such instruction (the kernels' `needs` lines are taken from their
-names); AArch64. The parents over a part of fewer than 32 chunks are compressed one at a time (those over
+does, but the checker shows only what holds if it returns, and the stack it uses on the way); AArch64. The parents over a part of fewer than 32 chunks are compressed one at a time (those over
 a whole tree of 32 go to the 16-lane kernel).
 
 ## The library's wide kernels, each run to its end (`kcheck.py`, the first trial)

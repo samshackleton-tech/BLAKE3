@@ -14,7 +14,7 @@ checker, and the exit status is 1. (The judge is the whole hash: a change that i
 goes is not seen by it.)"""
 import multiprocessing, os, signal, subprocess, sys, tempfile, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import kcheck, kdecode, kfn
+import kcheck, kdecode, kfn, kspec
 
 LIMIT = 120
 
@@ -32,6 +32,7 @@ def verdict(obj, name):
     except kdecode.Stop as e: return "stopped", str(e)
     except (IndexError, ValueError, KeyError, StopIteration) as e: return "stopped", f"the decoder ran off the bytes ({type(e).__name__})"
     try:
+        kspec.fits(obj, "b3l_" + name)
         kfn.find(rows, name)
     except kcheck.Fail as e: return "refused", str(e)
     except (KeyError, IndexError, ValueError, TypeError, AssertionError, RecursionError, AttributeError) as e: return "refused", f"the checker cannot run it ({type(e).__name__}: {e})"

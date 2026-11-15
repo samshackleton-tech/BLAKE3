@@ -12,7 +12,7 @@ import json, os, shutil, sys, tempfile, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
 sys.path.insert(0, HERE)
-import kcheck, kdecode, kfn, kglue, kloop, kone
+import kcheck, kdecode, kfn, kglue, kloop, kone, kspec
 from test_kcheck import assemble
 
 BASE, DATA = 0x10000, 0x50000000
@@ -33,6 +33,7 @@ def kernel_any_count(folder, name):
 def kernel_fixed(folder, name, obj):
     k = kcheck.KERNELS[name]
     rows, data = kdecode.read(os.path.join(folder, obj), k["start"], BASE, DATA)
+    kspec.fits(os.path.join(folder, obj), k["start"], k["symbol"])
     kcheck.check(rows, DATA, data, name, BASE + kdecode.address(os.path.join(folder, obj), k["symbol"]) - kdecode.address(os.path.join(folder, obj), k["start"]))
     return k["symbol"], len(rows), 0, "every " + k["given"]
 

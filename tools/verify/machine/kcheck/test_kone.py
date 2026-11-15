@@ -82,6 +82,24 @@ class Kone(unittest.TestCase):
             kspec.SPEC = true
             kone.CONTRACTS = kone.contracts()
 
+    def test_a_kernel_holds_only_what_its_contract_says_it_needs(self):
+        # `needs avx512`, `needs sse41` in a contract: read from the kernel's bytes, by how each instruction is encoded
+        import kdecode, kspec, ode
+        self.assertEqual(kdecode.features(os.path.join(self.dir, "avx512.o"), "blake3_servil_compress_in_place_avx512"), {"avx", "avx512"})
+        self.assertEqual(kdecode.features(os.path.join(self.dir, "sse41.o"), "blake3_servil_compress_in_place_sse41"), {"sse41"})
+        true, text = kspec.SPEC, ode.source()
+        try:
+            for name, old, new in (("avx512", "leaves h = compress(h, m, t, length, flags)\n    stack 0\n    needs avx512\n", "leaves h = compress(h, m, t, length, flags)\n    stack 0\n"),
+                                   ("avx512", "leaves h = compress(h, m, t, length, flags)\n    stack 0\n    needs avx512\n", "leaves h = compress(h, m, t, length, flags)\n    stack 0\n    needs sse41\n"),
+                                   ("sse41", "leaves h = compress(h, m, t, length, flags)\n    stack 0\n    needs sse41\n", "leaves h = compress(h, m, t, length, flags)\n    stack 0\n")):
+                self.assertEqual(text.count(old), 1, old)
+                kspec.SPEC = ode.Spec(text.replace(old, new))
+                with self.assertRaises(kcheck.Fail, msg=f"{name}: {new}"):
+                    kone.load(os.path.join(self.dir, name + ".o"), name)
+        finally:
+            kspec.SPEC = true
+        kone.load(os.path.join(self.dir, "sse41.o"), "sse41")
+
     def test_a_kernel_does_not_meet_the_others_contract(self):
         # the SSE4.1 kernel reads all of EDX: against "the low byte of RDX" it is refused, and the other way round
         with self.assertRaises(kcheck.Fail):

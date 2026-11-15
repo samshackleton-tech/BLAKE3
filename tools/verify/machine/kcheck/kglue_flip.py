@@ -14,7 +14,7 @@ random stacks and arguments the contract allows: an accepted change the processo
 machine is an error of the decoder or the checker, and the exit status is 1."""
 import multiprocessing, os, signal, subprocess, sys, tempfile, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import kcheck, kdecode, kglue, kone
+import kcheck, kdecode, kglue, kone, kspec
 
 
 def symbol(name): return kone.CONTRACTS[name]["symbol"] if name in kone.CONTRACTS else "b3l_" + name
@@ -35,6 +35,7 @@ def verdict(obj, name):
     except kdecode.Stop as e: return "stopped", str(e)
     except (IndexError, ValueError, KeyError, StopIteration) as e: return "stopped", f"the decoder ran off the bytes ({type(e).__name__})"
     try:
+        kspec.fits(obj, symbol(name))
         if name in kone.CONTRACTS: kone.check(rows, name)
         else: kglue.find(rows, name)
     except kcheck.Fail as e: return "refused", str(e)

@@ -430,6 +430,26 @@ def read(obj, symbol, base, rodata_at):
     return rows, rodata
 
 
+def features(obj, symbol):
+    """What kinds of instruction the function at `symbol` holds, by how each is encoded: "avx512" (an EVEX
+    prefix), "avx" (a VEX prefix), "sse41" (the 0F 38 and 0F 3A maps of the older encoding: SSSE3 and
+    SSE4.1). The rest are the instructions every x86-64 processor has."""
+    e = Elf(obj)
+    text = e.bytes_of(".text")
+    start = next(s["value"] for s in e.symbols if s["name"] == symbol and e.sections[s["shndx"]]["name"] == ".text")
+    rows, _ = read(obj, symbol, 0, 0)
+    out = set()
+    for at, _, _ in rows:
+        p = start + at
+        while text[p] in (0x66, 0xF2, 0xF3): p += 1
+        if text[p] == 0x62: out.add("avx512")
+        elif text[p] in (0xC4, 0xC5): out.add("avx")
+        else:
+            if 0x40 <= text[p] <= 0x4F: p += 1
+            if text[p] == 0x0F and text[p + 1] in (0x38, 0x3A): out.add("sse41")
+    return out
+
+
 def main():
     a = sys.argv[1:]
     compare = a and a[0] == "--compare"

@@ -453,6 +453,20 @@ def plain_words(v):
     return False
 
 
+def fits(obj, start, symbol=None):
+    """The instructions of the function at `start` are of kinds its contract says it needs (`needs F`, with
+    no condition): a function that does not say it needs AVX-512 holds no instruction of that kind. (A machine
+    with AVX-512 has AVX and SSE4.1; one with AVX has SSE4.1.) `symbol`: the contract's, where the function is
+    entered at another symbol than where its code begins."""
+    import kdecode
+    c = SPEC.contracts.get(symbol or start)
+    have = {f for f, cond in (c["needs"] if c else []) if cond is None}
+    if "avx512" in have: have |= {"avx", "sse41"}
+    if "avx" in have: have.add("sse41")
+    extra = kdecode.features(obj, start) - have
+    if extra: raise Err(f"{symbol or start} holds instructions of a kind its contract does not say it needs: {', '.join(sorted(extra))}")
+
+
 def halved(facts, x, d):
     """x / d for d a power of two (rounded down): exact where x's parts all divide, else a symbol q with
     d*q <= x <= d*q + d - 1. The code's shifts and the specification's divisions make the same symbol."""

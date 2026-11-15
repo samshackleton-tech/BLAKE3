@@ -195,6 +195,7 @@ def check(rows, name):
 
 def load(obj, name):
     rows, _ = kdecode.read(obj, CONTRACTS[name]["symbol"], BASE, DATA)
+    kspec.fits(obj, CONTRACTS[name]["symbol"])
     return rows
 
 

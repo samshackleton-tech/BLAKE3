@@ -847,6 +847,7 @@ def find(rows, name):
 
 def load(obj, name):
     rows, _ = kdecode.read(obj, "b3l_" + name, BASE, DATA)
+    kspec.fits(obj, "b3l_" + name)
     return rows
 
 

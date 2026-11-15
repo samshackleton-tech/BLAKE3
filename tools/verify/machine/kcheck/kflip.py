@@ -50,6 +50,8 @@ def verdict(obj, name):
     except kdecode.Stop as e: return "stopped", str(e)
     except (IndexError, ValueError, KeyError, StopIteration) as e: return "stopped", f"the decoder ran off the bytes ({type(e).__name__})"
     try:
+        import kspec
+        kspec.fits(obj, kcheck.KERNELS[name]["start"], kcheck.KERNELS[name]["symbol"])
         if GENERAL:
             import kloop
             kloop.find(rows, data, name, entry)         # accepted: a proof is found, and the checker takes it

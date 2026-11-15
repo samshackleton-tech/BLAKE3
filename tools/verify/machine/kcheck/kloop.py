@@ -406,6 +406,7 @@ Machine.clone_at_rest = _clone_at_rest
 def load(obj, name):
     kernel = KERNELS[name]
     rows, data = kdecode.read(obj, kernel["start"], BASE, DATA)
+    kspec.fits(obj, kernel["start"], kernel["symbol"])
     entry = BASE + kdecode.address(obj, kernel["symbol"]) - kdecode.address(obj, kernel["start"])
     return rows, data, entry
 
