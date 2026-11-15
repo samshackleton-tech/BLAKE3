@@ -542,8 +542,11 @@ For the whole hash the two are not of the same code: Lean checked the earlier co
 taken on trust (a stand-in). A whole run of those chains on the workhorse, 12 at a time, took 3,120 s
 (`hashw` alone 1,360 s, `hashl` 690 s, `groupf` 630 s; pinned run `wide-model-check4`, November 15: every
 chain checked but one, a listing compared across two versions of `llvm-objdump`, which is not a proof).
-Here `hash.ode` has no invariant and no lemma, nothing is taken on trust of a callee, and `check_all.py`
-takes 5 s on a laptop.
+Written by hand for that code, beside its 924 lines of source with their invariants: fourteen files of
+lemmas (`lang/Lemmas_*.lean`, 2,516 lines), the contracts in Lean (`lang/Spec_*.lean`), and the tree's part
+(`alg/`). Here `hash.ode` is 274 lines with no invariant and no lemma; its seven inner contracts are 50
+lines of `proofs/inner.spec` (and two layouts and three kinds); nothing is taken on trust of a callee; and
+`check_all.py` takes 13 s on a laptop.
 
 Also tried the same day: SAW 1.6 on P16 with a Cryptol specification stops at the kernel's first AVX-512
 instruction ("Could not decode instruction 62d2").
