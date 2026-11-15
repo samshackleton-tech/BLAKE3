@@ -60,6 +60,28 @@ class Kone(unittest.TestCase):
             with self.assertRaises(kcheck.Fail, msg=f"{name}: {what}"):
                 kone.check(rows, name)
 
+    def test_a_changed_contract_refuses_the_true_kernel(self):
+        import kspec, ode
+        true = kspec.SPEC
+        with open(os.path.join(HERE, "blake3.ode")) as f: text = f.read()
+        head = {"avx512": "contract blake3_servil_compress_in_place_avx512(h: cv, m: block, length: low byte, t: counter, flags: low byte) {\n    leaves h = compress(h, m, t, length, flags)",
+                "sse41": "contract blake3_servil_compress_in_place_sse41(h: cv, m: block, length: word, t: counter, flags: low word) {\n    leaves h = compress(h, m, t, length, flags)"}
+        try:
+            for name, old, new in (("avx512", "compress(h, m, t, length, flags)", "compress(h, m, t, flags, length)"),
+                                   ("avx512", "compress(h, m, t, length, flags)", "compress(h, m, t + 1, length, flags)"),
+                                   ("avx512", "length: low byte", "length: word"),
+                                   ("sse41", "compress(h, m, t, length, flags)", "compress(m[0..8], m, t, length, flags)"),
+                                   ("sse41", "length: word", "length: low byte"),
+                                   ("sse41", "flags: low word", "flags: low byte")):
+                self.assertEqual(text.count(head[name]), 1)
+                kspec.SPEC = ode.Spec(text.replace(head[name], head[name].replace(old, new)))
+                kone.CONTRACTS = kone.contracts()
+                with self.assertRaises(kcheck.Fail, msg=f"{name}: {new}"):
+                    kone.check(self.rows[name], name)
+        finally:
+            kspec.SPEC = true
+            kone.CONTRACTS = kone.contracts()
+
     def test_a_kernel_does_not_meet_the_others_contract(self):
         # the SSE4.1 kernel reads all of EDX: against "the low byte of RDX" it is refused, and the other way round
         with self.assertRaises(kcheck.Fail):

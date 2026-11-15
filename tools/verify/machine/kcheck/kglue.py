@@ -10,14 +10,10 @@ functions `push`, `merge` and `add` of lang/hasher.ode, as the Ode compiler and 
 calls `push` and `merge`. Lean checks the same three in about 100 seconds from proofs with lemmas by hand
 (lang/Proof_merge.lean, Lemmas_merge.lean, StackLemmas.lean).
 
-WHAT IS CLAIMED OF A FUNCTION is its contract (CONTRACTS, below): what each argument is, what the caller must
-show, what the function leaves, how much stack it may use.
-  merge(st, key, flags, plat, target)   the stack at `st` becomes what THE MERGE MACHINE makes of it, and the
-                                        result is its count; the AVX-512 kernel is called only where plat is 5
-  THE MERGE MACHINE                     while the stack holds more than `target` values, its top two become
-                                        their parent: `machine merge` and `fn parent` of blake3.ode
-  push(st, cv)                          the value at `cv` is put on the stack at `st`
-  add(st, key, flags, plat, cv, target) push, then merge
+WHAT IS CLAIMED OF A FUNCTION is its `contract` in blake3.ode (b3l_push, b3l_merge, b3l_add): what each
+argument is, what the caller must show (`asks`), what the function `leaves` and `returns`, how much `stack` it
+may use, and which function it `calls` only on a condition. `merge` leaves what the merge machine of the same
+file makes of the stack (while it holds more than `target` values, its top two become their parent).
 
 A PROOF names the places of the code's loops, and for each what the registers and the frame hold there, for
 ANY stack `now` of any count m the stack's memory may hold: kept, or a number c + cm*m. A function with no
@@ -47,7 +43,6 @@ from kspec import Stack, plain, byte, byte_or, byte_term
 
 BASE, DATA = 0x10000, 0x50000000
 CAPACITY = 55                       # values a stack's memory holds (1792 bytes: the count's 32, and 55 of 32)
-AVX512 = 5                          # the platform word that says the machine has AVX-512 (hasher.ode)
 G64 = kcheck.G64
 KEPT = kcheck.SAVED                 # the registers a callee keeps
 ARGS = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
@@ -58,57 +53,90 @@ def sym(name): return Lin([(name, 1)])
 
 # ---------------------------------------------------------------------------------------------------------
 # The specification: the merge machine, and what each function is claimed to do.
-def merge_given(T, facts, key, flags, target, stack):
-    """What blake3.ode's merge machine is given: the key, the flags byte, the target, and its state, the stack."""
-    return kspec.Symbols(T, facts), dict(key=kspec.words(key), flags=ode.Word(byte_term(T, flags)), target=plain(target), s=stack)
+class Contract:
+    """A function's contract, as blake3.ode states it. The arguments are in the calling convention's order;
+    each is a `stack` (the address of a stack of chaining values, which the function may change), a `cv` (the
+    address of 32 bytes it may read), a `byte` (a number below 256), a `number`, or `any`."""
+    def __init__(self, symbol):
+        c = kspec.SPEC.contracts[symbol]
+        self.name, self.stack = symbol, c["stack"]
+        self.args = [(reg, kind, name) for reg, (name, kind) in zip(ARGS, c["args"])]
+        if any(kind not in ("stack", "cv", "byte", "number", "any") for _, kind, _ in self.args): raise Fail(f"{symbol}: an argument of a kind this checker does not know")
+        stacks = [name for _, kind, name in self.args if kind == "stack"]
+        if len(stacks) != 1 or c["leaves"][0][0] != stacks[0]: raise Fail(f"{symbol}: a function of the stack has one stack, and leaves it")
+        self.region, self.left, self.asked, self.returned = stacks[0], c["leaves"][0][1], c["asks"], c["returns"]
+        # a function that leaves `machine(..., its stack)` is a loop of that machine: proved turn by turn
+        e = self.left
+        self.machine = e[1] if e[0] == "call" and e[1] in kspec.SPEC.machines and e[2] and e[2][-1] == ("name", self.region) else None
+        # `calls F if NAME == NUMBER`: F is called only on a path where that was asked and was so
+        self.calls = {}
+        for callee, cond in c["calls"]:
+            if not (cond[0] == "bin" and cond[1] == "==" and cond[2][0] == "name" and cond[3][0] == "num"): raise Fail(f"{symbol}: a condition on a call that is not NAME == NUMBER")
+            self.calls[callee] = (cond[2][1], cond[3][1])
+
+    def env(self, T, v):
+        """The arguments in the specification's terms, from what the checker holds of them."""
+        env = {}
+        for _, kind, name in self.args:
+            if kind == "stack": env[name] = v[name]
+            elif kind == "cv": env[name] = kspec.words(v[name])
+            elif kind == "byte": env[name] = ode.Word(byte_term(T, v[name]))
+            elif kind == "number": env[name] = plain(v[name])
+        return env
+
+    def asks(self, T, facts, v):
+        """What the caller must show, as numbers that are not below zero."""
+        A, env, out = kspec.Symbols(T, facts), self.env(T, v), []
+        for e in self.asked:
+            if e[0] != "bin" or e[1] not in (">=", "<=", ">", "<"): raise Fail(f"{self.name}: asks something that is not an order of two numbers")
+            x, y = Lin.of(kspec.SPEC.eval(A, e[2], env)), Lin.of(kspec.SPEC.eval(A, e[3], env))
+            out.append({">=": x - y, "<=": y - x, ">": x - y - 1, "<": y - x - 1}[e[1]])
+        return out
+
+    def leaves(self, T, facts, v):
+        """The stack afterwards, and the result (None: the contract says nothing of it)."""
+        A, env = kspec.Symbols(T, facts), self.env(T, v)
+        after = kspec.SPEC.eval(A, self.left, env)
+        if not isinstance(after, Stack): raise Fail(f"{self.name}: what it leaves is not a stack")
+        return after, self.result(T, facts, v, after)
+
+    def result(self, T, facts, v, after):
+        """What the contract says is returned, the stack being `after` (None: it says nothing)."""
+        if self.returned is None: return None
+        env = self.env(T, v); env[self.region] = after
+        return Lin.of(kspec.SPEC.eval(kspec.Symbols(T, facts), self.returned, env))
+
+    def machine_given(self, T, facts, v, stack):
+        """For a loop of a machine: the machine's arguments (as the contract gives them) and its state."""
+        A, env = kspec.Symbols(T, facts), self.env(T, v)
+        m = kspec.SPEC.machines[self.machine]
+        given = {p: kspec.SPEC.eval(A, e, env) for p, e in zip(m["params"], self.left[2][:-1])}
+        given[m["state"]] = stack
+        return A, given
 
 
-def machine_turns(T, facts, key, flags, target, stack):
-    """Does the merge machine turn on this stack? True, False, or None: the facts do not say."""
-    A, env = merge_given(T, facts, key, flags, target, stack)
+def machine_turns(T, facts, c, v, stack):
+    """Does the function's machine turn on this stack? True, False, or None: the facts do not say."""
+    A, env = c.machine_given(T, facts, v, stack)
     try:
-        return kspec.SPEC.goes(A, "merge", env)
+        return kspec.SPEC.goes(A, c.machine, env)
     except ode.Err:
         return None
 
 
-def machine_turn(T, facts, key, flags, target, stack):
-    """One turn of the merge machine: the top two values become their parent."""
-    A, env = merge_given(T, facts, key, flags, target, stack)
-    return kspec.SPEC.turn(A, "merge", env)
+def machine_turn(T, facts, c, v, stack):
+    """One turn of the function's machine."""
+    A, env = c.machine_given(T, facts, v, stack)
+    return kspec.SPEC.turn(A, c.machine, env)
 
 
-def machine_result(T, facts, key, flags, target, stack):
-    """What the machine makes of a stack, as a caller knows it: a stack named by what went in. Its count is a
-    number of its own: at least 1 if the stack held a value, at most the stack's count."""
-    name = T.mk("merged", tuple(key), byte(flags), Lin.of(target), stack.key(T, facts))
-    count = sym(f"count of merged {name}")
-    return Stack(("merged", name), count), count
+def contracts():
+    """The three functions' contracts, read from the specification as it is now."""
+    by_name = {name: Contract("b3l_" + name) for name in ("push", "merge", "add")}
+    return by_name, {c.name: c for c in by_name.values()}
 
 
-class Contract:
-    """name(args...): `args` are (register, kind, name): kind "stack" (the address of a stack, which the function
-    may change), "cv" (the address of 32 bytes it may read), "byte" (a number below 256), "number" (a number,
-    with what is asked of it), "any". `asks(v)`: the numbers the caller must show are not below zero.
-    `leaves(T, facts, v)`: the stack afterwards and the result (None: nothing is said of rax). `machine`: for a
-    function that is a loop of the merge machine, proved by its turns. `stack`: the bytes of stack it may use."""
-    def __init__(self, name, args, asks, leaves, stack, machine=False):
-        self.name, self.args, self.asks, self.leaves, self.stack, self.machine = name, args, asks, leaves, stack, machine
-
-
-CONTRACTS = {
-    "push": Contract("push", [("rdi", "stack", "st"), ("rsi", "cv", "new")],
-                     asks=lambda v: [CAPACITY - 1 - v["st"].count],
-                     leaves=lambda T, facts, v: (v["st"].put(T, facts, v["st"].count, v["new"], v["st"].count + 1), None), stack=64),
-    "merge": Contract("merge", [("rdi", "stack", "st"), ("rsi", "cv", "key"), ("rdx", "byte", "flags"), ("rcx", "any", "plat"), ("r8", "number", "target")],
-                      asks=lambda v: [v["target"] - 1],
-                      leaves=lambda T, facts, v: machine_result(T, facts, v["key"], v["flags"], v["target"], v["st"]), stack=256, machine=True),
-    "add": Contract("add", [("rdi", "stack", "st"), ("rsi", "cv", "key"), ("rdx", "byte", "flags"), ("rcx", "any", "plat"), ("r8", "cv", "new"), ("r9", "number", "target")],
-                    asks=lambda v: [CAPACITY - 1 - v["st"].count, v["target"] - 1],
-                    leaves=lambda T, facts, v: machine_result(T, facts, v["key"], v["flags"], v["target"],
-                                                              v["st"].put(T, facts, v["st"].count, v["new"], v["st"].count + 1)), stack=512),
-}
-SYMBOLS = {"b3l_push": "push", "b3l_merge": "merge", "b3l_add": "add"}
+CONTRACTS, BY_SYMBOL = contracts()
 # The one-block kernels, by their contract: (cv, block, block_len, counter, flags): the 32 bytes at cv become
 # the first eight words of compress(cv, the 64 bytes at block, counter, block_len, flags); no stack but the
 # return address. Where each reads the length and the flags from is CHECKED against the kernels' bytes by
@@ -152,7 +180,7 @@ class Machine:
             elif kind == "number":
                 self.g[reg] = ("l", sym(name)); self.facts.add(sym(name)); self.given[name] = sym(name)
             else: self.g[reg] = ("q", name)
-        for f in contract.asks(self.given): self.facts.add(f)
+        for f in contract.asks(T, self.facts, self.given): self.facts.add(f)
 
     def clone(self):
         c = copy.copy(self)
@@ -248,6 +276,10 @@ class Machine:
     # -- calls
     def call(self, name):
         T, sp = self.T, self.g["rsp"][2]
+        # the contract's `calls F if NAME == NUMBER`: found wanting by reading kglue_flip.py's accepted changes
+        # (`mov rcx, 5` could become any number, and the AVX-512 kernel be called on a machine without it)
+        only = self.contract.calls.get(name)
+        if only is not None and self.conds.get(only) is not True: raise Fail(f"{name} is called on a path that does not say {only[0]} is {only[1]}")
         if name in COMPRESS:
             cv, block = self.g["rdi"], self.g["rsi"]
             if cv[0] != "a" or block[0] != "a": raise Fail("a kernel called with something that is not an address")
@@ -255,11 +287,7 @@ class Machine:
             message = sum((self.load(block[1], block[2] + 16 * i, 16) for i in range(4)), ())
             length, counter, flags = self.g["rdx"], self.g["rcx"], self.g["r8"]
             if length[0] != "n" or counter[0] != "n" or flags[0] != "p": raise Fail(f"a kernel called with a length, counter or flags this does not take: {length}, {counter}, {flags}")
-            if name.endswith("avx512") and self.conds.get(("plat", AVX512)) is not True:
-                # found by reading kglue_flip.py's accepted changes: `mov rcx, 5` could become any number and
-                # the AVX-512 kernel be called on a machine without it, with the contract none the wiser
-                raise Fail("the AVX-512 kernel is called on a path that does not say the platform word is 5 (AVX-512)")
-            wide = COMPRESS[name]["length"] == "whole word"
+            wide = COMPRESS[name]["length"] == "word"
             if wide and (length[1] >= 1 << 32 or any(b != 0 for b in flags[1][1:4])):
                 raise Fail(f"{name} reads all of EDX and of R8D: the caller does not show the length is below 2^32 and the flags below 256")
             A = kspec.Symbols(T, self.facts)
@@ -267,7 +295,7 @@ class Machine:
             self.store(cv[1], cv[2], 16, tuple(out[:4])); self.store(cv[1], cv[2] + 16, 16, tuple(out[4:]))
             used = 8
         else:
-            c = CONTRACTS.get(SYMBOLS.get(name))
+            c = BY_SYMBOL.get(name)
             if c is None: raise Fail(f"a call of {name}: no contract")
             v, region = {}, None
             for reg, kind, arg in c.args:
@@ -284,7 +312,7 @@ class Machine:
                 elif kind == "number":
                     if lin(a) is None: raise Fail(f"{name}: {arg} is not a number")
                     v[arg] = lin(a)
-            for f in c.asks(v):
+            for f in c.asks(T, self.facts, v):
                 if not self.facts.ge0(f): raise Fail(f"{name}: the caller does not show what it asks ({f} >= 0)")
             after, result = c.leaves(T, self.facts, v)
             self.stacks[region] = after
@@ -409,7 +437,7 @@ def check(rows, name, proof):
     c, T = CONTRACTS[name], kcheck.Terms()
     entry = rows[0][0]
     places = {BASE + p["at"]: p for p in proof["places"]}
-    region = next(arg for _, kind, arg in c.args if kind == "stack")
+    region = c.region
     m = Machine(T, rows, c); m.pc = entry
     given = m.given
     tally = {"place": 0, "return": 0, "steps": 0}
@@ -420,8 +448,8 @@ def check(rows, name, proof):
         if kind == "return":
             if c.machine:
                 # a loop of the machine that returns before its place: the machine must not turn at all
-                if machine_turns(T, e.facts, given["key"], given["flags"], given["target"], given[region]) is not False: raise Fail("entry: the code returns where the machine turns")
-                want, result = given[region], given[region].count
+                if machine_turns(T, e.facts, c, given, given[region]) is not False: raise Fail("entry: the code returns where the machine turns")
+                want, result = given[region], c.result(T, e.facts, given, given[region])
             else: want, result = c.leaves(T, e.facts, given)
             if not e.stacks[region].same(T, e.facts, want): raise Fail("entry: the stack at the return is not what the contract says")
             if result is not None and not same(e.g["rax"], value(result)): raise Fail(f"entry: the result is {e.g['rax']}, the contract says {value(result)}")
@@ -440,17 +468,18 @@ def check(rows, name, proof):
         m.pc = at
         for kind, e in paths(m, places):
             tally[kind] += 1; tally["steps"] += e.steps
-            turns = machine_turns(T, e.facts, given["key"], given["flags"], given["target"], now)
+            turns = machine_turns(T, e.facts, c, given, now)
             if kind == "place":
                 if turns is not True: raise Fail("step: the code goes round where the machine has stopped (or the path does not say)")
-                want = machine_turn(T, e.facts, given["key"], given["flags"], given["target"], now)
+                want = machine_turn(T, e.facts, c, given, now)
                 if not e.stacks[region].same(T, e.facts, want): raise Fail("step: the stack at the place is not one turn of the machine")
                 agrees(e, at_place(seen[e.pc], places[e.pc], region, e.stacks[region]), "step")
                 if -e.low > c.stack: raise Fail(f"step: {-e.low} bytes of stack used, the contract gives {c.stack}")
             else:
                 if turns is not False: raise Fail("step: the code returns where the machine turns (or the path does not say)")
                 if not e.stacks[region].same(T, e.facts, now): raise Fail("step: the stack at the return is not the stack the machine stopped with")
-                if not same(e.g["rax"], value(now.count)): raise Fail(f"step: the result is {e.g['rax']}, not the count")
+                result = c.result(T, e.facts, given, now)       # the machine has stopped with `now`: what the contract returns of it
+                if result is not None and not same(e.g["rax"], value(result)): raise Fail(f"step: the result is {e.g['rax']}, the contract says {value(result)}")
                 returned(e, c, T, "step")
     if c.machine and not seen: raise Fail("a loop of the machine with no place")
     if not tally["return"]: raise Fail("no path returns")
@@ -466,7 +495,7 @@ def find(rows, name):
         check(rows, name, proof); return proof
     # the places: the targets of backward jumps
     heads = sorted({num(i.split()[1]) for a, n, i in rows if i.split()[0] in (".jmp", ".je", ".jne", ".jae", ".jb") and num(i.split()[1]) <= a})
-    region = next(arg for _, kind, arg in c.args if kind == "stack")
+    region = c.region
     m = Machine(T, rows, c); m.pc = rows[0][0]
     for head in heads:
         first = [e for kind, e in paths(m.clone(), {head}) if kind == "place"]

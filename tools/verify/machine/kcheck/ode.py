@@ -26,8 +26,8 @@ class Err(Exception):
 
 # ---------------------------------------------------------------------------------------------------------
 # Text to tree.
-TOKEN = re.compile(r"\s*(?:(//[^\n]*)|(0x[0-9A-Fa-f]+|\d+)|([A-Za-z_][A-Za-z_0-9]*)|(>>>|\+\+|\.\.|==|!=|<=|>=|&&|\|\||[-+*/%^|&<>=!(){}\[\],]))")
-KEYWORDS = {"const", "fn", "machine", "on", "while", "for", "in", "turn", "if", "then", "else", "let", "var", "return"}
+TOKEN = re.compile(r"\s*(?:(//[^\n]*)|(0x[0-9A-Fa-f]+|\d+)|([A-Za-z_][A-Za-z_0-9]*)|(>>>|\+\+|\.\.|==|!=|<=|>=|&&|\|\||[-+*/%^|&<>=!(){}\[\],:]))")
+KEYWORDS = {"const", "fn", "machine", "contract", "on", "while", "for", "in", "turn", "if", "then", "else", "let", "var", "return"}
 LEVELS = [["||"], ["&&"], ["==", "!=", "<", "<=", ">", ">="], ["++"], ["|"], ["^"], ["&"], ["+", "-"], ["*", "/", "%"], [">>>"]]
 
 
@@ -63,7 +63,7 @@ class Parser:
         return False
 
     def file(self):
-        consts, fns, machines = {}, {}, {}
+        consts, fns, machines, self.contracts = {}, {}, {}, {}
         while not self.peek(kind="end"):
             if self.maybe("const"):
                 name = self.take(kind="name"); self.take("="); consts[name] = self.expr()
@@ -78,8 +78,32 @@ class Parser:
                     self.take("for"); var = self.take(kind="name"); self.take("in"); a = self.expr(); self.take(".."); loop = ("for", var, a, self.expr())
                 self.take("turn"); turn = self.block(); self.take("}")
                 machines[name] = dict(params=params, state=state, init=init, loop=loop, turn=turn)
-            else: raise Err(f"line {self.t[self.i][2]}: const, fn or machine expected")
+            elif self.maybe("contract"):
+                name = self.take(kind="name"); self.contracts[name] = self.contract()
+            else: raise Err(f"line {self.t[self.i][2]}: const, fn, machine or contract expected")
         return consts, fns, machines
+
+    def contract(self):
+        """(arg: kind, ...) { asks E | leaves NAME = E | returns E | stack N | calls F if E }"""
+        self.take("("); args = []
+        while not self.maybe(")"):
+            arg = self.take(kind="name"); self.take(":"); kind = [self.take(kind="name")]
+            while self.peek(kind="name"): kind.append(self.take(kind="name"))
+            args.append((arg, " ".join(kind))); self.maybe(",")
+        c = dict(args=args, asks=[], leaves=[], returns=None, stack=None, calls=[])
+        self.take("{")
+        while not self.maybe("}"):
+            clause = self.take(kind="name")
+            if clause == "asks": c["asks"].append(self.expr())
+            elif clause == "leaves":
+                name = self.take(kind="name"); self.take("="); c["leaves"].append((name, self.expr()))
+            elif clause == "returns": c["returns"] = self.expr()
+            elif clause == "stack": c["stack"] = self.take(kind="num")
+            elif clause == "calls":
+                name = self.take(kind="name"); self.take("if"); c["calls"].append((name, self.expr(1)))
+            else: raise Err(f"line {self.t[self.i - 1][2]}: asks, leaves, returns, stack or calls expected, not {clause!r}")
+        if c["stack"] is None or len(c["leaves"]) != 1: raise Err("a contract says its stack, and what one thing it leaves")
+        return c
 
     def params(self):
         self.take("("); out = []
@@ -215,8 +239,9 @@ class Return(Exception):
 
 class Spec:
     def __init__(self, text):
-        self.consts, self.fns, self.machines = Parser(text).file()
-        self.turns = 0
+        parser = Parser(text)
+        self.consts, self.fns, self.machines = parser.file()
+        self.contracts, self.turns = parser.contracts, 0
         numbers = Numbers()
         self.consts = {k: self.eval(numbers, e, {}) for k, e in self.consts.items()}
 
@@ -254,6 +279,8 @@ class Spec:
             if len(names) != len(args): raise Err(f"{name}: {len(names)} arguments expected")
             env = dict(zip(names, args))
             if m["init"] is not None: env[m["state"]] = self.eval(A, m["init"], env)
+            named = A.machine_result(name, m, env) if hasattr(A, "machine_result") else None
+            if named is not None: return named          # on symbols: what the machine makes of a state it cannot be run on
             if m["loop"][0] == "while":
                 while self.eval(A, m["loop"][1], env) is True: self.tick(); self.run(A, m["turn"], env)
             else:

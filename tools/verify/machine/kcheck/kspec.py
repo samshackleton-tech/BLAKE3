@@ -113,6 +113,23 @@ class Symbols:
         else: yes = True if self.facts.ge0(d - 1) else False if self.facts.ge0(-d) else None                       # is a > b?
         if yes is None: raise Err(f"the specification asks how {Lin.of(a)} and {Lin.of(b)} compare, and the code's path does not say")
         return yes if op in (">=", ">") else not yes
+    def machine_result(self, name, m, env):
+        """A machine applied to a stack whose count is not a plain number cannot be run: its result is a stack
+        named by the machine and everything it was given, with a count of its own. (In the machine's own
+        function the code is checked against it turn by turn; here a caller only names what it gets.)"""
+        state = env[m["state"]]
+        if not isinstance(state, Stack) or not state.count.c: return None
+        named = self.T.mk("machine", name, *(self.key(env[p]) for p in m["params"]), state.key(self.T, self.facts))
+        count = Lin([(f"count of {name} {named}", 1)])
+        self.facts.add(count)
+        return Stack((name, named), count)
+    def key(self, v):
+        if isinstance(v, Word): return ("word", v.v)
+        if isinstance(v, Counter): return ("counter", v.lo.v, v.hi.v)
+        if isinstance(v, list): return tuple(self.key(x) for x in v)
+        if isinstance(v, Stack): return v.key(self.T, self.facts)
+        if isinstance(v, Blocks): return ("blocks", v.lane)
+        return Lin.of(v)
     def minus(self, x, y):
         d = Lin.of(x) - Lin.of(y)
         if not self.facts.ge0(d): raise Err(f"the specification takes {Lin.of(y)} from {Lin.of(x)}, and the code's path does not show the result is not below zero")

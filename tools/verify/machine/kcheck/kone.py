@@ -11,10 +11,10 @@ against the kernel's bytes, in kcheck.py's way: the instructions are run on symb
 32-bit terms), the specification's `compress` (blake3.ode) is built on the same symbols, and the eight words
 stored are compared by identity.
 
-What each kernel is shown to do, for every cv, block and counter:
+What each kernel is claimed to do is its `contract` in blake3.ode, and shown for every cv, block and counter:
   avx512   cv <- compress(cv, block, counter, the low byte of RDX, the low byte of R8), whatever else RDX and R8 hold
   sse41    cv <- compress(cv, block, counter, EDX, the low word of R8), IF RDX is below 2^32 (its upper half would
-           be added into the flags' word); whatever the upper half of R8 holds
+           be added into the flags' word: the contract's `word`); whatever the upper half of R8 holds
 Both: nothing is read but the 32 bytes at cv, the 64 at block and the object's constants; nothing is written
 but the 32 bytes at cv; no stack is used and no register a callee keeps is written; the seven rounds' branch is
 decided by a number. kglue.py's table of what a caller must show (COMPRESS) is read from CONTRACTS here."""
@@ -26,11 +26,22 @@ from kcheck import Fail, num, signed
 BASE, DATA = 0x10000, 0x50000000
 KEPT = kcheck.SAVED
 
-# name -> the symbol, and what the length and the flags are read from
-CONTRACTS = {
-    "avx512": dict(symbol="blake3_servil_compress_in_place_avx512", length="low byte", flags="low byte"),
-    "sse41": dict(symbol="blake3_servil_compress_in_place_sse41", length="whole word", flags="low word"),
-}
+def contract_of(symbol):
+    """A one-block kernel's contract, as blake3.ode states it: (cv, block, length, counter, flags) in the calling
+    convention's order, the length a `low byte` or a `word`, the flags a `low byte` or a `low word`, and what the
+    chaining value is left as."""
+    c = kspec.SPEC.contracts[symbol]
+    kinds = [kind for _, kind in c["args"]]
+    if len(kinds) != 5 or kinds[0] != "cv" or kinds[1] != "block" or kinds[2] not in ("low byte", "word") or kinds[3] != "counter" or kinds[4] not in ("low byte", "low word"):
+        raise Fail(f"{symbol}: not a one-block kernel's contract: {kinds}")
+    if c["stack"] != 0 or c["leaves"][0][0] != c["args"][0][0] or c["asks"] or c["returns"] is not None: raise Fail(f"{symbol}: a one-block kernel leaves its chaining value, uses no stack, asks and returns nothing")
+    return dict(symbol=symbol, length=kinds[2], flags=kinds[4], names=[arg for arg, _ in c["args"]], leaves=c["leaves"][0][1])
+
+
+def contracts(): return {name: contract_of("blake3_servil_compress_in_place_" + name) for name in ("avx512", "sse41")}
+
+
+CONTRACTS = contracts()
 
 
 class Machine:
@@ -41,7 +52,7 @@ class Machine:
         self.g = {r: ("q", r) for r in kcheck.G64}
         self.g.update(rdi=("a", "cv", 0), rsi=("a", "block", 0), rsp=("a", "stack", 0),
                       rcx=("pair", T.var("counter low"), T.var("counter high")))
-        if contract["length"] == "whole word": self.g["rdx"] = ("w", T.var("edx"))       # the contract's condition: RDX below 2^32
+        if contract["length"] == "word": self.g["rdx"] = ("w", T.var("edx"))       # the contract's `word`: RDX below 2^32
         self.x, self.zf, self.out, self.steps, self.pc = {}, None, {}, 0, None
         self.cv = [T.var("cv", w) for w in range(8)]
         self.block = [T.var("input", w) for w in range(16)]
@@ -171,10 +182,11 @@ def check(rows, name):
     for r in KEPT + ["rsp"]:
         if m.g[r] != (("q", r) if r != "rsp" else ("a", "stack", 0)): raise Fail(f"{r} is written")
     A = kspec.Symbols(T)
-    length = ode.Word(T.var("edx")) if c["length"] == "whole word" else ode.Word(kspec.byte_term(T, (0, ("low byte of rdx",))))
+    length = ode.Word(T.var("edx")) if c["length"] == "word" else ode.Word(kspec.byte_term(T, (0, ("low byte of rdx",))))
     flags = ode.Word(T.var("low word of r8")) if c["flags"] == "low word" else ode.Word(kspec.byte_term(T, (0, ("low byte of r8",))))
     counter = ode.Counter(ode.Word(T.var("counter low")), ode.Word(T.var("counter high")))
-    want = kspec.terms(kspec.SPEC.call(A, "compress", kspec.words(m.cv), kspec.words(m.block), counter, length, flags))
+    # what the contract says the chaining value is left as, in its own names for the five arguments
+    want = kspec.terms(kspec.SPEC.eval(A, c["leaves"], dict(zip(c["names"], [kspec.words(m.cv), kspec.words(m.block), length, counter, flags]))))
     for half in (0, 16):
         if half not in m.out: raise Fail(f"the chaining value's bytes from {half} are not written")
         if tuple(m.out[half]) != want[half // 4:half // 4 + 4]: raise Fail(f"the words stored at {half} are not the specification's")

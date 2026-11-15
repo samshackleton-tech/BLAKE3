@@ -93,6 +93,50 @@ machine merge(key, flags, target) on s {
 }
 
 // ---------------------------------------------------------------------------------------------------------
+// What functions of the binary are claimed to do (so far: the one-block kernels and the hasher's stack; the
+// wide kernels' claims are still in kloop.py and kcheck.py). The arguments are in the order the machine's
+// calling convention passes them. An argument is the address of a `stack` of chaining values (1792 bytes: its
+// count in the first 8, value i at 32 + 32*i, at most 55 of them), the address of a `cv` (32 bytes: 8 words)
+// or of a `block` (64 bytes: 16 words), a `byte` (a number below 256), a `number`, a `counter` (64 bits), or
+// `any` 64 bits; `low byte`, `word` (a number below 2^32) and `low word` say how much of a register a kernel
+// reads. `asks`: what a caller must show. `leaves`: what the memory named holds afterwards; all else is as it
+// was. `returns`: the result. `stack`: the bytes of stack the function may use below its return address.
+// `calls F if C`: the function calls F only where C holds (the platform word 5 means the machine has AVX-512,
+// which its caller answers for).
+
+contract blake3_servil_compress_in_place_avx512(h: cv, m: block, length: low byte, t: counter, flags: low byte) {
+    leaves h = compress(h, m, t, length, flags)
+    stack 0
+}
+
+contract blake3_servil_compress_in_place_sse41(h: cv, m: block, length: word, t: counter, flags: low word) {
+    leaves h = compress(h, m, t, length, flags)
+    stack 0
+}
+
+contract b3l_push(st: stack, new: cv) {
+    asks len(st) <= 54
+    leaves st = st ++ [new]
+    stack 64
+}
+
+contract b3l_merge(st: stack, key: cv, flags: byte, plat: any, target: number) {
+    asks target >= 1
+    leaves st = merge(key, flags, target, st)
+    returns len(st)
+    stack 256
+    calls blake3_servil_compress_in_place_avx512 if plat == 5
+}
+
+contract b3l_add(st: stack, key: cv, flags: byte, plat: any, new: cv, target: number) {
+    asks len(st) <= 54
+    asks target >= 1
+    leaves st = merge(key, flags, target, st ++ [new])
+    returns len(st)
+    stack 512
+}
+
+// ---------------------------------------------------------------------------------------------------------
 // The whole hash of a message of bytes (run on numbers only: the test vectors).
 
 fn words(bytes) {
