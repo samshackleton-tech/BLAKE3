@@ -25,3 +25,10 @@ contract ode_adler32_blocks(input: len bytes, len: number) {
     trace depends on input
     stack 56
 }
+
+// The same again, of the function that takes four bytes a turn within a block (blocks4.ode).
+contract ode_adler32_blocks4(input: len bytes, len: number) {
+    returns adler32(input)
+    trace depends on input
+    stack 56
+}

@@ -303,6 +303,14 @@ class Algebra:
                     self.m.lists[title_of(v)] = u
                 return u
         n = self.facts.number(i)
+        if n is None and not any(self.facts.zero(i - j - 1) is True for j, _ in table):
+            # a few places after a place that is known: the places between, one after another, each by the
+            # sequence's own equation
+            for j, _ in list(table):
+                d = self.facts.number(i - j)
+                if d is not None and 2 <= d <= 16:
+                    for m in range(1, d): self.element(spec, seq, plain(Lin.of(j) + m))
+                    break
         below = Lin.of(n - 1) if n is not None and n > 0 else next((j for j, _ in table if self.facts.zero(i - j - 1) is True), None)
         if n == 0: v = spec.eval(self, seq.first, seq.env)
         elif below is not None:
@@ -456,8 +464,14 @@ class Machine(kfn.Machine):
         try:
             if op == "and" and x[0] == "l" and y[0] == "n" and y[1] > 0 and (y[1] + 1) & y[1] == 0 and y[1] < 1 << 32:
                 return value(x[1] - Lin.of(self.halve(x[1], y[1] + 1)).scale(y[1] + 1))
-            if op == "shr" and x[0] == "l" and 0 < y[1] <= 16 and not self.facts.ge0((1 << y[1]) - 1 - x[1]):
+            if op == "shr" and x[0] == "l" and 0 < y[1] < 64 and not self.facts.ge0((1 << y[1]) - 1 - x[1]):
                 return value(self.halve(x[1], 1 << y[1]))
+            if op == "or" and lin(x) is not None and lin(y) is not None:
+                # two numbers with no bit in common: their `or` is their sum. One is a multiple of 2^k (every part
+                # of it is), the other is shown to be below 2^k.
+                for a, b in ((lin(x), lin(y)), (lin(y), lin(x))):
+                    k = min([(c & -c).bit_length() - 1 for _, c in a.c] + ([(a.k & -a.k).bit_length() - 1] if a.k else []), default=0)
+                    if k > 0 and self.facts.ge0(b) and self.facts.ge0((1 << k) - 1 - b): return value(a + b)
         except Err as e: raise Fail(str(e))
         return super().arith(op, x, y)
 

@@ -85,12 +85,13 @@ class Adler32Blocks(unittest.TestCase):
         self.assertEqual(self.p.verdict(), "accepted")
 
     def test_a_changed_specification_or_contract_is_refused(self):
-        tail = "\n    trace depends on input\n    stack 56"
+        head = "contract ode_adler32_blocks(input: len bytes, len: number) {\n"
+        whole = head + "    returns adler32(input)\n    trace depends on input\n    stack 56\n}"
         self.p.changed(self, "spec", [
             ("s[0] = 1 ", "s[0] = 0 "), ("s[0] = 0 ", "s[0] = 1 "), ("(s[i] + bytes[i]) % 65521", "(s[i] + bytes[i]) % 65520"), ("(s[i] + bytes[i]) % 65521", "(s[i] + bytes[i]) % 65536"),
             ("(s[i] + s1(bytes)[i + 1]) % 65521", "(s[i] + s1(bytes)[i]) % 65521"), ("(s[i] + s1(bytes)[i + 1]) % 65521", "(s[i] + s1(bytes)[i + 1]) % 65522"),
             ("65536 * s2(bytes)[len(bytes)] + s1(bytes)[len(bytes)]", "65536 * s1(bytes)[len(bytes)] + s2(bytes)[len(bytes)]"), ("65536 * s2(bytes)[len(bytes)] + s1(bytes)[len(bytes)]", "65535 * s2(bytes)[len(bytes)] + s1(bytes)[len(bytes)]"),
-            ("returns adler32(input)" + tail, "returns adler32(input) + 1" + tail), ("    trace depends on input\n    stack 56", "    stack 56"), ("stack 56", "stack 48")])
+            (whole, whole.replace("returns adler32(input)", "returns adler32(input) + 1")), (whole, whole.replace("    trace depends on input\n", "")), (whole, whole.replace("stack 56", "stack 48"))])
 
     def test_a_changed_proof_is_refused(self):
         lines, needless = self.p.proof.split("\n"), []
@@ -108,6 +109,34 @@ class Adler32Blocks(unittest.TestCase):
         n, accepted = instructions_changed(self.p)
         self.assertEqual((n, len(accepted)), (127, 11))
         self.assertTrue(all(i.startswith(".mov") and c == ".nop" for i, c in accepted))
+
+
+class Adler32Blocks4(unittest.TestCase):
+    """The same with four bytes a turn inside a block: the checker steps the specification's sequences four
+    places on, one after another."""
+    @classmethod
+    def setUpClass(cls): cls.p = Program("adler32", "adler32_blocks4", "ode_adler32_blocks4")
+
+    def test_it_meets_its_contract(self):
+        self.assertEqual(self.p.verdict(), "accepted")
+
+    def test_a_changed_proof_is_refused(self):
+        lines, needless = self.p.proof.split("\n"), []
+        for k, line in enumerate(lines):
+            if not line.strip() or line.strip().startswith(("//", "place", "}", "any ")): continue
+            if self.p.verdict(proof="\n".join(lines[:k] + lines[k + 1:])) == "accepted": needless.append(line.strip())
+        self.assertEqual(needless, [])
+
+    def test_a_byte_taken_twice_or_left_out_is_refused(self):
+        # the four reads of a turn are of input[i], [i + 1], [i + 2], [i + 3]: each made the one before, or the one after
+        reads = [k for k, (a, z, i) in enumerate(self.p.rows) if i.startswith(".add 64 (.reg .rcx) (.imm 0x")]
+        self.assertEqual([self.p.rows[k][2] for k in reads], [f".add 64 (.reg .rcx) (.imm 0x{d})" for d in (1, 2, 3)])
+        for k in reads:
+            a, z, i = self.p.rows[k]
+            d = int(i.split("0x")[1].rstrip(")"), 16)
+            for other in (d - 1, d + 1):
+                rows = list(self.p.rows); rows[k] = (a, z, i.replace(f"0x{d})", f"0x{other})"))
+                self.assertTrue(self.p.verdict(rows=rows).startswith("refused"), (i, other))
 
 
 class Lz4Decode(unittest.TestCase):
@@ -455,6 +484,19 @@ class Arithmetic(unittest.TestCase):
         plain = Facts()
         for fact in (m - 4, Lin.of(18) - m, m + 236 - q.scale(16), q.scale(16) + 15 - m - 236): plain.add(fact)
         self.assertFalse(plain.thorough)
+
+    def test_or_is_a_sum_only_of_numbers_with_no_bit_in_common(self):
+        # Adler-32's two sums are joined as (b << 16) + a. With `or` in place of the add (as Devon's source has it):
+        # the same, since a is below 2^16. With the shift one less, or the add an `or` of the unshifted sum: not shown.
+        p = Program("adler32", "adler32", "ode_adler32")
+        k = next(j for j, (a, z, i) in enumerate(p.rows) if i == ".add 64 (.reg .rax) (.reg .r12)" and p.rows[j - 1][2] == ".shl64 .rax 16")
+        a, z, i = p.rows[k]
+        with_or = list(p.rows); with_or[k] = (a, z, ".or 64 (.reg .rax) (.reg .r12)")
+        self.assertEqual(p.verdict(rows=with_or), "accepted")
+        less = list(with_or); less[k - 1] = (p.rows[k - 1][0], p.rows[k - 1][1], ".shl64 .rax 15")
+        self.assertTrue(p.verdict(rows=less).startswith("refused"), p.verdict(rows=less))
+        none = list(with_or); none[k - 1] = (p.rows[k - 1][0], p.rows[k - 1][1], ".nop")
+        self.assertTrue(p.verdict(rows=none).startswith("refused"), p.verdict(rows=none))
 
     def test_neither_way_shows_what_is_not_so(self):
         # 3,000 systems of a few small rows over three symbols: where `bounded`, or the elimination with the room

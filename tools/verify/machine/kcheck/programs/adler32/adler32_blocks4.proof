@@ -1,0 +1,43 @@
+// The three loops of ode_adler32_blocks4: as adler32_blocks.proof, with the block's loop in two (four bytes
+// a turn, then what is left). In the last the sums are bounded by what the bytes still to come could add,
+// since where the block began is no longer known there.
+place +0x3c {
+    name i = r12
+    fact i <= len
+    r13 = s1(input)[i]
+    r14 = s2(input)[i]
+    any r15
+    decreases len - i, 2, 0
+}
+
+place +0x6f {
+    name i = r12
+    name a = r13
+    name b = r14
+    name end = r15
+    ghost i0 = i
+    fact i0 <= i
+    fact i <= end
+    fact i0 < end
+    fact end <= len
+    fact end <= i0 + 5552
+    fact a % 65521 == s1(input)[i]
+    fact a <= 65520 + 255 * (i - i0)
+    fact b % 65521 == s2(input)[i]
+    fact b <= 65520 + 1481280 * (i - i0)
+    decreases len - i0, 1, len - i
+}
+
+place +0x10c {
+    name i = r12
+    name a = r13
+    name b = r14
+    name end = r15
+    fact i <= end
+    fact end <= len
+    fact a % 65521 == s1(input)[i]
+    fact a + 255 * (end - i) <= 65520 + 255 * 5552
+    fact b % 65521 == s2(input)[i]
+    fact b + 1481280 * (end - i) <= 65520 + 1481280 * 5552
+    decreases len - end + 1, 0, end - i
+}
