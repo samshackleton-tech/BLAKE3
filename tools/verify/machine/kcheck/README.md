@@ -39,8 +39,8 @@ Apple M6):
 - An earlier trial (`push`, `merge`, `add` of a stack of subtrees) against an algorithm, not the
   specification.
 
-What a reader relies on: `blake3.spec`, which he reads; the checker, 3,933 lines of unverified Python for the
-hash (4,502 with the stack's checker); the processor doing what the checker takes each instruction form
+What a reader relies on: `blake3.spec`, which he reads; the checker, 3,890 lines of unverified Python for the
+hash (4,459 with the stack's checker); the processor doing what the checker takes each instruction form
 to do; Python. Most of this page is what has been done to find where the checker is wrong,
 and what that found.
 
@@ -83,7 +83,7 @@ and the claim, which is all of the contracts a reader need read:
 
 (`needs`: it runs SSE4.1 instructions, and AVX-512 instructions only where `plat` is 5.)
 
-- `ode.py` (648 lines) reads the text and evaluates it over an algebra of words. On numbers: the official
+- `ode.py` (605 lines) reads the text and evaluates it over an algebra of words. On numbers: the official
   vectors, at every length, for the hash, the keyed hash and key derivation.
 - `kspec.py` (522 lines) is the other algebra, for the checkers: words are terms; a number may depend on a
   count, and a comparison of such numbers is decided from the code path's facts or the evaluation stops;
@@ -179,7 +179,7 @@ own specification, opened later on the same path, finds the same name). At the r
 contract says is left is the specification's value of it; the result, the registers a callee keeps, the stack
 pointer and the stack used are checked; every write was within what the contract lets the function write.
 
-The numbers' part (`klin.py`, 209 lines): a fact is a number known not to be below zero; one known both
+The numbers' part (`klin.py`, 211 lines): a fact is a number known not to be below zero; one known both
 ways is an equality and one of its symbols is replaced; a question is answered by adding facts up (Fourier
 and Motzkin's elimination, in whole numbers). Halving and the low bit make a symbol with its two facts.
 
@@ -420,7 +420,7 @@ specification. (The hash above does not use them: it has no stack.)
 | `proofs/inner.spec`, `proofs/*.json` | 175 | what the functions inside are claimed to do, the layouts of two records; the wide kernels' and `merge`'s places |
 | `hash.ode`, `glue/*.S` | 332 | the hash written to be proved; the assembly the Ode compiler prints of it (and of the stack's three functions) |
 | `check_all.py` | 120 | what a reader runs: every function from its bytes, and that the hash's functions end |
-| `ode.py`, `kspec.py`, `klin.py` | 648 + 522 + 211 | the specification's reader; its algebra on symbols; numbers that depend on counts and the facts about them |
+| `ode.py`, `kspec.py`, `klin.py` | 605 + 522 + 211 | the specification's reader; its algebra on symbols; numbers that depend on counts and the facts about them |
 | `kdecode.py` | 479 | reads the ELF object (sections, symbol, relocations) and decodes the instruction forms the code uses, and no others; no disassembler |
 | `kfn.py`, `test_kfn.py` | 882 + 122 | the checker of functions; its tests |
 | `kfn_flip.py`, `khash_native.c` | 133 + 142 | its single-bit audit; the whole hash on a processor against BLAKE3 in C |
@@ -527,7 +527,7 @@ an 8-bit `or` read as 32 bits.
 
 - The specification and the claim, `blake3.spec` (168 lines), and the programs that read it and the bytes:
   for the hash `ode.py`, `kspec.py`, `klin.py`, `kdecode.py`, `kcheck.py`, `kone.py`, `kloop.py`, `kfn.py`:
-  3,933 lines; with `kglue.py`, 4,502 (their provers, about 150 of those, need no trust). And Python.
+  3,890 lines; with `kglue.py`, 4,459 (their provers, about 150 of those, need no trust). And Python.
 - That the things `hashr` is given the addresses of are apart from one another and from the stack (the
   claim says so: its caller's part).
 - What the functions inside are claimed to do (`proofs/inner.spec`) is not relied on: a wrong contract there

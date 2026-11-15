@@ -84,12 +84,13 @@ class Ode(unittest.TestCase):
             self.assertTrue(any(a != b for a, b in (both_ways(changed, n, 5, 16) for n in (1, 64, 65, 1000, 1024))), what)
 
     def test_what_is_not_the_language_is_refused(self):
-        for text in ("fn f(x) { x @ 1 }", "fn f(x) { x + }", "machine m(a) on s { turn { s = a } }", "const = 3", "fn f(x) { [x for i in 0..2 }",
-                     "def f(x) { var y = x\n y }", "def f(x) { let y = x\n let y = 2\n y }", "def f(x) { for i in 0..2 { x }\n x }",
+        for text in ("def f(x) { x @ 1 }", "def f(x) { x + }", "machine m(a) on s { turn { s = a } }", "const = 3", "def f(x) { [x for i in 0..2 }",
+                     "fn f(x) { x }", "def f(x) { var y = x\n y }", "def f(x) { let y = x\n let y = 2\n y }", "def f(x) { for i in 0..2 { x }\n x }",
+                     "def f(x) { y = x\n y }", "def f(x) { return x }", "def f(x) { while x > 0 { x }\n x }",
                      "sequence s(a) { h[1] = a  h[b + 1] = h[b]  for b in 0..2 }", "sequence s(a) { h[0] = a  h[b + 1] = h  for b in 0..2 }"):
             with self.assertRaises(ode.Err, msg=text):
                 ode.Spec(text)
-        spec = ode.Spec("fn f(x) { x + nothing }\nfn g(x) { word(1) * 2 }\nfn h(x) { [1, 2][x] }")
+        spec = ode.Spec("def f(x) { x + nothing }\ndef g(x) { word(1) * 2 }\ndef h(x) { [1, 2][x] }")
         for name in ("f", "g"):
             with self.assertRaises(ode.Err, msg=name):
                 spec.call(ode.Numbers(), name, 1)

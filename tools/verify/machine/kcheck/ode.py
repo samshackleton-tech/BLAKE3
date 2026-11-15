@@ -1,24 +1,27 @@
 #!/usr/bin/env python3
-"""ode: a specification that runs, read on numbers and on symbols.
+"""ode: the reader of the specification's language, on numbers and on symbols.
 
     python3 ode.py blake3.spec --vectors ../../../../test_vectors/test_vectors.json [--up-to BYTES]
 
 The language is described at the top of blake3.spec. This file is its reader: a parser (to a tree), and one
 evaluator of the tree over an "algebra" of words: Numbers (words are 32-bit numbers) or Symbols (words are
 the checkers' terms; a comparison of numbers that depend on a count is decided from the path's facts, or the
-evaluation stops). The same text is thus the thing that gives BLAKE3's test vectors and the thing code is
-compared with.
+evaluation stops). The same text is thus what gives BLAKE3's test vectors and what code is compared with.
 
-    fn NAME(args) [: KIND] { statements }  the value of the last expression, or of `return`
-    machine NAME(args) on STATE, ... [= INIT, ...] { while COND | for I in A..B   turn { statements } }
     const NAME = EXPR
+    def NAME(args) { let X = E ... VALUE }        a definition: equations and a value
+    sequence NAME(args) { h[0] = A   h[b + 1] = F(h[b])   for b in 0..n }
     layout NAME BYTES { FIELD: KIND at OFFSET [below N], FIELD[COUNT]: KIND at OFFSET, ... }
-    contract NAME(ARG: KIND, ...) { asks E | leaves NAME = E | spoils NAME | returns E | stack N | calls F if E }
+    kind NAME: KIND                               what sort of thing a definition gives
+    contract NAME(ARG: KIND, ...) { asks E | asks X[i] == E for i in A..B | leaves NAME = E | spoils NAME
+                                    | returns E | stack E | needs F [if E] | decreases E | calls F if E }
+    machine NAME(args) on STATE, ... [= INIT, ...] { while COND | for I in A..B   turn { STATE = E ... } }
+                                                  (an algorithm, not a specification: proofs/inner.spec has one)
 
-A machine called as a function runs to its end (its state the last arguments, if it has no INIT); with more
-than one state its result is a record of them. The checkers ask it for one `turn` and whether it `goes` on.
-On symbols a machine that cannot be run (its condition depends on a count the path does not fix) gives a
-result named by what it was given; a `fn` with a KIND that cannot be evaluated likewise."""
+A sequence or machine called as a function runs to its end; with more than one state its result is a record
+of them. The checkers ask it for one `turn` and whether it `goes` on. On symbols a definition with a kind
+that cannot be evaluated (the tree over bytes whose count the path does not fix) gives a value of that
+kind named by what it was given; a machine that cannot be run likewise."""
 import json, os, re, sys, time
 
 M32 = 0xFFFFFFFF
@@ -33,7 +36,7 @@ class Err(Exception):
 # ---------------------------------------------------------------------------------------------------------
 # Text to tree.
 TOKEN = re.compile(r"\s*(?:(//[^\n]*)|(0x[0-9A-Fa-f]+|\d+)|([A-Za-z_][A-Za-z_0-9]*)|(>>>|\+\+|\.\.|==|!=|<=|>=|&&|\|\||[-+*/%^|&<>=!(){}\[\],:.]))")
-KEYWORDS = {"const", "fn", "def", "sequence", "the", "machine", "contract", "layout", "kind", "on", "while", "for", "in", "turn", "if", "then", "else", "let", "var", "return"}
+KEYWORDS = {"const", "def", "sequence", "the", "machine", "contract", "layout", "kind", "on", "while", "for", "in", "turn", "if", "then", "else", "let"}
 LEVELS = [["||"], ["&&"], ["==", "!=", "<", "<=", ">", ">="], ["++"], ["|"], ["^"], ["&"], ["+", "-"], ["*", "/", "%"], [">>>"]]
 
 
@@ -73,10 +76,6 @@ class Parser:
         while not self.peek(kind="end"):
             if self.maybe("const"):
                 name = self.take(kind="name"); self.take("="); consts[name] = self.expr()
-            elif self.maybe("fn"):
-                name = self.take(kind="name"); params = self.params()
-                if self.maybe(":"): self.kinds[name] = self.kind()
-                fns[name] = (params, self.block())
             elif self.maybe("def"):
                 # a definition: equations (`let`) and a value; nothing is assigned twice, nothing loops
                 name = self.take(kind="name"); params = self.params()
@@ -115,12 +114,12 @@ class Parser:
                 if self.maybe("while"): loop = ("while", self.expr())
                 else:
                     self.take("for"); var = self.take(kind="name"); self.take("in"); a = self.expr(); self.take(".."); loop = ("for", var, a, self.expr())
-                self.take("turn"); turn = self.block(); self.take("}")
+                self.take("turn"); turn = self.turn(); self.take("}")
                 machines[name] = dict(params=params, states=state, state=state[0] if len(state) == 1 else None,
                                       init=init[0] if init is not None and len(state) == 1 else None, inits=init, loop=loop, turn=turn)
             elif self.maybe("contract"):
                 name = self.take(kind="name"); self.contracts[name] = self.contract()
-            else: raise Err(f"line {self.t[self.i][2]}: const, def, sequence, contract, layout, kind (or fn, machine) expected")
+            else: raise Err(f"line {self.t[self.i][2]}: const, def, sequence, contract, layout, kind or machine expected")
         return consts, fns, machines
 
     def before(self, e, h, b, name):
@@ -222,34 +221,12 @@ class Parser:
             out.append(self.take(kind="name")); self.maybe(",")
         return out
 
-    def block(self):
+    def turn(self):
+        """A machine's turn: { NAME = E ... }: its states given anew."""
         self.take("{"); out = []
-        while not self.maybe("}"): out.append(self.stmt())
+        while not self.maybe("}"):
+            name = self.take(kind="name"); self.take("="); out.append(("set", name, self.expr()))
         return out
-
-    def stmt(self):
-        if self.maybe("let") or self.maybe("var"):
-            name = self.take(kind="name"); self.take("="); return ("set", name, self.expr())
-        if self.maybe("for"):
-            var = self.take(kind="name"); self.take("in"); a = self.expr(); self.take(".."); b = self.expr(); return ("for", var, a, b, self.block())
-        if self.maybe("while"):
-            c = self.expr(); return ("while", c, self.block())
-        if self.maybe("return"): return ("return", self.expr())
-        if self.peek("if"):
-            # a statement `if c { }` or an expression `if c then a else b`: the brace or `then` says which
-            save = self.i; self.take("if"); c = self.expr()
-            if self.peek("{"):
-                then = self.block(); other = self.block() if self.maybe("else") else []
-                return ("if", c, then, other)
-            self.i = save
-        if self.peek(kind="name") and self.t[self.i + 1][1] == "=" and self.t[self.i + 1][0] == "sym":
-            name = self.take(kind="name"); self.take("="); return ("set", name, self.expr())
-        if self.peek(kind="name") and self.t[self.i + 1][1] == "[":
-            # NAME[i] = e, or an expression that starts so
-            save = self.i; name = self.take(kind="name"); self.take("["); i = self.expr()
-            if self.maybe("]") and self.maybe("="): return ("setidx", name, i, self.expr())
-            self.i = save
-        return ("expr", self.expr())
 
     def expr(self, level=0):
         if level == 0 and self.maybe("if"):
@@ -382,10 +359,6 @@ def part(xs, a, b):
     return xs[a:b]
 
 
-class Return(Exception):
-    def __init__(self, value): self.value = value
-
-
 class Seq:
     """A sequence inside a definition: its first value, and each next from the one before."""
     def __init__(self): self.first, self.var, self.next, self.env, self.memo = None, None, None, None, {}
@@ -465,10 +438,7 @@ class Spec:
             return self.run_machine(A, m, env)
         return self.builtin(A, name, args)
 
-    def body(self, A, body, env):
-        try:
-            return self.run(A, body, env)
-        except Return as r: return r.value
+    def body(self, A, body, env): return self.run(A, body, env)
 
     def run_machine(self, A, m, env):
         if m["loop"][0] == "while":
@@ -513,19 +483,6 @@ class Spec:
                 if kind == "first": seq.first = s[2]
                 else: seq.var, seq.next = s[2], s[3]
                 last = None
-            elif kind == "setidx":
-                i = self.eval(A, s[2], env)
-                env[s[1]] = A.put(env[s[1]], i, self.eval(A, s[3], env)); last = None
-            elif kind == "for":
-                for i in self.span(A, s[2], s[3], env):
-                    env[s[1]] = i; self.run(A, s[4], env)
-                last = None
-            elif kind == "while":
-                while self.eval(A, s[1], env) is True: self.tick(); self.run(A, s[2], env)
-                last = None
-            elif kind == "if":
-                self.run(A, s[2] if self.eval(A, s[1], env) is True else s[3], env); last = None
-            elif kind == "return": raise Return(self.eval(A, s[1], env))
             else: last = self.eval(A, s[1], env)
         return last
 
