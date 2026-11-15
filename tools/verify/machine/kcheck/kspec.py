@@ -26,7 +26,7 @@ from klin import Lin, Facts, sym
 
 SPEC = ode.load()
 HALVES = {}                 # the symbol of x / 2 -> x (for facts of the kind "x is below 2^k")
-FUEL = 100000               # applications of the specification's functions followed before a result is named instead
+FUEL = 2000000              # applications of the specification's functions followed before a result is named instead
 
 
 def plain(x):

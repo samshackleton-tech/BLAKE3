@@ -4,7 +4,7 @@ contract and a changed specification are refused.
 
     python3 test_kfn.py
 
-glue/pad.S, chunk_node.S, node_out.S, wide32.S, take.S, part32.S, subtree.S and hashr.S are hash.ode as the Ode compiler prints it
+glue/pad.S, chunk_node.S, node_out.S, wide32.S, wide128.S, take.S, part32.S, subtree.S and hashr.S are hash.ode as the Ode compiler prints it
 (copies: the compiler needs Lean); they are assembled here (clang where there is one, else cc)."""
 import json, os, shutil, sys, tempfile, unittest
 
@@ -13,7 +13,7 @@ sys.path.insert(0, HERE)
 import kcheck, kfn, kspec, ode
 from test_kcheck import assemble
 
-NAMES = ["pad", "chunk_node", "node_out", "wide32", "take", "part32", "subtree", "hashr"]
+NAMES = ["pad", "chunk_node", "node_out", "wide32", "wide128", "take", "part32", "subtree", "hashr"]
 FLIP = {".jae": ".jb", ".jb": ".jae", ".je": ".jne", ".jne": ".je"}
 
 # (function, the text of blake3.spec, what it becomes): the function that met the text does not meet the change
@@ -29,11 +29,11 @@ TEXT = [
     ("node_out", "leaves out = node_value(nd, root)", "leaves out = node_value(nd, 0)"),
     ("node_out", "counter(node.counter), node.length, node.flags | root)", "counter(node.counter), 64, node.flags | root)"),
     ("node_out", "counter: number at 96, length: number at 104", "counter: number at 104, length: number at 96"),
-    ("subtree", "leaves out = subtree(kf.key, kf.flags, t, input)\n    stack 8704", "leaves out = subtree(kf.key, kf.flags, t + 1, input)\n    stack 8704"),
+    ("subtree", "leaves out = subtree(kf.key, kf.flags, t, input)\n    stack 16896", "leaves out = subtree(kf.key, kf.flags, t + 1, input)\n    stack 16896"),
     ("subtree", "t: number, plat: any) {\n    asks len >= 1\n    asks 1024 * t + len <= 18446744073709551615", "t: number, plat: any) {\n    asks len >= 1\n    asks t <= 18446744073709551615"),         # the chunks' numbers may then pass 64 bits
-    ("subtree", "stack 8704 + 384 * bits((len - 1) / 1024)", "stack 8704 + 320 * bits((len - 1) / 1024)"),
-    ("subtree", "stack 8704 + 384 * bits((len - 1) / 1024)\n    needs sse41\n    needs avx512 if plat == 5", "stack 8704 + 384 * bits((len - 1) / 1024)\n    needs sse41\n    needs avx512 if plat == 4"),
-    ("subtree", "stack 8704 + 384 * bits((len - 1) / 1024)\n    needs sse41\n", "stack 8704 + 384 * bits((len - 1) / 1024)\n"),
+    ("subtree", "stack 16896 + 384 * bits((len - 1) / 1024)", "stack 16896 + 320 * bits((len - 1) / 1024)"),
+    ("subtree", "stack 16896 + 384 * bits((len - 1) / 1024)\n    needs sse41\n    needs avx512 if plat == 5", "stack 16896 + 384 * bits((len - 1) / 1024)\n    needs sse41\n    needs avx512 if plat == 4"),
+    ("subtree", "stack 16896 + 384 * bits((len - 1) / 1024)\n    needs sse41\n", "stack 16896 + 384 * bits((len - 1) / 1024)\n"),
     ("wide32", "asks 1024 * t + 32768 <= 18446744073709551615\n    leaves out = subtree(kf.key, kf.flags, t, input)\n    stack 8192", "asks 1024 * t + 32768 <= 18446744073709551615\n    leaves out = subtree(kf.key, kf.flags, t + 1, input)\n    stack 8192"),
     ("wide32", "stack 8192\n    needs avx512\n", "stack 8192\n"),
     ("wide32", "asks 1024 * t + 32768 <= 18446744073709551615\n    leaves out = subtree(kf.key, kf.flags, t, input)\n    stack 8192", "asks 1024 * t + 32768 <= 18446744073709551615\n    leaves out = subtree(kf.key, kf.flags, t, input)\n    stack 4096"),
@@ -48,9 +48,13 @@ TEXT = [
     ("hashr", "leaves out = hash_words(key, flags, input)", "leaves out = hash_words(key, 0, input)"),
     ("hashr", "counter(0), 64, flags | PARENT | ROOT)", "counter(0), 64, flags | PARENT)"),
     ("hashr", "node_value(chunk_node(key, 0, flags, message), ROOT)", "node_value(chunk_node(key, 0, flags, message), 0)"),
-    ("hashr", "stack 10496 + 384 * bits(len / 1024)\n    needs sse41\n    needs avx512 if plat == 5", "stack 10496 + 384 * bits(len / 1024)\n    needs sse41"),
-    ("hashr", "stack 10496 + 384 * bits(len / 1024)\n    needs sse41\n", "stack 10496 + 384 * bits(len / 1024)\n"),
-    ("hashr", "stack 10496 + 384 * bits(len / 1024)", "stack 9216 + 384 * bits(len / 1024)"),
+    ("hashr", "stack 18688 + 384 * bits(len / 1024)\n    needs sse41\n    needs avx512 if plat == 5", "stack 18688 + 384 * bits(len / 1024)\n    needs sse41"),
+    ("hashr", "stack 18688 + 384 * bits(len / 1024)\n    needs sse41\n", "stack 18688 + 384 * bits(len / 1024)\n"),
+    ("hashr", "stack 18688 + 384 * bits(len / 1024)", "stack 9216 + 384 * bits(len / 1024)"),
+    ("wide128", "asks 1024 * t + 131072 <= 18446744073709551615\n    leaves out = subtree(kf.key, kf.flags, t, input)\n    stack 16384", "asks 1024 * t + 131072 <= 18446744073709551615\n    leaves out = subtree(kf.key, kf.flags, t + 1, input)\n    stack 16384"),
+    ("wide128", "asks 1024 * t + 131072 <= 18446744073709551615\n    leaves out = subtree(kf.key, kf.flags, t, input)\n    stack 16384", "asks 1024 * t + 131072 <= 18446744073709551615\n    leaves out = subtree(kf.key, kf.flags, t, input)\n    stack 8192"),
+    ("wide128", "contract b3l_wide128(out: cv, input: 131072 bytes,", "contract b3l_wide128(out: cv, input: 131071 bytes,"),
+    ("wide128", "compress(key, children(key, flags, t, bytes), counter(0), 64, flags | PARENT)", "compress(key, children(key, flags, t, bytes), counter(0), 64, flags)"),
     # an array with a type: what each value at cvs is
     ("take", "asks cvs[i] == node_value(chunk_node(kf.key, t + i, kf.flags, input[1024 * i .. 1024 * i + 1024]), 0) for i in 0..len / 1024", "asks cvs[i] == node_value(chunk_node(kf.key, t + i + 1, kf.flags, input[1024 * i .. 1024 * i + 1024]), 0) for i in 0..len / 1024"),
     ("take", "asks cvs[i] == node_value(chunk_node(kf.key, t + i, kf.flags, input[1024 * i .. 1024 * i + 1024]), 0) for i in 0..len / 1024", "asks cvs[i] == node_value(chunk_node(kf.key, t + i, kf.flags, input[1024 * i .. 1024 * i + 1024]), 0) for i in 0..len / 1024 - 1"),
@@ -80,12 +84,17 @@ class Kfn(unittest.TestCase):
             self.assertGreater(done["return"], 0)
 
     def test_changed_code_is_refused(self):
-        # every call left out, and every branch turned round
+        # every call left out, and every branch turned round (of wide128's thirty branches, which are fifteen
+        # copies of one loop, the first four: the single-bit audit has them all)
         for name in NAMES:
+            branches = 0
             for k, (a, nxt, ins) in enumerate(self.rows[name]):
                 op = ins.split()[0]
                 new = ".nop" if op == ".call" else FLIP[op] + ins[len(op):] if op in FLIP else None
                 if new is None: continue
+                if op in FLIP:
+                    branches += 1
+                    if name == "wide128" and branches > 4: continue
                 rows = list(self.rows[name]); rows[k] = (a, nxt, new)
                 with self.assertRaises(kcheck.Fail, msg=f"{name}: {ins} -> {new}"):
                     kfn.check(rows, name)

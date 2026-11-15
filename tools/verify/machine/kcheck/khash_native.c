@@ -2,7 +2,7 @@
 // written out here another way (the reference's stack of subtrees, not the specification's recursion).
 // kfn_flip.py links it with each changed object the checker accepts: the processor arbitrates.
 //
-//     cc -O1 -o run khash_native.c kflip_thunk.S pad.o chunk_node.o node_out.o wide32.o take.o part32.o subtree.o hashr.o KERNELS.o...
+//     cc -O1 -o run khash_native.c kflip_thunk.S pad.o chunk_node.o node_out.o wide32.o wide128.o take.o part32.o subtree.o hashr.o KERNELS.o...
 //     ./run CASES
 //
 // The lengths: every one from 0 to 200, then every seventh to 2200, the three around each multiple of 1024

@@ -20,9 +20,9 @@ writes the code so that it can be proved, as he writes it so that it is fast).
 |---|---|---|---|
 | the specification | what the result IS: definitions by equations, in a language made for specifications | the auditor | `blake3.spec`, 147 lines |
 | the claim | the contract of each function a user calls | the auditor | 18 lines, one function |
-| the code | written in the specification's shape, in Ode | nobody has to | `hash.ode`, 274 lines |
+| the code | written in the specification's shape, in Ode | nobody has to | `hash.ode`, 332 lines |
 | the proof | what the checker needs beside the binary: what the functions inside do; a place for a loop of unfixed count | nobody has to | `proofs/inner.spec`; for the hash, no place |
-| the checker | runs the binary on symbols and compares with the specification; does not search | the auditor, once, for every program | 3,883 lines of Python, unverified |
+| the checker | runs the binary on symbols and compares with the specification; does not search | the auditor, once, for every program | 3,920 lines of Python, unverified |
 
 The auditor reads the specification and the claim, and runs the checker on the binary. If a contract of a
 function inside were wrong, the checker would refuse that function, or one that calls it: the contracts
@@ -124,7 +124,7 @@ Not done, in the order I would take them:
    no slower than the earlier `hashf` anywhere (README.md). The rest is code not yet written: parents many
    to a call all the way up; a 16-lane path for 16 chunks or fewer (a kernel to check); AVX2 and narrower
    machines.
-2. **The checker's own worth.** It is 3,883 lines of Python, tested and audited, not proved. Smaller; a
+2. **The checker's own worth.** It is 3,920 lines of Python, tested and audited, not proved. Smaller; a
    second one written apart; or proved once. Undecided.
 3. **The source's checker** (above), and the compiler printing bytes, not assembly (BLAKE3 #396).
 4. **What is shown is what holds if the function returns.** Each loop is bounded and each call of itself is on

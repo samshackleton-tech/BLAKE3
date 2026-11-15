@@ -122,6 +122,57 @@ fn wide32(out, input, kf, t)
   copy 32 out <- a
 }
 
+// The chaining value of the tree over 128 whole chunks (131072 bytes), numbered from t, on a machine with
+// AVX-512: four calls of the chunk kernel, then the parents level by level, sixteen to a call of the parent
+// kernel while a level has as many (64, 32 and 16 parents; then 8, 4, 2 and 1).
+fn wide128(out, input, kf, t)
+  reg out, input, kf, t
+{
+  buf ptrs[256]
+  buf cvs[4096]
+  buf a[2048]
+  buf b[1024]
+  buf c[512]
+  buf d[512]
+  var flags = u64[kf + 32]
+  var kp = flags | 0x40020100           // the chunk's start and end flags and a last block of 64 bytes, packed above the mode's
+  var pp = flags | 0x40000004           // PARENT, and a block of 64 bytes
+  var i = 0
+  var p = 0
+  var q = 0
+  var tt = 0
+  for g in 0..4 {
+    p = input + (g << 15)
+    q = cvs + (g << 10)
+    tt = t + (g << 5)
+    fill(p, 10, 32, 32)
+    chunks32(ptrs, 16, kf, tt, kp, q)
+  }
+  for g in 0..4 {
+    p = cvs + (g << 10)
+    q = a + (g << 9)
+    fill(p, 6, 16, 16)
+    parents16(ptrs, 1, kf, 0, pp, q)
+  }
+  for g in 0..2 {
+    p = a + (g << 10)
+    q = b + (g << 9)
+    fill(p, 6, 16, 16)
+    parents16(ptrs, 1, kf, 0, pp, q)
+  }
+  fill(b, 6, 16, 16)
+  parents16(ptrs, 1, kf, 0, pp, c)
+  fill(c, 6, 8, 16)
+  parents16(ptrs, 1, kf, 0, pp, d)
+  fill(d, 6, 4, 16)
+  parents16(ptrs, 1, kf, 0, pp, c)
+  fill(c, 6, 2, 16)
+  parents16(ptrs, 1, kf, 0, pp, d)
+  fill(d, 6, 1, 16)
+  parents16(ptrs, 1, kf, 0, pp, c)
+  copy 32 out <- c
+}
+
 // The chaining value of the tree over the len bytes at input (1 or more; chunks numbered from t), where the
 // values of its chunks of 1024 bytes are at cvs already, one after another (the contract says what each is).
 // The specification's two parts again; a chunk of 1024 bytes is taken from cvs, a shorter last one is hashed.
@@ -177,7 +228,7 @@ fn part32(out, input, len, kf, t)
 
 // The chaining value of the tree over the len bytes at input (1 or more), whose chunks are numbered from t.
 // kf: the key (32 bytes) and the flags (8 bytes). Where the machine has AVX-512, a whole tree of 32 chunks
-// goes to the wide kernels, and a smaller one of more than one chunk to the chunk kernel.
+// or of 128 goes to the wide kernels, and a smaller one of more than one chunk to the chunk kernel.
 fn subtree(out, input, len, kf, t, plat)
   reg out, input, len, kf, t, plat
 {
@@ -189,9 +240,15 @@ fn subtree(out, input, len, kf, t, plat)
   var k2 = 0
   var wide = 0
   if plat == AVX512 {
-    if len == 32768 { wide = 1 }
-    else { if len > 1024 { if len < 32768 { wide = 2 } } }
+    if len == 131072 { wide = 3 }
+    else {
+      if len == 32768 { wide = 1 }
+      else { if len > 1024 { if len < 32768 { wide = 2 } } }
+    }
   }
+  if wide == 3 {
+    wide128(out, input, kf, t)
+  } else {
   if wide == 1 {
     wide32(out, input, kf, t)
   } else {
@@ -214,6 +271,7 @@ fn subtree(out, input, len, kf, t, plat)
     copy 32 nd <- kf
     chunk_node(nd, input, len, t, flags, plat)
     node_out(out, nd, 0, plat)
+  }
   }
   }
   }

@@ -103,6 +103,13 @@ contract b3l_wide32(out: cv, input: 32768 bytes, kf: keyed, t: number) {
     needs avx512
 }
 
+contract b3l_wide128(out: cv, input: 131072 bytes, kf: keyed, t: number) {
+    asks 1024 * t + 131072 <= 18446744073709551615
+    leaves out = subtree(kf.key, kf.flags, t, input)
+    stack 16384
+    needs avx512
+}
+
 // `cvs`: the address of chaining values, one after another, of which the contract says what each is.
 contract b3l_take(out: cv, input: len bytes, len: number, kf: keyed, t: number, cvs: cvs) {
     asks len >= 1
@@ -128,7 +135,7 @@ contract b3l_subtree(out: cv, input: len bytes, len: number, kf: keyed, t: numbe
     asks len >= 1
     asks 1024 * t + len <= 18446744073709551615
     leaves out = subtree(kf.key, kf.flags, t, input)
-    stack 8704 + 384 * bits((len - 1) / 1024)
+    stack 16896 + 384 * bits((len - 1) / 1024)
     needs sse41
     needs avx512 if plat == 5
 }

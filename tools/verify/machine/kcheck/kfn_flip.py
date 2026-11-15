@@ -2,7 +2,7 @@
 """kfn_flip: every single-bit change of a function of hash.ode, given to the decoder, the prover and the checker,
 and the processor's word on each change a proof is found for.
 
-    python3 kfn_flip.py pad|chunk_node|node_out|wide32|take|part32|subtree|hashr FOLDER [--jobs N] [--native CASES]
+    python3 kfn_flip.py pad|chunk_node|node_out|wide32|wide128|take|part32|subtree|hashr FOLDER [--jobs N] [--native CASES]
 
 FOLDER holds an object for each of those names (glue/NAME.S assembled) and the
 kernels' objects (*.o beside them: they are linked in, not changed). As kflip.py: each bit of the function's
