@@ -559,12 +559,18 @@ and with a wrong one the check fails.
 
   (Threadripper PRO 7975WX. The judges: zlib's `adler32`; for the decoder a decoder written in C in the
   harness, on blocks that are right and blocks that are damaged; for the encoders that decoder,
-  `ode_lz4_decode`, and for the packing one `LZ4_decompress_safe` of lz4 1.10's `lz4.c` as well.)
+  `ode_lz4_decode`, and for the packing one `LZ4_decompress_safe` of lz4's `lz4.c` (commit `6b589e80`) as
+  well; for UTF-8 a validator by the standard's table of byte ranges and the C library's converter; for
+  base 64 an encoder by a table and the C library's `b64_ntop`; for the checksum RFC 1071's own C code.
+  The first six rows are of the full audit; the last four were run apart, with the same checker files,
+  because those programs were written after it began.)
 - **The unchanged functions on the processor**: Adler-32 on 6,301 inputs as zlib's; the decoder on 20,000
   blocks as the C decoder (count, bytes, and NO); the plain encoder: 12,877 blocks that decode to their
   input, NO only where the room is less than the block needs; the packing encoder: 15,065 blocks, each
   decoded to its input by three decoders (437.5 MB written as 193.8 MB: the inputs are runs and patterns);
-  varint on 100,200 numbers; first difference on 20,301 pairs.
+  varint on 100,200 numbers; first difference on 20,301 pairs; the fast Adler-32 on 9,001 inputs; the
+  UTF-8 validator on 2,403,649 (every input of one and of two bytes among them); base 64 on 20,601; the
+  checksum on 22,001, and NO for 2^49 bytes and more when given the address of a page that faults.
 
 **What that found.**
 
