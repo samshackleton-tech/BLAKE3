@@ -28,8 +28,9 @@ def counted(bytes, at, sum) {
 // A count whose four bits in the token are `first`: that; or, if they are 15, 15 and the bytes that follow.
 def count(bytes, at, first) { if first < 15 then {value: first, next: at} else counted(bytes, at, 15) }
 
-// `out` with `n` more bytes, each a copy of the byte `offset` before the end as it then is.
-def copied(out, offset, n) { if n == 0 then out else copied(out ++ [out[len(out) - offset]], offset, n - 1) }
+// `out` with one more byte, and one more, and so on: each a copy of the byte `offset` before the end as it
+// then is. copies(out, offset)[n] is `out` with n more.
+sequence copies(out, offset) { s[0] = out   s[k + 1] = s[k] ++ [s[k][len(s[k]) - offset]] }
 
 // What the block decodes to, from the token at `at`, when `out` is what is decoded before it.
 def sequences(bytes, at, out, cap) {
@@ -49,7 +50,7 @@ def match(bytes, at, low, out, cap) {
     fails MALFORMED if offset == 0 || offset > len(out)
     let n = count(bytes, at + 2, low)
     fails ROOM if len(out) + n.value + 4 > cap
-    sequences(bytes, n.next, copied(out, offset, n.value + 4), cap)
+    sequences(bytes, n.next, copies(out, offset)[n.value + 4], cap)
 }
 
 def lz4(bytes, cap) { sequences(bytes, 0, [], cap) }

@@ -95,21 +95,24 @@ place +0x2dd {
     decreases n - i, 4
 }
 
-// the match is copied, a byte a turn, from `offset` before: what is decoded is M with `count` more to copy
+// the match is copied, a byte a turn, from `offset` before: M0 is what was decoded when the copying began, and
+// what is decoded now is M0 with as many copies as have been made since
 place +0x3ba {
     name i = r14
     name o = r15
     name state = stack[0]
     name count = stack[16]
     name offset = stack[32]
-    list M = out[0 .. o]
+    ghost list M0 = out[0 .. o]
     fact state == 0
     fact count >= 1
     fact i <= n
     fact o + count <= cap
     fact offset >= 1
-    fact offset <= o
-    fact sequences(input, i, copied(M, offset, count), cap) == lz4(input, cap)
+    fact offset <= len(M0)
+    fact len(M0) <= o
+    out[0 .. o] = copies(M0, offset)[o - len(M0)]
+    fact sequences(input, i, copies(M0, offset)[o - len(M0) + count], cap) == lz4(input, cap)
     any stack[8], stack[24], stack[40]
     decreases n - i, 3, count
 }

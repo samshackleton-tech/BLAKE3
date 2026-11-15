@@ -161,14 +161,14 @@ class Algebra:
         if n is None: raise Err(f"a plain number expected, not {x!r}")
         return n
     def length(self, x):
-        if isinstance(x, Rope): return plain(sum((Lin.of(1) if q[0] == "one" else q[-1] for q in x.parts), Lin.of(0)))
+        if isinstance(x, Rope): return plain(sum((Lin.of(1) if q[0] == "one" else q[-1] for q in self.rope(x.parts).parts), Lin.of(0)))
         if isinstance(x, View): return plain(x.n)
         if not isinstance(x, list): raise Err("the length of something that is not a list")
         return len(x)
     def index(self, x, i):
         if isinstance(x, Rope):
             i, c = Lin.of(self.num(i)), Lin.of(0)
-            for q in x.parts:
+            for q in self.rope(x.parts).parts:
                 n = Lin.of(1) if q[0] == "one" else q[-1]
                 if self.facts.ge0(i - c) and self.facts.ge0(c + n - 1 - i):
                     if q[0] == "one": return plain(q[1])
@@ -191,7 +191,7 @@ class Algebra:
             # the parts from a to b: whole parts, and of bytes of memory any run
             a, b, c, out = Lin.of(self.num(a)), Lin.of(self.num(b)), Lin.of(0), []
             F = self.facts
-            for q in x.parts:
+            for q in self.rope(x.parts).parts:
                 n = Lin.of(1) if q[0] == "one" else Lin.of(q[-1])
                 if F.ge0(a - c - n) or F.ge0(c - b): c = c + n; continue                    # before a, or from b on
                 if F.ge0(c - a) and F.ge0(b - c - n): out.append(q); c = c + n; continue     # within
@@ -213,8 +213,11 @@ class Algebra:
         raise Err("a list expected")
     def rope(self, parts):
         """Parts as a rope: none of no bytes; bytes of memory that follow one another as one part."""
-        out = []
-        for q in parts:
+        out, parts = [], list(parts)
+        while parts:
+            q = parts.pop(0)
+            if q[0] == "list" and q[1] in self.m.lists:        # a list with a name, known to be something: that
+                parts = self.parts(self.m.lists[q[1]]) + parts; continue
             n = Lin.of(1) if q[0] == "one" else q[-1]
             if self.facts.zero(n) is True: continue
             if out and out[-1][0] == "view":
@@ -266,21 +269,33 @@ class Algebra:
             return me
     def defined(self, v):
         if isinstance(self.known(v), Opaque): raise Err("the specification asks whether something has a value, and the code's path does not say")
-    def key(self, a):
-        if isinstance(a, View): return ("view", a.region, repr(self.facts.subst(a.off)), repr(self.facts.subst(a.n)))
-        if isinstance(a, list): return tuple(self.key(x) for x in a)
-        if isinstance(a, (int, Lin)) and not isinstance(a, bool): return repr(self.facts.subst(Lin.of(a)))
-        raise Err("a sequence of something this checker gives no name to")
     def element(self, spec, seq, i):
         """A sequence's value at place i. At a place the path fixes: worked out. At a place one after a place
-        whose value is known: the sequence's equation of it. Else: a number with a name."""
+        whose value is known: the sequence's equation of it. Else: a number, or a list, with a name."""
         if seq.id is None: return seq.at(spec, self, self.plain(i))
-        i = self.facts.subst(Lin.of(i))
+        i = self.facts.subst(Lin.of(self.num(i)))
         name, args = seq.id
-        key = (name, tuple(self.key(a) for a in args))
-        table = self.m.seqs.setdefault(key, [])
+        table = next((tb for nm, others, tb in self.m.seqs if nm == name and len(others) == len(args) and all(self.same(x, y) for x, y in zip(args, others))), None)
+        if table is None:
+            table = []; self.m.seqs.append((name, list(args), table))
+        def title_of(v):
+            """The name of a value that is a name only (a number or a list made here for a place not known)."""
+            if isinstance(v, Lin) and len(v.c) == 1 and v.k == 0 and v.c[0][1] == 1 and v.c[0][0] in self.m.elements: return v.c[0][0]
+            if isinstance(v, Rope) and len(v.parts) == 1 and v.parts[0][0] == "list" and v.parts[0][1] in self.m.elements and v.parts[0][1] not in self.m.lists: return v.parts[0][1]
+            return None
         for j, v in table:
-            if self.facts.zero(i - j) is True: return v
+            if self.facts.zero(i - j) is True:
+                # a name only, and the path now knows the place before it: it is the sequence's equation of that
+                before = next((k for k, _ in table if self.facts.zero(i - k - 1) is True), None)
+                if title_of(v) is None or before is None: return v
+                inner = dict(seq.env); inner[seq.var] = plain(before)
+                u = spec.eval(self, seq.next, inner)
+                if isinstance(v, Lin):
+                    d = v - Lin.of(self.num(u)); self.facts.add(d); self.facts.add(-d)
+                else:
+                    d = Lin.of(v.parts[0][2]) - Lin.of(self.length(u)); self.facts.add(d); self.facts.add(-d)
+                    self.m.lists[title_of(v)] = u
+                return u
         n = self.facts.number(i)
         below = Lin.of(n - 1) if n is not None and n > 0 else next((j for j, _ in table if self.facts.zero(i - j - 1) is True), None)
         if n == 0: v = spec.eval(self, seq.first, seq.env)
@@ -290,12 +305,17 @@ class Algebra:
             v = spec.eval(self, seq.next, inner)
         else:
             if not self.facts.ge0(i): raise Err(f"place {i} of a sequence: not shown to be a place of it")
-            title = f"{name}{key[1]}[{i!r}]"
-            v = sym(title); self.facts.add(v)
-            first, nxt = seq.first, seq.next
-            if nxt[0] == "bin" and nxt[1] == "%" and nxt[3][0] == "num" and first[0] == "num" and first[1] < nxt[3][1]:
-                self.facts.add(nxt[3][1] - 1 - v)                    # every value of it is one of the remainders
-            if any(isinstance(a, View) and a.region not in self.m.contract.trace for a in args): self.m.secret.add(title)
+            title = f"{name}.{next(FRESH)}[{i!r}]"
+            if isinstance(spec.eval(self, seq.first, seq.env), (Rope, View, list)):
+                # a sequence of lists: a list with a name, of a length with a name
+                self.facts.add(sym("#" + title)); self.m.elements.add(title)
+                v = Rope([("list", title, sym("#" + title))])
+            else:
+                v = sym(title); self.facts.add(v); self.m.elements.add(title)
+                first, nxt = seq.first, seq.next
+                if nxt[0] == "bin" and nxt[1] == "%" and nxt[3][0] == "num" and first[0] == "num" and first[1] < nxt[3][1]:
+                    self.facts.add(nxt[3][1] - 1 - v)                    # every value of it is one of the remainders
+                if any(isinstance(a, View) and a.region not in self.m.contract.trace for a in args): self.m.secret.add(title)
         table.append((i, v))
         return v
 
@@ -311,11 +331,12 @@ class Machine(kfn.Machine):
         self.mem = {"frame": {0: (8, "q", ("q", "return address"))}}
         self.readonly, self.given, self.len = set(), {}, {}
         self.low, self.pc, self.steps, self.back, self.since = 0, None, 0, {}, 0
-        self.secret, self.bytes, self.seqs = set(), set(), {}
+        self.secret, self.bytes, self.seqs = set(), set(), []
         self.held = {name: Rope() for name in c.held}        # the bytes written at the start of what the contract ensures something of
         self.equal = []                                      # at a path's end: named things and what they are known to be
         self.named = {}                                      # the names given to bytes: {region or list: [(where, name)]}
         self.halves = []                                     # the names given to quotients: [(of what, by what, the name)]
+        self.elements, self.lists = set(), {}                # the names given to lists of sequences; what such a list is known to be
         for reg, kind, name in c.args:
             if kind == "number":
                 x = sym(name); self.facts.add(x); self.facts.add(WORD64 - x)
@@ -334,7 +355,8 @@ class Machine(kfn.Machine):
 
     def clone(self):
         c = super().clone()
-        c.secret, c.bytes, c.seqs = set(self.secret), set(self.bytes), {k: list(v) for k, v in self.seqs.items()}
+        c.secret, c.bytes, c.seqs = set(self.secret), set(self.bytes), [(n, a, list(tb)) for n, a, tb in self.seqs]
+        c.elements, c.lists = set(self.elements), dict(self.lists)
         c.held, c.equal, c.named, c.halves = dict(self.held), list(self.equal), {k: list(v) for k, v in self.named.items()}, list(self.halves)
         return c
 
@@ -590,6 +612,13 @@ def carry(e, spec, origin, env0, env=None):
         if DEBUG: print(f"   carry from +{origin.at - BASE:#x} to {'the return' if e.pc is None else f'+{e.pc - BASE:#x}'}: {x!r}  ==  {y!r}")
         if isinstance(x, Opaque) and not A.same(x, y): e.equal.append((x, y))
         elif isinstance(y, Opaque) and not A.same(x, y): e.equal.append((y, x))
+        else:
+            for u, v in ((x, y), (y, x)):
+                # a list of a sequence, with a name only, said to be some list: it is that, and as long
+                if isinstance(u, Rope) and len(u.parts) == 1 and u.parts[0][0] == "list" and u.parts[0][1] in e.elements and isinstance(v, (Rope, View, list)) and not A.same(u, v):
+                    try: d = Lin.of(u.parts[0][2]) - Lin.of(A.length(v))
+                    except Err: break
+                    e.lists[u.parts[0][1]] = v; e.facts.add(d); e.facts.add(-d); break
 
 
 def places_future(env): return env.get("\0futures", ())
@@ -667,7 +696,8 @@ def kept(e, first, p, where):
 def start(entry, first, p, spec):
     """The machine at a place, for any numbers its names may be: (machine, the names)."""
     m = first.clone()
-    m.facts, m.secret, m.bytes, m.seqs, m.named, m.halves = entry.facts.clone(), set(entry.secret), set(entry.bytes), {}, {}, []
+    m.facts, m.secret, m.bytes, m.seqs, m.named, m.halves = entry.facts.clone(), set(entry.secret), set(entry.bytes), [], {}, []
+    m.elements, m.lists = set(), {}
     m.x, m.flags, m.conds, m.back, m.pc, m.since = {}, None, {}, {}, p.at, m.steps
     if not stable(first, first.g["rsp"]): raise Fail("at a place the stack pointer is not the same on every path")
     for r in G64:
