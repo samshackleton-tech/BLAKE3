@@ -202,6 +202,24 @@ the platform, and the AVX-512 kernel be run where the caller's contract says it 
 carried: what a callee is given for `plat` must be the caller's own, or a plain number that is not 5, or
 anything on a path where the caller's own condition holds.
 
+**Speed, roughly.** One run on the Threadripper PRO 7975WX while 44 other processes loaded it (no timing
+lock: not evidence, a first look), one thread, AVX-512, best of 7 rounds, GiB a second; `hashf` is the earlier
+code (`levels/levels.ode`: levels over groups of 32 chunks), on the same kernels:
+
+| bytes | `hashr` | `hashf` |
+|---|---|---|
+| 1,024 | 1.04 | 1.03 |
+| 16,384 | 0.98 | 2.73 |
+| 32,768 | 0.98 | 4.68 |
+| 65,536 | 6.45 | 5.35 |
+| 100,000 | 5.87 | 4.82 |
+| 1,048,576 | 6.28 | 6.05 |
+| 16,777,216 | 5.40 | 5.25 |
+
+Where whole trees of 32 chunks carry the message the recursion costs nothing. At 32 KiB and below `hashr`
+compresses one block at a time and `hashf` does not: parts of 2 to 31 chunks through the chunk kernel are the
+next thing to write.
+
 **The checker refused my first form of the wide leaf.** I had written `wide32(...)` and then `return 0`
 inside an `if`; Ode's `return` gives the result and does not leave the function, so the code went on, hashed
 the 32 chunks again by halves, and wrote the same value a second time. The checker's message was that `out`
