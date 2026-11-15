@@ -15,7 +15,7 @@ he can read, that the binary meets the specification.
 
 What is shown so far, each in under a second: four AVX-512 kernels of the library; three of them for every
 number of blocks and every flag byte; and `push`, `merge` and `add` of the hasher's stack (a loop over a data
-structure in memory, calls by contract). The programs here are what would have to be trusted, about 2,600
+structure in memory, calls by contract). The programs here are what would have to be trusted, about 2,400
 lines of Python; most of this page is what has been done to find where they are wrong, and what that found.
 
 ## The specification: `blake3.ode`
@@ -175,11 +175,11 @@ machine is `blake3.ode`'s; the contracts are Python inside `kglue.py`: not yet i
 | `kdecode.py` | 357 | reads the ELF object (sections, symbol, relocations) and decodes the instruction forms the code uses, and no others; no disassembler |
 | `kcheck.py` | 526 | runs a kernel's instructions on symbolic values and compares with the specification's terms |
 | `kcheck_cross.py` | 109 | kcheck's reading of each instruction against the Lean model's processor-validated test vectors |
-| `kflip.py`, `kflip_native.c`, `kflip_thunk.S` | 194 + 153 + 63 | the audit below: every single-bit change of a kernel, and the processor's word on each one accepted |
+| `kflip.py`, `kflip_native.c`, `kflip_thunk.S` | 204 + 160 + 66 | the audit below: every single-bit change of a kernel, and the processor's word on each one accepted |
 | `kloop.py`, `test_kloop.py` | 410 + 94 | every number of blocks: the prover, the proof's form, the checker by induction; its tests |
 | `kglue.py`, `kglue_flip.py`, `kglue_native.c`, `test_kglue.py` | 541 + 129 + 109 + 92 | the stack's functions: contracts, prover, checker; the audit; the tests |
 | `kremove.py` | 41 | which instructions can be replaced by a no-op with the contract still met: for a person to read |
-| `test_kcheck.py`, `test_ode.py` | 149 + 66 | the four kernels and the controls, from the sources; the specification on the vectors |
+| `test_kcheck.py`, `test_ode.py` | 148 + 64 | the four kernels and the controls, from the sources; the specification on the vectors |
 
 ## How
 
@@ -198,6 +198,10 @@ is decided by numbers and every address is a region and a number, so the trace o
 same for every input.
 
 ## What has been done to find it wrong
+
+(The kernels' single-bit audits, in item 5 and in the section on every number of blocks, were run before the
+specification moved to `blake3.ode`; they are being run again on this state. The stack's functions' audit
+above was run on it.)
 
 1. **Changed kernels** (`--mutants`): 15 of 15 refused (rotations, operands, the carry's mask, a message offset,
    a store's offset, a shuffle, a flag, a saved register, the frame's bound, the block step, one entry of the
