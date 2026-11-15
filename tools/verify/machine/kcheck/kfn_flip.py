@@ -16,7 +16,7 @@ import multiprocessing, os, signal, subprocess, sys, tempfile, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import kcheck, kdecode, kfn, kspec
 
-LIMIT = 120
+LIMIT = int(os.environ.get("LIMIT", "120"))        # seconds a change may take; beyond it: NO VERDICT
 
 
 class TimeUp(Exception):

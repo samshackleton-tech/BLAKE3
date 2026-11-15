@@ -37,7 +37,7 @@ run "kflip-o16.txt" python3 kflip.py o16 "$work/out16.o" --jobs "$jobs" --native
 for f in push merge add; do run "kglue-flip-$f.txt" python3 kglue_flip.py $f "$work/glue" --jobs "$jobs" --native 3000; done
 for f in avx512 sse41; do run "kone-flip-$f.txt" python3 kglue_flip.py $f "$work/glue" --jobs "$jobs" --native 20000; done
 fi
-for f in pad chunk_node node_out wide32 wide128 take part32 subtree hashr; do run "kfn-flip-$f.txt" python3 kfn_flip.py $f "$work/hash" --jobs "$jobs" --native 200; done
+for f in pad chunk_node node_out wide32 wide128 take part32 subtree hashr; do run "kfn-flip-$f.txt" env LIMIT="${LIMIT:-900}" python3 kfn_flip.py $f "$work/hash" --jobs "$jobs" --native 200; done
 # the binary as one file: what a linker would have written, bit by bit; then the file shipped, on this processor
 python3 klink.py "$work/hash" "$work/blob.o" > /dev/null && run "klink-flip.txt" python3 klink_flip.py "$work/blob.o" --native 2000
 run "binary.txt" sh -c "python3 check_binary.py b3hashr.o && cc -O1 -o '$work/shipped' khash_native.c kflip_thunk.S b3hashr.o && '$work/shipped' 2000 say"
