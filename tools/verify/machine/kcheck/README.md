@@ -628,7 +628,8 @@ refusals. And what `kbyte.py` lacks, each found by a program that wanted it:
 - that two numbers with no bit in common have their sum for their `or` (Devon's Adler-32); a constant
   above 32 bits and a shift by more than 16 (the checksum's own bound);
 - in-place work: a byte the function may write and has not yet written is unknown to it, so a function
-  that reads and writes one buffer cannot be shown.
+  that reads and writes one buffer cannot be shown (tried: ASCII made upper-case in place, 44 instructions:
+  refused).
 
 ## The library's wide kernels, each run to its end (`kcheck.py`, the first trial)
 
