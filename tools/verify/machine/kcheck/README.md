@@ -4,7 +4,7 @@
 to hand a reader a specification, a binary and a proof, such that he checks in a second, by a small program
 he can read, that the binary meets the specification.
 
-- **The specification is a text that runs** (`blake3.ode`, 146 lines with its comments): BLAKE3 as small pure
+- **The specification is a text that runs** (`blake3.ode`, 190 lines with its comments): BLAKE3 as small pure
   functions and two machines, in a language of our own. Run on numbers it gives the 105 official test vectors;
   read on symbols it gives the terms machine code is compared with. There is no other specification.
 - **A proof is a short text nobody writes**: the places of the code's loops, and what the registers and the
@@ -29,17 +29,33 @@ be run on the test vectors.
     python3 ode.py blake3.ode --vectors ../../../../test_vectors/test_vectors.json      # 105 vectors, 7 s
     python3 test_ode.py
 
-- `ode.py` (389 lines) reads the text and evaluates it over an algebra of words. On numbers: the official
+- `ode.py` (416 lines) reads the text and evaluates it over an algebra of words. On numbers: the official
   vectors, at every length, for the hash, the keyed hash and key derivation.
-- `kspec.py` (138 lines) is the other algebra: words are the checkers' terms, a number may depend on a count
+- `kspec.py` (155 lines) is the other algebra: words are the checkers' terms, a number may depend on a count
   (and a comparison is decided from the code path's facts, or the evaluation stops), a list may be a stack of
   unknown count or an input of unknown length. `kcheck.py`, `kloop.py` and `kglue.py` take `compress`, the
   two machines and `parent` from the file through it.
 - `test_ode.py`: 18 single changes of the text (a rotation, the permutation, a flag, the counter, the root)
   are each told from BLAKE3 by the vectors. `test_kcheck.py`: a changed specification refuses the true kernels.
 
-What the file is not yet: the contracts (what each function is given and leaves, how values lie in memory) are
-still Python in the checkers; and no code is compiled from it.
+**Contracts are in the file too**, for the one-block kernels and the stack's functions: what each argument
+is, what a caller must show (`asks`), what the function `leaves` and `returns` in the specification's terms,
+its `stack`, and which function it `calls` only on a condition:
+
+    contract b3l_merge(st: stack, key: cv, flags: byte, plat: any, target: number) {
+        asks target >= 1
+        leaves st = merge(key, flags, target, st)
+        returns len(st)
+        stack 256
+        calls blake3_servil_compress_in_place_avx512 if plat == 5
+    }
+
+`kglue.py` and `kone.py` take them from there, and a change of a contract's text refuses the function that
+met it (`test_kglue.py`: 11 changes; `test_kone.py`: 6). Writing that test found a hole: `merge`'s result was
+compared with the stack's count by the checker's own code, whatever the contract said it returns.
+
+What the file is not yet: the wide kernels' contracts are still Python in `kloop.py` and `kcheck.py`; how a
+`stack` or a `cv` lies in memory is a kind the checkers know, not text; and no code is compiled from it.
 
 ## What it shows today
 
@@ -175,15 +191,14 @@ So for `add` everything it runs is checked against the one specification: `add`,
 kernels, 316 instructions in all, in under 20 ms.
 
 Not shown here: that the merge machine is BLAKE3's tree (`alg/Stack.lean` proves that of the same machine);
-buffers of bytes with a symbolic length. The machine is `blake3.ode`'s; the contracts are Python inside
-`kglue.py`: not yet in the language.
+buffers of bytes with a symbolic length. The machine and the contracts are `blake3.ode`'s.
 
 ## The parts
 
 | file | lines | what it is |
 |---|---|---|
-| `blake3.ode` | 146 | the specification |
-| `ode.py`, `kspec.py`, `klin.py` | 389 + 138 + 78 | the specification's reader; its algebra on symbols; numbers that depend on counts and the facts about them |
+| `blake3.ode` | 190 | the specification, and the contracts of five functions |
+| `ode.py`, `kspec.py`, `klin.py` | 416 + 155 + 78 | the specification's reader; its algebra on symbols; numbers that depend on counts and the facts about them |
 | `kdecode.py` | 357 | reads the ELF object (sections, symbol, relocations) and decodes the instruction forms the code uses, and no others; no disassembler |
 | `kcheck.py` | 526 | runs a kernel's instructions on symbolic values and compares with the specification's terms |
 | `kcheck_cross.py` | 109 | kcheck's reading of each instruction against the Lean model's processor-validated test vectors |
@@ -283,7 +298,7 @@ an 8-bit `or` read as 32 bits.
 
 ## What it rests on (what a reader must trust or check)
 
-- The specification `blake3.ode` (146 lines), and for a kernel its reader and the checker: `ode.py`,
+- The specification `blake3.ode` (190 lines), and for a kernel its reader and the checker: `ode.py`,
   `kspec.py`, `klin.py`, `kdecode.py`, `kcheck.py`, 1,488 lines, and Python. For the loops and the stack's
   functions, `kloop.py` and `kglue.py` beside them.
 - That the regions are apart (the contract's own condition: the stack and the output apart from everything).
