@@ -62,7 +62,7 @@ tests found a hole: `merge`'s result was compared with the stack's count by the 
 the contract said it returns.
 
 So the triple exists for these nine functions: the specification and the contracts (`blake3.ode`, 222
-lines), the binary (the objects), the proofs (`proofs/*.json`, 3.3 KB in all), and
+lines), the binary (the objects), the proofs (`proofs/*.json`, 3.4 KB in all), and
 
     python3 check_all.py          # 9 functions, 2,061 instructions, under a second
 
@@ -216,11 +216,11 @@ buffers of bytes with a symbolic length. The machine and the contracts are `blak
 | `kcheck.py` | 534 | runs a kernel's instructions on symbolic values and compares with the specification's terms |
 | `kcheck_cross.py` | 109 | kcheck's reading of each instruction against the Lean model's processor-validated test vectors |
 | `kflip.py`, `kflip_native.c`, `kflip_thunk.S` | 204 + 160 + 66 | the audit below: every single-bit change of a kernel, and the processor's word on each one accepted |
-| `kloop.py`, `test_kloop.py` | 438 + 116 | every number of blocks: the prover, the proof's form, the checker by induction; its tests |
-| `kglue.py`, `kglue_flip.py`, `kglue_native.c`, `test_kglue.py` | 541 + 129 + 109 + 92 | the stack's functions: contracts, prover, checker; the audit; the tests |
-| `kone.py`, `kone_native.c`, `test_kone.py` | 217 + 86 + 95 | the one-block kernels: the checker (XMM registers as four terms), the processor run, the tests |
+| `kloop.py`, `test_kloop.py` | 438 + 115 | every number of blocks: the prover, the proof's form, the checker by induction; its tests |
+| `kglue.py`, `kglue_flip.py`, `kglue_native.c`, `test_kglue.py` | 568 + 135 + 109 + 119 | the stack's functions: contracts, prover, checker; the audit; the tests |
+| `kone.py`, `kone_native.c`, `test_kone.py` | 217 + 86 + 94 | the one-block kernels: the checker (XMM registers as four terms), the processor run, the tests |
 | `kremove.py` | 41 | which instructions can be replaced by a no-op with the contract still met: for a person to read |
-| `test_kcheck.py`, `test_ode.py` | 148 + 64 | the four kernels and the controls, from the sources; the specification on the vectors |
+| `test_kcheck.py`, `test_ode.py` | 163 + 64 | the four kernels and the controls, from the sources; the specification on the vectors |
 
 ## How
 
