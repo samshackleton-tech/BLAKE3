@@ -1,0 +1,126 @@
+// An LZ4 encoder that finds repeats at one distance: where the bytes ahead are the bytes d before (4 to 18
+// of them), it writes a match; the rest it writes as literals. With d = 1 it packs runs of one byte; with
+// d = 4, runs of a 4-byte pattern. Written to be proved against lz4.spec: what it writes decodes to the
+// input. It gives the count of bytes written, or NO where the room is too small.
+//
+// p: bytes of the input looked at; a: where the literals not yet written begin; e: bytes written;
+// state: 0 going on, 1 the input is all looked at, 2 no room. A match begins 12 bytes or more before the
+// end and leaves the last 5 bytes literals, as the format asks of encoders.
+const NO = 0xFFFFFFFFFFFFFFFF
+
+fn lz4_pack(out, cap, input, n, d)
+  reg out, cap, input, n, p, e
+{
+  var p = 0
+  var e = 0
+  var a = 0
+  var state = 0
+  var m = 0
+  var go = 0
+  var lit = 0
+  var rest = 0
+  var j = 0
+  while state == 0 {
+    if p >= n { state = 1 } else {
+      m = 0
+      if p >= d {
+        if n - p >= 12 {
+          go = 1
+          while go == 1 {
+            if m >= 18 { go = 0 } else {
+              if n - p - m <= 5 { go = 0 } else {
+                if u8[input + p + m] == u8[input + p + m - d] { m = m + 1 } else { go = 0 }
+              }
+            }
+          }
+        }
+      }
+      if m < 4 { p = p + 1 } else {
+        // a sequence: the literals from a to p, and the match of m bytes from d before
+        lit = p - a
+        if e >= cap { state = 2 } else {
+          if lit < 15 {
+            u8[out + e] = (lit << 4) + m - 4
+            e = e + 1
+          } else {
+            u8[out + e] = 236 + m
+            e = e + 1
+            rest = lit - 15
+            go = 1
+            while go == 1 {
+              if e >= cap { state = 2  go = 0 } else {
+                if rest < 255 {
+                  u8[out + e] = rest
+                  e = e + 1
+                  go = 0
+                } else {
+                  u8[out + e] = 255
+                  e = e + 1
+                  rest = rest - 255
+                }
+              }
+            }
+          }
+          if state == 0 {
+            if lit > cap - e { state = 2 } else {
+              j = 0
+              while j < lit {
+                u8[out + e] = u8[input + a + j]
+                e = e + 1
+                j = j + 1
+              }
+              if cap - e < 2 { state = 2 } else {
+                u8[out + e] = d & 255
+                u8[out + e + 1] = d >> 8
+                e = e + 2
+                p = p + m
+                a = p
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  var result = NO
+  if state == 1 {
+    // the last sequence: the literals from a to the end
+    lit = n - a
+    if e >= cap { state = 2 } else {
+      if lit < 15 {
+        u8[out + e] = lit << 4
+        e = e + 1
+      } else {
+        u8[out + e] = 240
+        e = e + 1
+        rest = lit - 15
+        go = 1
+        while go == 1 {
+          if e >= cap { state = 2  go = 0 } else {
+            if rest < 255 {
+              u8[out + e] = rest
+              e = e + 1
+              go = 0
+            } else {
+              u8[out + e] = 255
+              e = e + 1
+              rest = rest - 255
+            }
+          }
+        }
+      }
+      if state == 1 {
+        if lit > cap - e { state = 2 } else {
+          j = 0
+          while j < lit {
+            u8[out + e] = u8[input + a + j]
+            e = e + 1
+            j = j + 1
+          }
+          result = e
+        }
+      }
+    }
+  }
+  return result
+}

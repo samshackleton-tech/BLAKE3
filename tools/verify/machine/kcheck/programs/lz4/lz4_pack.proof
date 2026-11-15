@@ -1,0 +1,152 @@
+// The six loops of ode_lz4_pack, each at the first instruction of its body.
+//
+// p: bytes of the input looked at; a: where the literals not yet written begin; e: bytes written; m: the
+// match's length; lit: the literals of the sequence being written; rest: what of their count is still to be
+// written; j: literals copied. In the stack: [0] d, [8] a, [16] state, [24] m, [32] go, [40] lit, [48] rest,
+// [56] j, [64] result. R is whatever will be written after what is written now.
+//
+// Three kinds of fact carry the specification:
+//   sequences(E ++ R, e, input[0 .. a], n) == lz4(E ++ R, n)
+//       a block that begins with what is written decodes to what its sequences from e on decode to, after
+//       the first a bytes of the input;
+//   copies(input[0 .. p], d)[m] == input[0 .. p + m]
+//       the first p bytes of the input with m more copied from d before are its first p + m bytes (this is
+//       what the m bytes found alike amount to);
+//   counted(...) == counted(...), count(...) == {value: lit, next: ...}
+//       the count of literals reads as it was written.
+
+// a place in the input is looked at
+place +0x9b {
+    name p = r14
+    name e = r15
+    name a = stack[8]
+    name state = stack[16]
+    list E = out[0 .. e]
+    future R = out
+    fact state == 0
+    fact a <= p
+    fact p <= n
+    fact sequences(E ++ R, e, input[0 .. a], n) == lz4(E ++ R, n)
+    any stack[24], stack[32], stack[40], stack[48], stack[56]
+    decreases n - p, 9
+}
+
+// the bytes ahead are compared with the bytes d before, one a turn
+place +0xff {
+    name p = r14
+    name e = r15
+    name a = stack[8]
+    name state = stack[16]
+    name m = stack[24]
+    list E = out[0 .. e]
+    future R = out
+    fact state == 0
+    fact a <= p
+    fact d <= p
+    fact m <= 18
+    fact p + m + 5 <= n
+    fact copies(input[0 .. p], d)[m] == input[0 .. p + m]
+    fact sequences(E ++ R, e, input[0 .. a], n) == lz4(E ++ R, n)
+    any stack[40], stack[48], stack[56]
+    decreases n - p, 8, 18 - m
+}
+
+// a sequence with a match: the count of its literals is written (the token is at e0)
+place +0x24c {
+    name p = r14
+    name e = r15
+    name a = stack[8]
+    name state = stack[16]
+    name m = stack[24]
+    name go = stack[32]
+    name lit = stack[40]
+    name rest = stack[48]
+    list M = out[0 .. e]
+    future R = out
+    ghost e0 = e - 1
+    fact state == 0
+    fact go == 1
+    fact e0 + 1 <= e
+    fact lit + a == p
+    fact rest + 15 <= lit
+    fact m >= 4
+    fact m <= 18
+    fact d <= p
+    fact p + m + 5 <= n
+    fact M[e0] == 236 + m
+    fact counted(M ++ R, e, lit - rest) == counted(M ++ R, e0 + 1, 15)
+    fact copies(input[0 .. p], d)[m] == input[0 .. p + m]
+    fact sequences(M ++ R, e0, input[0 .. a], n) == lz4(M ++ R, n)
+    any stack[56]
+    decreases n - p, 7, rest
+}
+
+// its literals are copied (HDR: what was written before them)
+place +0x326 {
+    name p = r14
+    name e = r15
+    name a = stack[8]
+    name state = stack[16]
+    name m = stack[24]
+    name lit = stack[40]
+    name j = stack[56]
+    ghost list HDR = out[0 .. e]
+    ghost e0 = e - 1
+    future R = out
+    fact state == 0
+    fact j < lit
+    fact lit + a == p
+    fact e0 + 1 <= len(HDR)
+    fact e + lit <= cap + j
+    fact m <= 18
+    fact d <= p
+    fact p + m + 5 <= n
+    out[0 .. e] = HDR ++ input[a .. a + j]
+    fact HDR[e0] % 16 + 4 == m
+    fact count(HDR ++ input[a .. a + j] ++ R, e0 + 1, HDR[e0] / 16) == {value: lit, next: len(HDR)}
+    fact copies(input[0 .. p], d)[m] == input[0 .. p + m]
+    fact sequences(HDR ++ input[a .. a + j] ++ R, e0, input[0 .. a], n) == lz4(HDR ++ input[a .. a + j] ++ R, n)
+    any stack[32], stack[48]
+    decreases n - p, 6, lit - j
+}
+
+// the last sequence: the count of its literals is written
+place +0x492 {
+    name e = r15
+    name a = stack[8]
+    name go = stack[32]
+    name lit = stack[40]
+    name rest = stack[48]
+    list M = out[0 .. e]
+    future R = out
+    ghost e0 = e - 1
+    fact go == 1
+    fact e0 + 1 <= e
+    fact lit + a == n
+    fact rest + 15 <= lit
+    fact M[e0] == 240
+    fact counted(M ++ R, e, lit - rest) == counted(M ++ R, e0 + 1, 15)
+    fact sequences(M ++ R, e0, input[0 .. a], n) == lz4(M ++ R, n)
+    any stack[24], stack[56]
+    decreases 0, 5, rest
+}
+
+// its literals are copied
+place +0x565 {
+    name e = r15
+    name a = stack[8]
+    name lit = stack[40]
+    name j = stack[56]
+    ghost list HDR = out[0 .. e]
+    ghost e0 = e - 1
+    future R = out
+    fact j < lit
+    fact lit + a == n
+    fact e0 + 1 <= len(HDR)
+    fact e + lit <= cap + j
+    out[0 .. e] = HDR ++ input[a .. a + j]
+    fact count(HDR ++ input[a .. a + j] ++ R, e0 + 1, HDR[e0] / 16) == {value: lit, next: len(HDR)}
+    fact sequences(HDR ++ input[a .. a + j] ++ R, e0, input[0 .. a], n) == lz4(HDR ++ input[a .. a + j] ++ R, n)
+    any stack[24], stack[32], stack[48]
+    decreases 0, 4, lit - j
+}

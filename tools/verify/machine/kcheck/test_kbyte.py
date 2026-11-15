@@ -191,6 +191,52 @@ class Lz4Store(unittest.TestCase):
         self.assertEqual(sorted(c for i, c in accepted if not i.startswith(".mov")), [".nop"] * 2)
 
 
+class Lz4Pack(unittest.TestCase):
+    """An encoder that writes matches, against the same contract: what it writes decodes to the input."""
+    @classmethod
+    def setUpClass(cls): cls.p = Program("lz4", "lz4_pack", "ode_lz4_pack")
+
+    def test_it_meets_its_contract(self):
+        self.assertEqual(self.p.verdict(), "accepted")
+
+    def test_a_changed_specification_or_contract_is_refused(self):
+        tail = "\n    writes out\n    trace"
+        self.p.changed(self, "spec", [
+            ("{value: sum + bytes[at], next: at + 1}", "{value: sum + bytes[at] + 1, next: at + 1}"), ("counted(bytes, at + 1, sum + 255)", "counted(bytes, at + 1, sum + 254)"), ("if bytes[at] < 255 then", "if bytes[at] < 254 then"),
+            ("if first < 15 then {value: first, next: at} else counted(bytes, at, 15)", "if first < 14 then {value: first, next: at} else counted(bytes, at, 15)"),
+            ("s[k] ++ [s[k][len(s[k]) - offset]]", "s[k] ++ [s[k][len(s[k]) - offset + 1]]"), ("{ s[0] = out ", "{ s[0] = out ++ [0] "),
+            ("count(bytes, at + 1, bytes[at] / 16)", "count(bytes, at + 1, bytes[at] % 16)"),
+            ("let with_literals = out ++ bytes[literals.next .. end]", "let with_literals = out ++ bytes[literals.next .. end] ++ [0]"),
+            ("match(bytes, end, bytes[at] % 16, with_literals, cap)", "match(bytes, end, bytes[at] / 16, with_literals, cap)"), ("match(bytes, end, bytes[at] % 16, with_literals, cap)", "match(bytes, end, bytes[at] % 16, out, cap)"),
+            ("let offset = bytes[at] + 256 * bytes[at + 1]", "let offset = 256 * bytes[at] + bytes[at + 1]"), ("let offset = bytes[at] + 256 * bytes[at + 1]", "let offset = bytes[at] + 255 * bytes[at + 1]"),
+            ("let n = count(bytes, at + 2, low)", "let n = count(bytes, at + 3, low)"),
+            ("copies(out, offset)[n.value + 4], cap)", "copies(out, offset)[n.value + 3], cap)"), ("copies(out, offset)[n.value + 4], cap)", "copies(out, offset + 1)[n.value + 4], cap)"),
+            ("sequences(bytes, n.next, copies", "sequences(bytes, n.next + 1, copies"),
+            ("def lz4(bytes, cap) { sequences(bytes, 0, [], cap) }", "def lz4(bytes, cap) { sequences(bytes, 0, [0], cap) }"),
+            ("if end == len(bytes) then with_literals else", "if end == len(bytes) then out else"),
+            ("fails MALFORMED if offset == 0 || offset > len(out)", "fails MALFORMED if offset == 0 || offset >= len(out)"),
+            ("ensures lz4(out[0 .. r], n) == input if r != NO" + tail, "ensures lz4(out[0 .. r], n) == input ++ [0] if r != NO" + tail),
+            ("ensures lz4(out[0 .. r], n) == input if r != NO" + tail, "ensures lz4(out[0 .. r], n) == input" + tail),
+            ("ensures lz4(out[0 .. r], n) == input if r != NO" + tail, "ensures lz4(out[0 .. r + 1], n) == input if r != NO" + tail),
+            ("    requires d >= 1\n", ""), ("    requires d <= 65535\n", ""), ("requires d <= 65535", "requires d <= 65536"),
+            ("    trace depends on input\n    stack 120", "    stack 120"), ("stack 120", "stack 112"), ("    requires cap < NO\n    requires d", "    requires d")])
+
+    def test_a_proof_without_one_of_its_lines_is_refused(self):
+        lines, needless = self.p.proof.split("\n"), []
+        for k, line in enumerate(lines):
+            if not line.strip() or line.strip().startswith(("//", "place", "}", "any ")): continue
+            if self.p.verdict(proof="\n".join(lines[:k] + lines[k + 1:])) == "accepted": needless.append(line.strip())
+        self.assertEqual(needless, [])
+
+    def test_a_changed_instruction_is_refused_unless_it_keeps_the_contract(self):
+        # Of 429, 45 accepted, each an instruction left out: moves that change nothing, and jumps after which NO is
+        # given where it need not be, or a match is not taken. (Each such object is run on the processor by the
+        # audit: what it writes still decodes to its input.)
+        n, accepted = instructions_changed(self.p)
+        self.assertEqual((n, len(accepted)), (429, 45))
+        self.assertEqual({c for i, c in accepted}, {".nop"})
+
+
 class Varint(unittest.TestCase):
     """No proof: the loop turns at most nine times, and the checker runs it."""
     @classmethod

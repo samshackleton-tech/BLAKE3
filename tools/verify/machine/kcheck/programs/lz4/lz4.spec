@@ -92,3 +92,18 @@ contract ode_lz4_store(out: cap bytes, cap: number, input: n bytes, n: number) {
     writes out
     stack 88
 }
+
+// An encoder that packs: `ode_lz4_pack` writes a match where the bytes ahead are the bytes `d` before (the
+// caller chooses the distance), and literals elsewhere. The same contract: what it writes decodes to the
+// input. (The `requires` on d: a distance is 1 to 65535, as the format's two bytes hold it.)
+contract ode_lz4_pack(out: cap bytes, cap: number, input: n bytes, n: number, d: number) {
+    requires apart(out, input)
+    requires cap < NO
+    requires d >= 1
+    requires d <= 65535
+    returns r
+    ensures lz4(out[0 .. r], n) == input if r != NO
+    writes out
+    trace depends on input
+    stack 120
+}
