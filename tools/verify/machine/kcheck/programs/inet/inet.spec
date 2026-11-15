@@ -15,14 +15,14 @@ def total(bytes) {
     if len(bytes) % 2 == 0 then sums(bytes)[pairs] else sums(bytes)[pairs] + 256 * bytes[len(bytes) - 1]
 }
 
-// One's complement addition lets what is carried out of 16 bits come back in at the bottom: so of a plain
-// sum, what is above 16 bits is added to what is within them. Four times brings any sum below 2^64 within
-// 16 bits, and the sum of fewer than 2^49 bytes is below 2^64. (Three times would do for fewer than 2^32
-// bytes.) It is then the sum's remainder by 65535, with 65535 in place of 0 for a sum that is not 0:
-// test_specs.py tries that; nothing here shows it.
-def fold(s) { s % 65536 + s / 65536 }
+// The one's complement sum of 16-bit numbers whose plain sum is s. One's complement addition lets what is
+// carried out of 16 bits come back in at the bottom, which takes 65535 off; so the sum is s less as many
+// 65535s as leave it from 1 to 65535. Only a plain sum of 0 gives 0: in one's complement 65535 is a zero
+// too, and it is the zero every other sum that is a multiple of 65535 comes to.
+def ones_sum(s) { if s == 0 then 0 else (s - 1) % 65535 + 1 }
 
-def checksum(bytes) { 65535 - fold(fold(fold(fold(total(bytes))))) }
+// The checksum: the one's complement (every bit turned) of that sum.
+def checksum(bytes) { 65535 - ones_sum(total(bytes)) }
 
 const NO = 18446744073709551615
 
@@ -30,7 +30,13 @@ const NO = 18446744073709551615
 // The public contract (what a contract means: CONTRACT.md). There is no `requires`: of 2^49 bytes or more,
 // whose plain sum might not fit 64 bits, it says NO and reads none. There is no `trace` line: which
 // instructions run and which addresses are touched depend on n, and not on the bytes.
+//
+// (The second and third lines are one line, said for a sum that is 0 and for one that is not: the checker
+// has to be told to take that question both ways. README.md, "What each made the languages gain".)
 contract ode_inet(input: n bytes, n: number) {
-    returns if n < 562949953421312 then checksum(input) else NO
+    returns r
+    ensures r == NO if n >= 562949953421312
+    ensures r == checksum(input) if n < 562949953421312 && total(input) == 0
+    ensures r == checksum(input) if n < 562949953421312 && total(input) != 0
     stack 40
 }

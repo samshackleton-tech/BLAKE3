@@ -62,7 +62,7 @@ encoder's):
 | first difference of two runs of bytes | `returns common(a, b)` | 45 | 1 place, 8 lines | 5 ms |
 | UTF-8: is it well-formed, and how many code points | `returns if failed(utf8(input)) then NO else utf8(input)` | 300 | 1 place, 11 lines | 0.16 s |
 | Base 64 encoder | `requires cap >= 4 * ((n + 2) / 3)`; `returns 4 * ((n + 2) / 3)`; `ensures out[0 .. 4 * ((n + 2) / 3)] = base64(input)` | 197 | 1 place, 12 lines | 12 s |
-| the Internet checksum (RFC 1071) | `returns if n < 562949953421312 then checksum(input) else NO`; no `requires`; no `trace` line: its timing does not depend on the bytes | 88 | 1 place, 9 lines | 0.16 s |
+| the Internet checksum (RFC 1071) | `ensures r == checksum(input) if n < 562949953421312`, else NO; no `requires`; no `trace` line: its timing does not depend on the bytes | 88 | 1 place, 9 lines | 0.25 s |
 
 What is shown of BLAKE3, from the bytes (`python3 check_all.py`, of the objects an assembler makes of the
 sources: 18 functions, 3,831 instructions, 19 s):
@@ -434,7 +434,7 @@ that is no way to compute anything.
 | `common/` | 15 | the same in Python | `ode_common` |
 | `utf8/` | 61: a code point is 0 to 0x10FFFF and no surrogate, written in the fewest of one to four bytes | Python's strict decoder | `ode_utf8` |
 | `base64/` | 38: RFC 4648's words: 24 bits as four groups of six, a letter each; "=" at the end | Python's `base64` | `ode_base64` |
-| `inet/` | 34: RFC 1071's words: pairs of bytes summed, what is carried out of 16 bits added back in | the RFC's own example and its C code's way, in Python | `ode_inet` |
+| `inet/` | 42: RFC 1071's words: pairs of bytes summed in one's complement (the plain sum less as many 65535s as leave it from 1 to 65535), and that sum's complement | the RFC's own example and its C code's way, in Python | `ode_inet` |
 | `sigil/` | 175: John's Sigil 0.1 (the data with two marker bits, times a check prime, written in base 2,048 as letters) | the 220 good vectors of its repository | none: it multiplies a number of 258 bits by a prime and looks letters up in a table of 2,048; Ode has no multiplication yet, and `kbyte.py` reads no table of constants |
 
 **What each made the languages gain.**
@@ -479,9 +479,12 @@ that is no way to compute anything.
   did arithmetic its author had wrong: I wrote `requires n < 2^32` with four folds of the carries; a
   changed specification with three folds was accepted (three do suffice below 2^32), and so was `n < 2^49`
   with four (the sum then still fits 64 bits, and four folds bring any such sum within 16). The contract
-  now says 2^49, and one byte more is refused. What it could not show is what the folds amount to (the
-  sum's remainder by 65535): that is a fact about numbers, tried on examples (`test_specs.py`) and shown
-  nowhere. Last, the contract was given no `requires` at all: from 2^49 bytes on the function says NO and
+  now says 2^49, and one byte more is refused. And it showed what I had assumed it could not. The
+  specification first said the code's own way ("fold the carries in, four times"), with a note that what
+  the folds amount to was tried on examples and shown nowhere. It now says what a one's complement sum is
+  (`if s == 0 then 0 else (s - 1) % 65535 + 1`) and has no fold in it; the code still folds four times; the
+  checker's arithmetic shows the two are one, in a quarter of a second. Last, the contract was given no
+  `requires` at all: from 2^49 bytes on the function says NO and
   reads nothing (`returns if n < 562949953421312 then checksum(input) else NO`). That is one compare in
   principle; here it is four shifts and a compare, because the decoder reads no constant above 32 bits and
   the machine no shift by more than 16: two more things the checker lacks.
@@ -617,10 +620,10 @@ refusals. And what `kbyte.py` lacks, each found by a program that wanted it:
 
 - calls (`kfn.py` follows them, and knows no places and no bytes in parts: they should be one checker);
 - tables of constants beside the code, and multiplication in Ode (Sigil);
-- facts about a specification itself: that what an LZ4 block decodes to only grows; that the least place
-  two runs differ is where a walk over them stops; that four folds of the carries are the remainder by
-  65535. The first two are inductions over a definition, and the specifications were written as walks
-  over the input so as not to need them;
+- facts about a specification itself that take an induction: that what an LZ4 block decodes to only
+  grows; that the least place two runs differ is where a walk over them stops. Those specifications were
+  written as walks over the input so as not to need them. (A fact of arithmetic it does show: that four
+  folds of the carries are a one's complement sum.)
 - facts modulo a number (a sum reduced only now and then), and reads of more than a byte at a time: both
   for speed;
 - taking a specification's question both ways where the code's path does not answer it (UTF-8), and

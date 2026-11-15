@@ -343,6 +343,8 @@ class Base64(unittest.TestCase):
 class Inet(unittest.TestCase):
     """The Internet checksum. Its contract has no `trace` line: no branch and no address depends on the bytes,
     though every byte goes into the result. And it has no `requires`: where the sum might not fit it says NO.
+    The specification says what a one's complement sum is (the plain sum less as many 65535s as leave it from 1
+    to 65535); the code folds the carries in four times; the checker's arithmetic shows they are the same.
     Written with the checker frozen: no change to it."""
     @classmethod
     def setUpClass(cls): cls.p = Program("inet", "inet", "ode_inet")
@@ -355,18 +357,20 @@ class Inet(unittest.TestCase):
     def test_a_changed_specification_or_contract_is_refused(self):
         pair = "s[k + 1] = s[k] + 256 * bytes[2 * k] + bytes[2 * k + 1]"
         total = "if len(bytes) % 2 == 0 then sums(bytes)[pairs] else sums(bytes)[pairs] + 256 * bytes[len(bytes) - 1]"
-        whole = "65535 - fold(fold(fold(fold(total(bytes)))))"
-        result = "returns if n < 562949953421312 then checksum(input) else NO"
+        ones = "if s == 0 then 0 else (s - 1) % 65535 + 1"
+        no, zero, other = "ensures r == NO if n >= 562949953421312", "ensures r == checksum(input) if n < 562949953421312 && total(input) == 0", "ensures r == checksum(input) if n < 562949953421312 && total(input) != 0"
         self.p.changed(self, "spec", [
             ("s[0] = 0   " + pair, "s[0] = 1   " + pair), (pair, "s[k + 1] = s[k] + bytes[2 * k] + 256 * bytes[2 * k + 1]"), (pair, pair.replace("256", "255")), (pair, pair.replace("bytes[2 * k + 1]", "bytes[2 * k]")),
             (total, total.replace("+ 256 * bytes[len(bytes) - 1]", "+ bytes[len(bytes) - 1]")), (total, total.replace("else sums(bytes)[pairs] + 256 * bytes[len(bytes) - 1]", "else sums(bytes)[pairs]")),
             (total, total.replace("% 2 == 0", "% 2 == 1")), ("let pairs = len(bytes) / 2", "let pairs = (len(bytes) + 1) / 2"),
-            ("def fold(s) { s % 65536 + s / 65536 }", "def fold(s) { s % 65536 }"), ("def fold(s) { s % 65536 + s / 65536 }", "def fold(s) { s % 65535 + s / 65535 }"), ("def fold(s) { s % 65536 + s / 65536 }", "def fold(s) { s % 65536 + s / 65536 + 1 }"),
-            # three folds are too few for a sum of 2^49 bytes (the checker shows they would do for 2^32, and that a fifth changes nothing)
-            (whole, "65535 - fold(fold(fold(total(bytes))))"), (whole, "fold(fold(fold(fold(total(bytes)))))"), (whole, "65536 - fold(fold(fold(fold(total(bytes)))))"),
-            # it says NO from 2^49 bytes on, not from one more or one fewer; and nowhere else
-            (result, "returns checksum(input)"), (result, result.replace("562949953421312", "562949953421313")), (result, result.replace("562949953421312", "562949953421311")),
-            (result, result.replace("else NO", "else 0")), (result, result.replace("then checksum(input)", "then checksum(input) + 1")), ("stack 40", "stack 32")])
+            # the one's complement sum: not the plain remainder (which gives 0 for 65535), not by 65536, not one off
+            (ones, "if s == 0 then 0 else s % 65535"), (ones, ones.replace("65535", "65536")), (ones, "if s == 0 then 0 else (s - 1) % 65535"), (ones, "if s == 0 then 0 else s % 65535 + 1"),
+            (ones, "if s == 0 then 65535 else (s - 1) % 65535 + 1"),
+            ("def checksum(bytes) { 65535 - ones_sum(total(bytes)) }", "def checksum(bytes) { ones_sum(total(bytes)) }"), ("def checksum(bytes) { 65535 - ones_sum(total(bytes)) }", "def checksum(bytes) { 65536 - ones_sum(total(bytes)) }"),
+            # it says NO from 2^49 bytes on, not from one more or one fewer; and the checksum everywhere else
+            (no, no.replace(">= 562949953421312", ">= 562949953421311")), (no, "ensures r == 0 if n >= 562949953421312"),
+            (zero, zero.replace("n < 562949953421312", "n < 562949953421314")), (other, other.replace("n < 562949953421312", "n < 562949953421314")),
+            (zero, zero.replace("r == checksum(input)", "r == checksum(input) + 1")), (other, other.replace("r == checksum(input)", "r == checksum(input) + 1")), ("stack 40", "stack 32")])
 
     def test_a_proof_without_one_of_its_lines_is_refused(self):
         lines, needless = self.p.proof.split("\n"), []
