@@ -10,7 +10,7 @@ You need Python 3 and this folder. Nothing is installed, nothing is downloaded, 
     python3 verify.py programs/lz4/odelz4.o        # an LZ4 decoder and two encoders: 0.3 s
     python3 verify.py programs/utf8/odeutf8.o      # a UTF-8 validator: 0.03 s
     python3 verify.py programs/frame/odeframe.o    # a function that calls two others: 0.25 s
-    python3 verify.py b3hashr.o                    # BLAKE3, with its AVX-512 kernels: 15 s
+    python3 verify.py b3hashr.o                    # BLAKE3, with its AVX-512 kernels: 16 s (8 s with pypy3)
 
 It prints three things:
 
@@ -26,7 +26,9 @@ It prints three things:
        }
 
 2. **The verification**: each function's instructions, read from the file's own bytes, meet its contract
-   on every input the contract allows; or `NOT shown`.
+   on every input the contract allows; or `NOT shown`. And one line about the specification: its
+   definitions that use themselves come to an end (so a contract written with them says something of
+   every input), or which are not shown to.
 3. **What ran**: the files of this folder that were loaded to reach that, with their sizes and digests.
 
 Exit status 0 means shown.
@@ -48,8 +50,8 @@ file; the verifier uses them and trusts none of them. A wrong one makes the veri
 
 ## What you rely on
 
-- **The files listed under "What ran"**: about 3,500 lines of Python for the hash, 4,600 for the other
-  programs (they load more than they use). They hold: how the file's bytes are read as instructions; what
+- **The files listed under "What ran"**: about 3,500 lines of Python for the hash, 4,000 for the other
+  programs (they load more than they use). None of them searches for anything. They hold: how the file's bytes are read as instructions; what
   each instruction does; how a specification is read and worked out; how a proof of arithmetic is added up.
   They are tested and audited, **not proved**: that is the weakest part of this, and the work under way is
   to make that list short enough to read (`DESIGN.md`, "Where it stands").
@@ -74,13 +76,22 @@ inputs, and if they differ it prints the input:
 
 A FALSE is a fact you can check by hand. "Not refuted" settles nothing.
 
+## A second opinion on one part
+
+The proofs of arithmetic a file carries can be added up by a second program that shares nothing with the
+first (C, 310 lines, its own whole numbers):
+
+    cc -O2 -o varith2 varith2.c -lz && ./varith2 b3hashr.o programs/*/ode*.o
+    varith2: 7850 proofs of arithmetic: 7850 add up to "these rows cannot all hold"
+
+It says each proof adds up; it does not say the proof was used where its starting facts were known (the
+first verifier's part). It is the beginning of a second verifier, not one.
+
 ## What it does not show
 
 - **Speed**, and anything else a contract does not say. (A `trace` line says what the timing may depend on.)
 - **That your program reaches these bytes.** The verification is of the function at a name in the file. That
   the calls in a program linked with it go there, and not to something else of the same name, is not shown.
-- **That every definition of a specification has a value on every input.** A specification can be written
-  that never ends; the ones here do, and nothing checks it.
 - **The hash on AArch64**, or with an incremental interface: x86-64, one call.
 
 ## Why not Lean, Coq, or an SMT solver?

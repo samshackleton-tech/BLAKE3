@@ -72,7 +72,7 @@ run "kbyte-flip-unframe.txt" env LIBS="-lz $work/p/lz4_decode.o $work/p/adler32_
 # and every instruction left out in turn
 run "kbyte-nop-unframe.txt" env LIBS="-lz $work/p/lz4_decode.o $work/p/adler32_blocks4.o" python3 kbyte_nop.py "$work/frame.spec" ode_unframe "$work/p/unframe.o" programs/frame/unframe.proof programs/frame/native.c 6000
 run "kbyte-nop-lz4_pack.txt" python3 kbyte_nop.py "$work/lz4.spec" ode_lz4_pack "$work/p/lz4_pack.o" programs/lz4/lz4_pack.proof programs/lz4/native_pack.c 6000 full
-run "kbyte-nop-utf8.txt" python3 kbyte_nop.py programs/utf8/utf8.spec ode_utf8 "$work/p/utf8.o" programs/utf8/utf8.proof programs/utf8/native.c 20000
+run "kbyte-nop-utf8.txt" python3 kbyte_nop.py "$work/utf8.spec" ode_utf8 "$work/p/utf8.o" programs/utf8/utf8.proof programs/utf8/native.c 20000        # (with its lemma, as the file shipped has it)
 run "kbyte-nop-inet.txt" python3 kbyte_nop.py programs/inet/inet.spec ode_inet "$work/p/inet.o" programs/inet/inet.proof programs/inet/native.c 5000
 run "kbyte-nop-adler32_blocks.txt" env LIBS=-lz python3 kbyte_nop.py programs/adler32/adler32.spec ode_adler32_blocks "$work/p/adler32_blocks.o" programs/adler32/adler32_blocks.proof programs/adler32/native_blocks.c 600
 run "kbyte-nop-adler32_blocks4.txt" env LIBS=-lz python3 kbyte_nop.py programs/adler32/adler32.spec ode_adler32_blocks4 "$work/p/adler32_blocks4.o" programs/adler32/adler32_blocks4.proof programs/adler32/native_blocks4.c 600
