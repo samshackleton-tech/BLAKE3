@@ -865,7 +865,7 @@ tests, and `--search`. `klin.py` is 174 lines of code and holds no elimination. 
 `programs/` no longer loads the hash's driver or the kernels' two verifiers (`kproof.py`, 16 lines, reads
 the proof's form; the helpers `value` and `lin` moved to `klin.py`): `verify.py` listed 10 files and 3,979
 lines of code for an LZ4 file (it was 12 and 4,587), 11 files and 3,445 for the hash (3,484). With what
-follows below (definitions that end, `any`, the record, `kends.py`) it lists 4,161 and 3,461.
+follows below (definitions that end, `any`, the record, `kends.py`) it lists 4,183 and 3,461.
 
 **A definition that uses itself is shown to come to an end.** A specification's definition that never
 ended on some input would have no value there and no failure, and a contract written with it would say
@@ -920,7 +920,7 @@ the greatest power of two that leaves bytes for the right, so each part is short
 three changed specifications in which a part is not smaller (`<=` for `<` in the split among them). A
 verification of `b3hashr.o` says "the definitions that use themselves (children, subtree): each is shown to
 come to an end" (see below for what that line now rests on); `verify.py` lists what that one line loaded
-beside the rest (`kbyte.py` and `kends.py`, 1,063 and 99 lines of code: it is no part of what shows the code meets the contract).
+beside the rest (`kbyte.py` and `kends.py`, 1,063 and 116 lines of code: it is no part of what shows the code meets the contract).
 
 ### A hole in the line about coming to an end, found and closed the same day (`kends.py`)
 
@@ -938,7 +938,7 @@ is shown (of nothing: no use meets it), and the line was printed. A maker could 
 definitions end when one of them goes on for ever. No shipped file did; the lemma audit's own output had
 the sign of it (two changed lemmas "shown, and judged on no use") and I had read that as harmless.
 
-Now (`kends.py`, 99 lines of code): the line is about **the public contracts**, and it is said only where,
+Now (`kends.py`, 116 lines of code): the line is about **the public contracts**, and it is said only where,
 from the contract inward, every use of a definition is one its lemma speaks of. Each definition the
 contract's text names is gone through once from what the contract gives it (an argument as it is, with its
 length and what the contract `requires`; a part of what the function wrote, as any bytes; anything else,
