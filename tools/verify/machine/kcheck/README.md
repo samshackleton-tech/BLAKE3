@@ -18,9 +18,9 @@ own again); definitions shown to come to an end on everything a contract allows 
 verifier of the arithmetic, in C, written apart (`varith2.c`); provers that guess lemmas and the places of
 loops (`kguess.py`, `kplace.py`: for three functions the whole proof from the binary and the specification
 alone); two more audits (`lemma_audit.py`, `kadversary.py`); "false, and here is the input" (`refute.py`).
-And three holes of the kind "shown, of something false", found and closed that night, none in "meets its
-contract": what a verification said about a specification's definitions ending, a function the proof left
-out, the kind a lemma gave a value.
+And three things found wrong and closed that night, none in "meets its contract": two of the kind "shown,
+of something false" (what a verification said about a specification's definitions ending; the kind a
+lemma gave a value) and one silence (a function the proof left out).
 
 **Not a proof in a proof assistant, and checked by none.** A trial of another way to the goal of BLAKE3 #361:
 to hand a skeptical reader a specification, a binary and a proof, such that he checks for himself, in
