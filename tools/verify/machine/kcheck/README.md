@@ -848,7 +848,7 @@ tests, and `--search`. `klin.py` is 174 lines of code and holds no elimination. 
 `programs/` no longer loads the hash's driver or the kernels' two verifiers (`kproof.py`, 16 lines, reads
 the proof's form; the helpers `value` and `lin` moved to `klin.py`): `verify.py` listed 10 files and 3,979
 lines of code for an LZ4 file (it was 12 and 4,587), 11 files and 3,445 for the hash (3,484). With what
-follows below (definitions that end, `any`, the record, `kends.py`) it lists 4,155 and 3,461.
+follows below (definitions that end, `any`, the record, `kends.py`) it lists 4,161 and 3,461.
 
 **A definition that uses itself is shown to come to an end.** A specification's definition that never
 ended on some input would have no value there and no failure, and a contract written with it would say
