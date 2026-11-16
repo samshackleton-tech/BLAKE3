@@ -1,0 +1,30 @@
+// Lemmas about lz4.spec's definitions: steps of the proofs of the decoder and the encoders, not the reader's.
+// Each is a contract of a definition: where the definition has a value, `ensures` holds of it (`result`).
+// The verifier shows each one, by opening the definition once, before it uses any (kbyte.py).
+//
+// What they are for: the decoder gives NO as soon as what it has decoded and is about to decode would pass
+// its room. That is right because what a block decodes to only grows: it is at least as long as what was
+// decoded before any of its sequences.
+
+// A count read from the bytes is at least what it began with, and ends after where it began.
+lemma counted(bytes: bytes, at: number, sum: number): record(value, next) {
+    ensures result.value >= sum
+    ensures result.next >= at + 1
+}
+
+// `out` with k more bytes copied onto it has k more bytes.
+lemma copies(out: list, offset: number)[k]: list {
+    requires offset >= 1
+    requires offset <= len(out)
+    ensures len(result) == len(out) + k
+}
+
+// What the sequences from `at` on decode to, after `out`, is at least as long as `out`.
+lemma sequences(bytes: bytes, at: number, out: list): list {
+    ensures len(result) >= len(out)
+}
+
+// The same of the rest of a sequence, from its offset on.
+lemma match(bytes: bytes, at: number, low: number, out: list): list {
+    ensures len(result) >= len(out)
+}

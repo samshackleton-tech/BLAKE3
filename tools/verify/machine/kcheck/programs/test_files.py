@@ -104,7 +104,7 @@ class Files(unittest.TestCase):
             code, out = run(obj, spec, "--proof", other)
             self.assertNotEqual(code, 0, out)
             # a file that carries a specification that is not the one its code meets: with the file alone, refused
-            wrong = carried.replace(b"copies(out, offset)[n.value + 4], cap)", b"copies(out, offset)[n.value + 3], cap)")
+            wrong = carried.replace(b"copies(out, offset)[n.value + 4])", b"copies(out, offset)[n.value + 3])")
             self.assertNotEqual(wrong, carried)
             path = os.path.join(d, "wrong.proof")
             with open(path, "wb") as f: f.write(wrong)
@@ -116,7 +116,9 @@ class Files(unittest.TestCase):
             with open(mine, "w") as f: f.write(text + "\n// a reader's note\n")
             code, out = run(obj, mine)
             self.assertEqual(code, 0, out); self.assertIn("NOT the one the maker had", out)
-            with open(mine, "w") as f: f.write(text.replace("copies(out, offset)[n.value + 4], cap)", "copies(out, offset)[n.value + 3], cap)"))
+            changed_text = text.replace("copies(out, offset)[n.value + 4])", "copies(out, offset)[n.value + 3])")
+            self.assertNotEqual(changed_text, text)
+            with open(mine, "w") as f: f.write(changed_text)
             code, out = run(obj, mine)
             self.assertEqual(code, 1, out); self.assertIn("NOT shown", out)
 

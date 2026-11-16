@@ -33,10 +33,17 @@ COMPOSED = [("frame", "unframe", "a frame opened: an LZ4 block decoded and its A
              {"ode_lz4_decode": ("lz4", "lz4_decode"), "ode_adler32_blocks4": ("adler32", "adler32_blocks4")})]
 
 
+def lemmas(program):
+    """The program's lemmas about its specification's definitions (programs/NAME/NAME.lemmas): steps of its proofs."""
+    path = os.path.join(HERE, program, program + ".lemmas")
+    if not os.path.exists(path): return ""
+    with open(path) as f: return "\n" + f.read()
+
+
 def composed(folder, program, function, parts, made=True):
     """[(symbol, instructions, seconds, what it calls)] of the function and of all it calls; raises where one is not shown."""
     read = lambda *p: open(os.path.join(HERE, *p)).read()
-    spec = ode.with_proof(read(program, program + ".spec"), read(program, function + ".inner"))
+    spec = ode.with_proof(read(program, program + ".spec"), read(program, function + ".inner") + lemmas(program))
     out, todo, seen = [], [("ode_" + function, program, function)], set()
     while todo:
         symbol, where, name = todo.pop(0)
@@ -66,7 +73,7 @@ def main():
             t0 = time.time()
             try:
                 rows = kbyte.load(os.path.join(folder, function + ".o"), "ode_" + function)
-                tally = kbyte.check(rows, ode.Spec(spec_text), "ode_" + function, proof)
+                tally = kbyte.check(rows, ode.with_proof(spec_text, lemmas(program)) if lemmas(program) else ode.Spec(spec_text), "ode_" + function, proof)
                 total += len(rows)
                 print(f"  ode_{function:<12} {len(rows):>4} instructions  proof {lines(proof):>3} lines, {proof.count('place +')} places  {1000 * (time.time() - t0):7.1f} ms  meets its contract: {what}")
             except (kcheck.Fail, kdecode.Stop, ode.Err) as e:

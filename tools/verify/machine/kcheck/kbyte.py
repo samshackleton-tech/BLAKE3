@@ -281,9 +281,22 @@ class Algebra:
     def defined(self, v):
         v = self.known(v)
         if not isinstance(v, Opaque) or any(self.alike(v, k) for k in self.m.fine): return
-        if self.m.calling: raise Undecided("a callee's contract asks whether something has a value, and the path does not say", "defined", v)
-        raise Err("the specification asks whether something has a value, and the code's path does not say")
+        raise Undecided("the specification asks whether something has a value, and the code's path does not say", "defined", v)
     def element(self, spec, seq, i):
+        v = self.element_of(spec, seq, i)
+        if seq.id is not None and seq.id[0] in spec.lemmas:
+            # the sequence has a lemma (shown before anything else: prove_lemmas): where it applies, it holds of this place
+            l = spec.lemmas[seq.id[0]]
+            env = applies(spec, self, l, seq.id[1])
+            if env is not None and self.facts.ge0(Lin.of(self.num(i))):
+                env[l["index"]] = i; env["result"] = v
+                try:
+                    for e in l["ensures"]:
+                        for f in order(spec, self, e, env): self.facts.add(f)
+                except Err: pass
+        return v
+
+    def element_of(self, spec, seq, i):
         """A sequence's value at place i. At a place the path fixes: worked out. At a place one after a place
         whose value is known: the sequence's equation of it. Else: a number, or a list, with a name."""
         if seq.id is None: return seq.at(spec, self, self.plain(i))
@@ -938,11 +951,9 @@ def run(m, places, budget):
             try:
                 m.one(); budget[0] -= 1
             except kfn.Fork as f:
+                if f.kind in ("zero", "ge", "defined"): work += split(m, f); break
                 yes, no = m.clone(), m.clone()
-                if f.kind == "zero": yes.facts.assume_zero(f.x); no.facts.assume_nonzero(f.x)
-                elif f.kind == "ge": yes.facts.add(f.x); no.facts.add(-f.x - 1)
-                elif f.kind == "defined": yes.fine.append(f.x); no.learned.append((f.x, Failure(Opaque("reason", (f.x,)))))
-                else: yes.conds[f.x] = True; no.conds[f.x] = False
+                yes.conds[f.x] = True; no.conds[f.x] = False
                 work += [side for side in (yes, no) if side.facts.consistent()]; break
     return ends
 
@@ -958,15 +969,24 @@ def where_holds(e, spec, guard, env):
         try:
             if spec.eval(Algebra(m), guard, env) is True: holds.append(m)
         except Undecided as u:
-            yes, no = m.clone(), m.clone()
-            if u.kind == "zero": yes.facts.assume_zero(u.x); no.facts.assume_nonzero(u.x)
-            else: yes.facts.add(u.x); no.facts.add(-u.x - 1)
-            work += [side for side in (yes, no) if side.facts.consistent()]
+            work += split(m, u)
             if len(work) + len(holds) > 64: raise Fail("a guard of the contract with more cases than this verifier takes")
     return holds
 
 
 def returned(e, c, where):
+    """What the contract says of the return, on this path. Where the contract asks what the path does not answer
+    (has `lz4(input)` a value?), each way it can be is a case of its own, and the contract is shown in each."""
+    work, cases = [e], 0
+    while work:
+        m = work.pop()
+        cases += 1
+        if cases > 200: raise Fail(f"{where}: the contract asks more questions the path does not answer than this verifier takes")
+        try: returned_case(m, c, where)
+        except Undecided as u: work += split(m, u)
+
+
+def returned_case(e, c, where):
     A, env, spec = Algebra(e), dict(e.given), c.spec
     for region, rope in e.held.items():
         if rope is not None: env[region] = rope                # what is written there, as a list
@@ -993,11 +1013,202 @@ def returned(e, c, where):
         for cond, guard in c.conditions:
             for m in where_holds(e, spec, guard, env):
                 if spec.eval(Algebra(m), cond, env) is not True: raise Fail(f"{where}: something the contract ensures is not so")
+    except Undecided: raise
     except ode.Fails as err: raise Fail(f"{where}: the contract speaks of something the specification gives no value (it fails with {err.reason})")
     except Err as err: raise Fail(f"{where}: the specification cannot be followed on this path: {err}")
     for r in KEPT:
         if e.g[r] != ("q", r + " at entry"): raise Fail(f"{where}: {r} is not restored")
     within(e, c, where)
+
+
+# ---------------------------------------------------------------------------------------------------------
+# Lemmas: contracts of the specification's own definitions (ode.py: `lemma`). Steps of a proof.
+#
+# A lemma says: where what the definition is given meets `requires`, and the definition has a value, `ensures`
+# holds of that value. It is shown by opening the definition once on names, every use of a definition that
+# has a lemma inside taken by that lemma: as a function that calls itself is taken by its own contract. (If the
+# definition has a value, it was reached by finitely many openings; so what holds after one opening, given that
+# it holds of the openings inside, holds.) A sequence's lemma is of its place k: shown of its first value, and
+# of the value after one of which it holds.
+#
+# Used: (1) wherever a place of a sequence with a lemma is asked for; (2) where the contract asks whether
+# something has a value and the path does not say: in the case that it has, the definition it is known to be is
+# opened once, the uses inside by their lemmas, and each way that opening can go is a case of its own.
+
+def fresh_value(m, kind, fields, title):
+    """A value of which nothing is known but its kind: a list, a number, a record of numbers, with a name."""
+    if kind == "list":
+        n = sym("#" + title); m.facts.add(n)
+        return Rope([("list", title, n)])
+    if kind == "number":
+        v = sym(title); m.facts.add(v)
+        return plain(v)
+    out = {}
+    for f in fields:
+        v = sym(f"{title}.{f}"); m.facts.add(v); out[f] = plain(v)
+    return out
+
+
+def applies(spec, A, l, args):
+    """The lemma's names for what it is given, if these are of its kinds and meet its `requires` here; else None."""
+    if len(args) != len(l["params"]): return None
+    env = {}
+    try:
+        for (p, kind), a in zip(l["params"], args):
+            if kind == "bytes" and not isinstance(a, View): return None
+            if kind == "list":
+                # a list of bytes (a lemma is shown of such): bytes of memory, lists with a name, and numbers shown to be bytes
+                if not isinstance(a, (Rope, View, list)): return None
+                for q in A.parts(a):
+                    if q[0] == "one" and not (A.facts.ge0(Lin.of(q[1])) and A.facts.ge0(255 - Lin.of(q[1]))): return None
+            if kind == "number" and not A.facts.ge0(numb(a)): return None
+            env[p] = a
+        for e in l["requires"]:
+            for f in order(spec, A, e, env):
+                if not A.facts.ge0(f): return None
+    except Err: return None
+    return env
+
+
+class Opening(Algebra):
+    """The algebra while one definition (`top`) is opened once: a definition with a lemma that is used inside is
+    not opened: its value is a name of which the lemma's `ensures` holds."""
+    def __init__(self, m, spec, top, tag):
+        # `tag`: this opening's own; the names it gives are numbered from 0 each time it is gone through, so that
+        # going through it again, after a question was taken both ways, speaks of the same things
+        super().__init__(m); self.spec, self.top, self.opened, self.tag, self.count = spec, top, False, tag, itertools.count()
+        self.only = None        # while a sequence's lemma is shown: the one place of which it may be taken (the place before)
+    def hypothesis(self, name, args, index=None):
+        l = self.spec.lemmas[name]
+        env = applies(self.spec, self, l, args)
+        if env is None or (index is not None and not self.facts.ge0(Lin.of(self.num(index)))): raise Err(f"the lemma of {name} does not apply here")
+        v = fresh_value(self.m, l["kind"], l["fields"], f"{name}!{self.tag}.{next(self.count)}")
+        env["result"] = v
+        if index is not None: env[l["index"]] = index
+        for e in l["ensures"]:
+            for f in order(self.spec, self, e, env): self.facts.add(f)
+        return v
+    def kept(self, name, args, body):
+        if name == self.top and not self.opened: self.opened = True; return body()
+        v = self.known(Opaque(name, args))
+        if isinstance(v, Failure): raise ode.Fails(v.reason)
+        if not isinstance(v, Opaque): return v
+        if name in self.spec.lemmas: return self.hypothesis(name, args)
+        return body()                                            # a definition without a lemma: opened where it stands
+    def defined(self, v):
+        v = self.known(v)
+        if isinstance(v, Opaque) and not any(self.alike(v, k) for k in self.m.fine): raise Err("a definition that asks whether something has a value: not followed in an opening")
+    def element(self, spec, seq, i):
+        if seq.id is not None and seq.id[0] in spec.lemmas:
+            if self.only is not None and self.facts.zero(Lin.of(self.num(i)) - self.only) is not True: raise Err(f"a sequence's lemma is shown from the place before, and place {i} is asked for")
+            return self.hypothesis(seq.id[0], seq.id[1], i)
+        return super().element(spec, seq, i)
+
+
+def lemma_machine(spec, name, l):
+    """A machine with no code, for the facts and the names: and what the lemma is given, of which nothing is known
+    but its kinds and its `requires`."""
+    c = Contract.__new__(Contract)
+    c.name, c.spec, c.args, c.kind, c.result = "lemma " + name, spec, [], {}, None
+    c.writes, c.held, c.trace, c.stack, c.conditions = set(), set(), {p for p, k in l["params"] if k == "bytes"}, 0, []
+    c.text = dict(asks=[], apart=None, leaves=[], returns=None, spoils=[])
+    m = Machine(kcheck.Terms(), [], c)
+    args = []
+    for p, kind in l["params"]:
+        if kind == "bytes":
+            n = sym("#" + p); m.facts.add(n); m.facts.add(WORD64 - n)          # bytes in memory: fewer than 2^64 of them
+            m.len[p], m.given[p] = Lin.of(n), View(p, 0, plain(n)); m.readonly.add(p)
+            args.append(m.given[p])
+        else: args.append(fresh_value(m, kind, (), p))
+    env = dict(zip((p for p, _ in l["params"]), args))
+    A = Algebra(m)
+    for e in l["requires"]:
+        for f in order(spec, A, e, env): m.facts.add(f)
+    return m, args, env
+
+
+def lemma_cases(m0, one, what):
+    work, n = [m0], 0
+    while work:
+        m = work.pop(); n += 1
+        if n > 500: raise Fail(f"{what}: more cases than this verifier takes")
+        try: one(m)
+        except Undecided as u:
+            if u.kind == "defined": raise Fail(f"{what}: its opening asks whether something has a value")
+            work += split(m, u)
+        except ode.Fails: pass                                   # no value in this case: the lemma says nothing of it
+        except Err as err: raise Fail(str(err) if str(err).startswith(what) else f"{what}: its opening cannot be followed: {err}")
+
+
+def prove_lemmas(spec):
+    """Every lemma of the specification is shown, or Fail. (Each use of a lemma rests on this.)"""
+    for name, l in spec.lemmas.items():
+        what = f"the lemma of {name}"
+        m0, args, env0 = lemma_machine(spec, name, l)
+        def holds(m, A, v, index=None, of=""):
+            env = dict(env0); env["result"] = v
+            if index is not None: env[l["index"]] = index
+            for e in l["ensures"]:
+                for f in order(spec, A, e, env):
+                    if not m.facts.ge0(f): raise Fail(f"{what}: what it ensures is not shown{of} ({f} >= 0)")
+        tag = next(FRESH)
+        if l["index"] is None:
+            def one(m):
+                A = Opening(m, spec, name, tag)
+                holds(m, A, spec.apply(A, name, list(args)))
+            lemma_cases(m0, one, what)
+        else:
+            params, h, var, first, nxt = spec.seqs[name]
+            k = sym(l["index"] + "?"); m0.facts.add(k)
+            def one(m):
+                A = Opening(m, spec, None, tag)
+                A.only = k
+                s = ode.Seq(); s.first, s.var, s.next, s.id = first, var, nxt, (name, list(args))
+                s.env = dict(zip(params, args)); s.env[h] = s
+                holds(m, A, spec.eval(A, first, dict(s.env)), 0, " of its first value")
+                inner = dict(s.env); inner[var] = plain(k)
+                holds(m, A, spec.eval(A, nxt, inner), plain(k + 1), " of the value after one of which it holds")
+            lemma_cases(m0, one, what)
+
+
+def split(m, u):
+    """The ways a question the path does not answer can be, each a machine of its own (those that cannot be are left out)."""
+    if u.kind == "defined": return split_defined(m, u.x)
+    yes, no = m.clone(), m.clone()
+    if u.kind == "zero": yes.facts.assume_zero(u.x); no.facts.assume_nonzero(u.x)
+    else: yes.facts.add(u.x); no.facts.add(-u.x - 1)
+    return [s for s in (yes, no) if s.facts.consistent()]
+
+
+def split_defined(m, V):
+    """V (a definition of some things, not worked out) has a value, or fails. Where it has one, the definition
+    (or one it is known to be the same as: the rest of the specification from where the code is) is opened once,
+    each definition with a lemma that is used inside taken by its lemma: each way the opening goes is a case, in
+    which V is what the opening gives."""
+    spec, A = m.contract.spec, Algebra(m)
+    no = m.clone(); no.learned.append((V, Failure(Opaque("reason", (V,)))))
+    opens = lambda x: isinstance(x, Opaque) and x.name in spec.fns
+    target = next((k for k, v in m.learned + m.equal if opens(k) and isinstance(v, Opaque) and A.alike(v, V)), V if opens(V) else None)
+    yes = []
+    if target is None:
+        y = m.clone(); y.fine.append(V); yes.append(y)
+    else:
+        work, tag = [m.clone()], next(FRESH)
+        while work:
+            sm = work.pop()
+            if len(yes) + len(work) > 64:
+                y = m.clone(); y.fine.append(V); yes = [y]; break       # too many ways: only that it has a value
+            O = Opening(sm, spec, target.name, tag)
+            try: val = spec.apply(O, target.name, list(target.args))
+            except Undecided as u:
+                work += [s for s in split(sm, u)] if u.kind != "defined" else []
+                if u.kind == "defined": sm.fine.append(V); yes.append(sm)
+                continue
+            except ode.Fails: continue                               # it has a value: not this way
+            except Err:
+                sm.fine.append(V); yes.append(sm); continue          # the opening cannot be followed: only that it has a value
+            sm.learned.append((V, val)); sm.fine.append(V); yes.append(sm)
+    return [s for s in yes + [no] if s.facts.consistent()]
 
 
 def within(e, c, where):
@@ -1006,7 +1217,10 @@ def within(e, c, where):
 
 def check(rows, spec, symbol, proof=""):
     """The function's instructions meet its contract. Raises Fail; returns a tally."""
+    global FRESH
+    FRESH = itertools.count()               # the names given on the way are the same every time: a proof of the arithmetic speaks of them
     c, T = Contract(spec, symbol), kcheck.Terms()
+    prove_lemmas(spec)                      # before any is used
     places = read_proof(proof, c)
     CALLED.clear()
     for at in places:

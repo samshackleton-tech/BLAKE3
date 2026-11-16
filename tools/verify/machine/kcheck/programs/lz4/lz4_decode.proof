@@ -5,7 +5,7 @@
 // read, [32] offset, [40] more, [48] result.
 //
 // What carries the specification through the loops is one kind of fact: the rest of the specification from
-// here is the whole (`sequences(input, i, O, cap) == lz4(input, cap)`: the block decodes to what its
+// here is the whole (`sequences(input, i, O) == lz4(input)`: the block decodes to what its
 // sequences from i on decode to, after O). A count being read is at most 15 and 255 for each byte read
 // (`count + 255 * t + 240 <= 255 * i`), so it stays within 64 bits.
 
@@ -18,7 +18,7 @@ place +0x89 {
     fact state == 0
     fact i <= n
     fact o <= cap
-    fact sequences(input, i, O, cap) == lz4(input, cap)
+    fact sequences(input, i, O) == lz4(input)
     any stack[8], stack[16], stack[24], stack[32], stack[40]
     decreases n - i, 2
 }
@@ -42,7 +42,7 @@ place +0xf1 {
     fact token == input[t]
     fact token >= 240
     fact counted(input, i, count) == counted(input, t + 1, 15)
-    fact sequences(input, t, O, cap) == lz4(input, cap)
+    fact sequences(input, t, O) == lz4(input)
     any stack[24], stack[32]
     decreases n - i, 4
 }
@@ -66,7 +66,7 @@ place +0x1c0 {
     fact token == input[t]
     out[0 .. o] = O ++ input[s .. i]
     fact count(input, t + 1, input[t] / 16) == {value: i - s + count, next: s}
-    fact sequences(input, t, O, cap) == lz4(input, cap)
+    fact sequences(input, t, O) == lz4(input)
     any stack[24], stack[32], stack[40]
     decreases n - i, 4
 }
@@ -90,7 +90,7 @@ place +0x2dd {
     fact offset <= o
     fact offset == input[a] + 256 * input[a + 1]
     fact counted(input, i, count) == counted(input, a + 2, 15)
-    fact match(input, a, 15, M, cap) == lz4(input, cap)
+    fact match(input, a, 15, M) == lz4(input)
     any stack[8], stack[24]
     decreases n - i, 4
 }
@@ -112,7 +112,7 @@ place +0x3ba {
     fact offset <= len(M0)
     fact len(M0) <= o
     out[0 .. o] = copies(M0, offset)[o - len(M0)]
-    fact sequences(input, i, copies(M0, offset)[o - len(M0) + count], cap) == lz4(input, cap)
+    fact sequences(input, i, copies(M0, offset)[o - len(M0) + count]) == lz4(input)
     any stack[8], stack[24], stack[40]
     decreases n - i, 3, count
 }

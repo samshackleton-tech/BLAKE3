@@ -21,6 +21,7 @@ class Program:
         self.rows = kbyte.load(os.path.join(self.dir, name + ".o"), symbol)
         self.spec, self.proof, self.symbol = text(folder, folder + ".spec"), text(folder, name + ".proof"), symbol
         if os.path.exists(os.path.join(HERE, "programs", folder, name + ".inner")): self.spec += "\n" + text(folder, name + ".inner")   # the contracts of what it calls
+        if os.path.exists(os.path.join(HERE, "programs", folder, folder + ".lemmas")): self.spec += "\n" + text(folder, folder + ".lemmas")   # lemmas about the definitions
         shutil.rmtree(self.dir)
     def verdict(self, spec=None, proof=None, rows=None):
         try: kbyte.check(rows or self.rows, ode.Spec(spec or self.spec), self.symbol, self.proof if proof is None else proof); return "accepted"
@@ -160,26 +161,29 @@ class Lz4Decode(unittest.TestCase):
             ("count(bytes, at + 1, bytes[at] / 16)", "count(bytes, at + 1, bytes[at] % 16)"), ("count(bytes, at + 1, bytes[at] / 16)", "count(bytes, at + 2, bytes[at] / 16)"),
             ("let with_literals = out ++ bytes[literals.next .. end]", "let with_literals = out ++ bytes[literals.next .. end] ++ [0]"),
             ("let with_literals = out ++ bytes[literals.next .. end]", "let with_literals = bytes[literals.next .. end] ++ out"),
-            ("match(bytes, end, bytes[at] % 16, with_literals, cap)", "match(bytes, end, bytes[at] / 16, with_literals, cap)"), ("match(bytes, end, bytes[at] % 16, with_literals, cap)", "match(bytes, end, bytes[at] % 16, out, cap)"),
+            ("match(bytes, end, bytes[at] % 16, with_literals)", "match(bytes, end, bytes[at] / 16, with_literals)"), ("match(bytes, end, bytes[at] % 16, with_literals)", "match(bytes, end, bytes[at] % 16, out)"),
             ("let offset = bytes[at] + 256 * bytes[at + 1]", "let offset = 256 * bytes[at] + bytes[at + 1]"), ("let offset = bytes[at] + 256 * bytes[at + 1]", "let offset = bytes[at] + 255 * bytes[at + 1]"),
             ("let n = count(bytes, at + 2, low)", "let n = count(bytes, at + 3, low)"),
-            ("copies(out, offset)[n.value + 4], cap)", "copies(out, offset)[n.value + 3], cap)"), ("copies(out, offset)[n.value + 4], cap)", "copies(out, offset + 1)[n.value + 4], cap)"),
+            ("copies(out, offset)[n.value + 4])", "copies(out, offset)[n.value + 3])"), ("copies(out, offset)[n.value + 4])", "copies(out, offset + 1)[n.value + 4])"),
             ("sequences(bytes, n.next, copies", "sequences(bytes, n.next + 1, copies"),
-            ("def lz4(bytes, cap) { sequences(bytes, 0, [], cap) }", "def lz4(bytes, cap) { sequences(bytes, 0, [0], cap) }"), ("def lz4(bytes, cap) { sequences(bytes, 0, [], cap) }", "def lz4(bytes, cap) { sequences(bytes, 1, [], cap) }"),
+            ("def lz4(bytes) { sequences(bytes, 0, []) }", "def lz4(bytes) { sequences(bytes, 0, [0]) }"), ("def lz4(bytes) { sequences(bytes, 0, []) }", "def lz4(bytes) { sequences(bytes, 1, []) }"),
             ("if end == len(bytes) then with_literals else", "if end == len(bytes) then out else"),
             # where it fails: a test of the specification left out, or made another
-            ("    fails MALFORMED if at >= len(bytes)\n    let literals", "    let literals"), ("    fails MALFORMED if end > len(bytes)\n", ""), ("    fails ROOM if len(out) + literals.value > cap\n", ""),
-            ("    fails MALFORMED if at + 2 > len(bytes)\n", ""), ("    fails MALFORMED if offset == 0 || offset > len(out)\n", ""), ("    fails ROOM if len(out) + n.value + 4 > cap\n", ""),
+            ("    fails MALFORMED if at >= len(bytes)\n    let literals", "    let literals"), ("    fails MALFORMED if end > len(bytes)\n", ""), 
+            ("    fails MALFORMED if at + 2 > len(bytes)\n", ""), ("    fails MALFORMED if offset == 0 || offset > len(out)\n", ""), 
             ("fails MALFORMED if offset == 0 || offset > len(out)", "fails MALFORMED if offset > len(out)"), ("fails MALFORMED if offset == 0 || offset > len(out)", "fails MALFORMED if offset == 0 || offset >= len(out)"),
-            ("fails ROOM if len(out) + literals.value > cap", "fails ROOM if len(out) + literals.value >= cap"), ("fails ROOM if len(out) + n.value + 4 > cap", "fails ROOM if len(out) + n.value + 3 > cap"),
+            
             ("fails MALFORMED if end > len(bytes)", "fails MALFORMED if end >= len(bytes)"), ("fails MALFORMED if at + 2 > len(bytes)", "fails MALFORMED if at + 1 > len(bytes)"),
             # the contract
-            ("returns if failed(lz4(input, cap)) then NO else len(lz4(input, cap))", "returns if failed(lz4(input, cap)) then NO else len(lz4(input, cap)) + 1"),
-            ("returns if failed(lz4(input, cap)) then NO else len(lz4(input, cap))", "returns if failed(lz4(input, cap)) then 0 else len(lz4(input, cap))"),
-            ("returns if failed(lz4(input, cap)) then NO else len(lz4(input, cap))", "returns NO"), ("returns if failed(lz4(input, cap)) then NO else len(lz4(input, cap))", "returns len(lz4(input, cap))"),
-            ("ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap) if !failed(lz4(input, cap))", "ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap) ++ [0] if !failed(lz4(input, cap))"),
-            ("ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap) if !failed(lz4(input, cap))", "ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap)"),
-            ("lz4(input, cap) if !failed(lz4(input, cap))", "lz4(input, cap + 1) if !failed(lz4(input, cap))"),
+            ("returns if failed(lz4(input)) || len(lz4(input)) > cap then NO else len(lz4(input))", "returns if failed(lz4(input)) || len(lz4(input)) > cap then NO else len(lz4(input)) + 1"),
+            ("returns if failed(lz4(input)) || len(lz4(input)) > cap then NO else len(lz4(input))", "returns if failed(lz4(input)) || len(lz4(input)) > cap then 0 else len(lz4(input))"),
+            ("returns if failed(lz4(input)) || len(lz4(input)) > cap then NO else len(lz4(input))", "returns NO"), ("returns if failed(lz4(input)) || len(lz4(input)) > cap then NO else len(lz4(input))", "returns len(lz4(input))"),
+            ("ensures out[0 .. len(lz4(input))] = lz4(input) if !failed(lz4(input)) && len(lz4(input)) <= cap", "ensures out[0 .. len(lz4(input))] = lz4(input) ++ [0] if !failed(lz4(input)) && len(lz4(input)) <= cap"),
+            ("ensures out[0 .. len(lz4(input))] = lz4(input) if !failed(lz4(input)) && len(lz4(input)) <= cap", "ensures out[0 .. len(lz4(input))] = lz4(input)"),
+            # the room is the contract's: each part of what it says of it
+            ("&& len(lz4(input)) <= cap", "&& len(lz4(input)) <= cap + 1"), ("|| len(lz4(input)) > cap then", "|| len(lz4(input)) >= cap then"), ("|| len(lz4(input)) > cap then", "|| len(lz4(input)) > cap + 1 then"),
+            ("returns if failed(lz4(input)) || len(lz4(input)) > cap then NO", "returns if failed(lz4(input)) then NO"), ("returns if failed(lz4(input)) || len(lz4(input)) > cap then NO", "returns if len(lz4(input)) > cap then NO"),
+            ("if !failed(lz4(input)) && len(lz4(input)) <= cap", "if !failed(lz4(input))"), ("if !failed(lz4(input)) && len(lz4(input)) <= cap", "if len(lz4(input)) <= cap"),
             ("    requires n < 72057594037927936\n", ""), ("    trace depends on input\n    stack 104", "    stack 104"), ("stack 104", "stack 96"), ("    requires apart(out, input)\n    requires n <", "    requires n <"),
             ("ode_lz4_decode(out: cap bytes, cap: number, input: n bytes", "ode_lz4_decode(out: cap bytes, cap: number, input: cap bytes"), ("ode_lz4_decode(out: cap bytes, cap: number, input: n bytes", "ode_lz4_decode(out: n bytes, cap: number, input: n bytes")])
 
@@ -240,27 +244,37 @@ class Frame(unittest.TestCase):
     def test_a_changed_specification_or_contract_is_refused(self):
         self.p.changed(self, "spec", [
             ("    stack 184", "    stack 183"),
-            ("fails SHORT if len(bytes) < 4", "fails SHORT if len(bytes) < 5"), ("fails SHORT if len(bytes) < 4", "fails SHORT if len(bytes) < 3"),
+            ("fails SHORT if len(bytes) < 4", "fails SHORT if len(bytes) < 3"),
             ("    fails SHORT if len(bytes) < 4\n", ""), ("    fails SUM if adler32(body) != be32(bytes[len(bytes) - 4 .. len(bytes)])\n", ""),
-            ("lz4(bytes[0 .. len(bytes) - 4], cap)", "lz4(bytes[0 .. len(bytes) - 3], cap)"), ("lz4(bytes[0 .. len(bytes) - 4], cap)", "lz4(bytes[1 .. len(bytes) - 4], cap)"),
-            ("lz4(bytes[0 .. len(bytes) - 4], cap)", "lz4(bytes[0 .. len(bytes) - 4], cap + 1)"), ("lz4(bytes[0 .. len(bytes) - 4], cap)", "lz4(bytes, cap)"),
+            ("lz4(bytes[0 .. len(bytes) - 4])", "lz4(bytes[0 .. len(bytes) - 3])"), ("lz4(bytes[0 .. len(bytes) - 4])", "lz4(bytes[1 .. len(bytes) - 4])"),
+            ("lz4(bytes[0 .. len(bytes) - 4])", "lz4(bytes)"),
+            ("|| len(unframe(input)) > cap then", "|| len(unframe(input)) >= cap then"), ("returns if failed(unframe(input)) || len(unframe(input)) > cap then NO", "returns if failed(unframe(input)) then NO"),
+            ("&& len(unframe(input)) <= cap", "&& len(unframe(input)) <= cap + 1"),
             ("adler32(body) != be32(", "adler32(body) == be32("), ("adler32(body) != be32(", "adler32(bytes) != be32("), ("adler32(body) != be32(", "adler32(body) + 1 != be32("),
             ("be32(bytes[len(bytes) - 4 .. len(bytes)])", "be32(bytes[len(bytes) - 5 .. len(bytes)])"), ("be32(bytes[len(bytes) - 4 .. len(bytes)])", "be32(bytes[0 .. 4])"),
             ("16777216 * b[0] + 65536 * b[1] + 256 * b[2] + b[3]", "16777216 * b[3] + 65536 * b[2] + 256 * b[1] + b[0]"), ("16777216 * b[0]", "16777215 * b[0]"), ("256 * b[2] + b[3]", "256 * b[2] + b[2]"),
             ("    body\n}", "    body ++ [0]\n}"), ("    body\n}", "    bytes\n}"),
-            ("returns if failed(unframe(input, cap)) then NO else len(unframe(input, cap))", "returns if failed(unframe(input, cap)) then NO else len(unframe(input, cap)) + 1"),
-            ("returns if failed(unframe(input, cap)) then NO else len(unframe(input, cap))", "returns if failed(unframe(input, cap)) then 0 else len(unframe(input, cap))"),
-            ("returns if failed(unframe(input, cap)) then NO else len(unframe(input, cap))", "returns len(unframe(input, cap))"),
-            ("ensures out[0 .. len(unframe(input, cap))] = unframe(input, cap) if !failed(unframe(input, cap))", "ensures out[0 .. len(unframe(input, cap))] = unframe(input, cap)"),
-            ("ensures out[0 .. len(unframe(input, cap))] = unframe(input, cap) if !failed(unframe(input, cap))", "ensures out[0 .. len(unframe(input, cap))] = input[0 .. len(unframe(input, cap))] if !failed(unframe(input, cap))"),
+            ("returns if failed(unframe(input)) || len(unframe(input)) > cap then NO else len(unframe(input))", "returns if failed(unframe(input)) || len(unframe(input)) > cap then NO else len(unframe(input)) + 1"),
+            ("returns if failed(unframe(input)) || len(unframe(input)) > cap then NO else len(unframe(input))", "returns if failed(unframe(input)) || len(unframe(input)) > cap then 0 else len(unframe(input))"),
+            ("returns if failed(unframe(input)) || len(unframe(input)) > cap then NO else len(unframe(input))", "returns len(unframe(input))"),
+            ("ensures out[0 .. len(unframe(input))] = unframe(input) if !failed(unframe(input)) && len(unframe(input)) <= cap", "ensures out[0 .. len(unframe(input))] = unframe(input)"),
+            ("ensures out[0 .. len(unframe(input))] = unframe(input) if !failed(unframe(input)) && len(unframe(input)) <= cap", "ensures out[0 .. len(unframe(input))] = input[0 .. len(unframe(input))] if !failed(unframe(input)) && len(unframe(input)) <= cap"),
             ("contract ode_unframe(out: cap bytes, cap: number, input: n bytes, n: number)", "contract ode_unframe(out: cap bytes, cap: number, input: cap bytes, n: number)"),
             ])
+
+    def test_a_specification_that_says_the_same_another_way_is_shown_too(self):
+        """A frame of four bytes holds an empty block, and an empty block decodes to nothing: so "fails SHORT
+        if len(bytes) < 5" is the same specification as far as the contract asks. With the bent LZ4 (the room
+        inside the definitions) the verifier could not see it and refused; opening `sequences` once, it does."""
+        old = "fails SHORT if len(bytes) < 4"
+        self.assertEqual(self.p.spec.count(old), 1)
+        self.assertEqual(self.p.verdict(spec=self.p.spec.replace(old, "fails SHORT if len(bytes) < 5")), "accepted")
 
     def test_what_the_parts_are_is_not_the_callers_to_show(self):
         """With another Adler-32, or another LZ4, in the definitions, the caller is still shown: it uses the two
         functions by what their contracts say, whatever that is. It is the function called that no longer
         meets its contract (programs/check_programs.py checks each against the same text)."""
-        for old, new, part in (("s[0] = 1 ", "s[0] = 2 ", ("adler32", "adler32_blocks4")), ("fails ROOM if len(out) + n.value + 4 > cap", "fails ROOM if len(out) + n.value + 3 > cap", ("lz4", "lz4_decode"))):
+        for old, new, part in (("s[0] = 1 ", "s[0] = 2 ", ("adler32", "adler32_blocks4")), ("let offset = bytes[at] + 256 * bytes[at + 1]", "let offset = bytes[at] + 255 * bytes[at + 1]", ("lz4", "lz4_decode"))):
             self.assertEqual(self.p.spec.count(old), 1, old)
             spec = self.p.spec.replace(old, new)
             self.assertEqual(self.p.verdict(spec=spec), "accepted")
@@ -271,13 +285,13 @@ class Frame(unittest.TestCase):
     def test_a_callee_is_used_by_its_contract_and_nothing_else(self):
         """What the caller is shown to do rests on each line of the contracts of what it calls: with one weaker, or
         one that asks more, or one that says another thing, the caller is refused."""
-        dec = "returns if failed(lz4(input, cap)) then NO else len(lz4(input, cap))\n    ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap) if !failed(lz4(input, cap))\n    trace depends on input\n    stack 104"
+        dec = "returns if failed(lz4(input)) || len(lz4(input)) > cap then NO else len(lz4(input))\n    ensures out[0 .. len(lz4(input))] = lz4(input) if !failed(lz4(input)) && len(lz4(input)) <= cap\n    trace depends on input\n    stack 104"
         self.assertEqual(self.p.spec.count(dec), 1)
         sums = "contract ode_adler32_blocks4(input: len bytes, len: number) {\n    returns adler32(input)\n"
         self.assertEqual(self.p.spec.count(sums), 1)
-        for old, new in ((dec, dec.replace("    ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap) if !failed(lz4(input, cap))\n", "    writes out\n")),      # the decoder says nothing of the bytes
-                         (dec, dec.replace("then NO else", "then 0 else")), (dec, dec.replace("else len(lz4(input, cap))\n", "else len(lz4(input, cap)) + 1\n")),
-                         (dec, dec.replace("= lz4(input, cap) if", "= lz4(input, cap + 1) if")), (dec, dec.replace("ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap) if !failed", "ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap) if failed")),
+        for old, new in ((dec, dec.replace("    ensures out[0 .. len(lz4(input))] = lz4(input) if !failed(lz4(input)) && len(lz4(input)) <= cap\n", "    writes out\n")),      # the decoder says nothing of the bytes
+                         (dec, dec.replace("then NO else", "then 0 else")), (dec, dec.replace("else len(lz4(input))\n", "else len(lz4(input)) + 1\n")),
+                         (dec, dec.replace("> cap then", ">= cap then")), (dec, dec.replace("|| len(lz4(input)) > cap then", "then")), (dec, dec.replace("ensures out[0 .. len(lz4(input))] = lz4(input) if !failed", "ensures out[0 .. len(lz4(input))] = lz4(input) if failed")),
                          (dec, dec.replace("stack 104", "stack 105")),                                                                                               # the decoder may use more stack
                          (dec, "returns r\n    trace depends on input\n    writes out\n    stack 104"),                                                             # nothing said of the result
                          ("    requires n < 72057594037927936\n    returns if failed(lz4", "    requires n < 72057594037927931\n    returns if failed(lz4"),      # the decoder asks more than the caller shows (n - 4 < 2^56 - 4 it does show)
@@ -309,6 +323,63 @@ class Frame(unittest.TestCase):
             self.assertIn(c[:c.index("\n}\n") + 3], inner)
 
 
+class Lemmas(unittest.TestCase):
+    """Lemmas about the specification's definitions (programs/lz4/lz4.lemmas): the verifier shows each before it
+    uses any, so a lemma that is not so shows nothing; and the decoder's proof rests on them."""
+    @classmethod
+    def setUpClass(cls): cls.p = Program("lz4", "lz4_decode", "ode_lz4_decode")
+
+    def test_a_lemma_that_is_not_so_is_refused(self):
+        for old, new in (("    ensures len(result) >= len(out)\n}\n\n// The same of the rest", "    ensures len(result) >= len(out) + 1\n}\n\n// The same of the rest"),      # a last sequence with no literals adds nothing
+                         ("// The same of the rest of a sequence, from its offset on.\nlemma match(bytes: bytes, at: number, low: number, out: list): list {\n    ensures len(result) >= len(out)", "lemma match(bytes: bytes, at: number, low: number, out: list): list {\n    ensures len(result) >= len(out) + 5"),
+                         ("    ensures len(result) >= len(out)\n}\n\n// The same of the rest", "    ensures len(result) <= len(out)\n}\n\n// The same of the rest"),
+                         ("ensures result.value >= sum", "ensures result.value >= sum + 1"), ("ensures result.next >= at + 1", "ensures result.next >= at + 2"), ("ensures result.next >= at + 1", "ensures result.next == at + 1"),
+                         ("ensures len(result) == len(out) + k", "ensures len(result) == len(out) + k + 1"), ("ensures len(result) == len(out) + k", "ensures len(result) >= len(out) + 2 * k"),
+                         # what a lemma requires is what makes it so
+                         ("    requires offset >= 1\n", ""), ("    requires offset <= len(out)\n", ""),
+                         # a lemma of something that is no definition, or with other things than the definition is given
+                         ("lemma counted(bytes: bytes, at: number, sum: number)", "lemma counting(bytes: bytes, at: number, sum: number)"), ("lemma counted(bytes: bytes, at: number, sum: number)", "lemma counted(bytes: bytes, at: number)"),
+                         ("lemma copies(out: list, offset: number)[k]: list", "lemma copies(out: list, offset: number): list")):
+            self.assertEqual(self.p.spec.count(old), 1, old)
+            v = self.p.verdict(spec=self.p.spec.replace(old, new))
+            self.assertTrue(v.startswith("refused"), f"{new[:80]!r}: {v}")
+            self.assertTrue("lemma" in v, v)
+
+    def test_a_lemma_that_is_so_and_says_more_is_taken(self):
+        old = "lemma match(bytes: bytes, at: number, low: number, out: list): list {\n    ensures len(result) >= len(out)"
+        self.assertEqual(self.p.spec.count(old), 1)
+        self.assertEqual(self.p.verdict(spec=self.p.spec.replace(old, old + " + 4")), "accepted")        # a match adds four bytes at least
+
+    def test_a_lemma_is_of_the_definition_as_it_is(self):
+        # the specification changed so that what is decoded may get shorter: the lemma is not so of it, and is refused
+        for old, new in (("let with_literals = out ++ bytes[literals.next .. end]", "let with_literals = bytes[literals.next .. end]"),
+                         ("if bytes[at] < 255 then {value: sum + bytes[at], next: at + 1}", "if bytes[at] < 255 then {value: bytes[at], next: at + 1}")):
+            self.assertEqual(self.p.spec.count(old), 1, old)
+            v = self.p.verdict(spec=self.p.spec.replace(old, new))
+            self.assertTrue(v.startswith("refused") and "lemma" in v, v)
+
+    def test_the_decoders_proof_rests_on_the_lemmas(self):
+        """Without them the decoder is not shown: it gives NO for room before it has seen the whole block."""
+        at = self.p.spec.index("// Lemmas about lz4.spec's definitions")
+        v = self.p.verdict(spec=self.p.spec[:at])
+        self.assertTrue(v.startswith("refused"), v)
+        def without(spec, name):
+            a = spec.index(f"lemma {name}("); z = spec.index("\n}\n", a) + 3
+            return spec[:a] + spec[z:]
+        needed = [name for name in ("counted", "copies", "sequences", "match") if self.p.verdict(spec=without(self.p.spec, name)).startswith("refused")]
+        # `sequences` and `match` are each other's rest: with the lemma of one, the other is opened where it stands
+        self.assertEqual(needed, ["counted", "copies"])
+        self.assertTrue(self.p.verdict(spec=without(without(self.p.spec, "sequences"), "match")).startswith("refused"))
+
+    def test_a_proofs_part_gives_a_lemma_and_no_meaning(self):
+        """ode.with_proof lets a proof's part hold a lemma of a definition of the reader's, and still no second
+        definition of it."""
+        spec, lemmas = text("lz4", "lz4.spec"), text("lz4", "lz4.lemmas")
+        self.assertEqual(sorted(ode.with_proof(spec, lemmas).lemmas), ["copies", "counted", "match", "sequences"])
+        with self.assertRaises(ode.Err): ode.with_proof(spec, lemmas + "\ndef match(bytes, at, low, out) { out }\n")
+        with self.assertRaises(ode.Err): ode.with_proof(spec, lemmas + lemmas)                      # a lemma said twice
+
+
 class Lz4Store(unittest.TestCase):
     """The encoder against a contract that is not a way to compute: what it writes decodes to the input."""
     @classmethod
@@ -328,11 +399,11 @@ class Lz4Store(unittest.TestCase):
             ("count(bytes, at + 1, bytes[at] / 16)", "count(bytes, at + 1, bytes[at] % 16)"), ("count(bytes, at + 1, bytes[at] / 16)", "count(bytes, at + 2, bytes[at] / 16)"),
             ("let with_literals = out ++ bytes[literals.next .. end]", "let with_literals = out ++ bytes[literals.next .. end] ++ [0]"),
             ("if end == len(bytes) then with_literals else", "if end == len(bytes) then out else"),
-            ("def lz4(bytes, cap) { sequences(bytes, 0, [], cap) }", "def lz4(bytes, cap) { sequences(bytes, 0, [0], cap) }"), ("def lz4(bytes, cap) { sequences(bytes, 0, [], cap) }", "def lz4(bytes, cap) { sequences(bytes, 1, [], cap) }"),
-            ("fails ROOM if len(out) + literals.value > cap", "fails ROOM if len(out) + literals.value >= cap"),
-            ("ensures lz4(out[0 .. r], n) == input if r != NO" + room, "ensures lz4(out[0 .. r], n) == input ++ [0] if r != NO" + room),
-            ("ensures lz4(out[0 .. r], n) == input if r != NO" + room, "ensures lz4(out[0 .. r], n) == input" + room),
-            ("ensures lz4(out[0 .. r], n) == input if r != NO" + room, "ensures lz4(out[0 .. r + 1], n) == input if r != NO" + room),
+            ("def lz4(bytes) { sequences(bytes, 0, []) }", "def lz4(bytes) { sequences(bytes, 0, [0]) }"), ("def lz4(bytes) { sequences(bytes, 0, []) }", "def lz4(bytes) { sequences(bytes, 1, []) }"),
+            
+            ("ensures lz4(out[0 .. r]) == input if r != NO" + room, "ensures lz4(out[0 .. r]) == input ++ [0] if r != NO" + room),
+            ("ensures lz4(out[0 .. r]) == input if r != NO" + room, "ensures lz4(out[0 .. r]) == input" + room),
+            ("ensures lz4(out[0 .. r]) == input if r != NO" + room, "ensures lz4(out[0 .. r + 1], n) == input if r != NO" + room),
             # when it does not give NO: no less room than it needs will do (15 bytes need 17), and not the other answer
             (room, "\n    ensures r != NO if cap >= n + n / 255 + 1" + after), (room, "\n    ensures r != NO if cap >= n + 16" + after), (room, "\n    ensures r != NO if cap >= n + n / 256 + 2" + after),
             (room, "\n    ensures r != NO" + after), (room, "\n    ensures r == NO if cap >= n + n / 255 + 16" + after),
@@ -371,17 +442,17 @@ class Lz4Pack(unittest.TestCase):
             ("s[k] ++ [s[k][len(s[k]) - offset]]", "s[k] ++ [s[k][len(s[k]) - offset + 1]]"), ("{ s[0] = out ", "{ s[0] = out ++ [0] "),
             ("count(bytes, at + 1, bytes[at] / 16)", "count(bytes, at + 1, bytes[at] % 16)"),
             ("let with_literals = out ++ bytes[literals.next .. end]", "let with_literals = out ++ bytes[literals.next .. end] ++ [0]"),
-            ("match(bytes, end, bytes[at] % 16, with_literals, cap)", "match(bytes, end, bytes[at] / 16, with_literals, cap)"), ("match(bytes, end, bytes[at] % 16, with_literals, cap)", "match(bytes, end, bytes[at] % 16, out, cap)"),
+            ("match(bytes, end, bytes[at] % 16, with_literals)", "match(bytes, end, bytes[at] / 16, with_literals)"), ("match(bytes, end, bytes[at] % 16, with_literals)", "match(bytes, end, bytes[at] % 16, out)"),
             ("let offset = bytes[at] + 256 * bytes[at + 1]", "let offset = 256 * bytes[at] + bytes[at + 1]"), ("let offset = bytes[at] + 256 * bytes[at + 1]", "let offset = bytes[at] + 255 * bytes[at + 1]"),
             ("let n = count(bytes, at + 2, low)", "let n = count(bytes, at + 3, low)"),
-            ("copies(out, offset)[n.value + 4], cap)", "copies(out, offset)[n.value + 3], cap)"), ("copies(out, offset)[n.value + 4], cap)", "copies(out, offset + 1)[n.value + 4], cap)"),
+            ("copies(out, offset)[n.value + 4])", "copies(out, offset)[n.value + 3])"), ("copies(out, offset)[n.value + 4])", "copies(out, offset + 1)[n.value + 4])"),
             ("sequences(bytes, n.next, copies", "sequences(bytes, n.next + 1, copies"),
-            ("def lz4(bytes, cap) { sequences(bytes, 0, [], cap) }", "def lz4(bytes, cap) { sequences(bytes, 0, [0], cap) }"),
+            ("def lz4(bytes) { sequences(bytes, 0, []) }", "def lz4(bytes) { sequences(bytes, 0, [0]) }"),
             ("if end == len(bytes) then with_literals else", "if end == len(bytes) then out else"),
             ("fails MALFORMED if offset == 0 || offset > len(out)", "fails MALFORMED if offset == 0 || offset >= len(out)"),
-            ("ensures lz4(out[0 .. r], n) == input if r != NO" + tail, "ensures lz4(out[0 .. r], n) == input ++ [0] if r != NO" + tail),
-            ("ensures lz4(out[0 .. r], n) == input if r != NO" + tail, "ensures lz4(out[0 .. r], n) == input" + tail),
-            ("ensures lz4(out[0 .. r], n) == input if r != NO" + tail, "ensures lz4(out[0 .. r + 1], n) == input if r != NO" + tail),
+            ("ensures lz4(out[0 .. r]) == input if r != NO" + tail, "ensures lz4(out[0 .. r]) == input ++ [0] if r != NO" + tail),
+            ("ensures lz4(out[0 .. r]) == input if r != NO" + tail, "ensures lz4(out[0 .. r]) == input" + tail),
+            ("ensures lz4(out[0 .. r]) == input if r != NO" + tail, "ensures lz4(out[0 .. r + 1], n) == input if r != NO" + tail),
             ("    requires d >= 1\n", ""), ("    requires d <= 65535\n", ""), ("requires d <= 65535", "requires d <= 65536"),
             ("    trace depends on input\n    stack 120", "    stack 120"), ("stack 120", "stack 112"), ("    requires cap < NO\n    requires d", "    requires d"),
             # when it does not give NO: no less room will do (15 bytes that do not repeat need 17), and not the other answer
@@ -422,7 +493,7 @@ class Utf8(unittest.TestCase):
         rest = "if at == len(bytes) then count else points(bytes, point(bytes, at).next, count + 1)"
         result = "returns if failed(utf8(input)) then NO else utf8(input)"
         self.p.changed(self, "spec", [
-            ("fails MALFORMED if b >= 128 && b < 192", "fails MALFORMED if b >= 128 && b < 191"), ("fails MALFORMED if b >= 248", "fails MALFORMED if b >= 249"), ("fails MALFORMED if b >= 248", "fails MALFORMED if b >= 247"),
+            ("fails MALFORMED if b >= 128 && b < 192", "fails MALFORMED if b >= 128 && b < 191"),
             (length, length.replace("b < 224", "b < 225")), (length, length.replace("b < 240", "b < 239")), (length, length.replace("b < 128", "b < 127")),
             ("fails MALFORMED if at + k >= len(bytes)", "fails MALFORMED if at + k > len(bytes)"),
             ("fails MALFORMED if bytes[at + k] < 128 || bytes[at + k] >= 192", "fails MALFORMED if bytes[at + k] < 127 || bytes[at + k] >= 192"),
@@ -450,11 +521,27 @@ class Utf8(unittest.TestCase):
         self.assertEqual(needless, [])
 
     def test_a_changed_instruction_is_refused_unless_it_keeps_the_contract(self):
-        # Of 344, 47 accepted, each an instruction left out: moves of what is already there, and jumps over code
-        # that then does the same again. (Each such object is run on the processor by kbyte_nop.py.)
+        # Of 344, 50 accepted, each an instruction left out: moves of what is already there, and jumps over code
+        # that then does the same again. (Each such object is run on the processor by kbyte_nop.py.) Three of
+        # the 50 were refused until November 16, 2026, and keep the contract: without the test "b < 192" (two
+        # ways) a byte that only follows another is refused a little later by "b < 194"; without the jump of
+        # "b >= 248" such a first byte is refused by the tests of a four-byte form. The verifier sees it since
+        # it takes "has utf8(input) a value?" both ways and opens the definition once (split_defined).
         n, accepted = instructions_changed(self.p)
-        self.assertEqual((n, len(accepted)), (344, 47))
+        self.assertEqual((n, len(accepted)), (344, 50))
         self.assertEqual({c for i, c in accepted}, {".nop"})
+
+    def test_a_specification_that_says_the_same_another_way_is_shown_too(self):
+        """A first byte of 245 and above is no UTF-8 whatever `length` says of it: read as the first of four it
+        holds a number above 0x10FFFF. So "fails MALFORMED if b >= 248" can be 249 or 247 and the specification
+        is the same one (2,040,719 inputs worked out both ways agree). The verifier refused those two until
+        November 16, 2026: not shown, of something that is so."""
+        old = "fails MALFORMED if b >= 248"
+        self.assertEqual(self.p.spec.count(old), 1)
+        for new in ("fails MALFORMED if b >= 249", "fails MALFORMED if b >= 247"):
+            self.assertEqual(self.p.verdict(spec=self.p.spec.replace(old, new)), "accepted", new)
+        # and one that does not say the same is refused: 244 is the first byte of U+100000 to U+10FFFF
+        self.assertTrue(self.p.verdict(spec=self.p.spec.replace(old, "fails MALFORMED if b >= 244")).startswith("refused"))
 
 
 class Base64(unittest.TestCase):

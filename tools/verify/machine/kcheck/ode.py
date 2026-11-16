@@ -36,7 +36,7 @@ class Err(Exception):
 # ---------------------------------------------------------------------------------------------------------
 # Text to tree.
 TOKEN = re.compile(r"\s*(?:(//[^\n]*)|(0x[0-9A-Fa-f]+|\d+)|([A-Za-z_][A-Za-z_0-9]*)|(>>>|\+\+|\.\.|==|!=|<=|>=|&&|\|\||[-+*/%^|&<>=!(){}\[\],:.]))")
-KEYWORDS = {"const", "def", "sequence", "the", "machine", "contract", "layout", "kind", "on", "while", "for", "in", "turn", "if", "then", "else", "let", "fails"}
+KEYWORDS = {"const", "def", "sequence", "the", "machine", "contract", "layout", "kind", "on", "while", "for", "in", "turn", "if", "then", "else", "let", "fails", "lemma"}
 LEVELS = [["||"], ["&&"], ["==", "!=", "<", "<=", ">", ">="], ["++"], ["|"], ["^"], ["&"], ["+", "-"], ["*", "/", "%"], [">>>"]]
 
 
@@ -68,11 +68,12 @@ def with_proof(text, inner):
     text. (Then no name the reader reads has its meaning from the proof; a name his text uses and does not
     define stays undefined. A name declared twice, or one of the language's own, is refused by the parser.
     `kind NAME: ...` lines are let through: they say how a definition of the reader's is to be followed on
-    symbols, not what it is.)"""
+    symbols, not what it is. So are `lemma NAME(...)` declarations: a lemma is about a definition of the
+    reader's and gives it no meaning; a verifier shows each lemma before it uses it.)"""
     mine = {value for kind, value, _ in lex(text) if kind == "name"}
     p = Parser(inner); p.file()
     for what, name in sorted(p.declared):
-        if what != "kind" and name in mine: raise Err(f"the proof's part declares {name}, a name the reader's specification uses: it is refused")
+        if what not in ("kind", "lemma") and name in mine: raise Err(f"the proof's part declares {name}, a name the reader's specification uses: it is refused")
     return Spec(text + "\n" + inner)
 
 
@@ -92,6 +93,7 @@ class Parser:
 
     def file(self):
         consts, fns, machines, self.contracts, self.layouts, self.kinds, self.seqs = {}, {}, {}, {}, {}, {}, {}
+        self.lemmas = {}
         said = self.declared = set()
         def once(what, name):
             if what == "value" and name in OWN: raise Err(f"line {self.t[self.i - 1][2]}: {name} is the language's own: a specification does not define it")
@@ -149,6 +151,28 @@ class Parser:
                                       init=init[0] if init is not None and len(state) == 1 else None, inits=init, loop=loop, turn=turn)
             elif self.maybe("contract"):
                 name = once("contract", self.take(kind="name")); self.contracts[name] = self.contract()
+            elif self.maybe("lemma"):
+                # lemma NAME(param: bytes | list | number, ...) [ "[" k "]" ] : list | number | record(field, ...) { requires E | ensures E }
+                # A contract of a definition (or of a sequence's place k): where what it is given meets `requires`
+                # and the definition has a value, `ensures` holds of that value, written `result`. A step of a
+                # proof: a verifier shows it before it uses it (kbyte.py), so it changes no meaning.
+                name = once("lemma", self.take(kind="name")); self.take("("); params = []
+                while not self.maybe(")"):
+                    p = self.take(kind="name"); self.take(":"); params.append((p, self.take(kind="name"))); self.maybe(",")
+                index = None
+                if self.maybe("["): index = self.take(kind="name"); self.take("]")
+                self.take(":"); kind, fields = self.take(kind="name"), []
+                if kind == "record":
+                    self.take("(")
+                    while not self.maybe(")"): fields.append(self.take(kind="name")); self.maybe(",")
+                if kind not in ("list", "number", "record") or any(k not in ("bytes", "list", "number") for _, k in params): raise Err(f"line {self.t[self.i - 1][2]}: a lemma's kinds are bytes, list, number, record(...)")
+                self.take("{"); requires, ensures = [], []
+                while not self.maybe("}"):
+                    clause = self.take(kind="name")
+                    if clause == "requires": requires.append(self.expr())
+                    elif clause == "ensures": ensures.append(self.expr())
+                    else: raise Err(f"line {self.t[self.i - 1][2]}: a lemma says `requires` and `ensures`")
+                self.lemmas[name] = dict(params=params, index=index, kind=kind, fields=fields, requires=requires, ensures=ensures)
             else: raise Err(f"line {self.t[self.i][2]}: const, def, sequence, contract, layout, kind or machine expected")
         return consts, fns, machines
 
@@ -449,6 +473,10 @@ class Spec:
         self.consts, self.fns, self.machines = parser.file()
         self.contracts, self.layouts, self.kinds, self.turns = parser.contracts, parser.layouts, parser.kinds, 0
         self.seqs, self.seq_cache = parser.seqs, {}
+        self.lemmas = parser.lemmas
+        for name, l in self.lemmas.items():
+            if (name in self.seqs) != (l["index"] is not None) or (name not in self.seqs and name not in self.fns): raise Err(f"lemma {name}: of no definition, or a sequence's lemma without its place")
+            if len(l["params"]) != len((self.seqs.get(name) or self.fns.get(name))[0]): raise Err(f"lemma {name}: not the definition's parameters")
         self.fuel = None        # on symbols: the applications that may still be followed before a result is given a name instead
         self.deep = 0
         numbers = Numbers()

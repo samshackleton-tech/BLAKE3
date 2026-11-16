@@ -46,6 +46,8 @@ def pack(program, folder):
         struct.pack_into("<i", image, field, where[name] + addend - field)
     if made is not None:
         with open(os.path.join(HERE, program, made[1] + ".inner"), "rb") as f: files.append((made[1] + ".inner", f.read()))
+    if os.path.exists(os.path.join(HERE, program, program + ".lemmas")):
+        with open(os.path.join(HERE, program, program + ".lemmas"), "rb") as f: files.append((program + ".lemmas", f.read()))
     if not where: raise SystemExit(f"kpack: no program {program}")
     image += bytes(klink.up(len(image), 16) - len(image))
     with open(os.path.join(HERE, program, program + ".spec"), "rb") as f: spec = f.read()
@@ -54,10 +56,30 @@ def pack(program, folder):
     for name, at in sorted(where.items(), key=lambda x: x[1]): carried += f"at {at} {name}\n".encode()
     carried += f"file specification {len(spec)}\n".encode() + spec          # the specification itself, for a reader who has the file alone
     for name, text in files: carried += f"file {name} {len(text)}\n".encode() + text
+    # The prover's part: each function verified with the search, from the bytes just laid out, and the proofs
+    # of the arithmetic it needed kept for the file to carry: check_file.py then searches for nothing.
+    import tempfile
+    import kbyte, kprove, ode, varith
+    inner = b"\n".join(text for name, text in files if name.endswith((".inner", ".lemmas"))).decode()
+    whole = ode.with_proof(spec.decode(), inner) if inner else ode.Spec(spec.decode())
+    with tempfile.TemporaryDirectory() as d:
+        path = os.path.join(d, "packed.o")
+        with open(path, "wb") as f: f.write(klink.elf(bytes(image), where, sizes, 16, carried))
+        for symbol in sorted(where, key=where.get):
+            rows = kbyte.load(path, symbol)
+            places = dict(files).get(symbol[len("ode_"):] + ".proof", b"").decode()
+            table = kprove.prove(lambda: kbyte.check(rows, whole, symbol, places))
+            if table:
+                blob = varith.pack(table)
+                carried += f"file {symbol[len('ode_'):]}.arith.z {len(blob)}\n".encode() + blob
     return klink.elf(bytes(image), where, sizes, 16, carried), carried, where, len(image)
 
 
 def main():
+    if os.environ.get("PYTHONHASHSEED") != "0":
+        # the prover's search goes through sets, whose order Python changes from run to run: fixed, so that the
+        # same objects make the same file (the proofs it finds are then the same ones)
+        os.execve(sys.executable, [sys.executable] + sys.argv, dict(os.environ, PYTHONHASHSEED="0"))
     program, folder, out = sys.argv[1:4]
     blob, carried, where, size = pack(program, folder)
     with open(out, "wb") as f: f.write(blob)

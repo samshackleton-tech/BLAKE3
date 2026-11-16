@@ -3,8 +3,8 @@
 contract ode_lz4_decode(out: cap bytes, cap: number, input: n bytes, n: number) {
     requires apart(out, input)
     requires n < 72057594037927936
-    returns if failed(lz4(input, cap)) then NO else len(lz4(input, cap))
-    ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap) if !failed(lz4(input, cap))
+    returns if failed(lz4(input)) || len(lz4(input)) > cap then NO else len(lz4(input))
+    ensures out[0 .. len(lz4(input))] = lz4(input) if !failed(lz4(input)) && len(lz4(input)) <= cap
     trace depends on input
     stack 104
 }

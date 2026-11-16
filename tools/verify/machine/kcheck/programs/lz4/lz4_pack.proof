@@ -6,7 +6,7 @@
 // [56] j, [64] result. R is whatever will be written after what is written now.
 //
 // Three kinds of fact carry the specification:
-//   sequences(E ++ R, e, input[0 .. a], n) == lz4(E ++ R, n)
+//   sequences(E ++ R, e, input[0 .. a]) == lz4(E ++ R)
 //       a block that begins with what is written decodes to what its sequences from e on decode to, after
 //       the first a bytes of the input;
 //   copies(input[0 .. p], d)[m] == input[0 .. p + m]
@@ -31,7 +31,7 @@ place +0x9b {
     fact a <= p
     fact p <= n
     fact 255 * e <= 256 * a
-    fact sequences(E ++ R, e, input[0 .. a], n) == lz4(E ++ R, n)
+    fact sequences(E ++ R, e, input[0 .. a]) == lz4(E ++ R)
     any stack[24], stack[32], stack[40], stack[48], stack[56]
     decreases n - p, 9
 }
@@ -52,7 +52,7 @@ place +0xff {
     fact p + m + 5 <= n
     fact 255 * e <= 256 * a
     fact copies(input[0 .. p], d)[m] == input[0 .. p + m]
-    fact sequences(E ++ R, e, input[0 .. a], n) == lz4(E ++ R, n)
+    fact sequences(E ++ R, e, input[0 .. a]) == lz4(E ++ R)
     any stack[40], stack[48], stack[56]
     decreases n - p, 8, 18 - m
 }
@@ -83,7 +83,7 @@ place +0x24c {
     fact M[e0] == 236 + m
     fact counted(M ++ R, e, lit - rest) == counted(M ++ R, e0 + 1, 15)
     fact copies(input[0 .. p], d)[m] == input[0 .. p + m]
-    fact sequences(M ++ R, e0, input[0 .. a], n) == lz4(M ++ R, n)
+    fact sequences(M ++ R, e0, input[0 .. a]) == lz4(M ++ R)
     any stack[56]
     decreases n - p, 7, rest
 }
@@ -113,7 +113,7 @@ place +0x326 {
     fact HDR[e0] % 16 + 4 == m
     fact count(HDR ++ input[a .. a + j] ++ R, e0 + 1, HDR[e0] / 16) == {value: lit, next: len(HDR)}
     fact copies(input[0 .. p], d)[m] == input[0 .. p + m]
-    fact sequences(HDR ++ input[a .. a + j] ++ R, e0, input[0 .. a], n) == lz4(HDR ++ input[a .. a + j] ++ R, n)
+    fact sequences(HDR ++ input[a .. a + j] ++ R, e0, input[0 .. a]) == lz4(HDR ++ input[a .. a + j] ++ R)
     any stack[32], stack[48]
     decreases n - p, 6, lit - j
 }
@@ -135,7 +135,7 @@ place +0x492 {
     fact 255 * e0 <= 256 * a
     fact M[e0] == 240
     fact counted(M ++ R, e, lit - rest) == counted(M ++ R, e0 + 1, 15)
-    fact sequences(M ++ R, e0, input[0 .. a], n) == lz4(M ++ R, n)
+    fact sequences(M ++ R, e0, input[0 .. a]) == lz4(M ++ R)
     any stack[24], stack[56]
     decreases 0, 5, rest
 }
@@ -155,7 +155,7 @@ place +0x565 {
     fact e + lit <= cap + j
     out[0 .. e] = HDR ++ input[a .. a + j]
     fact count(HDR ++ input[a .. a + j] ++ R, e0 + 1, HDR[e0] / 16) == {value: lit, next: len(HDR)}
-    fact sequences(HDR ++ input[a .. a + j] ++ R, e0, input[0 .. a], n) == lz4(HDR ++ input[a .. a + j] ++ R, n)
+    fact sequences(HDR ++ input[a .. a + j] ++ R, e0, input[0 .. a]) == lz4(HDR ++ input[a .. a + j] ++ R)
     any stack[24], stack[32], stack[48]
     decreases 0, 4, lit - j
 }

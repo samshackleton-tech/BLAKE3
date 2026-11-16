@@ -50,6 +50,12 @@ AGAIN = 30000           # rows, where a question is asked again
 class Facts:
     """Numbers known to be >= 0, numbers known not to be 0, symbols known in terms of others. Whole numbers."""
     thorough = False        # kbyte.py sets it: a question the first elimination does not answer is asked again (see `again`)
+    # Who answers "can these numbers not all be >= 0?":
+    #   PROOFS None: the search below (`search`, `bounds`): the prover's way, and the way of every audit so far.
+    #   PROOFS a table (varith.py): only a proof of the table, verified by adding up; nothing is searched for.
+    # RECORD: the prover's (kprove.py), told of each answer "shown" by the search. MISS: the prover's, asked where
+    # the table has no proof. A verifier sets neither.
+    PROOFS, RECORD, MISS = None, None, None
     def __init__(self): self.ge, self.ne, self.eq, self.below, self.bad, self.memo, self.asked = [], [], {}, [], False, {}, 0
     def clone(self):
         f = Facts(); f.ge, f.ne, f.eq, f.below, f.bad, f.memo, f.asked = list(self.ge), list(self.ne), dict(self.eq), list(self.below), self.bad, dict(self.memo), self.asked
@@ -97,6 +103,19 @@ class Facts:
 
     @staticmethod
     def bounded(system, rounds=12):
+        if Facts.PROOFS is not None: return Facts.by_proof(system, None, frozenset())
+        r = Facts.bounds(system, rounds)
+        if r and Facts.RECORD is not None: Facts.RECORD(system, lambda s: Facts.bounds(s, rounds) or Facts.search(s, AGAIN))
+        return r
+
+    @staticmethod
+    def by_proof(system, limit, last):
+        import varith
+        if varith.shown(Facts.PROOFS, [(dict(f.c), f.k) for f in system]): return True
+        return Facts.MISS(system, limit, last) if Facts.MISS is not None else False
+
+    @staticmethod
+    def bounds(system, rounds=12):
         """Can the numbers in `system` not all be >= 0, by the bounds of their symbols alone?"""
         lo, hi = {}, {}
         for _ in range(rounds):
@@ -141,6 +160,13 @@ class Facts:
 
     @staticmethod
     def eliminate(system, limit=600, last=frozenset()):
+        if Facts.PROOFS is not None: return Facts.by_proof(system, limit, last)
+        r = Facts.search(system, limit, last)
+        if r and Facts.RECORD is not None: Facts.RECORD(system, lambda s: Facts.search(s, limit, last), last)
+        return r
+
+    @staticmethod
+    def search(system, limit=600, last=frozenset()):
         """Can the numbers in `system` not all be >= 0? Symbols are eliminated one after another; a constant
         below zero left over says so."""
         rows = set()

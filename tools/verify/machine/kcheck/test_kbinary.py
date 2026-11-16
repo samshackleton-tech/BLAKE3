@@ -81,7 +81,8 @@ class Binary(unittest.TestCase):
         self.assertEqual(proof["spec"], hashlib.sha256(spec).hexdigest(), "the file shipped was made with the specification here")
         self.assertEqual(proof["at"], kdecode.Settled(e).at)
         self.assertEqual(proof["code"][:2], (len(e.bytes_of(".text")), hashlib.sha256(e.bytes_of(".text")).hexdigest()))
-        self.assertEqual(sorted(proof["files"]), ["proofs/inner.spec", "proofs/k32.json", "proofs/p16.json", "proofs/p32.json", "specification"])
+        self.assertEqual(sorted(proof["files"]), ["b3l_hashr.arith.z", "b3l_part32.arith.z", "b3l_subtree.arith.z", "b3l_take.arith.z",       # the arithmetic's proofs (varith.py), of the functions that need any
+                                                  "proofs/inner.spec", "proofs/k32.json", "proofs/p16.json", "proofs/p32.json", "specification"])
         self.assertEqual(proof["files"]["specification"], spec, "the specification the file carries is the one here")
         try:
             # the proof is not trusted: one of its contracts changed, and the function it is of is refused

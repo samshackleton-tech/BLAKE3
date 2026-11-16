@@ -47,9 +47,13 @@ if [ "$only" != hash ]; then
 mkdir -p "$work/p"
 for f in adler32/adler32 adler32/adler32_blocks adler32/adler32_blocks4 lz4/lz4_decode lz4/lz4_store lz4/lz4_pack varint/varint common/common utf8/utf8 base64/base64 inet/inet frame/unframe; do cc -c -o "$work/p/$(basename $f).o" "programs/$f.S" || exit 2; done
 export LIMIT="${LIMIT:-900}"
+export JOBS="$jobs"
 flip() {    # PROGRAM FUNCTION HARNESS ARGS...
     prog=$1; fn=$2; harness=$3; shift 3
-    run "kbyte-flip-$fn.txt" python3 kbyte_flip.py "programs/$prog/$prog.spec" "ode_$fn" "$work/p/$fn.o" "programs/$prog/$fn.proof" --jobs "$jobs" --detail --native "programs/$prog/$harness" "$@"
+    spec="programs/$prog/$prog.spec"
+    # a program with lemmas about its specification's definitions: they are read after it (steps of the proof)
+    if [ -f "programs/$prog/$prog.lemmas" ]; then cat "$spec" "programs/$prog/$prog.lemmas" > "$work/$prog.spec"; spec="$work/$prog.spec"; fi
+    run "kbyte-flip-$fn.txt" python3 kbyte_flip.py "$spec" "ode_$fn" "$work/p/$fn.o" "programs/$prog/$fn.proof" --jobs "$jobs" --detail --native "programs/$prog/$harness" "$@"
 }
 LIBS=-lz flip adler32 adler32 native.c 200
 LIBS=-lz flip adler32 adler32_blocks native_blocks.c 300
@@ -63,17 +67,23 @@ flip utf8 utf8 native.c 3000
 flip inet inet native.c 3000
 flip base64 base64 native.c 2000
 # a function made of two others, each used by its contract: its own code changed (the two it calls are linked in as they are)
-cat programs/frame/frame.spec programs/frame/unframe.inner > "$work/frame.spec"
+cat programs/frame/frame.spec programs/frame/unframe.inner programs/frame/frame.lemmas > "$work/frame.spec"
 run "kbyte-flip-unframe.txt" env LIBS="-lz $work/p/lz4_decode.o $work/p/adler32_blocks4.o" python3 kbyte_flip.py "$work/frame.spec" ode_unframe "$work/p/unframe.o" programs/frame/unframe.proof --jobs "$jobs" --detail --native programs/frame/native.c 3000
 # and every instruction left out in turn
 run "kbyte-nop-unframe.txt" env LIBS="-lz $work/p/lz4_decode.o $work/p/adler32_blocks4.o" python3 kbyte_nop.py "$work/frame.spec" ode_unframe "$work/p/unframe.o" programs/frame/unframe.proof programs/frame/native.c 6000
-run "kbyte-nop-lz4_pack.txt" python3 kbyte_nop.py programs/lz4/lz4.spec ode_lz4_pack "$work/p/lz4_pack.o" programs/lz4/lz4_pack.proof programs/lz4/native_pack.c 6000 full
+run "kbyte-nop-lz4_pack.txt" python3 kbyte_nop.py "$work/lz4.spec" ode_lz4_pack "$work/p/lz4_pack.o" programs/lz4/lz4_pack.proof programs/lz4/native_pack.c 6000 full
 run "kbyte-nop-utf8.txt" python3 kbyte_nop.py programs/utf8/utf8.spec ode_utf8 "$work/p/utf8.o" programs/utf8/utf8.proof programs/utf8/native.c 20000
 run "kbyte-nop-inet.txt" python3 kbyte_nop.py programs/inet/inet.spec ode_inet "$work/p/inet.o" programs/inet/inet.proof programs/inet/native.c 5000
 run "kbyte-nop-adler32_blocks.txt" env LIBS=-lz python3 kbyte_nop.py programs/adler32/adler32.spec ode_adler32_blocks "$work/p/adler32_blocks.o" programs/adler32/adler32_blocks.proof programs/adler32/native_blocks.c 600
 run "kbyte-nop-adler32_blocks4.txt" env LIBS=-lz python3 kbyte_nop.py programs/adler32/adler32.spec ode_adler32_blocks4 "$work/p/adler32_blocks4.o" programs/adler32/adler32_blocks4.proof programs/adler32/native_blocks4.c 600
-# the programs' files as shipped (programs/NAME/odeNAME.o): each checked as a file, then run on this processor
-run "programs-shipped.txt" sh -c "for p in adler32 lz4 varint common utf8 base64 inet frame; do python3 programs/check_file.py programs/\$p/ode\$p.o programs/\$p/\$p.spec || exit 1; done
+# the decoder with every instruction left out in turn: its proof now rests on lemmas (the unbent LZ4)
+run "kbyte-nop-lz4_decode.txt" python3 kbyte_nop.py "$work/lz4.spec" ode_lz4_decode "$work/p/lz4_decode.o" programs/lz4/lz4_decode.proof programs/lz4/native.c 6000 full
+# the arithmetic's proofs (varith.py) and the refuter (refute.py: the contracts worked out on numbers beside the code run here)
+run "varith.txt" python3 test_varith.py
+run "refute.txt" python3 test_refute.py
+# the programs' files as shipped (programs/NAME/odeNAME.o): each verified as a file (by the arithmetic's proofs it
+# carries, nothing searched for; then again with the search), then run on this processor
+run "programs-shipped.txt" sh -c "for p in adler32 lz4 varint common utf8 base64 inet frame; do python3 programs/check_file.py programs/\$p/ode\$p.o programs/\$p/\$p.spec || exit 1; python3 programs/check_file.py programs/\$p/ode\$p.o --search | tail -n 2 || exit 1; done
   cc -O1 -o '$work/s10' programs/frame/native.c programs/frame/odeframe.o -lz && '$work/s10' 30000 &&
   cc -O1 -o '$work/s1' programs/adler32/native.c programs/adler32/odeadler32.o -lz && '$work/s1' 200 &&
   cc -O1 -o '$work/s1b' programs/adler32/native_blocks.c programs/adler32/odeadler32.o -lz && '$work/s1b' 3000 &&

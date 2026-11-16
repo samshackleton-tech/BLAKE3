@@ -2,10 +2,10 @@
 """kbyte_nop: every instruction of a function left out in turn (its bytes made no-ops), checked by kbyte.py; each
 such object it accepts is run on this machine's processor (the harness, as kbyte_flip.py runs it).
 
-    [CFLAGS=...] [LIBS=...] python3 kbyte_nop.py SPEC SYMBOL OBJECT PROOF HARNESS.c ARGS...
+    [JOBS=N] [CFLAGS=...] [LIBS=...] python3 kbyte_nop.py SPEC SYMBOL OBJECT PROOF HARNESS.c ARGS...
 
 Exit 1 if an object the verifier accepts does not keep the contract on the processor."""
-import os, subprocess, sys, tempfile
+import multiprocessing, os, subprocess, sys, tempfile
 sys.path.insert(0, os.getcwd())
 import kbyte, kbyte_flip, kdecode
 spec_path, symbol, obj_path, proof_path, harness = sys.argv[1:6]
@@ -17,14 +17,26 @@ sec, start = e.sections[e.index[".text"]], kdecode.address(obj, symbol)
 rows = kbyte.load(obj, symbol)
 work = tempfile.mkdtemp()
 subprocess.run(["cc", "-O1", "-c", "-o", f"{work}/h.o"] + os.environ.get("CFLAGS", "").split() + [harness], check=True)
-accepted = wrong = 0
-for a, z, i in rows:
-    if i.startswith((".push", ".pop")) or i in (".ret", ".nop"): continue
+def without(k):
+    a, z, i = rows[k]
     b = bytearray(obj)
     lo, hi = sec["off"] + start + a - kbyte.BASE, sec["off"] + start + z - kbyte.BASE
     b[lo:hi] = b"\x90" * (hi - lo)
-    v = kbyte_flip.verdict(bytes(b), spec_text, symbol, proof)
-    if v[0] != "ACCEPTED": continue
+    return b
+
+
+def taken(k):
+    return kbyte_flip.verdict(bytes(without(k)), spec_text, symbol, proof)[0] == "ACCEPTED"
+
+
+candidates = [k for k, (a, z, i) in enumerate(rows) if not (i.startswith((".push", ".pop")) or i in (".ret", ".nop"))]
+with multiprocessing.Pool(int(os.environ.get("JOBS", "8"))) as pool:          # the verifier's word on each, side by side (a refusal can take it seconds)
+    verdicts = pool.map(taken, candidates, chunksize=1)
+accepted = wrong = 0
+for k, yes in zip(candidates, verdicts):
+    if not yes: continue
+    a, z, i = rows[k]
+    b = without(k)
     accepted += 1
     o, exe = f"{work}/m.o", f"{work}/m"
     open(o, "wb").write(b)

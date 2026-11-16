@@ -77,7 +77,7 @@ def link(folder):
 PROOF = ["proofs/inner.spec", "proofs/k32.json", "proofs/p32.json", "proofs/p16.json"]
 
 
-def proof(image, where):
+def proof(image, where, more=()):
     """What a verifier needs beside the code and the specification, to be carried in the file: the contracts of
     the functions inside and the kernels' places; where each function is in the code (for a file whose names
     have been stripped); and which specification the maker had (a reader compares it with his own)."""
@@ -90,6 +90,26 @@ def proof(image, where):
     for name in PROOF:
         with open(os.path.join(HERE, name), "rb") as f: text = f.read()
         out += f"file {name} {len(text)}\n".encode() + text
+    for name, text in more: out += f"file {name} {len(text)}\n".encode() + text
+    return out
+
+
+def arithmetic(path, top="b3l_hashr"):
+    """The prover's part of making the file: each function of `path` is verified with the search, and the proofs
+    of the arithmetic it needed are kept (kprove.py), to be carried in the file: [(SYMBOL.arith.z, bytes)].
+    With them check_binary.py searches for nothing. Trusted for nothing: a table that is wrong shows nothing."""
+    import check_binary, kdecode, kprove, varith
+    e = kdecode.Elf(path)
+    check_binary.take(check_binary.carried(e.bytes_of(".ode.proof")), None)
+    out, todo, done = [], [top], set()
+    while todo:
+        symbol = todo.pop(0)
+        if symbol in done: continue
+        done.add(symbol)
+        table = kprove.prove(lambda: check_binary.check(path, symbol))
+        rows = check_binary.check(path, symbol)[0]
+        if table: out.append((symbol + ".arith.z", varith.pack(table)))
+        todo += sorted({i.split()[1] for _, _, i in rows if i.split()[0] == ".call"})
     return out
 
 
@@ -121,13 +141,20 @@ def elf(image, where, sizes, align, carried=None):
 
 
 def main():
+    if os.environ.get("PYTHONHASHSEED") != "0":
+        # the prover's search goes through sets, whose order Python changes from run to run: fixed, so that the
+        # same objects make the same file (the proofs it finds are then the same ones)
+        os.execve(sys.executable, [sys.executable] + sys.argv, dict(os.environ, PYTHONHASHSEED="0"))
     folder, path = sys.argv[1], sys.argv[2]
     image, where, sizes, align = link(folder)
     with open(path, "wb") as f: f.write(elf(image, where, sizes, align))
+    more = arithmetic(path)                                                    # (of the file just written: its bytes as a loader maps them)
+    whole = proof(image, where, more)
+    with open(path, "wb") as f: f.write(elf(image, where, sizes, align, whole))
     if len(sys.argv) > 3:
-        with open(sys.argv[3], "wb") as f: f.write(proof(image, where))        # the proof by itself, for a file that has lost its own
+        with open(sys.argv[3], "wb") as f: f.write(whole)                      # the proof by itself, for a file that has lost its own
     print(f"{os.path.basename(path)}: {len(where)} names, {sum(sizes.values())} bytes of code in {len(sizes)} bodies, {len(image)} bytes in all, on a {align}-byte boundary; no relocations; "
-          f"the proof ({len(proof(image, where))} bytes) in a section that is not loaded")
+          f"the proof ({len(whole)} bytes, {sum(len(b) for _, b in more)} of them the arithmetic's proofs for {len(more)} functions) in a section that is not loaded")
     return 0
 
 

@@ -29,11 +29,12 @@ to know.)"""
 import hashlib, json, os, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import kcheck, kdecode, kfn, kloop, kone, kspec, ode
+import kcheck, kdecode, kfn, klin, kloop, kone, kspec, ode, varith
 
 WIDE = {kloop.KERNELS[n]["symbol"]: n for n in ("k32", "p32", "p16")}
 ONE = {c["symbol"]: n for n, c in kone.CONTRACTS.items()}
 PLACES = {}             # the kernels' places, where a proof carried in the file gives them: {name: the JSON's text}
+ARITH = {}              # the arithmetic's proofs the file carries: {a function's name: the table's bytes (varith.py)}
 
 
 def carried(text):
@@ -65,8 +66,10 @@ def take(proof, spec_path):
     kone.CONTRACTS = kone.contracts(); kloop.KERNELS = kloop.kernels(); kfn.CONTRACTS.clear()
     WIDE = {kloop.KERNELS[n]["symbol"]: n for n in ("k32", "p32", "p16")}
     ONE = {c["symbol"]: n for n, c in kone.CONTRACTS.items()}
+    ARITH.clear()
     for name, text in proof["files"].items():
         if name.endswith(".json"): PLACES[os.path.basename(name)[:-5]] = text.decode()
+        if name.endswith(".arith.z"): ARITH[name[:-len(".arith.z")]] = text
     return hashlib.sha256(mine.encode()).hexdigest() == proof.get("spec")
 
 
@@ -125,15 +128,30 @@ def main():
             s = kdecode.Settled(e)
             print(f"the file has no names: the code the proof is of is found by its bytes at {s.lo + hit:#x}, and the proof's names are taken for its functions")
     else: print(f"the proof: {where}")
-    done, todo, covered, failed, count, t_all = {}, [top], [], 0, 0, time.time()
+    done, todo, covered, failed, count, t_all, searched = {}, [top], [], 0, 0, time.time(), []
     while todo:
         symbol = todo.pop(0)
         if symbol in done: continue
         t0 = time.time()
+        # the arithmetic: by the proofs the file carries for this function (nothing is searched for); with
+        # `--search`, or for a file that carries none, by this program's own search, as before
+        by_proof = "--search" not in sys.argv and (symbol in ARITH or bool(ARITH))
         try:
+            klin.Facts.PROOFS = (varith.unpack(ARITH[symbol]) if symbol in ARITH else {}) if by_proof else None
             rows, what, start = check(path, symbol)
         except (kcheck.Fail, kdecode.Stop) as err:
-            done[symbol] = None; failed += 1; print(f"  {symbol}: NOT shown: {err}"); continue
+            done[symbol] = None; failed += 1; print(f"  {symbol}: NOT shown: {err}" + (" (with the arithmetic's proofs the file carries and no search: --search to see what a search says)" if by_proof else ""))
+            if symbol == top:
+                # not shown: is it false? The public contract worked out on numbers beside the code run here (refute.py)
+                import refute
+                said = refute.after_refusal(path, symbol, option("--spec"))
+                if said: print("      " + said.replace("\n", "\n      "))
+            continue
+        except (ValueError, KeyError, IndexError, TypeError) as err:
+            if not by_proof: raise
+            done[symbol] = None; failed += 1; print(f"  {symbol}: NOT shown: the arithmetic's proofs the file carries cannot be read ({type(err).__name__})"); continue
+        finally: klin.Facts.PROOFS = None
+        searched.append(symbol) if not by_proof else None
         done[symbol] = len(rows)
         at = s.at[start]
         if (at, at + rows[-1][1] - rows[0][0]) not in covered: covered.append((at, at + rows[-1][1] - rows[0][0])); count += len(rows)      # two ways into one body: once
@@ -148,6 +166,8 @@ def main():
     print(f"of the {run} bytes loaded to be run: {sum(inside)} are the {len(covered)} bodies checked ({count} instructions), {zeros} are zero, {len(rest) - zeros} are others"
           + (" (constants the functions read; what lies between functions; whatever else the file holds)" if len(rest) - zeros else ""))
     if failed: print(f"{top}: NOT shown ({failed} failed)"); return 1
+    print("the arithmetic: " + ("every fact by a proof the file carries, verified by adding up (varith.py); nothing was searched for" if not searched else
+                              f"searched for by this program for {len(searched)} function(s): the file carries no proofs of it, or --search was given"))
     print(f"{top} in this file meets its public contract ({'the specification the file carries' if proof is not None and option('--spec') is None and 'specification' in proof['files'] else 'blake3.spec'}), with all it calls: {len(done)} functions, from the file's bytes, in {time.time() - t_all:.2f} s")
     return 0
 

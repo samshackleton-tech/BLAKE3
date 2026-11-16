@@ -21,7 +21,7 @@ its name, where it is, its length in bytes, its instructions, its contract's tex
 import hashlib, json, os, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
-import check_binary, kbyte, kcheck, kdecode, ode
+import check_binary, kbyte, kcheck, kdecode, ode, klin, varith
 
 
 def main():
@@ -49,7 +49,8 @@ def main():
         print(f"the proof: {where}; the specification is the reader's ({os.path.basename(spec_path)}), " + ("the one the maker had" if hashlib.sha256(text.encode()).hexdigest() == proof.get("spec") else "NOT the one the maker had"))
     same = hashlib.sha256(text.encode()).hexdigest() == proof.get("spec")
     # a program made of others: the proof carries the contracts of the functions called (steps of the proof)
-    inner = "".join("\n" + body.decode() for name, body in sorted(proof["files"].items()) if name.endswith(".inner"))
+    # ... and lemmas about the specification's definitions, which the verifier shows before it uses them
+    inner = "".join("\n" + body.decode() for name, body in sorted(proof["files"].items()) if name.endswith((".inner", ".lemmas")))
     public = set(ode.Spec(text).contracts)
     spec = ode.with_proof(text, inner) if inner else ode.Spec(text)
     wanted = [name for name in spec.contracts if name in proof["at"]]
@@ -62,7 +63,7 @@ def main():
         s = kdecode.Settled(e)
         print(f"the file does not name the functions: the code the proof is of is found by its bytes at {s.lo + hit:#x}, and the proof's names are taken for them")
     failed, count, t_all, record = 0, 0, time.time(), []
-    calls = {}
+    calls, searched, by_proof = {}, [], False
     def contract_text(symbol):
         lines = (text + inner).split("\n")
         a = next(k for k, l in enumerate(lines) if l.startswith(f"contract {symbol}("))
@@ -72,9 +73,24 @@ def main():
         try:
             rows = kbyte.load(path, symbol)
             places = proof["files"].get(symbol[len("ode_"):] + ".proof", b"").decode()
-            calls[symbol] = kbyte.check(rows, spec, symbol, places)["calls"]
+            # the arithmetic: by the proofs the file carries for this function (nothing is searched for); with
+            # `--search`, or for a file that carries none at all, by the search, as before
+            arith = proof["files"].get(symbol[len("ode_"):] + ".arith.z")
+            by_proof = "--search" not in sys.argv and any(n.endswith(".arith.z") for n in proof["files"])
+            try:
+                klin.Facts.PROOFS = (varith.unpack(arith) if arith is not None else {}) if by_proof else None
+                calls[symbol] = kbyte.check(rows, spec, symbol, places)["calls"]
+            except (ValueError, KeyError, IndexError, TypeError) as err:
+                if not by_proof: raise
+                raise kcheck.Fail(f"the arithmetic's proofs the file carries cannot be read ({type(err).__name__})")
+            finally: klin.Facts.PROOFS = None
+            if not by_proof: searched.append(symbol)
         except (kcheck.Fail, kdecode.Stop, ode.Err) as err:
-            failed += 1; print(f"  {symbol}: NOT shown: {err}")
+            failed += 1; print(f"  {symbol}: NOT shown: {err}" + (" (with the arithmetic's proofs the file carries and no search: --search to see what a search says)" if by_proof else ""))
+            # not shown: is it false? The contract worked out on numbers beside the code run here (refute.py), where this machine can run it
+            import refute
+            said = refute.after_refusal(path, symbol, args[1] if len(args) > 1 else None)
+            if said: print("      " + said.replace("\n", "\n      "))
             record.append(dict(name=symbol, verdict="NOT shown", why=str(err), contract=contract_text(symbol))); continue
         count += len(rows)
         said = "meets its public contract" if symbol in public else "meets its contract (a step of the proof)"
@@ -94,7 +110,9 @@ def main():
         return any(rings(name, above | {symbol}) for name in calls.get(symbol, ()))
     if any(rings(symbol, frozenset()) for symbol in calls): failed += 1; print("  a function is called by what it calls: nothing here shows such calls come to an end")
     if failed: print(f"NOT shown ({failed} of {len(wanted)} failed)"); return 1
-    print(f"{len(wanted)} function(s) in this file, {count} instructions, each meets its {'public ' if not inner else ''}contract ({os.path.basename(spec_path)}{', with the contracts of the functions called that the proof carries' if inner else ''}), from the file's bytes, in {time.time() - t_all:.2f} s")
+    print("the arithmetic: " + ("every fact by a proof the file carries, verified by adding up (varith.py); nothing was searched for" if not searched else
+                              f"searched for by this program for {len(searched)} function(s): the file carries no proofs of it, or --search was given"))
+    print(f"{len(wanted)} function(s) in this file, {count} instructions, each meets its {'public ' if not inner else ''}contract ({os.path.basename(spec_path)}{', with the inner contracts and lemmas the proof carries' if inner else ''}), from the file's bytes, in {time.time() - t_all:.2f} s")
     return 0
 
 

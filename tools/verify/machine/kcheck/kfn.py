@@ -849,6 +849,8 @@ def check(rows, name, proof=None):
     """The function's instructions meet its contract. (`proof`: for this verifier, nothing: a proof with a place
     is refused.)"""
     if proof is not None and proof.get("places"): raise Fail("a proof with a place: this verifier runs every loop")
+    global FRESH
+    FRESH = itertools.count()               # the names given on the way are the same every time: a proof of the arithmetic speaks of them
     c, T = contract("b3l_" + name), kcheck.Terms()
     m = Machine(T, rows, c); m.pc = rows[0][0]
     budget = [STEPS]
