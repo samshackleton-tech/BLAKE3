@@ -993,6 +993,36 @@ against 2.6 for the eight files). Nearly all of it is the specification's defini
 (`ode.py`'s `eval` under `kspec.py`'s `kept`: 51 of 60 profiled seconds), and two functions take most
 (`b3l_wide128`, `b3l_part32`). So "faster" is there, and it is also where a proof could carry more.
 
+### A first function of a verifier's own work, in Ode (`programs/decimal/`: a seed)
+
+One of the bottoms the design allows is a verifier written in Ode, specified in Ode's specification
+language, and shown by Ode's own verifier. Nothing of the verifier is in Ode yet. This is the smallest
+piece of its work there is, to see what the first step costs: **reading a count as a proof's header
+writes it** (`file NAME LENGTH`, `at OFFSET NAME`: one to nine decimal digits; `kproof.py` does it with
+Python's `int`).
+
+    def digit(b) { fails MALFORMED if b < 48 || b > 57   b - 48 }
+    def digits(bytes, at, sum) { if at == len(bytes) then sum else digits(bytes, at + 1, 10 * sum + digit(bytes[at])) }
+    def decimal(bytes) { fails MALFORMED if len(bytes) == 0   fails MALFORMED if len(bytes) > 9   digits(bytes, 0, 0) }
+
+    contract ode_decimal(input: n bytes, n: number) {
+        returns if failed(decimal(input)) then NO else decimal(input)
+        trace depends on input
+        stack 56
+    }
+
+`decimal.ode` is 30 lines (ten times a number is its shifts by three and by one, added: Ode has no
+multiplication); the compiler's 89 instructions meet the contract **with no proof text**: the loop is run
+out, nine digits at most (0.1 s). The lemma that `digits` comes to an end is the one `kguess.py` writes.
+Its own audit, on the workhorse: 2,576 single-bit changes, 135 accepted, each as a loop in C on 20,000
+inputs; each instruction left out in turn, 8 accepted, each keeping the contract; the unchanged code on
+203,616 inputs (`audit/kbyte-flip-decimal.txt`, `kbyte-nop-decimal.txt`; `programs/test_decimal.py`).
+
+What it is not: used. `kproof.py` still reads its numbers with Python, and a verifier in Ode would need
+what Ode lacks for the rest (lists that grow, records, a way to call out for the bytes of a file). It is
+not one of the shipped programs and is in none of their counts. It shows only what the first piece costs:
+three definitions, a function of thirty lines, nothing else written, and under half an hour with its audit.
+
 ### A second verifier of the arithmetic, written apart (`varith2.c`)
 
 "A is right if B or C is": one of the bottoms the design allows is a second verifier, written apart, that

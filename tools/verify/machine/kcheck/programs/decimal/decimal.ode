@@ -1,0 +1,31 @@
+// A count read as a proof's header writes it, written to be proved against decimal.spec: one to nine
+// decimal digits. It gives the count, or NO.
+//
+// state: 0 going on, 1 the bytes are all read, 2 not a count.
+const NO = 0xFFFFFFFFFFFFFFFF
+
+fn decimal(input, n)
+  reg input, n, i, v, state
+{
+  var i = 0
+  var v = 0
+  var b = 0
+  var state = 0
+  var r = 0
+  if n == 0 { state = 2 }
+  if n > 9 { state = 2 }
+  while state == 0 {
+    if i >= n { state = 1 } else {
+      b = u8[input + i]
+      if b < 48 { state = 2 } else {
+        if b > 57 { state = 2 } else {
+          v = (v << 3) + (v << 1) + b - 48
+          i = i + 1
+        }
+      }
+    }
+  }
+  r = v
+  if state == 2 { r = NO }
+  return r
+}
