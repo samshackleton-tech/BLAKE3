@@ -437,6 +437,24 @@ class Lemmas(unittest.TestCase):
         self.assertTrue(v.startswith("refused"), v)
         with self.assertRaises(ode.Err): ode.Spec(text("lz4", "lz4.spec") + "\nlemma counted(bytes: words, at: number, sum: number): any { }\n")
 
+    def test_the_kind_a_lemma_says_is_shown_too(self):
+        """A lemma says what kind of thing the definition's value is (a list, a number, a record of these fields),
+        and a use is given a thing of that kind. Until November 16, 2026 the kind was taken as said where the
+        lemma ensured nothing else (`lemma counted(...): list { }` was shown; `counted` gives a record)."""
+        spec = text("lz4", "lz4.spec")
+        def shown(lemma):
+            try: kbyte.prove_lemmas(ode.with_proof(spec, lemma)); return True
+            except (kcheck.Fail, ode.Err): return False
+        head = "lemma counted(bytes: bytes, at: number, sum: number): "
+        self.assertTrue(shown(head + "record(value, next) { }\n"))
+        self.assertTrue(shown(head + "record(next, value) { }\n"))
+        for kind in ("list", "number", "record(value)", "record(value, next, more)", "record(a, b)"):
+            self.assertFalse(shown(head + kind + " { }\n"), kind)
+        self.assertTrue(shown(head + "any { }\n"))                                              # nothing said: nothing to show
+        copies = "lemma copies(out: list, offset: number)[k]: list {\n    requires offset >= 1\n    requires offset <= len(out)\n    ensures len(result) == len(out) + k\n}\n"
+        self.assertTrue(shown(copies))
+        self.assertFalse(shown(copies.replace("[k]: list", "[k]: number").replace("    ensures len(result) == len(out) + k\n", "")))
+
     def test_a_proofs_part_gives_a_lemma_and_no_meaning(self):
         """ode.with_proof lets a proof's part hold a lemma of a definition of the reader's, and still no second
         definition of it."""

@@ -18,7 +18,7 @@ class LemmaAudit(unittest.TestCase):
         self.assertEqual(code, 0, out[-2000:])
         self.assertIn("lemma_audit: no changed lemma is shown and false", out)
         self.assertNotIn("CONTROL FAILED", out); self.assertNotIn("HOLE", out)
-        self.assertIn("lz4: 113 changed lemmas: 110 refused, 3 shown and so on every use tried, 0 shown and not judged, 0 SHOWN AND FALSE", out)
+        self.assertIn("lz4: 129 changed lemmas: 126 refused, 3 shown and so on every use tried, 0 shown and not judged, 0 SHOWN AND FALSE", out)
 
     def test_a_verifier_made_wrong_is_found_out(self):
         code, out = run("common", "lz4", "--control", "7")
@@ -62,6 +62,27 @@ class LemmaAudit(unittest.TestCase):
             self.assertGreaterEqual(lemma_audit.audit("common", 40, 1, out=lines.append), 3)
             self.assertTrue(any("HOLE" in l and "STILL SAID" in l for l in lines), lines)
         finally: lemma_audit.said_to_end = honest
+
+    def test_a_kind_that_is_not_so_is_found_out(self):
+        """The judge on numbers looks at the kind of what a definition gave; and the way lemmas were shown until
+        November 16, 2026 (the kind taken as said where nothing else was ensured) is reported by the audit."""
+        import kbyte
+        lines = []
+        self.assertEqual(lemma_audit.audit("common", 40, 1, out=lines.append), 0)
+        with open(os.path.join(HERE, "kbyte.py")) as f: source = f.read()
+        self.assertIn("it says the definition's value is a", source)
+        # the same audit with a verifier that does not look at the kind: made here by taking that one check out
+        import types
+        old = types.ModuleType("kbyte_before"); old.__file__ = os.path.join(HERE, "kbyte.py")
+        a = source.index("            # the kind the lemma says the value is of is something said too"); b = source.index("            env = dict(env0); env[\"result\"] = v", a)
+        exec(compile(source[:a] + source[b:], "kbyte_before", "exec"), old.__dict__)
+        prove = kbyte.prove_lemmas
+        try:
+            kbyte.prove_lemmas = old.prove_lemmas
+            lines = []
+            self.assertGreaterEqual(lemma_audit.audit("common", 40, 1, out=lines.append), 2)
+            self.assertTrue(any("HOLE" in l and "the lemma says the value is a list, and the definition gave int" in l for l in lines), lines)
+        finally: kbyte.prove_lemmas = prove
 
     def test_the_changed_copies(self):
         text = "lemma f(a: bytes, n: number): number {\n    requires n <= len(a)\n    ensures result >= n + 1\n    decreases len(a) - n\n}\n"

@@ -13,6 +13,7 @@ does. For each lemma file it makes every changed copy of these kinds:
     one name of what the lemma is given made another, or 0, or 1
     the lemma made to require the impossible (shown then, of nothing: it must not be what "its definitions
     come to an end" is said by; kends.py)
+    the kind the lemma says the definition's value is of (a list, a number, a record) made another
 
 and asks the verifier of each (the other lemmas of the file as they are). And the other way about: the
 lemmas as they are, of each changed copy of the specification's definitions they speak of (a number one more
@@ -70,6 +71,16 @@ def changed(text):
     out = []
     for name, a, z, params in lemma_spans(text):
         body_at = text.index("{", a)
+        # the kind the lemma says the value is of, made another
+        head = re.match(r"lemma \w+\([^)]*\)(\[\w+\])?: (list|number|any|record\([^)]*\))", text[a:body_at])
+        if head:
+            was = head.group(2)
+            for other in ("list", "number", "record(value)"):
+                if other.split("(")[0] != was.split("(")[0] and was != "any":
+                    out.append((f"{name}: said to be a {other} (it is a {was})", text[:a + head.start(2)] + other + text[a + head.end(2):]))
+                    # and with nothing ensured of it (what is ensured would be refused for speaking of the wrong kind of thing)
+                    bare = re.sub(r"(?m)^[ \t]*ensures\b.*\n", "", text[body_at:z])
+                    if bare != text[body_at:z]: out.append((f"{name}: said to be a {other} (it is a {was}), and nothing ensured of it", text[:a + head.start(2)] + other + text[a + head.end(2):body_at] + bare + text[z:]))
         # a lemma made to require the impossible: it is then shown (of nothing), and must count for nothing
         kinds = dict(re.findall(r"(\w+): (\w+)", text[a:body_at]))
         for p in params:
@@ -174,6 +185,12 @@ def judge(spec, uses):
         req = [truth(spec, None, e, env) for e in l["requires"]]
         holds = all(r is True for r in req)
         if holds and u["has"]:
+            v = u["value"]
+            if l["kind"] != "any":
+                checked += 1
+                is_number = isinstance(v, int) and not isinstance(v, bool)
+                if not {"number": is_number, "list": isinstance(v, list), "record": isinstance(v, dict) and sorted(v) == sorted(l["fields"])}[l["kind"]]:
+                    return f"the lemma says the value is a {l['kind']}, and the definition gave {type(v).__name__}", u, checked
             env2 = dict(env); env2["result"] = u["value"]
             for k, e in enumerate(l["ensures"]):
                 checked += 1

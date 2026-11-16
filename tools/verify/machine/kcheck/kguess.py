@@ -296,19 +296,33 @@ def whole(spec_text, lemmas="", say=lambda s: None):
             progress = True; done_rings.append(ring)
             # what each ensures: its kind first (a lemma of kind any says nothing of the value)
             kinds = list_params(spec, ring, ring_kinds(spec, ring))
-            for name in ring:
-                head, clauses = kept[name]
+            def kind_of(name):
                 kind, fields = result_kind(spec, name, kinds[name])
                 if kind is None:
                     for other in ring:                                # the value of one of the ring is the value of another
                         k2, f2 = result_kind(spec, other, kinds[other])
-                        if k2: kind, fields = k2, f2; break
+                        if k2: return k2, f2
+                return kind, fields
+            def head_of(name, kind, fields):
+                ps = [(p, kinds[name][p]) for p in spec.fns[name][0]]
+                return f"lemma {name}({', '.join(f'{p}: {k}' for p, k in ps)}): {kind}" + (f"({', '.join(fields)})" if kind == "record" else "")
+            # the kinds of the ring's values, said together (the value of one may be the value of another: a kind
+            # said of one alone is then not shown)
+            before = {n: kept[n] for n in ring}
+            if all(kind_of(n)[0] for n in ring):
+                for n in ring: kept[n] = (head_of(n, *kind_of(n)), kept[n][1])
+                if not ok(text_of()):
+                    for n in ring: kept[n] = before[n]
+            for name in ring:
+                head, clauses = kept[name]
+                kind, fields = kind_of(name)
                 if kind is None: continue
                 ps = [(p, kinds[name][p]) for p in spec.fns[name][0]]
-                new_head = f"lemma {name}({', '.join(f'{p}: {k}' for p, k in ps)}): {kind}" + (f"({', '.join(fields)})" if kind == "record" else "")
-                before = kept[name]
-                kept[name] = (new_head, clauses)
-                if not ok(text_of()): kept[name] = before; continue    # with the kind said, it is not shown: left as it was
+                new_head = head_of(name, kind, fields)
+                if kept[name][0] != new_head:
+                    was = kept[name]
+                    kept[name] = (new_head, clauses)
+                    if not ok(text_of()): kept[name] = was; continue   # with the kind said, it is not shown: left as it was
                 for e in ensures_of(kind, fields, ps):
                     trial = (new_head, kept[name][1] + [f"ensures {e}"])
                     saved = kept[name]; kept[name] = trial

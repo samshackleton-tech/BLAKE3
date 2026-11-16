@@ -947,9 +947,22 @@ one named function and all it calls are verified, and the bytes that are not are
 which specification (the reader's or the file's, with its digest), each function's verdict, how the
 arithmetic was verified, come from the reader's text or from what the verifier did.
 
+**And of the lemmas themselves: the kind was taken as said.** A lemma says what kind of thing its
+definition's value is (`: list`, `: number`, `: record(value, next)`), and a use is given a thing of that
+kind. Where a lemma ensured something, a wrong kind was refused (the clause spoke of the wrong kind of
+thing). Where it ensured nothing, nothing looked: `lemma counted(bytes: bytes, at: number, sum: number):
+list { }` was shown, and `counted` gives a record. **Kind: shown, of something false.** I could not make a
+function accepted wrongly with it (a use of the thing as the wrong kind stops the verifier), and it is
+closed all the same: the value the opening gives must be of the kind said (`kbyte.py`, one check in
+`prove_lemmas`). The lemma audit now changes each lemma's kind, with and without what it ensures, and its
+judge on numbers looks at the kind of what the definition gave; run against the verifier as it was, it
+reports the two it finds in the common-start program ("the lemma says the value is a list, and the
+definition gave int").
+
 In files the running audit covers, this changed the three drivers' lines (`check_binary.py`,
 `programs/check_file.py`, `programs/check_programs.py`: what is printed and the exit status in the case
-above); `kends.py` is new; `kbyte.py` is untouched.
+above), and one check in `kbyte.py`'s `prove_lemmas` (the kind). `kends.py` is new. The part of the audit
+that covers `kbyte.py` is run again for it.
 
 **How long a verification takes, and where.** `b3hashr.o`: 16 s under CPython 3.14, 7.6 s under PyPy 3.12
 (the same files, the same verdict; the short verifications of `programs/` gain nothing from PyPy: 3.1 s
@@ -1072,15 +1085,16 @@ Two ways, over the six lemma files (`audit/lemma_audit.txt`; ten minutes, nine o
 
 | | copies | refused | shown, and so on every use tried | shown, judged on no use | shown and false |
 |---|---|---|---|---|---|
-| a lemma changed (a number one more or less, a comparison made another, + and - exchanged, a `requires` left out, a name made another or 0 or 1, the lemma made to require the impossible) | 329 | 312 | 9 | 8 | **0** |
-| the lemmas as they are, of a changed specification (the same changes, in the definitions the lemmas speak of and those they use) | 621, of which 36 are no specification | 178 | 400 | 7 | **0** |
+| a lemma changed (a number one more or less, a comparison made another, + and - exchanged, a `requires` left out, a name made another or 0 or 1, the kind of its value made another, the lemma made to require the impossible) | 367 | 350 | 11 | 6 | **0** |
+| the lemmas as they are, of a changed specification (the same changes, in the definitions the lemmas speak of and those they use) | 621, of which 36 are no specification | 178 | 407 | 0 | **0** |
 
-The nine changed lemmas that are shown say less than the ones in the files, or the same (`result.value >= 0`
-for `>= sum`; a match makes the output longer, not only no shorter). The 400 changed specifications are ones
-the lemmas are still true of (a round constant of BLAKE3 moved does not make its tree stop ending). "Judged
-on no use": the change leaves no input here on which one use is inside another, so nothing says. Six of
-those eight are lemmas made to require the impossible: shown, of nothing; and with each of them "its
-definitions come to an end" is not said (the hole described above; the other 29 such are refused).
+The eleven changed lemmas that are shown say less than the ones in the files, or the same, or ask more
+(`result.value >= 0` for `>= sum`; a match makes the output longer, not only no shorter; `at == len(bytes)`
+for `at <= len(bytes)`). The 407 changed specifications are ones the lemmas are still true of (a round
+constant of BLAKE3 moved does not make its tree stop ending). The six "judged on no use" are lemmas made to
+require the impossible: shown, of nothing; with each of them "its definitions come to an end" is not said
+(the hole described above; the other 29 such are refused). The 38 lemmas whose kind was made another are
+all refused.
 
 **The audit's own control** (`--control 7`; `audit/lemma_audit-control.txt`): a verifier made wrong in the
 process, every seventh question about the numbers answered "shown", shows five false lemmas of LZ4 and of

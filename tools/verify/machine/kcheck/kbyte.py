@@ -1176,6 +1176,12 @@ def prove_lemmas(spec):
         what = f"the lemma of {name}"
         m0, args, env0 = lemma_machine(spec, name, l)
         def holds(m, A, v, index=None, of=""):
+            # the kind the lemma says the value is of is something said too: a use is given a thing of that kind
+            v = A.known(v)
+            numbers = lambda x: isinstance(x, (int, Lin)) and not isinstance(x, bool)
+            if not {"any": True, "number": numbers(v), "list": isinstance(v, (Rope, View, list)),
+                    "record": isinstance(v, dict) and sorted(v) == sorted(l["fields"]) and all(numbers(x) for x in v.values())}[l["kind"]]:
+                raise Fail(f"{what}: it says the definition's value is a {l['kind']}{of}, and what the definition gives here is not shown to be one")
             env = dict(env0); env["result"] = v
             if index is not None: env[l["index"]] = index
             for e in l["ensures"]:
