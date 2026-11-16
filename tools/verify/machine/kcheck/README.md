@@ -822,6 +822,8 @@ refusals. And what `kbyte.py` still lacks, each found by a program that wanted i
 - tables of constants beside the code, and multiplication in Ode (Sigil);
 - lemmas of other shapes than the few `kguess.py` tries (below: it finds LZ4's four, and the numbers that
   decrease; a lemma that needs a new shape is still written by hand);
+- `common.spec` is still a walk over the two runs and not "the least place they differ"; with a lemma it
+  could be the latter;
 - reads and writes of more than a byte at a time, for speed;
 - joining paths that have come to the same state (base 64). (A specification's question the code's path
   does not answer is now taken both ways where it asks whether something has a value; a comparison of two
