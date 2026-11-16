@@ -855,7 +855,7 @@ costs a reader nothing:
         decreases len(bytes) - at
     }
 
-All seven such definitions of `programs/` have it (`counted`, `sequences`, `match` of LZ4, where the last two
+All six such definitions of `programs/` have it (`counted`, `sequences`, `match` of LZ4, where the last two
 use each other; `points` of UTF-8; `varint`; `alike`), a verification says so ("the definitions that use
 themselves (...): each is shown to come to an end") or names those that are not, and `check_programs.py`
 fails on one that is not; `--json` records both, with how the arithmetic was verified and the verifier's own
@@ -900,7 +900,7 @@ code: it is no part of what shows the code meets the contract).
 
 ### A prover that guesses (`kguess.py`)
 
-Who finds the number that decreases? The seven lemmas above were written by hand, and one took a second
+Who finds the number that decreases? The eight lemmas above (six of `programs/`, BLAKE3's two) were written by hand, and one took a second
 try (`children` is one less than `subtree`). `kguess.py` is the smallest prover there could be: for each
 ring of definitions that use themselves it tries the few numbers there are (`n`; `len(b) - n`; `len(b)`;
 for a ring of two, `2 * len(b)` and one less), with none, one or two of a few `requires` (`n <= len(b)`;
