@@ -867,8 +867,9 @@ length.
 **And the refusals are fast again where there is such a lemma.** The cost named above (a refusal that took
 a tenth of a second taking ten) was UTF-8's: with every question about a value taken both ways, a path that
 was going to be refused opened `points` again and again first. With the lemma of `points` a use of it is
-taken by the lemma: the same 40 instructions of `ode_utf8`, each left out in turn, are refused in 0.2 to 0.3
-seconds each, against 8.6 to 11.7 without the lemma file (measured on this machine, the same day). Two more
+taken by the lemma: of 40 instructions of `ode_utf8`, each left out in turn, the slowest verdict takes 0.3
+seconds, against 11.7 without the lemma file (the five slowest: 8.6 to 11.7; measured on this machine, the
+same day). Two more
 changed specifications of UTF-8 are accepted now, and both are the same specification (`b < 192` made
 `b < 193` in the first check of a first byte; `b < 128` made `b < 129` in the count: 244,205 inputs agree on
 each, and the two neighbouring changes that are not the same are refused).
