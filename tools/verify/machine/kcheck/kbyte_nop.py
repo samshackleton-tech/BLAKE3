@@ -30,7 +30,7 @@ def taken(k):
 
 
 candidates = [k for k, (a, z, i) in enumerate(rows) if not (i.startswith((".push", ".pop")) or i in (".ret", ".nop"))]
-with multiprocessing.Pool(int(os.environ.get("JOBS", "8"))) as pool:          # the verifier's word on each, side by side (a refusal can take it seconds)
+with multiprocessing.get_context("fork").Pool(int(os.environ.get("JOBS", "8"))) as pool:          # the verifier's word on each, side by side (a refusal can take it seconds). fork: the workers have what was read above (Python 3.14 starts workers afresh by default, and this file then fell over: the audit of November 16)
     verdicts = pool.map(taken, candidates, chunksize=1)
 accepted = wrong = 0
 for k, yes in zip(candidates, verdicts):
