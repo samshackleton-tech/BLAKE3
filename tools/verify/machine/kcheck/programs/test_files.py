@@ -67,6 +67,32 @@ class Files(unittest.TestCase):
         code, out = with_inner(inner[:inner.index(b"contract ode_adler32_blocks4")])
         self.assertEqual(code, 1, out); self.assertIn("ode_unframe: NOT shown", out)
 
+    def test_a_proof_cannot_leave_a_function_out_quietly(self):
+        """Which functions are verified is the proof's to say. One that leaves out a function the file has and the
+        specification has a contract for: the verification is NOT shown, and says which."""
+        import re
+        obj, spec = self.paths("lz4")
+        carried = kdecode.Elf(obj).bytes_of(".ode.proof")
+        line = re.search(rb"at \d+ ode_lz4_pack\n", carried)
+        self.assertIsNotNone(line)
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "p")
+            with open(path, "wb") as f: f.write(carried.replace(line.group(0), b""))
+            code, out = run(obj, "--proof", path, "--json", os.path.join(d, "r.json"))
+            self.assertEqual(code, 1, out)
+            self.assertIn("ode_lz4_pack: NOT verified", out); self.assertIn("THIS FILE HAS A FUNCTION OF THAT NAME", out); self.assertIn("NOT shown (1 of 3 failed)", out)
+            with open(os.path.join(d, "r.json")) as f: r = json.load(f)
+            self.assertFalse(r["shown"]); self.assertEqual(r["of_them_functions_of_this_file"], ["ode_lz4_pack"])
+            # a reader's specification with a contract for something this file does not have: said, and the rest stands
+            more = os.path.join(d, "more.spec")
+            with open(spec) as f: text = f.read()
+            with open(more, "w") as f: f.write(text + "\ncontract ode_elsewhere(n: number) {\n    returns n\n    stack 8\n}\n")
+            code, out = run(obj, more)
+            self.assertEqual(code, 0, out)
+            self.assertIn("ode_elsewhere: NOT verified", out); self.assertIn("(this file has none of that name)", out); self.assertIn("3 function(s) verified in this file", out)
+        code, out = run(obj)
+        self.assertEqual(code, 0, out); self.assertNotIn("NOT verified", out)
+
     def test_a_proof_cannot_make_the_file_say_its_definitions_end(self):
         """The lemmas come with the proof. One that requires the impossible is shown, of nothing; the line about
         the definitions coming to an end is then "NOT shown", and the record says why. (The function itself is

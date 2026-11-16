@@ -936,8 +936,20 @@ with `requires n <= m` added it is shown again (`test_kends.py`).
 The lemma audit now makes each lemma require the impossible in turn and asks that the line is then not
 said; its test puts the old way of making the line back and the audit reports the hole.
 
-In files the running audit covers, this changed the three drivers' one line (`check_binary.py`,
-`programs/check_file.py`, `programs/check_programs.py`); `kends.py` is new; `kbyte.py` is untouched.
+**And the same question asked of every other line a verification prints: could a maker's proof make it
+say what is not so?** One more, by silence. Which functions of a file are verified is the proof's to say
+(its `at` lines). A proof for the LZ4 file that left `ode_lz4_pack` out got exit status 0 and "2
+function(s) in this file ... each meets its contract": true of the two it named, and silent about a third
+function in the file with a public contract in the same specification. Now a public contract the proof
+leaves out is named ("NOT verified"), and if the file has a function of that name the verification is NOT
+shown (`test_files.py`). The summary says "verified in this file". (The hash's file was not open to it: there
+one named function and all it calls are verified, and the bytes that are not are counted.) The other lines:
+which specification (the reader's or the file's, with its digest), each function's verdict, how the
+arithmetic was verified, come from the reader's text or from what the verifier did.
+
+In files the running audit covers, this changed the three drivers' lines (`check_binary.py`,
+`programs/check_file.py`, `programs/check_programs.py`: what is printed and the exit status in the case
+above); `kends.py` is new; `kbyte.py` is untouched.
 
 **How long a verification takes, and where.** `b3hashr.o`: 16 s under CPython 3.14, 7.6 s under PyPy 3.12
 (the same files, the same verdict; the short verifications of `programs/` gain nothing from PyPy: 3.1 s

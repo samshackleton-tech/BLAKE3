@@ -58,6 +58,11 @@ def main():
     spec = ode.with_proof(text, inner) if inner else ode.Spec(text)
     wanted = [name for name in spec.contracts if name in proof["at"]]
     if not wanted: print("the specification has a contract for no function the proof speaks of"); return 1
+    # Which functions are verified is the proof's to say (`at`), and the proof is not trusted: a public contract
+    # of the specification that the proof leaves out is said, and if the file has a function of that name the
+    # verification is "NOT shown" (a reader would take a file's function with a contract in front of him as verified).
+    left_out = sorted(name for name in public if name not in proof["at"])
+    in_file = [name for name in left_out if name in s.at]
     if any(name not in s.at for name in wanted):
         size, digest, begins = proof["code"]
         hit = next((k for k in range(0, len(s.image) - size + 1, 16) if s.image[k:k + len(begins)] == begins and hashlib.sha256(s.image[k:k + size]).hexdigest() == digest), None)
@@ -116,6 +121,7 @@ def main():
                            functions=record, shown=not failed,
                            arithmetic=("searched for by the verifier" if searched else "by the proofs the file carries, verified by adding up"), arithmetic_searched_for=sorted(searched),
                            definitions_that_use_themselves=again, of_them_not_shown_to_end=open_,
+                           contracts_the_proof_leaves_out=left_out, of_them_functions_of_this_file=in_file,
                            verifier=ran, verifier_sha256=hashlib.sha256("".join(f"{r['sha256']}  {r['file']}\n" for r in ran).encode()).hexdigest()), f, indent=1)
     # every function called is one of those checked here; and none is called by what it calls
     for symbol, called in calls.items():
@@ -139,12 +145,15 @@ def main():
         except (kcheck.Fail, ode.Err, KeyError, IndexError, TypeError, AttributeError, RecursionError) as err:
             ends, ends_line = ([], [f"not followed ({type(err).__name__})"]), f"whether its definitions come to an end is NOT shown: {err}"
         finally: klin.Facts.PROOFS = None
+    for name in left_out:
+        print(f"  {name}: NOT verified: the specification has a contract for it and the proof speaks of no such function" + (", and THIS FILE HAS A FUNCTION OF THAT NAME" if name in in_file else " (this file has none of that name)"))
+    if in_file: failed += len(in_file)
     write_record()
-    if failed: print(f"NOT shown ({failed} of {len(wanted)} failed)"); return 1
+    if failed: print(f"NOT shown ({failed} of {len(wanted) + len(in_file)} failed)"); return 1
     print("the specification: " + ends_line)
     print("the arithmetic: " + ("every fact by a proof the file carries, verified by adding up (varith.py); nothing was searched for" if not searched else
                               f"searched for by this program for {len(searched)} function(s): the file carries no proofs of it, or --search was given"))
-    print(f"{len(wanted)} function(s) in this file, {count} instructions, each meets its {'public ' if not inner else ''}contract ({os.path.basename(spec_path)}{', with the inner contracts and lemmas the proof carries' if inner else ''}), from the file's bytes, in {time.time() - t_all:.2f} s")
+    print(f"{len(wanted)} function(s) verified in this file, {count} instructions, each meets its {'public ' if not inner else ''}contract ({os.path.basename(spec_path)}{', with the inner contracts and lemmas the proof carries' if inner else ''}), from the file's bytes, in {time.time() - t_all:.2f} s")
     return 0
 
 
