@@ -848,7 +848,7 @@ tests, and `--search`. `klin.py` is 174 lines of code and holds no elimination. 
 `programs/` no longer loads the hash's driver or the kernels' two verifiers (`kproof.py`, 16 lines, reads
 the proof's form; the helpers `value` and `lin` moved to `klin.py`): `verify.py` listed 10 files and 3,979
 lines of code for an LZ4 file (it was 12 and 4,587), 11 files and 3,445 for the hash (3,484). With what
-follows below (definitions that end, `any`, the record) it lists 4,045 and 3,461.
+follows below (definitions that end, `any`, the record, `kends.py`) it lists 4,155 and 3,461.
 
 **A definition that uses itself is shown to come to an end.** A specification's definition that never
 ended on some input would have no value there and no failure, and a contract written with it would say
@@ -902,8 +902,42 @@ the greatest power of two that leaves bytes for the right, so each part is short
 0.3 s. Refused in the tests: seven other numbers or `requires`, a lemma that says something of words, and
 three changed specifications in which a part is not smaller (`<=` for `<` in the split among them). A
 verification of `b3hashr.o` says "the definitions that use themselves (children, subtree): each is shown to
-come to an end"; `verify.py` lists what that one line loaded beside the rest (`kbyte.py`, 1,063 lines of
-code: it is no part of what shows the code meets the contract).
+come to an end" (see below for what that line now rests on); `verify.py` lists what that one line loaded
+beside the rest (`kbyte.py` and `kends.py`, 1,063 and 99 lines of code: it is no part of what shows the code meets the contract).
+
+### A hole in the line about coming to an end, found and closed the same day (`kends.py`)
+
+**Kind: shown, of something false** (in the line a verification prints about the specification; not in
+whether the code meets the contract). The line said "each is shown to come to an end" when every definition
+that uses itself had a lemma with a number that decreases, and the lemmas were shown. But a lemma speaks
+only where its `requires` holds, and a lemma comes with the proof, which is not trusted:
+
+    lemma points(bytes: bytes, at: number, count: number): number {
+        requires at < at
+        decreases 0
+    }
+
+is shown (of nothing: no use meets it), and the line was printed. A maker could have had a file say its
+definitions end when one of them goes on for ever. No shipped file did; the lemma audit's own output had
+the sign of it (two changed lemmas "shown, and judged on no use") and I had read that as harmless.
+
+Now (`kends.py`, 99 lines of code): the line is about **the public contracts**, and it is said only where,
+from the contract inward, every use of a definition is one its lemma speaks of. Each definition the
+contract's text names is gone through once from what the contract gives it (an argument as it is, with its
+length and what the contract `requires`; a part of what the function wrote, as any bytes; anything else,
+as a thing of which nothing is known), and every use inside of a definition with a lemma must meet that
+lemma's `requires`. Inside a ring the showing of the lemmas already asks the same. No search is used: what
+the plain facts do not show is not shown. All thirteen public contracts here pass, BLAKE3's among them.
+
+What it found beside the hole: `ode_common`'s definitions end *because* its contract gives both runs the
+same length. With `b: m bytes` the line is "NOT shown" (the walk reads the second run past its end), and
+with `requires n <= m` added it is shown again (`test_kends.py`).
+
+The lemma audit now makes each lemma require the impossible in turn and asks that the line is then not
+said; its test puts the old way of making the line back and the audit reports the hole.
+
+In files the running audit covers, this changed the three drivers' one line (`check_binary.py`,
+`programs/check_file.py`, `programs/check_programs.py`); `kends.py` is new; `kbyte.py` is untouched.
 
 **How long a verification takes, and where.** `b3hashr.o`: 16 s under CPython 3.14, 7.6 s under PyPy 3.12
 (the same files, the same verdict; the short verifications of `programs/` gain nothing from PyPy: 3.1 s
@@ -992,8 +1026,24 @@ alone**: the lemmas (the number that decreases), then the place; the verifier sh
 the two wrote (`test_kplace.py`). Functions with two loops or more are not tried (six of the twelve;
 `ode_varint`'s loop is run out and `ode_unframe` has none: those two need no proof text at all).
 
+**Another build of the same function.** In Lean a proof was of one build's bytes and another compiler
+undid it. Here the three functions were assembled again with two of their registers exchanged, as another
+compiler might hold them: the proof written by hand names registers and is refused for that build; the
+prover finds the build's own proof, and it in turn is refused for the first build (`test_kplace.py`). So a
+proof need not be kept in step with the compiler by hand.
+
+**As an audit** (`kadversary.py`). The flips ask the verifier of changed code with the proof written for
+the unchanged code; most are refused because that proof no longer fits, which says little about whether
+some proof would get the changed code accepted. `kadversary.py` leaves each instruction out in turn and,
+where the verifier refuses with the proof as written, lets the prover look for another; every changed
+object accepted either way is run on a processor. `ode_adler32`: 44 left out, 6 accepted as written (all
+keep the contract), none more by a proof found. `ode_common`: 34, none accepted either way. `ode_utf8`: 287, 50 accepted as written (all keep the contract),
+none more by a proof found within 60 tries (`audit/kadversary.txt`).
+The prover is weak, so this is a small thing; its control is that it does find the proof of the unchanged
+code and of the other build.
+
 The same caution as above: the shapes are few and fitted to these programs. What it shows is where the
-work of finding a proof lives. Neither file is loaded by a verification.
+work of finding a proof lives. None of these files is loaded by a verification.
 
 ### An audit of the part that shows lemmas (`lemma_audit.py`)
 
@@ -1010,13 +1060,15 @@ Two ways, over the six lemma files (`audit/lemma_audit.txt`; ten minutes, nine o
 
 | | copies | refused | shown, and so on every use tried | shown, judged on no use | shown and false |
 |---|---|---|---|---|---|
-| a lemma changed (a number one more or less, a comparison made another, + and - exchanged, a `requires` left out, a name made another or 0 or 1) | 294 | 283 | 9 | 2 | **0** |
+| a lemma changed (a number one more or less, a comparison made another, + and - exchanged, a `requires` left out, a name made another or 0 or 1, the lemma made to require the impossible) | 329 | 312 | 9 | 8 | **0** |
 | the lemmas as they are, of a changed specification (the same changes, in the definitions the lemmas speak of and those they use) | 621, of which 36 are no specification | 178 | 400 | 7 | **0** |
 
 The nine changed lemmas that are shown say less than the ones in the files, or the same (`result.value >= 0`
 for `>= sum`; a match makes the output longer, not only no shorter). The 400 changed specifications are ones
 the lemmas are still true of (a round constant of BLAKE3 moved does not make its tree stop ending). "Judged
-on no use": the change leaves no input here on which one use is inside another, so nothing says.
+on no use": the change leaves no input here on which one use is inside another, so nothing says. Six of
+those eight are lemmas made to require the impossible: shown, of nothing; and with each of them "its
+definitions come to an end" is not said (the hole described above; the other 29 such are refused).
 
 **The audit's own control** (`--control 7`; `audit/lemma_audit-control.txt`): a verifier made wrong in the
 process, every seventh question about the numbers answered "shown", shows five false lemmas of LZ4 and of
@@ -1188,7 +1240,8 @@ specification. (The hash above does not use them: it has no stack.)
 | `varith2.c`, `test_varith2.py` | 310 + 129 | a second verifier of the arithmetic's proofs, in C, written apart; the two put against each other on changed proofs |
 | `kguess.py`, `test_kguess.py` | 406 + 78 | a prover that guesses lemmas (the number that decreases; what a definition ensures, of a few shapes); trusted for nothing |
 | `kplace.py`, `test_kplace.py` | 235 + 65 | a prover that guesses the place of a loop, led by the verifier's refusals; trusted for nothing |
-| `lemma_audit.py`, `test_lemma_audit.py` | 441 + 66 | the audit of the part that shows lemmas: changed lemmas and changed specifications, judged on numbers |
+| `lemma_audit.py`, `test_lemma_audit.py` | 464 + 82 | the audit of the part that shows lemmas: changed lemmas and changed specifications, judged on numbers |
+| `kends.py`, `test_kends.py` | 137 + 85 | whether the definitions a public contract speaks through come to an end on everything it allows (the lemmas' `requires` met from the contract inward) |
 | `refute.py`, `refute_run.c`, `test_refute.py` | 421 + 145 + 76 | "false, and here is the input": a contract worked out on numbers beside the code run on the processor (a prover's tool); its tests |
 | `kbyte_flip.py`, `kbyte_nop.py` | 117 + 37 | their single-bit audit and every instruction left out, the processor judging |
 | `programs/kpack.py`, `programs/check_file.py`, `programs/test_files.py` | 55 + 78 + 82 | a program as one file with its proof (untrusted); what a reader runs on it, or on what a linker made of it (`--json`: what was checked, for a benchmark's record); tests |

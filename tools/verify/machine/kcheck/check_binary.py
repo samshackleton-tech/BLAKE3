@@ -58,18 +58,19 @@ def take(proof, spec_path):
     return hashlib.sha256(mine.encode()).hexdigest() == proof.get("spec")
 
 
-def ends():
-    """Do the specification's definitions that use themselves come to an end? Shown by the lemmas the proof
-    carries (`decreases`), with the other verifier's part for lemmas (kbyte.py: loaded for this line alone;
-    it is no part of what shows the code meets the contract)."""
-    import kbyte
+def ends(top="b3l_hashr"):
+    """Do the definitions the public contract speaks through come to an end, on everything it allows? Shown by
+    the lemmas the proof carries (`decreases`) and by kends.py (the lemmas' `requires` met from the contract
+    inward), with the other verifier's part for lemmas (kbyte.py: loaded for this line alone; it is no part
+    of what shows the code meets the contract)."""
+    import kbyte, kends
     by_proof = "--search" not in sys.argv and bool(ARITH)
     try:
         spec = ode.with_proof(MINE, LEMMAS) if LEMMAS else ode.Spec(MINE)
         klin.Facts.PROOFS = (varith.unpack(ARITH["lemmas"]) if "lemmas" in ARITH else {}) if by_proof else None
         kbyte.prove_lemmas(spec)
-        return kbyte.ends_line(spec)
-    except (kcheck.Fail, ode.Err, ValueError, KeyError, IndexError, TypeError) as err:
+        return kends.line(spec, [top])
+    except (kcheck.Fail, ode.Err, ValueError, KeyError, IndexError, TypeError, AttributeError, RecursionError) as err:
         return f"its definitions that use themselves are NOT shown to come to an end: {err}"
     finally: klin.Facts.PROOFS = None
 
@@ -169,7 +170,7 @@ def main():
     if failed: print(f"{top}: NOT shown ({failed} failed)"); return 1
     print("the arithmetic: " + ("every fact by a proof the file carries, verified by adding up (varith.py); nothing was searched for" if not searched else
                               f"searched for by this program for {len(searched)} function(s): the file carries no proofs of it, or --search was given"))
-    if "--no-ends" not in sys.argv: print("the specification: " + ends())
+    if "--no-ends" not in sys.argv: print("the specification: " + ends(top))
     print(f"{top} in this file meets its public contract ({'the specification the file carries' if proof is not None and option('--spec') is None and 'specification' in proof['files'] else 'blake3.spec'}), with all it calls: {len(done)} functions, from the file's bytes, in {time.time() - t_all:.2f} s")
     return 0
 

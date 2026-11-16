@@ -76,7 +76,9 @@ text, cannot change it). A proof's part may also hold lemmas (`lemma NAME(...) {
 a contract of one of the specification's definitions, of its value `result`): the verifier shows each
 before it uses any, so they change no meaning either, and a reader need not read them. A lemma may
 also name a number that `decreases` at each use of a definition by itself: shown, it says the definition comes
-to an end on what the lemma requires (a definition that did not would leave a contract saying nothing there). What a
+to an end on what the lemma requires (a definition that did not would leave a contract saying nothing there). That a
+contract's own uses are ones the lemmas speak of is asked apart (`kends.py`): a lemma comes with the proof,
+and one that requires the impossible is shown and says nothing. What a
 lemma is given or says may be of kind `any`: a thing passed on, of which the lemma asks and says nothing
 (BLAKE3's words, in the lemmas that show its tree comes to an end). The inner contracts of the hash
 (`proofs/inner.spec`) still name kinds of memory (`cv`: eight words); the public contract does not. That a

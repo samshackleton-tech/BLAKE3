@@ -18,7 +18,7 @@ class LemmaAudit(unittest.TestCase):
         self.assertEqual(code, 0, out[-2000:])
         self.assertIn("lemma_audit: no changed lemma is shown and false", out)
         self.assertNotIn("CONTROL FAILED", out); self.assertNotIn("HOLE", out)
-        self.assertIn("lz4: 101 changed lemmas: 98 refused, 3 shown and so on every use tried, 0 shown and not judged, 0 SHOWN AND FALSE", out)
+        self.assertIn("lz4: 113 changed lemmas: 110 refused, 3 shown and so on every use tried, 0 shown and not judged, 0 SHOWN AND FALSE", out)
 
     def test_a_verifier_made_wrong_is_found_out(self):
         code, out = run("common", "lz4", "--control", "7")
@@ -46,6 +46,22 @@ class LemmaAudit(unittest.TestCase):
         self.assertIsNone(judged("    requires offset >= 1\n", ""))
         self.assertIn("ensures", judged("ensures result.next >= at + 1", "ensures result.next >= at + 2"))
         self.assertIn("the number that decreases", judged("    ensures result.next >= at + 1\n    decreases len(bytes) - at\n", "    ensures result.next >= at + 1\n    decreases len(bytes)\n"))
+
+    def test_a_lemma_that_requires_the_impossible_counts_for_nothing(self):
+        """Such a lemma is shown, of nothing. The audit asks that "its definitions come to an end" is then not
+        said; and it finds out the way that line was made until November 16, 2026 (a count of lemmas with a
+        number that decreases), which said it."""
+        import kbyte
+        lines = []
+        self.assertEqual(lemma_audit.audit("common", 40, 1, out=lines.append), 0)
+        self.assertEqual(sum(1 for l in lines if "made to require the impossible" in l and '"comes to an end" is not said with it' in l), 3, lines)
+        honest = lemma_audit.said_to_end
+        try:
+            lemma_audit.said_to_end = lambda spec, text: not kbyte.ends(spec)[1]          # the line as it was made before
+            lines = []
+            self.assertGreaterEqual(lemma_audit.audit("common", 40, 1, out=lines.append), 3)
+            self.assertTrue(any("HOLE" in l and "STILL SAID" in l for l in lines), lines)
+        finally: lemma_audit.said_to_end = honest
 
     def test_the_changed_copies(self):
         text = "lemma f(a: bytes, n: number): number {\n    requires n <= len(a)\n    ensures result >= n + 1\n    decreases len(a) - n\n}\n"

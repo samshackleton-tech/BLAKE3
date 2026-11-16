@@ -67,6 +67,27 @@ class Files(unittest.TestCase):
         code, out = with_inner(inner[:inner.index(b"contract ode_adler32_blocks4")])
         self.assertEqual(code, 1, out); self.assertIn("ode_unframe: NOT shown", out)
 
+    def test_a_proof_cannot_make_the_file_say_its_definitions_end(self):
+        """The lemmas come with the proof. One that requires the impossible is shown, of nothing; the line about
+        the definitions coming to an end is then "NOT shown", and the record says why. (The function itself is
+        still shown: UTF-8's needs no lemma.)"""
+        obj, _ = self.paths("utf8")
+        carried = kdecode.Elf(obj).bytes_of(".ode.proof")
+        with open(os.path.join(HERE, "utf8", "utf8.lemmas"), "rb") as f: lemmas = f.read()
+        head = b"file utf8.lemmas %d\n" % len(lemmas)
+        self.assertEqual(carried.count(head + lemmas), 1)
+        bad = b"lemma points(bytes: bytes, at: number, count: number): number {\n    requires at < at\n    decreases 0\n}\n"
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "p")
+            with open(path, "wb") as f: f.write(carried.replace(head + lemmas, b"file utf8.lemmas %d\n" % len(bad) + bad))
+            code, out = run(obj, "--proof", path, "--json", os.path.join(d, "r.json"), "--search")
+            self.assertIn("NOT shown to come to an end on everything the contracts allow", out)
+            self.assertNotIn("each is shown to come to an end", out)
+            with open(os.path.join(d, "r.json")) as f: r = json.load(f)
+            self.assertEqual(r["definitions_that_use_themselves"], ["points"]); self.assertEqual(len(r["of_them_not_shown_to_end"]), 1)
+        code, out = run(obj)
+        self.assertEqual(code, 0, out); self.assertIn("(points): each is shown to come to an end on everything the contracts allow", out)
+
     def test_the_record_says_how_and_by_what(self):
         """--json: how the arithmetic was verified, which definitions use themselves and whether they end, and the
         verifier's own files with their digests."""

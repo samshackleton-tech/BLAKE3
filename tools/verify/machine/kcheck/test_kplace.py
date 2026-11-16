@@ -2,7 +2,7 @@
 """Tests of kplace.py (a prover: trusted for nothing): for three functions with one loop the proof is found from
 the binary and the specification alone, the lemmas too (kguess.py), and the verifier shows each function by
 what was found. And where its few shapes do not reach, it says so."""
-import os, sys, unittest
+import os, re, sys, unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import kbyte, kcheck, kguess, kplace, ode
@@ -46,6 +46,31 @@ class Places(unittest.TestCase):
         for line in ("name i = r12", "name count = r13", "fact count <= i", "fact points(input, i, count) == utf8(input)", "any r14, r15, stack[8], stack[0]", "decreases n - i"): self.assertIn(line, proof)
         self.assertTrue(self.shown(rows, spec, symbol, proof))
         self.assertFalse(self.shown(rows, spec, symbol, ""))
+
+    def test_another_build_of_the_same_function(self):
+        """The same functions with their registers exchanged (as another compiler might hold them): the proof
+        written by hand names registers and is refused; the prover finds the proof of this build. (In Lean a
+        proof was of one build's bytes, and another build undid it.)"""
+        import shutil, tempfile
+        from test_kcheck import assemble
+        for folder, name, swap in (("common", "common", ("r13", "r14")), ("adler32", "adler32", ("r12", "r13")), ("utf8", "utf8", ("r12", "r13"))):
+            p = T.Program(folder, name, "ode_" + name)
+            src = T.text(folder, name + ".S")
+            a, b = swap
+            other = re.sub(r"\b(%s|%s)([dwb]?)\b" % (a, b), lambda m: (b if m.group(1) == a else a) + m.group(2), src)
+            self.assertNotEqual(other, src)
+            d = tempfile.mkdtemp(prefix="kplace-")
+            try:
+                with open(os.path.join(d, "x.S"), "w") as f: f.write(other)
+                assemble(os.path.join(d, "x.S"), os.path.join(d, "x.o"))
+                rows = kbyte.load(os.path.join(d, "x.o"), p.symbol)
+            finally: shutil.rmtree(d)
+            spec = ode.Spec(p.spec)
+            self.assertFalse(self.shown(rows, spec, p.symbol, p.proof), f"{name}: the proof written for the other build")
+            proof, tries = kplace.guess(rows, spec, p.symbol)
+            self.assertIsNotNone(proof, name)
+            self.assertTrue(self.shown(rows, spec, p.symbol, proof), name)
+            self.assertFalse(self.shown(p.rows, spec, p.symbol, proof), f"{name}: and this one is not the first build's")
 
     def test_where_it_does_not_reach(self):
         lemmas, proof, rows, spec, symbol = from_nothing("inet", "inet")                        # pairs of bytes: `i % 2 == 0`, a sum bounded by the count

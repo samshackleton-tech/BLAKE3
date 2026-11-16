@@ -139,8 +139,13 @@ class Binary(unittest.TestCase):
             self.assertIn("each is shown to come to an end", check_binary.ends())
             carried = proof["files"]["proofs/blake3.lemmas"]
             check_binary.take(dict(proof, files={k: v for k, v in proof["files"].items() if k != "proofs/blake3.lemmas"}), None)
-            self.assertIn("NOT shown to come to an end: children, subtree", check_binary.ends())
+            self.assertIn("NOT shown to come to an end on everything the contracts allow: no number that decreases is named for children, subtree", check_binary.ends())
             check_binary.take(dict(proof, files=dict(proof["files"], **{"proofs/blake3.lemmas": carried.replace(b"decreases 2 * len(bytes)\n", b"decreases len(bytes)\n")})), None)
+            self.assertIn("NOT shown to come to an end", check_binary.ends())
+            # a proof whose lemma requires the impossible (and so is shown, of nothing) does not make the line say it
+            impossible = carried.replace(b"lemma subtree(key: any, flags: any, t: number, bytes: bytes): any {\n", b"lemma subtree(key: any, flags: any, t: number, bytes: bytes): any {\n    requires t < t\n")
+            self.assertNotEqual(impossible, carried)
+            check_binary.take(dict(proof, files=dict(proof["files"], **{"proofs/blake3.lemmas": impossible})), None)
             self.assertIn("NOT shown to come to an end", check_binary.ends())
         finally:
             import kspec, kone, kloop, kfn

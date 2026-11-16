@@ -106,6 +106,10 @@ fi
 # specification, judged by the specification worked out on numbers; and that this would find a verifier made wrong
 run "lemma_audit.txt" python3 lemma_audit.py --cases 300 --seed 20261116
 run "lemma_audit-control.txt" python3 lemma_audit.py lz4 common --control 7
+# a prover that looks for another proof of changed code (functions with one loop): what it gets accepted is run on the processor
+if [ "$only" != hash ]; then
+(LIBS=-lz python3 kadversary.py adler32 adler32 "$work/p/adler32.o" programs/adler32/native.c 200 --jobs "$jobs" && python3 kadversary.py common common "$work/p/common.o" programs/common/native.c 3000 --jobs "$jobs" && python3 kadversary.py utf8 utf8 "$work/p/utf8.o" programs/utf8/native.c 3000 --jobs "$jobs" --limit 60) > audit/kadversary.txt 2>&1 || { bad=1; echo "FAILED: kadversary.txt"; }
+fi
 rm -rf "$work"
 grep -H "single-bit changes" audit/kflip-*.txt audit/kglue-flip-*.txt audit/kone-flip-*.txt audit/kfn-flip-*.txt audit/kbyte-flip-*.txt | sed "s|^audit/||" | cut -c1-250
 grep -h "accepted changes on this processor" audit/*.txt | sort | uniq -c | cut -c1-160

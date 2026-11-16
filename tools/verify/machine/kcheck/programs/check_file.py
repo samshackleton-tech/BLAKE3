@@ -24,7 +24,7 @@ its SHA-256, and one SHA-256 over that list (`verifier_sha256`: what "verified" 
 import hashlib, json, os, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
-import kbyte, kcheck, kdecode, kproof, ode, klin, varith
+import kbyte, kcheck, kdecode, kends, kproof, ode, klin, varith
 
 
 def main():
@@ -109,7 +109,7 @@ def main():
             p = getattr(mod, "__file__", None)
             if p and os.path.abspath(p).startswith(here + os.sep) and p.endswith(".py"):
                 with open(p, "rb") as g: ran.append(dict(file=os.path.relpath(os.path.abspath(p), here), sha256=hashlib.sha256(g.read()).hexdigest()))
-        again, open_ = kbyte.ends(spec)
+        again, open_ = ends
         with open(sys.argv[sys.argv.index("--json") + 1], "w") as f:
             json.dump(dict(file=os.path.basename(path), file_sha256=hashlib.sha256(e.b).hexdigest(), kind=kind, specification=os.path.basename(spec_path),
                            specification_sha256=hashlib.sha256(text.encode()).hexdigest(), specification_is_the_makers=same, proof=("the file's own section" if given is None else "given beside the file"),
@@ -125,9 +125,23 @@ def main():
         if symbol in above: return True
         return any(rings(name, above | {symbol}) for name in calls.get(symbol, ()))
     if any(rings(symbol, frozenset()) for symbol in calls): failed += 1; print("  a function is called by what it calls: nothing here shows such calls come to an end")
+    # do the definitions the public contracts speak through come to an end, on everything those contracts allow?
+    # (kends.py: a lemma's number that decreases, AND the lemma's `requires` met from the contract inward. No
+    # search: what the plain facts do not show is not shown.)
+    mine = [s for s in wanted if s in public]
+    ends, ends_line = ([], ["the functions are not shown"]), None
+    if not failed:
+        try:
+            klin.Facts.PROOFS = None if "--search" in sys.argv else {}
+            both = [kends.ends_for(spec, s) for s in mine]
+            ends = (sorted({n for a, _ in both for n in a}), [w for _, w in both if w])
+            ends_line = kends.line(spec, mine)
+        except (kcheck.Fail, ode.Err, KeyError, IndexError, TypeError, AttributeError, RecursionError) as err:
+            ends, ends_line = ([], [f"not followed ({type(err).__name__})"]), f"whether its definitions come to an end is NOT shown: {err}"
+        finally: klin.Facts.PROOFS = None
     write_record()
     if failed: print(f"NOT shown ({failed} of {len(wanted)} failed)"); return 1
-    print("the specification: " + kbyte.ends_line(spec))
+    print("the specification: " + ends_line)
     print("the arithmetic: " + ("every fact by a proof the file carries, verified by adding up (varith.py); nothing was searched for" if not searched else
                               f"searched for by this program for {len(searched)} function(s): the file carries no proofs of it, or --search was given"))
     print(f"{len(wanted)} function(s) in this file, {count} instructions, each meets its {'public ' if not inner else ''}contract ({os.path.basename(spec_path)}{', with the inner contracts and lemmas the proof carries' if inner else ''}), from the file's bytes, in {time.time() - t_all:.2f} s")

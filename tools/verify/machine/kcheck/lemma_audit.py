@@ -11,6 +11,8 @@ does. For each lemma file it makes every changed copy of these kinds:
     a number in a clause one more or one less          a comparison made each other comparison
     + made - and - made +                              a `requires` left out
     one name of what the lemma is given made another, or 0, or 1
+    the lemma made to require the impossible (shown then, of nothing: it must not be what "its definitions
+    come to an end" is said by; kends.py)
 
 and asks the verifier of each (the other lemmas of the file as they are). And the other way about: the
 lemmas as they are, of each changed copy of the specification's definitions they speak of (a number one more
@@ -34,7 +36,7 @@ the flips: every acceptance among many near misses, judged by something that is 
 import os, random, re, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import kbyte, kcheck, ode
+import kbyte, kcheck, kends, klin, ode
 
 PROGRAMS = {  # name: (specification, lemmas)
     "lz4": ("programs/lz4/lz4.spec", "programs/lz4/lz4.lemmas"), "frame": ("programs/frame/frame.spec", "programs/frame/frame.lemmas"),
@@ -68,6 +70,11 @@ def changed(text):
     out = []
     for name, a, z, params in lemma_spans(text):
         body_at = text.index("{", a)
+        # a lemma made to require the impossible: it is then shown (of nothing), and must count for nothing
+        kinds = dict(re.findall(r"(\w+): (\w+)", text[a:body_at]))
+        for p in params:
+            never = f"{p} + 1 <= {p}" if kinds.get(p) == "number" else f"len({p}) + 1 <= len({p})" if kinds.get(p) in ("bytes", "list") else None
+            if never: out.append((f"{name}: made to require the impossible (`requires {never}`)", text[:body_at + 1] + f"\n    requires {never}" + text[body_at + 1:]))
         for line in re.finditer(r"(?m)^[ \t]*(requires|ensures|decreases)\b(.*)$|\{[ \t]*((?:requires|ensures|decreases)\b[^}\n]*)\}", text[body_at:z]):
             la, lz = body_at + line.start(), body_at + line.end()
             clause = text[la:lz]
@@ -332,6 +339,16 @@ def judge_places(spec, uses):
     return None, None, checked
 
 
+def said_to_end(spec, text):
+    """Does a verification say, of this specification with these lemmas, that the definitions its contracts
+    speak through come to an end? (kends.py, with no search, as a shipped file is asked.)"""
+    try:
+        klin.Facts.PROOFS = {}
+        return all(kends.ends_for(spec, s)[1] is None for s in ode.Spec(text).contracts)
+    except (kcheck.Fail, ode.Err, KeyError, IndexError, TypeError, AttributeError, RecursionError): return False
+    finally: klin.Facts.PROOFS = None
+
+
 def show(u):
     def short(v):
         if isinstance(v, list): return f"{len(v)} things " + (bytes(v[:24]).hex() if all(isinstance(b, int) and 0 <= b < 256 for b in v[:24]) else "...") + ("..." if len(v) > 24 else "")
@@ -381,7 +398,13 @@ def audit(program, cases, seed, out=print, control=False):
         if not bad:
             bad, u, n2 = judge_places(s, seq_uses); n += n2
         if bad: holes.append((what, bad, u)); out(f"  HOLE: {what}: SHOWN, and FALSE: {bad}: {show(u)}" + (f" inside {show(u['outer'])}" if u["outer"] else ""))
-        elif not n: vacuous += 1; out(f"  shown, and judged on no use (nothing here says whether it is so): {what}")
+        elif not n:
+            # a lemma that speaks of no use tried here (one that requires what never is, for one): harmless as a lemma,
+            # and it must not be what "comes to an end" is said by
+            still = said_to_end(s, spec_text) and any(l["decreases"] is not None for l in s.lemmas.values())
+            if still and "the impossible" in what:
+                holes.append((what, "said to end", None)); out(f"  HOLE: {what}: SHOWN (of nothing), and \"comes to an end\" is STILL SAID by it")
+            else: vacuous += 1; out(f"  shown, and judged on no use (nothing here says whether it is so; \"comes to an end\" is {'still said' if still else 'not said'} with it): {what}")
         else: so += 1; out(f"  shown, and so on {n} judgements: {what}")
     out(f"{program}: {len(copies)} changed lemmas: {refused} refused, {so} shown and so on every use tried, {vacuous} shown and not judged, {len(holes)} SHOWN AND FALSE; {time.time() - t0:.1f} s")
     # the other way about: the lemmas as they are, of changed definitions
@@ -399,7 +422,7 @@ def audit(program, cases, seed, out=print, control=False):
         if not bad:
             bad, u, n2 = judge_places(s, places(s, rng, max(20, cases // 3))); n += n2
         if bad: holes.append((what, bad, u)); out(f"  HOLE: {what}: the lemmas are SHOWN of it, and FALSE: {bad}: {show(u)}" + (f" inside {show(u['outer'])}" if u["outer"] else ""))
-        elif no_end and not kbyte.ends(s)[1]:
+        elif no_end and said_to_end(s, text):
             holes.append((what, "no end", None)); out(f"  HOLE?: {what}: its definitions are SHOWN to come to an end, and {no_end} run(s) on numbers did not within the limit: look")
         elif not n: vacuous += 1; out(f"  the lemmas shown of it, and judged on no use: {what}")
         else: so += 1; out(f"  the lemmas shown of it, and so on {n} judgements: {what}")
