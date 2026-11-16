@@ -1,5 +1,5 @@
 control: the unchanged object is ACCEPTED 
-subtree: 7152 single-bit changes of 894 bytes of code (813 s): 2820 stopped by the decoder, 3516 refused (no proof), 816 accepted, 0 with NO VERDICT (the time limit)
+subtree: 7152 single-bit changes of 894 bytes of code (799 s): 2820 stopped by the decoder, 3516 refused (no proof), 816 accepted, 0 with NO VERDICT (the time limit)
   accepted: +0x35 byte 0 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .r8) (.imm 0x0)
   accepted: +0x35 byte 2 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rcx) (.imm 0x0)
   accepted: +0x35 byte 2 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rdx) (.imm 0x0)
@@ -819,4 +819,4 @@ subtree: 7152 single-bit changes of 894 bytes of code (813 s): 2820 stopped by t
 control: the unchanged object on this processor, the lengths and 200 more: same
 control: a change no proof was found for, on this processor: DIFFERS: an official vector (1025 bytes, keyed) is not what hashr gives
 the 816 accepted changes on this processor: 816 same
-for scale, 300 of the changes stopped or refused, on this processor: 201 CRASHES, 56 DIFFERS, 43 same
+for scale, 300 of the changes stopped or refused, on this processor: 199 CRASHES, 58 DIFFERS, 43 same

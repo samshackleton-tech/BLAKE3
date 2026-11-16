@@ -1,5 +1,5 @@
 control: the unchanged object is ACCEPTED 
-ode_varint: 840 single-bit changes of 105 bytes of code (3 s): 413 stopped by the decoder, 419 refused, 8 accepted, 0 with NO VERDICT (the time limit)
+ode_varint: 840 single-bit changes of 105 bytes of code (1 s): 413 stopped by the decoder, 419 refused, 8 accepted, 0 with NO VERDICT (the time limit)
   accepted: +0x1E byte 2 bit 5: .cmp 64 (.reg .rax) (.reg .rcx)  ->  .cmp 64 (.reg .rax) (.reg .rbp)
   accepted: +0x2A byte 0 bit 0: .mov 64 (.reg .rcx) (.reg .rbp)  ->  .mov 64 (.reg .r9) (.reg .rbp)
   accepted: +0x2A byte 2 bit 2: .mov 64 (.reg .rcx) (.reg .rbp)  ->  .mov 64 (.reg .rbp) (.reg .rbp)

@@ -566,17 +566,19 @@ and with a wrong one the check fails.
   | `ode_utf8` | 9,576 | 4,305 | 4,399 | 872 | 872 keep the contract |
   | `ode_base64` | 6,608 | 3,121 | 2,984 | 503 | 503 keep the contract |
   | `ode_inet` | 2,392 | 1,130 | 1,249 | 13 | 13 keep the contract |
+  | `ode_unframe` (its two calls by contract) | 2,232 | 1,098 | 886 | 248 | 248 keep the contract |
 
   (Threadripper PRO 7975WX. The judges: zlib's `adler32`; for the decoder a decoder written in C in the
   harness, on blocks that are right and blocks that are damaged; for the encoders that decoder,
   `ode_lz4_decode`, and for the packing one `LZ4_decompress_safe` of lz4's `lz4.c` (commit `6b589e80`) as
   well; for UTF-8 a validator by the standard's table of byte ranges and the C library's converter; for
   base 64 an encoder by a table and the C library's `b64_ntop`; for the checksum RFC 1071's own C code.
-  All eleven are of one run, `sh audit.sh 10 programs` at commit `f7c0cfa9`, the last change to `kbyte.py`:
-  53,808 changes, 3,267 accepted, none without a verdict. The same run left every instruction out of five
-  of them in turn: 38, 47, 4, 11 and 12 objects accepted (`lz4_pack`, `utf8`, `inet`, `adler32_blocks`,
-  `adler32_blocks4`), each keeping its contract on the processor; and checked and ran the seven shipped
-  files.)
+  All twelve are of one run, the whole `sh audit.sh 60` on the tree of commit `42ed51e0` (after `kbyte.py`
+  learned calls and `ode.py` to refuse a name defined twice): 56,040 changes, 3,515 accepted, none without a
+  verdict; the first eleven rows are what they were at `f7c0cfa9`. The same run left every instruction out
+  of six of them in turn: 38, 47, 4, 11, 12 and 13 objects accepted (`lz4_pack`, `utf8`, `inet`,
+  `adler32_blocks`, `adler32_blocks4`, `unframe`), each keeping its contract on the processor; and checked
+  and ran the eight shipped files (30,000 frames through `odeframe.o`).)
 - **The unchanged functions on the processor**: Adler-32 on 6,301 inputs as zlib's; the decoder on 20,000
   blocks as the C decoder (count, bytes, and NO); the plain encoder: 12,877 blocks that decode to their
   input, NO only where the room is less than the block needs; the packing encoder: 15,065 blocks, each
@@ -918,12 +920,11 @@ same for every input.
 
 ## What has been done to find it wrong
 
-(Every single-bit audit was run again on November 15 by `sh audit.sh 60` on the tree of commit `2ae7c9e9`,
-the last change to any checker the hash uses, and `audit/` holds the outputs: 350,960 single-bit changes
-in all, 17,785 accepted, each of those as its specification on the processor, none without a verdict
-(900 s a change at most). The kernels', the stack's and the one-block kernels' counts are what they were
-at `55bcb1c6`: 227,296 changes, 8,576 accepted. The checker of the programs, `kbyte.py`, changed twice
-after that run began; its eleven functions are of a second run at `f7c0cfa9`.)
+(Every single-bit audit was run again in the night of November 15 to 16 by `sh audit.sh 60` on the tree of
+commit `42ed51e0`, the last change to any of these programs (`ode.py`, which all of them read, and `kbyte.py`),
+and `audit/` holds the outputs: 353,192 single-bit changes in all, 18,033 accepted, each of those as its
+specification on the processor, none without a verdict (900 s a change at most). But for the new function's
+rows every count is what it was in the run before, at `2ae7c9e9` and `f7c0cfa9`.)
 
 1. **Changed kernels** (`--mutants`): 15 of 15 refused (rotations, operands, the carry's mask, a message offset,
    a store's offset, a shuffle, a flag, a saved register, the frame's bound, the block step, one entry of the
