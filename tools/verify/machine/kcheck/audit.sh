@@ -102,10 +102,15 @@ if [ "$only" != programs ]; then
 python3 klink.py "$work/hash" "$work/blob.o" > /dev/null && run "klink-flip.txt" python3 klink_flip.py "$work/blob.o" --native 2000
 run "binary.txt" sh -c "python3 check_binary.py b3hashr.o && cc -O1 -o '$work/shipped' khash_native.c kflip_thunk.S b3hashr.o && '$work/shipped' 2000 say"
 fi
+# the verifier's part for lemmas: every changed lemma it shows, and the lemmas as they are of every changed
+# specification, judged by the specification worked out on numbers; and that this would find a verifier made wrong
+run "lemma_audit.txt" python3 lemma_audit.py --cases 300 --seed 20261116
+run "lemma_audit-control.txt" python3 lemma_audit.py lz4 common --control 7
 rm -rf "$work"
 grep -H "single-bit changes" audit/kflip-*.txt audit/kglue-flip-*.txt audit/kone-flip-*.txt audit/kfn-flip-*.txt audit/kbyte-flip-*.txt | sed "s|^audit/||" | cut -c1-250
 grep -h "accepted changes on this processor" audit/*.txt | sort | uniq -c | cut -c1-160
 grep -h "with one left out" audit/kbyte-nop-*.txt | cut -c1-200
+grep -h "^lemma_audit" audit/lemma_audit.txt audit/lemma_audit-control.txt | cut -c1-200
 [ "$only" = programs ] || tail -n 1 audit/binary.txt | sed "s|^|b3hashr.o on this processor: |"
 echo "audit: $([ $bad = 0 ] && echo 'every accepted change runs as the specification on this processor' || echo 'FAILED')"
 exit $bad

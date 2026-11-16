@@ -897,6 +897,43 @@ verification of `b3hashr.o` says "the definitions that use themselves (children,
 come to an end"; `verify.py` lists what that one line loaded beside the rest (`kbyte.py`, 1,061 lines of
 code: it is no part of what shows the code meets the contract).
 
+### An audit of the part that shows lemmas (`lemma_audit.py`)
+
+The flips of the code's bits do not ask whether the verifier could show a lemma that is not so; and a false
+lemma, once shown, could show a function by something false. So the lemmas have an audit of their own, with
+its own judge: **the specification worked out on numbers** (`ode.Numbers`: no symbols, no facts, nothing of
+the verifier), on inputs made for it (LZ4 blocks an encoder here writes, some with a byte gone wrong; UTF-8
+of the edges; messages of BLAKE3 around the chunk and tree boundaries), every use of a definition with a
+lemma noted with what it was given and what it gave. Of each use: where `requires` holds, `ensures` must
+hold of the value; and where a use is inside another of its ring, `requires` must hold of it, the outer
+number that `decreases` must not be below zero, and the inner must be less.
+
+Two ways, over the six lemma files (`audit/lemma_audit.txt`; ten minutes, nine of them BLAKE3's):
+
+| | copies | refused | shown, and so on every use tried | shown, judged on no use | shown and false |
+|---|---|---|---|---|---|
+| a lemma changed (a number one more or less, a comparison made another, + and - exchanged, a `requires` left out, a name made another or 0 or 1) | 294 | 283 | 9 | 2 | **0** |
+| the lemmas as they are, of a changed specification (the same changes, in the definitions the lemmas speak of and those they use) | 621, of which 36 are no specification | 178 | 400 | 7 | **0** |
+
+The nine changed lemmas that are shown say less than the ones in the files, or the same (`result.value >= 0`
+for `>= sum`; a match makes the output longer, not only no shorter). The 400 changed specifications are ones
+the lemmas are still true of (a round constant of BLAKE3 moved does not make its tree stop ending). "Judged
+on no use": the change leaves no input here on which one use is inside another, so nothing says.
+
+**The audit's own control** (`--control 7`; `audit/lemma_audit-control.txt`): a verifier made wrong in the
+process, every seventh question about the numbers answered "shown", shows five false lemmas of LZ4 and of
+the two runs' common start, and each is found out with its input: an `ensures` that does not hold of what
+`counted` gave, a number that "decreases" from 70 to 70.
+
+The first run of it reported three holes. They were its own: on numbers it follows a definition's use of
+itself one inside another, the language allows 400 deep, and it had made inputs of 499 bytes. It makes
+none above 300 now and allows 3,000 while numbers are worked out (the verifier is asked with the
+language's limit as it is). It is in `audit.sh`.
+
+What this is not: a proof. It is the kind of evidence the flips are: every acceptance among many near
+misses, judged by something that is not the verifier. It does not change the lemmas' kinds, the
+specification's shape, or more than one thing at a time.
+
 ## The library's wide kernels, each run to its end (`kcheck.py`, the first trial)
 
 From the library's own assembly sources (`c/blake3_avx512_32.S`, `c/blake3_output16.S`), assembled, the
