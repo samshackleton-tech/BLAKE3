@@ -857,7 +857,8 @@ costs a reader nothing:
 All seven such definitions of `programs/` have it (`counted`, `sequences`, `match` of LZ4, where the last two
 use each other; `points` of UTF-8; `varint`; `alike`), a verification says so ("the definitions that use
 themselves (...): each is shown to come to an end") or names those that are not, and `check_programs.py`
-fails on one that is not. Refused in the tests: a number that grows, one that stays, one that could be
+fails on one that is not; `--json` records both, with how the arithmetic was verified and the verifier's own
+files and digests (it was written before the checks of the calls: now last). Refused in the tests: a number that grows, one that stays, one that could be
 below zero, a lemma without the number where another definition of its ring has one. What the first try
 taught: `alike(a, b, at)` reads `b[at]` and so ends, with a value, only where `b` is no shorter than `a`;
 the lemma had to say so (`requires len(a) <= len(b)`), and the public contract already gives both the same
@@ -1020,14 +1021,14 @@ specification. (The hash above does not use them: it has no stack.)
 | `VERIFY.md`, `verify.py` | 100 + 95 | the reader's page; one command: the contract, the verification, and which files of this folder ran to reach it (their lines and digests) |
 | `check_binary.py` | 140 | what a reader runs on the binary, or on what a linker made of it |
 | `programs/` | | six other programs (Sigil a specification only): each its specification and public contract, its Ode source, the compiler's assembly, its proof, a harness for the processor; `check_programs.py`, `test_specs.py`, `bench.c`; `blake3-rust/` |
-| `kbyte.py`, `test_kbyte.py` | 1,280 + 738 | the verifier of those programs (bytes, numbers, places, calls by contract, lemmas); its tests |
-| `varith.py`, `kprove.py`, `test_varith.py` | 90 + 125 + 174 | the arithmetic: the verifier's side (a proof added up; nothing searched for), the prover's side (trusted for nothing), their tests |
+| `kbyte.py`, `test_kbyte.py` | 1,336 + 792 | the verifier of those programs (bytes, numbers, places, calls by contract, lemmas, definitions that come to an end); its tests |
+| `varith.py`, `kprove.py`, `kproof.py`, `test_varith.py` | 90 + 185 + 29 + 174 | the arithmetic: the verifier's side (a proof added up; nothing searched for), the prover's side (the search and the writing of proofs; trusted for nothing), the reading of a proof's form, their tests |
 | `refute.py`, `refute_run.c`, `test_refute.py` | 421 + 145 + 76 | "false, and here is the input": a contract worked out on numbers beside the code run on the processor (a prover's tool); its tests |
 | `kbyte_flip.py`, `kbyte_nop.py` | 117 + 37 | their single-bit audit and every instruction left out, the processor judging |
 | `programs/kpack.py`, `programs/check_file.py`, `programs/test_files.py` | 55 + 78 + 82 | a program as one file with its proof (untrusted); what a reader runs on it, or on what a linker made of it (`--json`: what was checked, for a benchmark's record); tests |
 | `klink.py`, `klink_flip.py`, `test_kbinary.py` | 134 + 72 + 182 | makes the binary of the assembler's objects (untrusted); every single-bit change of what a linker would have written; tests of the reading of a linked file |
 | `check_all.py` | 120 | every function from an assembler's objects, and that the hash's functions end |
-| `ode.py`, `kspec.py`, `klin.py` | 749 + 565 + 282 | the specification's reader; its algebra on symbols; numbers that depend on counts and the facts about them |
+| `ode.py`, `kspec.py`, `klin.py` | 752 + 565 + 249 | the specification's reader; its algebra on symbols; numbers that depend on counts and the facts about them (no search: that is `kprove.py`'s) |
 | `kdecode.py` | 581 | reads the ELF file (an object's sections, names and relocations; a linked file as a loader maps it) and decodes the instruction forms the code uses, and no others; no disassembler |
 | `kfn.py`, `test_kfn.py` | 889 + 131 | the verifier of functions; its tests |
 | `kfn_flip.py`, `khash_native.c` | 133 + 176 | its single-bit audit; the whole hash on a processor against BLAKE3 in C |

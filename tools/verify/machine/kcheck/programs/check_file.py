@@ -17,7 +17,10 @@ looked for by its bytes, and the proof says where each function begins in it.
 
 `--json OUT.json` writes what was checked, for tools that carry it on (a benchmark's record of what it ran):
 the file's and the specification's SHA-256, whether the specification is the maker's, and for each function
-its name, where it is, its length in bytes, its instructions, its contract's text and the verdict."""
+its name, where it is, its length in bytes, its instructions, its contract's text and the verdict; how the
+arithmetic was verified (by the proofs the file carries, or searched for); the definitions that use themselves
+and those of them not shown to come to an end; and the verifier itself: each file of it that was loaded, with
+its SHA-256, and one SHA-256 over that list (`verifier_sha256`: what "verified" was said by)."""
 import hashlib, json, os, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
@@ -96,11 +99,24 @@ def main():
         said = "meets its public contract" if symbol in public else "meets its contract (a step of the proof)"
         record.append(dict(name=symbol, verdict=said, calls=calls[symbol], at=s.lo + s.at[symbol], bytes=rows[-1][1] - rows[0][0], instructions=len(rows), places=places.count("place +"), contract=contract_text(symbol)))
         print(f"  {symbol:<18} at {s.lo + s.at[symbol]:#8x}  {len(rows):>4} instructions  {places.count('place +')} places  {1000 * (time.time() - t0):7.1f} ms  {said}" + (f"; calls {', '.join(calls[symbol])} by contract" if calls[symbol] else ""))
-    if "--json" in sys.argv:
+    def write_record():
+        """--json: written last, when every check has had its say (it was written before the checks of the calls
+        until November 16, 2026: a file with a ring of calls had `shown: true` in its record beside "NOT shown")."""
+        if "--json" not in sys.argv: return
+        here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        ran = []
+        for mod in sorted(sys.modules.values(), key=lambda m: getattr(m, "__file__", None) or ""):
+            p = getattr(mod, "__file__", None)
+            if p and os.path.abspath(p).startswith(here + os.sep) and p.endswith(".py"):
+                with open(p, "rb") as g: ran.append(dict(file=os.path.relpath(os.path.abspath(p), here), sha256=hashlib.sha256(g.read()).hexdigest()))
+        again, open_ = kbyte.ends(spec)
         with open(sys.argv[sys.argv.index("--json") + 1], "w") as f:
             json.dump(dict(file=os.path.basename(path), file_sha256=hashlib.sha256(e.b).hexdigest(), kind=kind, specification=os.path.basename(spec_path),
                            specification_sha256=hashlib.sha256(text.encode()).hexdigest(), specification_is_the_makers=same, proof=("the file's own section" if given is None else "given beside the file"),
-                           functions=record, shown=not failed), f, indent=1)
+                           functions=record, shown=not failed,
+                           arithmetic=("searched for by the verifier" if searched else "by the proofs the file carries, verified by adding up"), arithmetic_searched_for=sorted(searched),
+                           definitions_that_use_themselves=again, of_them_not_shown_to_end=open_,
+                           verifier=ran, verifier_sha256=hashlib.sha256("".join(f"{r['sha256']}  {r['file']}\n" for r in ran).encode()).hexdigest()), f, indent=1)
     # every function called is one of those checked here; and none is called by what it calls
     for symbol, called in calls.items():
         for name in called:
@@ -109,6 +125,7 @@ def main():
         if symbol in above: return True
         return any(rings(name, above | {symbol}) for name in calls.get(symbol, ()))
     if any(rings(symbol, frozenset()) for symbol in calls): failed += 1; print("  a function is called by what it calls: nothing here shows such calls come to an end")
+    write_record()
     if failed: print(f"NOT shown ({failed} of {len(wanted)} failed)"); return 1
     print("the specification: " + kbyte.ends_line(spec))
     print("the arithmetic: " + ("every fact by a proof the file carries, verified by adding up (varith.py); nothing was searched for" if not searched else

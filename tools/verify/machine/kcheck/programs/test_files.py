@@ -6,7 +6,7 @@
 Each file meets its specification's public contracts; the proof it carries is the folder's, made with the
 folder's specification; a proof with a line left out, or of other code, is refused; a reader with another
 specification is told so."""
-import hashlib, os, subprocess, sys, tempfile, unittest
+import hashlib, json, os, subprocess, sys, tempfile, unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
 import check_binary, kdecode
@@ -50,7 +50,10 @@ class Files(unittest.TestCase):
             with tempfile.TemporaryDirectory() as d:
                 path = os.path.join(d, "p")
                 with open(path, "wb") as f: f.write(carried.replace(head + inner, b"file unframe.inner %d\n" % len(new) + new))
-                return run(obj, spec, "--proof", path)
+                code, out = run(obj, spec, "--proof", path, "--json", os.path.join(d, "record.json"))
+                if os.path.exists(os.path.join(d, "record.json")):
+                    with open(os.path.join(d, "record.json")) as f: self.assertEqual(json.load(f)["shown"], code == 0, out)   # the record says what the program said
+                return code, out
         # the proof's part cannot give the public function another contract, nor a definition another meaning
         for extra in (b"contract ode_unframe(out: cap bytes, cap: number, input: n bytes, n: number) {\n    requires apart(out, input)\n    returns r\n    writes out\n    trace depends on input\n    stack 184\n}\n", b"def be32(b) { 0 }\n"):
             code, out = with_inner(inner + extra)
@@ -63,6 +66,24 @@ class Files(unittest.TestCase):
         # a proof with no contract for a function called
         code, out = with_inner(inner[:inner.index(b"contract ode_adler32_blocks4")])
         self.assertEqual(code, 1, out); self.assertIn("ode_unframe: NOT shown", out)
+
+    def test_the_record_says_how_and_by_what(self):
+        """--json: how the arithmetic was verified, which definitions use themselves and whether they end, and the
+        verifier's own files with their digests."""
+        obj, _ = self.paths("lz4")
+        with tempfile.TemporaryDirectory() as d:
+            for extra, how, searched in (((), "by the proofs the file carries, verified by adding up", 0), (("--search",), "searched for by the verifier", 3)):
+                code, out = run(obj, "--json", os.path.join(d, "r.json"), *extra)
+                self.assertEqual(code, 0, out)
+                with open(os.path.join(d, "r.json")) as f: r = json.load(f)
+                self.assertTrue(r["shown"]); self.assertEqual(r["arithmetic"], how); self.assertEqual(len(r["arithmetic_searched_for"]), searched)
+                self.assertEqual((r["definitions_that_use_themselves"], r["of_them_not_shown_to_end"]), (["counted", "match", "sequences"], []))
+                files = {x["file"]: x["sha256"] for x in r["verifier"]}
+                for name in ("kbyte.py", "ode.py", "klin.py", "varith.py", "kdecode.py", "programs/check_file.py"):
+                    with open(os.path.join(os.path.dirname(HERE), name), "rb") as f: self.assertEqual(files[name], hashlib.sha256(f.read()).hexdigest(), name)
+                self.assertEqual("kprove.py" in files, bool(extra))                      # the search is loaded only where it is asked for
+                self.assertNotIn("check_binary.py", files); self.assertNotIn("kloop.py", files); self.assertNotIn("kone.py", files)
+                self.assertEqual(r["verifier_sha256"], hashlib.sha256("".join(f"{x['sha256']}  {x['file']}\n" for x in r["verifier"]).encode()).hexdigest())
 
     def test_the_proof_carried_is_the_folders(self):
         for name in NAMES:
