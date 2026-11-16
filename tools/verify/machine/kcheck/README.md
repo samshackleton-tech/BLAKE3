@@ -985,7 +985,7 @@ definition gave int").
 In files the running audit covers, this changed the three drivers' lines (`check_binary.py`,
 `programs/check_file.py`, `programs/check_programs.py`: what is printed and the exit status in the case
 above), and one check in `kbyte.py`'s `prove_lemmas` (the kind). `kends.py` is new. The part of the audit
-that covers `kbyte.py` is run again for it.
+that covers `kbyte.py` was run again for it, on the head: nothing moved.
 
 **How long a verification takes, and where.** `b3hashr.o`: 16 s under CPython 3.14, 7.6 s under PyPy 3.12
 (the same files, the same verdict; the short verifications of `programs/` gain nothing from PyPy: 3.1 s
@@ -1334,9 +1334,11 @@ same for every input.
 single-bit changes in all, 18,069 accepted, each of those as its specification on the processor, none
 without a verdict (900 s a change at most). But for `ode_utf8` (36 more accepted) every count of the flips
 is what it was in the run before, at `0a24723d`. After that commit `kbyte.py` got one more check (the kind a
-lemma says) and three drivers a line: the part of the audit that covers `kbyte.py` is being run again on
-the head, and `audit/` is brought up to it when it ends; see the end of "Programs other than the hash".
-The lemmas have an audit of their own there.)
+lemma says) and three drivers a line: so the part of the audit that covers `kbyte.py` was run again on the
+head (`sh audit.sh 36 programs` at `aea4e440`): the twelve functions' 56,040 changes and 3,551 accepted,
+the seven functions with each instruction left out, the shipped files, each count as in the whole run;
+and in the same run the lemmas' audit and the prover's (see the end of "Programs other than the hash").
+`audit/` holds the whole run's outputs for the hash and that run's for the rest.)
 
 1. **Changed kernels** (`--mutants`): 15 of 15 refused (rotations, operands, the carry's mask, a message offset,
    a store's offset, a shuffle, a flag, a saved register, the frame's bound, the block step, one entry of the

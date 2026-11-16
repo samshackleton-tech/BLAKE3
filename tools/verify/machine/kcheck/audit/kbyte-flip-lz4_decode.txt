@@ -1,5 +1,5 @@
 control: the unchanged object is ACCEPTED 
-ode_lz4_decode: 8608 single-bit changes of 1076 bytes of code (107 s): 4026 stopped by the decoder, 4156 refused, 426 accepted, 0 with NO VERDICT (the time limit)
+ode_lz4_decode: 8608 single-bit changes of 1076 bytes of code (132 s): 4026 stopped by the decoder, 4156 refused, 426 accepted, 0 with NO VERDICT (the time limit)
   accepted: +0x24 byte 0 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .r8) (.imm 0x0)
   accepted: +0x24 byte 2 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rcx) (.imm 0x0)
   accepted: +0x24 byte 2 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rdx) (.imm 0x0)
@@ -428,4 +428,4 @@ ode_lz4_decode: 8608 single-bit changes of 1076 bytes of code (107 s): 4026 stop
   accepted: +0x3F7 byte 1 bit 6: .jmp 0x10075  ->  .jmp 0x10035
 control: the unchanged object on this processor (3000 full): same
 the 426 accepted changes on this processor: 426 same
-for scale, 300 of the changes stopped or refused, on this processor: 162 CRASHES, 103 DIFFERS, 35 same
+for scale, 300 of the changes stopped or refused, on this processor: 161 CRASHES, 104 DIFFERS, 35 same

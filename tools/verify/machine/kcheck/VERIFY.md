@@ -60,9 +60,10 @@ file; the verifier uses them and trusts none of them. A wrong one makes the veri
   not the prover that found the proof: the verifier reads the bytes that will run.
 
 What the audits are (`README.md`, "What has been done to find it wrong"): every single bit of every
-function's code is changed in turn, 353,192 changes; each change the verifier still accepts is run on a
-processor against an independent implementation. None accepted so far behaves otherwise. That is evidence,
-not proof.
+function's code is changed in turn, 353,192 changes; each change the verifier still accepts (18,069) is
+run on a processor against an independent implementation. None accepted so far behaves otherwise. The
+lemmas have an audit of their own: each changed in one place, and each specification they speak of
+changed in one place, judged by the specification worked out on numbers. That is evidence, not proof.
 
 ## If it says NOT shown
 
