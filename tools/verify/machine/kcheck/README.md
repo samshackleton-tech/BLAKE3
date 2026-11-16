@@ -820,9 +820,8 @@ refusals. And what `kbyte.py` still lacks, each found by a program that wanted i
 
 - one verifier of functions (`kfn.py` and `kbyte.py` both follow calls now, each with its own kind of memory);
 - tables of constants beside the code, and multiplication in Ode (Sigil);
-- lemmas a prover finds: the four of LZ4 were written by hand (the form: a contract of a definition, shown
-  by one opening). `common.spec` is still a walk over the two runs and not "the least place they differ";
-  with a lemma it could be the latter;
+- lemmas of other shapes than the few `kguess.py` tries (below: it finds LZ4's four, and the numbers that
+  decrease; a lemma that needs a new shape is still written by hand);
 - reads and writes of more than a byte at a time, for speed;
 - joining paths that have come to the same state (base 64). (A specification's question the code's path
   does not answer is now taken both ways where it asks whether something has a value; a comparison of two
@@ -914,10 +913,21 @@ in 6, 1 and 31 tries; LZ4's two rings in 246 (1.8 s); **BLAKE3's tree in 1,786 t
 lemmas as the ones written by hand, and the three that say nothing.** What it cannot find it says
 (`f(a, n) = f(a, n)`: "no number found").
 
+**And what a lemma ensures** (`python3 kguess.py SPEC --whole`: the lemmas from nothing). A few shapes: a
+field or a number not below one the definition was given (or that and one more); a list no shorter than
+one it was given; place k of a sequence k longer than the list it starts from, under `n >= 1` and
+`n <= len(l)`. Each clause is kept if the verifier shows it with the rest; in a ring of two, one clause
+for each together (what one ensures rests on what the other does). **From `lz4.spec` alone it writes the
+four lemmas of the unbent LZ4, clause for clause the ones written by hand, in 273 tries and 1.9 seconds;
+and with what it wrote, in place of `lz4.lemmas`, the decoder, both encoders and the frame's opener are
+shown** (with no lemmas the decoder is refused). For UTF-8 and the common start it also finds what nobody
+had asked (`points`' count is not below the count before; `alike`'s place not below where it began).
+
 It is trusted for nothing: what it prints is a lemma like any other, and the verifier shows it or does
 not. It is here for what it shows about the design: the guessing costs the reader nothing wherever it is
-put, so it is put outside what he relies on. (It does not find what a lemma `ensures`; LZ4's four were
-written by hand.)
+put, so it is put outside what he relies on. The shapes are few and fitted to these programs; the next
+program will want one more, and adding it touches nothing a reader relies on. (The shipped files carry the
+lemmas written by hand: the audit under way is of them.)
 
 ### An audit of the part that shows lemmas (`lemma_audit.py`)
 

@@ -201,7 +201,8 @@ Not done, in the order I would take them:
    definition opened once, its own uses by its own lemma), which is the rule a function that calls itself
    is already verified by. This is what let LZ4's specification be the format's own again: bending a
    specification toward the code is a cost on the reader (he must believe the two say the same), a lemma is
-   a cost on the prover. Not built: a prover that finds lemmas (the four of LZ4 were written by hand).
+   a cost on the prover. A prover that finds them is small: `kguess.py` tries a few shapes and asks the
+   verifier, and writes LZ4's four lemmas from the specification alone (README.md, "A prover that guesses").
 
    **False, with an input (November 16).** `refute.py` works a public contract out on numbers beside the
    binary's code run on a processor, and says FALSE with the input where they differ. It is a prover's tool
