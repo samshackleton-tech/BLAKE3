@@ -113,11 +113,11 @@ class Contract:
         self.writes = set(c["spoils"]) | {leaf["name"] for leaf in c["leaves"] if leaf["name"] != self.result}
         self.held = set(self.writes)                           # what the verifier keeps the bytes of: all it may write
         self.stack, self.trace, self.conditions = c["stack"], set(c["trace"]), c["conditions"]
-        # What is written is taken to be apart from everything else given: the contract must ask it of the caller.
+        # What is written is taken to overlap nothing else given: the contract must ask it of the caller.
         # (Things that are only read may overlap: their bytes are then any bytes, alike or not.)
         addresses = [name for _, kind, name in self.args if kind != "number"]
-        if self.writes and len(addresses) > 1 and sorted(c["apart"] or []) != sorted(addresses):
-            raise Fail(f"{symbol}: the contract does not say `requires apart({', '.join(addresses)})`: what it writes is taken to be apart from the other things it is given")
+        if self.writes and len(addresses) > 1 and sorted(c["no_overlap"] or []) != sorted(addresses):
+            raise Fail(f"{symbol}: the contract does not say `requires no_overlap({', '.join(addresses)})`: what it writes is taken to overlap none of the other things it is given")
         for name in self.writes | self.trace:
             if self.kind.get(name) in (None, "number"): raise Fail(f"{symbol}: {name} is not something at an address among its arguments")
 
@@ -580,13 +580,13 @@ class Machine(kfn.Machine):
                 env[arg] = A.slice(rope, off, plain(off + count))
                 self.public(env[arg], arg)
         # what the callee requires
-        given_apart, ap = set(mine.text["apart"] or ()), c.text["apart"] or []
+        given_apart, ap = set(mine.text["no_overlap"] or ()), c.text["no_overlap"] or []
         for k, x in enumerate(ap):
             for y in ap[k + 1:]:
                 (r1, o1, n1), (r2, o2, n2) = spans[x], spans[y]
                 if r1 == r2:
-                    if not F.ge0(o2 - o1 - n1) and not F.ge0(o1 - o2 - n2): raise Fail(f"{x} and {y} are not shown to be apart")
-                elif r1 not in given_apart or r2 not in given_apart: raise Fail(f"{x} and {y}: this function's own contract does not require {r1} and {r2} to be apart")
+                    if not F.ge0(o2 - o1 - n1) and not F.ge0(o1 - o2 - n2): raise Fail(f"{x} and {y} are not shown to have no byte in common")
+                elif r1 not in given_apart or r2 not in given_apart: raise Fail(f"{x} and {y}: this function's own contract does not require that {r1} and {r2} do not overlap")
         for e in c.text["asks"]:
             for f in order(spec, A, e, env):
                 if not F.ge0(f): raise Fail(f"what {name} requires is not shown here ({f} >= 0)")
@@ -1138,7 +1138,7 @@ def lemma_machine(spec, name, l):
     c = Contract.__new__(Contract)
     c.name, c.spec, c.args, c.kind, c.result = "lemma " + name, spec, [], {}, None
     c.writes, c.held, c.trace, c.stack, c.conditions = set(), set(), {p for p, k in l["params"] if k == "bytes"}, 0, []
-    c.text = dict(asks=[], apart=None, leaves=[], returns=None, spoils=[])
+    c.text = dict(asks=[], no_overlap=None, leaves=[], returns=None, spoils=[])
     m = Machine(kcheck.Terms(), [], c)
     args = []
     for p, kind in l["params"]:

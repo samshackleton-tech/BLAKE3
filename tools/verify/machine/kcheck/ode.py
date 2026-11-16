@@ -237,18 +237,18 @@ class Parser:
         self.take("("); args = []
         while not self.maybe(")"):
             arg = self.take(kind="name"); self.take(":"); args.append((arg, self.kind())); self.maybe(",")
-        c = dict(args=args, asks=[], given=[], leaves=[], spoils=[], returns=None, stack=None, calls=[], needs=[], decreases=None, apart=None, trace=[], conditions=[])
+        c = dict(args=args, asks=[], given=[], leaves=[], spoils=[], returns=None, stack=None, calls=[], needs=[], decreases=None, no_overlap=None, trace=[], conditions=[])
         self.take("{")
         def once(what, key):
             # said twice, the second would silently be the one meant
             if c[key] is not None: raise Err(f"line {self.t[self.i - 1][2]}: a contract says `{what}` once")
         while not self.maybe("}"):
             clause = self.take(kind="name")
-            if clause == "requires" and self.t[self.i][:2] == ("name", "apart") and self.t[self.i + 1][1] == "(":
-                # requires apart(a, b, ...): the things at those addresses do not overlap one another
-                once("requires apart(...)", "apart")
-                self.take(); self.take("("); c["apart"] = []
-                while not self.maybe(")"): c["apart"].append(self.take(kind="name")); self.maybe(",")
+            if clause == "requires" and self.t[self.i][:2] == ("name", "no_overlap") and self.t[self.i + 1][1] == "(":
+                # requires no_overlap(a, b, ...): the things at those addresses do not overlap one another
+                once("requires no_overlap(...)", "no_overlap")
+                self.take(); self.take("("); c["no_overlap"] = []
+                while not self.maybe(")"): c["no_overlap"].append(self.take(kind="name")); self.maybe(",")
             elif clause == "requires":
                 e = self.expr()
                 if self.maybe("for"):

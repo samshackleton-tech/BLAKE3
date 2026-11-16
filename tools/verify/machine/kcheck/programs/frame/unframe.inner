@@ -1,7 +1,7 @@
 // The contracts of the two functions `ode_unframe` calls: steps of the proof, not read by the auditor. Each is
 // the public contract its own file has (lz4.spec, adler32.spec), and each function is checked against it.
 contract ode_lz4_decode(out: cap bytes, cap: number, input: n bytes, n: number) {
-    requires apart(out, input)
+    requires no_overlap(out, input)
     requires n < 72057594037927936
     returns if failed(lz4(input)) || len(lz4(input)) > cap then NO else len(lz4(input))
     ensures out[0 .. len(lz4(input))] = lz4(input) if !failed(lz4(input)) && len(lz4(input)) <= cap

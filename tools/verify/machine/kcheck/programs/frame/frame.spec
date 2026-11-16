@@ -80,7 +80,7 @@ def unframe(bytes) {
 // something of no more than `cap` bytes, the function returns how many bytes that is, and they are at
 // `out`; where it holds nothing, or more than the room, it returns NO. (cap < NO: so that NO is no count.)
 contract ode_unframe(out: cap bytes, cap: number, input: n bytes, n: number) {
-    requires apart(out, input)
+    requires no_overlap(out, input)
     requires n < 72057594037927936
     requires cap < NO
     returns if failed(unframe(input)) || len(unframe(input)) > cap then NO else len(unframe(input))

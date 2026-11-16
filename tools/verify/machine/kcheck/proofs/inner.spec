@@ -76,14 +76,14 @@ contract blake3_servil_compress_in_place_sse41(h: cv, m: block, length: word, t:
 // The hash of a message, written to be proved (hash.ode): a chunk's node and its value, and the tree by the
 // specification's own two parts.
 contract b3l_pad(block: 64 bytes, src: n bytes, n: number) {
-    requires apart(block, src)
+    requires no_overlap(block, src)
     requires n <= 64
     ensures block = padded(src)
     stack 48
 }
 
 contract b3l_chunk_node(nd: node120, input: len bytes, len: number, t: number, flags: byte, plat: any) {
-    requires apart(nd, input)
+    requires no_overlap(nd, input)
     requires len <= 1024
     ensures nd = chunk_node(nd.h, t, flags, input)
     stack 256
@@ -92,7 +92,7 @@ contract b3l_chunk_node(nd: node120, input: len bytes, len: number, t: number, f
 }
 
 contract b3l_node_out(out: cv, nd: node120, root: byte, plat: any) {
-    requires apart(out, nd)
+    requires no_overlap(out, nd)
     ensures out = node_value(nd, root)
     stack 128
     needs sse41
@@ -100,7 +100,7 @@ contract b3l_node_out(out: cv, nd: node120, root: byte, plat: any) {
 }
 
 contract b3l_wide32(out: cv, input: 32768 bytes, kf: keyed, t: number) {
-    requires apart(out, input, kf)
+    requires no_overlap(out, input, kf)
     requires 1024 * t + 32768 <= 18446744073709551615
     ensures out = subtree(kf.key, kf.flags, t, input)
     stack 8192
@@ -108,7 +108,7 @@ contract b3l_wide32(out: cv, input: 32768 bytes, kf: keyed, t: number) {
 }
 
 contract b3l_wide128(out: cv, input: 131072 bytes, kf: keyed, t: number) {
-    requires apart(out, input, kf)
+    requires no_overlap(out, input, kf)
     requires 1024 * t + 131072 <= 18446744073709551615
     ensures out = subtree(kf.key, kf.flags, t, input)
     stack 16384
@@ -117,7 +117,7 @@ contract b3l_wide128(out: cv, input: 131072 bytes, kf: keyed, t: number) {
 
 // `cvs`: the address of chaining values, one after another, of which the contract says what each is.
 contract b3l_take(out: cv, input: len bytes, len: number, kf: keyed, t: number, cvs: cvs) {
-    requires apart(out, input, kf, cvs)
+    requires no_overlap(out, input, kf, cvs)
     requires len >= 1
     requires 1024 * t + len <= 18446744073709551615
     requires cvs[i] == node_value(chunk_node(kf.key, t + i, kf.flags, input[1024 * i .. 1024 * i + 1024]), 0) for i in 0..len / 1024
@@ -129,7 +129,7 @@ contract b3l_take(out: cv, input: len bytes, len: number, kf: keyed, t: number, 
 }
 
 contract b3l_part32(out: cv, input: len bytes, len: number, kf: keyed, t: number) {
-    requires apart(out, input, kf)
+    requires no_overlap(out, input, kf)
     requires len >= 1025
     requires len <= 32768
     requires 1024 * t + len <= 18446744073709551615
@@ -140,7 +140,7 @@ contract b3l_part32(out: cv, input: len bytes, len: number, kf: keyed, t: number
 }
 
 contract b3l_subtree(out: cv, input: len bytes, len: number, kf: keyed, t: number, plat: any) {
-    requires apart(out, input, kf)
+    requires no_overlap(out, input, kf)
     requires len >= 1
     requires 1024 * t + len <= 18446744073709551615
     ensures out = subtree(kf.key, kf.flags, t, input)

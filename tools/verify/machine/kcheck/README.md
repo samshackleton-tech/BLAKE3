@@ -58,7 +58,7 @@ their constants, their names, the specification, the proof, and nothing for a li
 Apple M6 that `b3l_hashr` in that file meets its public contract:
 
     contract b3l_hashr(out: 32 bytes, input: len bytes, len: number, key: 32 bytes, flags: byte, plat: any) {
-        requires apart(out, input, key)
+        requires no_overlap(out, input, key)
         ensures out = bytes_of(hash_words(words(key), flags, input))
         stack 18688 + 384 * bits(len / 1024)
         needs sse41
@@ -251,8 +251,8 @@ a machine of the specification and what the registers and the memory hold for an
 prover that comes to the loop three times. When the hash was written as the specification's own recursion no
 loop needed a place, and that part of the verifier was taken out.)
 
-At a call the verifier also shows that what the callee writes is apart from everything else the callee is
-given the address of (the callee's own check took them to be apart), and that what the callee needs of the
+At a call the verifier also shows that what the callee writes overlaps nothing else the callee is
+given the address of (the callee's own check took it so), and that what the callee needs of the
 processor the caller's contract allows there.
 
 **What was done to find it wrong**, as for the kernels below:
@@ -424,7 +424,7 @@ hashes.)
 
 **What was done to find it wrong.** `test_kbinary.py`: the object and the same bytes under a program header
 give the same instructions; a part with leave to write, with no leave to run, off its page, longer in
-memory, sharing a page, or apart from the others stops the reading; `TEXTREL` stops it; a name given to two
+memory, sharing a page, or not side by side with the others stops the reading; `TEXTREL` stops it; a name given to two
 places is not found, and a call to it stops; each of `node_out`'s two calls sent to each of the other
 thirteen names is refused, but for one that is no fault (the AVX-512 kernel's call sent to the SSE4.1
 kernel: where the first may be run so may the second, and they give the same). `klink_flip.py`: every
@@ -1447,13 +1447,13 @@ an 8-bit `or` read as 32 bits.
   `kglue.py`, 569 (their provers, about 150 of those, need no trust). And Python.
 - No assembler and no linker, when the file checked is the file run (`check_binary.py`). A loader that
   maps the file as its program headers say, and nothing else in the process writing over the code.
-- That the things `hashr` is given the addresses of are apart from one another and from the stack (the
+- That the things `hashr` is given the addresses of overlap neither one another nor the stack (the
   public contract's `requires`: its caller's part).
 - The inner contracts (`proofs/inner.spec`, or the file's own section) are not relied on: a wrong one makes
   the verifier refuse the function it is of, or a function that calls it. Nor are a program's places.
 - For the wide kernels with a number of blocks other than those they are called with here: what is shown
   is what holds if they return.
-- That the regions are apart (the contract's own condition: the stack and the output apart from everything).
+- That the regions do not overlap (the contract's own condition: the stack and the output overlap nothing else).
 - One arithmetic fact taken as the specification's form of a lane's counter: low word + index, high word + carry.
   Lean proves it equal to the 64-bit counter plus the index (`lang/K32Lemmas.lean`, `counter_lo`, `counter_hi`);
   the processor runs of item 5 put a quarter of their cases just below a carry.

@@ -221,10 +221,10 @@ class Machine:
         self.mem = {"frame": {0: (8, "q", ("q", "return address"))}}
         self.readonly, self.given = set(), {}
         self.low, self.pc, self.steps, self.back = 0, None, 0, {}
-        # the things at the addresses given are taken to be apart: the contract must ask it of the caller
+        # the things at the addresses given are taken not to overlap: the contract must ask it of the caller
         addresses = [name for _, kind, name in c.args if kind not in ("number", "byte", "any")]
-        if len(addresses) > 1 and sorted(c.text["apart"] or []) != sorted(addresses):
-            raise Fail(f"{c.name}: the contract does not say `requires apart({', '.join(addresses)})`: the things at the addresses it is given are taken to be apart")
+        if len(addresses) > 1 and sorted(c.text["no_overlap"] or []) != sorted(addresses):
+            raise Fail(f"{c.name}: the contract does not say `requires no_overlap({', '.join(addresses)})`: the things at the addresses it is given are taken not to overlap")
         A = self.A()
         for reg, kind, name in c.args:               # numbers first: a count of bytes may be named before it is given
             if kind == "number":
@@ -572,14 +572,14 @@ class Machine:
             if not ((passed == ("q", mine[0]) and cond[1] == mine[1]) or (passed[0] == "n" and passed[1] != cond[1])):
                 raise Fail(f"{name} needs {feature} if its {cond[0]} is {cond[1]}: what it is given for {cond[0]} is not shown to be so only where {mine[0]} is {mine[1]}")
 
-    def apart(self, name, written, others):
-        """What a callee writes is apart from everything else it is given the address of: its own check took
-        them to be. (region, offset, bytes); things of different regions are apart."""
+    def no_overlap(self, name, written, others):
+        """What a callee writes overlaps nothing else it is given the address of: its own check took
+        it so. (region, offset, bytes); things of different regions do not overlap."""
         for region, off, size in written:
             for r, o, n in others:
                 if r != region: continue
                 if isinstance(off, Lin) or isinstance(o, Lin) or isinstance(size, Lin) or isinstance(n, Lin) or size is None or n is None:
-                    raise Fail(f"{name}: what it writes and something else it is given are both in {region}, and are not shown to be apart")
+                    raise Fail(f"{name}: what it writes and something else it is given are both in {region}, and are not shown to have no byte in common")
                 if off < o + n and o < off + size: raise Fail(f"{name}: what it writes at {region} + {off} lies across something else it is given, at {region} + {o}")
 
     def told(self, A, name, c, clause, at, env):
@@ -613,7 +613,7 @@ class Machine:
         counter, length, flags). Where the kernel reads the length and the flags from is its contract's."""
         cv, block, length, counter, flags = (self.g[r] for r in ARGS[:5])
         if cv[0] != "a" or block[0] != "a": raise Fail(f"{name} called with something that is not an address")
-        self.apart(name, [(cv[1], cv[2], 32)], [(block[1], block[2], 64)])
+        self.no_overlap(name, [(cv[1], cv[2], 32)], [(block[1], block[2], 64)])
         h, m = self.view(cv[1], cv[2], "cv"), self.view(block[1], block[2], "block")
         if lin(length) is None or lin(counter) is None: raise Fail(f"{name} called with a length or a counter that is not a number: {length}, {counter}")
         top = 255 if k["length"] == "low byte" else (1 << 32) - 1
@@ -686,7 +686,7 @@ class Machine:
             else: spans[arg] = [(a[1], a[2], count if n is not None else size_of(kind))]
             later[arg] = (lambda a=a, kind=kind, count=count: self.view(a[1], a[2], kind, count))
             if arg not in c.writes and n is not None: later[arg]()             # bytes given to read are there to be read
-        for arg in c.writes: self.apart(name, spans[arg], [s for other, ss in spans.items() if other != arg for s in ss])
+        for arg in c.writes: self.no_overlap(name, spans[arg], [s for other, ss in spans.items() if other != arg for s in ss])
         env = Env(v, later)
         if name == self.contract.name: self.lessens(A, name, c, env)
         for arg, clause in c.given.items(): self.told(A, name, c, clause, where[arg], env)

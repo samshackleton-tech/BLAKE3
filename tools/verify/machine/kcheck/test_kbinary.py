@@ -199,7 +199,7 @@ class Binary(unittest.TestCase):
         with open(os.path.join(HERE, "b3hashr.o"), "rb") as f: c = kdecode.Elf(f.read()).bytes_of(".ode.proof")
         m = re.search(rb"file proofs/inner.spec (\d+)\n", c)
         n = int(m.group(1))
-        weaker = b"\ncontract b3l_hashr(out: 32 bytes, input: len bytes, len: number, key: 32 bytes, flags: byte, plat: any) {\n    requires apart(out, input, key)\n    writes out\n    stack 18688 + 384 * bits(len / 1024)\n    needs sse41\n    needs avx512 if plat == 5\n}\n"
+        weaker = b"\ncontract b3l_hashr(out: 32 bytes, input: len bytes, len: number, key: 32 bytes, flags: byte, plat: any) {\n    requires no_overlap(out, input, key)\n    writes out\n    stack 18688 + 384 * bits(len / 1024)\n    needs sse41\n    needs avx512 if plat == 5\n}\n"
         for extra in (weaker, b"\nconst ROOT = 0\n", b"\ndef round(v, m) { v }\n", b"\ndef bits(n) { 1000000 }\n", b"\ndef len(x) { 0 }\n", b"\nlayout key 8 { a: number at 0 }\n", b"\nconst input = 1\n"):
             with tempfile.TemporaryDirectory() as d:
                 path = os.path.join(d, "p")

@@ -184,7 +184,7 @@ class Lz4Decode(unittest.TestCase):
             ("&& len(lz4(input)) <= cap", "&& len(lz4(input)) <= cap + 1"), ("|| len(lz4(input)) > cap then", "|| len(lz4(input)) >= cap then"), ("|| len(lz4(input)) > cap then", "|| len(lz4(input)) > cap + 1 then"),
             ("returns if failed(lz4(input)) || len(lz4(input)) > cap then NO", "returns if failed(lz4(input)) then NO"), ("returns if failed(lz4(input)) || len(lz4(input)) > cap then NO", "returns if len(lz4(input)) > cap then NO"),
             ("if !failed(lz4(input)) && len(lz4(input)) <= cap", "if !failed(lz4(input))"), ("if !failed(lz4(input)) && len(lz4(input)) <= cap", "if len(lz4(input)) <= cap"),
-            ("    requires n < 72057594037927936\n", ""), ("    trace depends on input\n    stack 104", "    stack 104"), ("stack 104", "stack 96"), ("    requires apart(out, input)\n    requires n <", "    requires n <"),
+            ("    requires n < 72057594037927936\n", ""), ("    trace depends on input\n    stack 104", "    stack 104"), ("stack 104", "stack 96"), ("    requires no_overlap(out, input)\n    requires n <", "    requires n <"),
             ("ode_lz4_decode(out: cap bytes, cap: number, input: n bytes", "ode_lz4_decode(out: cap bytes, cap: number, input: cap bytes"), ("ode_lz4_decode(out: cap bytes, cap: number, input: n bytes", "ode_lz4_decode(out: n bytes, cap: number, input: n bytes")])
 
     def test_a_proof_without_one_of_its_lines_is_refused(self):
@@ -234,7 +234,7 @@ class Frame(unittest.TestCase):
         self.assertEqual(self.p.verdict(), "accepted")
 
     def test_no_line_of_the_public_contract_can_go(self):
-        for line in ("    requires apart(out, input)\n    requires n < 72057594037927936\n    requires cap < NO\n", "    requires n < 72057594037927936\n    requires cap < NO\n",
+        for line in ("    requires no_overlap(out, input)\n    requires n < 72057594037927936\n    requires cap < NO\n", "    requires n < 72057594037927936\n    requires cap < NO\n",
                      "    requires cap < NO\n", "    trace depends on input\n    stack 184\n"):
             self.assertEqual(self.p.spec.count(line), 1, line)
             first = line.split("\n")[0] + "\n"
@@ -655,7 +655,7 @@ class Base64(unittest.TestCase):
             ("if at == len(bytes) then []", "if at == len(bytes) then [61]"), ("else if at + 1 == len(bytes) then", "else if at + 2 == len(bytes) then"),
             (whole, "groups(bytes)[len(bytes) / 3]"), (whole, "groups(bytes)[len(bytes) / 3] ++ rest(bytes, len(bytes))"),
             # the room is the caller's to give: not left out, not a letter less; and the count is of all the letters
-            ("    requires apart(out, input)\n", ""), ("    requires cap >= 4 * ((n + 2) / 3)\n", ""), ("requires cap >= 4 * ((n + 2) / 3)", "requires cap >= 4 * ((n + 2) / 3) - 1"), ("requires cap >= 4 * ((n + 2) / 3)", "requires cap >= 4 * (n / 3)"),
+            ("    requires no_overlap(out, input)\n", ""), ("    requires cap >= 4 * ((n + 2) / 3)\n", ""), ("requires cap >= 4 * ((n + 2) / 3)", "requires cap >= 4 * ((n + 2) / 3) - 1"), ("requires cap >= 4 * ((n + 2) / 3)", "requires cap >= 4 * (n / 3)"),
             ("returns 4 * ((n + 2) / 3)", "returns 4 * (n / 3)"), ("returns 4 * ((n + 2) / 3)", "returns 4 * ((n + 2) / 3) + 1"),
             ("ensures out[0 .. 4 * ((n + 2) / 3)] = base64(input)", "ensures out[0 .. 4 * ((n + 2) / 3)] = base64(input) ++ [61]"),
             ("    trace depends on input\n", ""), ("stack 120", "stack 112")])

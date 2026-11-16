@@ -22,7 +22,7 @@ extern "C" {
 
 fn pack(input: &[u8], d: u64) -> Vec<u8> {
     let mut out = vec![0u8; input.len() + input.len() / 255 + 16];
-    // SAFETY: the contract's `requires`: out and input are apart, cap is below NO, d is 1 to 65535.
+    // SAFETY: the contract's `requires`: out and input do not overlap, cap is below NO, d is 1 to 65535.
     let r = unsafe { ode_lz4_pack(out.as_mut_ptr(), out.len() as u64, input.as_ptr(), input.len() as u64, d) };
     assert!(r != NO, "the contract says it does not say NO with this much room");
     out.truncate(r as usize);
@@ -31,7 +31,7 @@ fn pack(input: &[u8], d: u64) -> Vec<u8> {
 
 fn store(input: &[u8]) -> Vec<u8> {
     let mut out = vec![0u8; input.len() + input.len() / 255 + 16];
-    // SAFETY: out and input are apart, cap is below NO.
+    // SAFETY: out and input do not overlap, cap is below NO.
     let r = unsafe { ode_lz4_store(out.as_mut_ptr(), out.len() as u64, input.as_ptr(), input.len() as u64) };
     assert!(r != NO);
     out.truncate(r as usize);
@@ -40,7 +40,7 @@ fn store(input: &[u8]) -> Vec<u8> {
 
 fn unpack(block: &[u8], cap: usize) -> Option<Vec<u8>> {
     let mut out = vec![0u8; cap];
-    // SAFETY: out and block are apart; the block is shorter than 2^56 bytes. Nothing is asked of its bytes.
+    // SAFETY: out and block do not overlap; the block is shorter than 2^56 bytes. Nothing is asked of its bytes.
     let r = unsafe { ode_lz4_decode(out.as_mut_ptr(), cap as u64, block.as_ptr(), block.len() as u64) };
     if r == NO { return None; }
     out.truncate(r as usize);

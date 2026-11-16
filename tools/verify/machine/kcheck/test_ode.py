@@ -90,11 +90,11 @@ class Ode(unittest.TestCase):
                      "sequence s(a) { h[1] = a  h[b + 1] = h[b]  for b in 0..2 }", "sequence s(a) { h[0] = a  h[b + 1] = h  for b in 0..2 }"):
             with self.assertRaises(ode.Err, msg=text):
                 ode.Spec(text)
-        # a contract says its stack, what it returns, what is apart and what decreases once: of two, one would be dropped
-        for twice in ("stack 8\n stack 16", "returns 1\n returns 2\n stack 8", "requires apart(a, b)\n requires apart(a, b)\n returns 1\n stack 8", "decreases n\n decreases n\n returns 1\n stack 8"):
+        # a contract says its stack, what it returns, what does not overlap and what decreases once: of two, one would be dropped
+        for twice in ("stack 8\n stack 16", "returns 1\n returns 2\n stack 8", "requires no_overlap(a, b)\n requires no_overlap(a, b)\n returns 1\n stack 8", "decreases n\n decreases n\n returns 1\n stack 8"):
             with self.assertRaises(ode.Err, msg=twice):
                 ode.Spec("contract f(a: 4 bytes, b: 4 bytes, n: number) {\n writes a\n " + twice + "\n}")
-        ode.Spec("contract f(a: 4 bytes, b: 4 bytes, n: number) {\n writes a\n requires apart(a, b)\n returns 1\n decreases n\n stack 8\n}")
+        ode.Spec("contract f(a: 4 bytes, b: 4 bytes, n: number) {\n writes a\n requires no_overlap(a, b)\n returns 1\n decreases n\n stack 8\n}")
         spec = ode.Spec("def f(x) { x + nothing }\ndef g(x) { word(1) * 2 }\ndef h(x) { [1, 2][x] }")
         for name in ("f", "g"):
             with self.assertRaises(ode.Err, msg=name):

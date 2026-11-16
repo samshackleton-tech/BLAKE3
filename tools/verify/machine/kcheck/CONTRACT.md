@@ -23,8 +23,8 @@ as many as the number `len`, another argument). The number a function returns is
 specification a number is of any size and never wraps: LANGUAGE.md. It is only an argument or a result
 that a register bounds.)
 
-**`requires`**: what the caller makes true. `requires apart(a, b, ...)`: the things at those addresses do not
-overlap one another. One thing is required of every caller and not written: the stack is the machine's own,
+**`requires`**: what the caller makes true. `requires no_overlap(a, b, ...)`: no two of the things at those addresses have a
+byte in common. One thing is required of every caller and not written: the stack is the machine's own,
 and nothing an argument addresses lies in it. Of a call that does not keep these, nothing is said.
 
 **If the caller does that, the function returns**, and then:

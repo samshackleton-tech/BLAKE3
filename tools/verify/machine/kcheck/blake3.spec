@@ -151,7 +151,7 @@ def iv_words() { [word(IV[i]) for i in 0..8] }
 //
 //   The arguments are in the registers of the calling convention, in the order written (rdi, rsi, rdx, rcx,
 //   r8, r9). An argument is a number, or the address of something in memory.
-//   `requires`: what the caller makes true. `requires apart(a, b, ...)`: the things at those addresses do
+//   `requires`: what the caller makes true. `requires no_overlap(a, b, ...)`: the things at those addresses do
 //   not overlap one another. The stack is the machine's own: none of them lies in it.
 //
 //   If the caller does that, the function returns, and then:
@@ -177,7 +177,7 @@ def iv_words() { [word(IV[i]) for i in 0..8] }
 // reader of this contract need not read those: if one were wrong, the verifier would refuse the function it
 // is of, or the function that relies on it.
 contract b3l_hashr(out: 32 bytes, input: len bytes, len: number, key: 32 bytes, flags: byte, plat: any) {
-    requires apart(out, input, key)
+    requires no_overlap(out, input, key)
     ensures out = bytes_of(hash_words(words(key), flags, input))
     stack 18688 + 384 * bits(len / 1024)
     needs sse41

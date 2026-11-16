@@ -65,7 +65,7 @@ const NO = 18446744073709551615
 // (The `requires` on n: the block is less than 2^56 bytes, so that no count read from it passes 64 bits.
 // Such a block decodes to fewer than 2^64 - 1 bytes, so NO is never a count.)
 contract ode_lz4_decode(out: cap bytes, cap: number, input: n bytes, n: number) {
-    requires apart(out, input)
+    requires no_overlap(out, input)
     requires n < 72057594037927936
     returns if failed(lz4(input)) || len(lz4(input)) > cap then NO else len(lz4(input))
     ensures out[0 .. len(lz4(input))] = lz4(input) if !failed(lz4(input)) && len(lz4(input)) <= cap
@@ -81,7 +81,7 @@ contract ode_lz4_decode(out: cap bytes, cap: number, input: n bytes, n: number) 
 // is the bound every user of LZ4 knows (LZ4_compressBound). `ode_lz4_store` is the plainest encoder: it
 // holds the n bytes as they are, in one sequence. It returns the count of bytes written at `out`, or NO.
 contract ode_lz4_store(out: cap bytes, cap: number, input: n bytes, n: number) {
-    requires apart(out, input)
+    requires no_overlap(out, input)
     requires cap < NO
     returns r
     ensures lz4(out[0 .. r]) == input if r != NO
@@ -95,7 +95,7 @@ contract ode_lz4_store(out: cap bytes, cap: number, input: n bytes, n: number) {
 // input, and with the same room it does not say NO. (The `requires` on d: a distance is 1 to 65535, as the
 // format's two bytes hold it.)
 contract ode_lz4_pack(out: cap bytes, cap: number, input: n bytes, n: number, d: number) {
-    requires apart(out, input)
+    requires no_overlap(out, input)
     requires cap < NO
     requires d >= 1
     requires d <= 65535

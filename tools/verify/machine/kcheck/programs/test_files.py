@@ -55,7 +55,7 @@ class Files(unittest.TestCase):
                     with open(os.path.join(d, "record.json")) as f: self.assertEqual(json.load(f)["shown"], code == 0, out)   # the record says what the program said
                 return code, out
         # the proof's part cannot give the public function another contract, nor a definition another meaning
-        for extra in (b"contract ode_unframe(out: cap bytes, cap: number, input: n bytes, n: number) {\n    requires apart(out, input)\n    returns r\n    writes out\n    trace depends on input\n    stack 184\n}\n", b"def be32(b) { 0 }\n"):
+        for extra in (b"contract ode_unframe(out: cap bytes, cap: number, input: n bytes, n: number) {\n    requires no_overlap(out, input)\n    returns r\n    writes out\n    trace depends on input\n    stack 184\n}\n", b"def be32(b) { 0 }\n"):
             code, out = with_inner(inner + extra)
             self.assertNotEqual(code, 0, out); self.assertNotIn("meets its public contract", out)
         # a contract in the proof that says more of a function called than that function does: the caller is shown by it, the function is not

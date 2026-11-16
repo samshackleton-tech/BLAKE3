@@ -17,7 +17,7 @@ It prints three things:
 1. **What is shown**: the public contract of each function in the file, a few lines each. For example:
 
        contract ode_lz4_decode(out: cap bytes, cap: number, input: n bytes, n: number) {
-           requires apart(out, input)
+           requires no_overlap(out, input)
            requires n < 72057594037927936
            returns if failed(lz4(input)) || len(lz4(input)) > cap then NO else len(lz4(input))
            ensures out[0 .. len(lz4(input))] = lz4(input) if !failed(lz4(input)) && len(lz4(input)) <= cap
