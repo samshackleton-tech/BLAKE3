@@ -1,5 +1,8 @@
 # kcheck: a specification, a binary, and a verifier a reader runs (a trial, November 14 and 15, 2026)
 
+**To verify a shipped binary yourself: `VERIFY.md`** (one page) and `python3 verify.py FILE`, which prints
+the contract you are asked to rely on, the verification, and the files that ran to reach it.
+
 **Two words, kept apart** (since November 15): a **prover** finds or writes out a proof and is trusted for
 nothing; a **verifier** decides whether the code is shown to meet its contract, and is what a reader relies
 on. The programs of this folder (`kfn.py`, `kbyte.py` and the others) are each both at once today: they
@@ -977,6 +980,7 @@ specification. (The hash above does not use them: it has no stack.)
 | `proofs/inner.spec`, `proofs/*.json` | 185 | the inner contracts (of the functions inside), the layouts of two records; the wide kernels' and `merge`'s places |
 | `hash.ode`, `glue/*.S` | 332 | the hash written to be proved; the assembly the Ode compiler prints of it (and of the stack's three functions) |
 | `b3hashr.o` | | the binary: 79,736 bytes, the specification and the proof in it |
+| `VERIFY.md`, `verify.py` | 100 + 95 | the reader's page; one command: the contract, the verification, and which files of this folder ran to reach it (their lines and digests) |
 | `check_binary.py` | 140 | what a reader runs on the binary, or on what a linker made of it |
 | `programs/` | | six other programs (Sigil a specification only): each its specification and public contract, its Ode source, the compiler's assembly, its proof, a harness for the processor; `check_programs.py`, `test_specs.py`, `bench.c`; `blake3-rust/` |
 | `kbyte.py`, `test_kbyte.py` | 1,280 + 738 | the verifier of those programs (bytes, numbers, places, calls by contract, lemmas); its tests |

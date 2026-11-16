@@ -122,6 +122,25 @@ class Files(unittest.TestCase):
             code, out = run(obj, mine)
             self.assertEqual(code, 1, out); self.assertIn("NOT shown", out)
 
+    def test_verify_says_what_is_shown_what_ran_and_whether(self):
+        """verify.py: the contract a reader is asked to rely on, the verification, the files that ran (and not the prover's)."""
+        tool = os.path.join(os.path.dirname(HERE), "verify.py")
+        obj, spec = self.paths("utf8")
+        r = subprocess.run([sys.executable, tool, obj], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        for words in ("contract ode_utf8(input: n bytes, n: number)", "returns if failed(utf8(input)) then NO else utf8(input)", "meets its public contract",
+                      "nothing was searched for", "varith.py", "kdecode.py", "not loaded (a prover's or a maker's, trusted for nothing): kprove.py, refute.py"):
+            self.assertIn(words, r.stdout)
+        ran = r.stdout[r.stdout.index("3. What ran"):]
+        self.assertNotIn("kprove.py   ", ran)
+        with tempfile.TemporaryDirectory() as d:
+            with open(spec) as f: text = f.read()
+            mine = os.path.join(d, "mine.spec")
+            with open(mine, "w") as f: f.write(text.replace("if b < 128 then 1", "if b < 127 then 1"))
+            r = subprocess.run([sys.executable, tool, obj, mine], capture_output=True, text=True)
+            self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+            self.assertIn("your own copy (mine.spec)", r.stdout); self.assertIn("NOT shown", r.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
