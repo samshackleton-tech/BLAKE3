@@ -1,5 +1,5 @@
 control: the unchanged object is ACCEPTED 
-hashr: 11008 single-bit changes of 1376 bytes of code (1375 s): 4384 stopped by the decoder, 5851 refused (no proof), 773 accepted, 0 with NO VERDICT (the time limit)
+hashr: 11008 single-bit changes of 1376 bytes of code (1360 s): 4384 stopped by the decoder, 5851 refused (no proof), 773 accepted, 0 with NO VERDICT (the time limit)
   accepted: +0x23 byte 0 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .r8) (.imm 0x0)
   accepted: +0x23 byte 2 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rcx) (.imm 0x0)
   accepted: +0x23 byte 2 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rdx) (.imm 0x0)
@@ -776,4 +776,4 @@ hashr: 11008 single-bit changes of 1376 bytes of code (1375 s): 4384 stopped by 
 control: the unchanged object on this processor, the lengths and 200 more: same
 control: a change no proof was found for, on this processor: DIFFERS: an official vector (0 bytes, plain) is not what hashr gives
 the 773 accepted changes on this processor: 773 same
-for scale, 300 of the changes stopped or refused, on this processor: 194 CRASHES, 75 DIFFERS, 31 same
+for scale, 300 of the changes stopped or refused, on this processor: 193 CRASHES, 76 DIFFERS, 31 same
