@@ -898,6 +898,27 @@ verification of `b3hashr.o` says "the definitions that use themselves (children,
 come to an end"; `verify.py` lists what that one line loaded beside the rest (`kbyte.py`, 1,063 lines of
 code: it is no part of what shows the code meets the contract).
 
+### A prover that guesses (`kguess.py`)
+
+Who finds the number that decreases? The seven lemmas above were written by hand, and one took a second
+try (`children` is one less than `subtree`). `kguess.py` is the smallest prover there could be: for each
+ring of definitions that use themselves it tries the few numbers there are (`n`; `len(b) - n`; `len(b)`;
+for a ring of two, `2 * len(b)` and one less), with none, one or two of a few `requires` (`n <= len(b)`;
+`len(a) <= len(b)`; `len(b) > C` for a number the definitions name), and asks the verifier of each. For
+the definitions a ring uses that work on words it writes the lemma of kind `any` that says nothing.
+
+`python3 kguess.py --again` takes every `decreases` out of the six lemma files (and every lemma that says
+nothing else) and looks for them again: **found for 8 of 8 rings**, from the specifications and the
+lemmas' other clauses. UTF-8's, varint's and the common start's are found from the specification alone
+in 6, 1 and 31 tries; LZ4's two rings in 246 (1.8 s); **BLAKE3's tree in 1,786 tries, 43 s: the same two
+lemmas as the ones written by hand, and the three that say nothing.** What it cannot find it says
+(`f(a, n) = f(a, n)`: "no number found").
+
+It is trusted for nothing: what it prints is a lemma like any other, and the verifier shows it or does
+not. It is here for what it shows about the design: the guessing costs the reader nothing wherever it is
+put, so it is put outside what he relies on. (It does not find what a lemma `ensures`; LZ4's four were
+written by hand.)
+
 ### An audit of the part that shows lemmas (`lemma_audit.py`)
 
 The flips of the code's bits do not ask whether the verifier could show a lemma that is not so; and a false
