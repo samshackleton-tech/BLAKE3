@@ -5,12 +5,12 @@
 #                                           `hash`: only hash.ode's functions and the binary; `programs`: only programs/)
 #
 # For each function: every bit of its code is flipped in turn; a change the decoder knows and a proof is found
-# for (or, for a kernel, that the checker accepts) is linked with BLAKE3 written out in C and run on the
+# for (or, for a kernel, that the verifier accepts) is linked with BLAKE3 written out in C and run on the
 # processor on inputs the contract allows. The outputs go to audit/*.txt; the last lines here are one a
 # function. Exit 1 if any accepted change is told from BLAKE3 by the processor, or any change has no verdict.
 # Run it after any change of kdecode.py, kcheck.py, kloop.py, kglue.py, kone.py, kfn.py, kbyte.py, kspec.py,
 # ode.py, klin.py, blake3.spec, proofs/inner.spec or a program's specification or proof: an unverified
-# checker is worth what its audits are worth.
+# verifier is worth what its audits are worth.
 # (The functions of hash.ode are judged by the whole hash: each accepted change of one of them is linked with
 # the others and the kernels, and `hashr` is run against BLAKE3 on some 2,400 lengths and 200 more.)
 set -u

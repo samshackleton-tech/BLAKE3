@@ -2,7 +2,7 @@
 """kloop: the wide kernels for EVERY number of blocks, by a proof that is found and then checked.
 
     python3 kloop.py k32|p32|p16 OBJECT --find PROOF.json [--smallest]     the prover: finds a proof and writes it (no trust in it)
-    python3 kloop.py k32|p32|p16 OBJECT --proof PROOF.json     the checker: reads the proof and says yes or no
+    python3 kloop.py k32|p32|p16 OBJECT --proof PROOF.json     the verifier: reads the proof and says yes or no
 
 A trial of a way to make proofs (November 15, 2026). kcheck.py shows a kernel for one fixed number of blocks,
 by running it to its end. Here the number of blocks `n` is a symbol, and so are the flags' four bytes: the
@@ -23,7 +23,7 @@ what each register and each cell of the frame holds when the code is there with 
     "cv"            word w of the specification's state for sixteen lanes
     (unnamed)       anything: the code must not read it before writing it
 
-THE CHECKER does no searching:
+THE VERIFIER does no searching:
   base   it runs the code from its entry through the first block (which may differ from the others: the start
          flag) and sees that the place then holds what the proof says for b = 1 and the specification's state
          1, or, where the path returns, that n was 1 and state 1 is stored;
@@ -38,7 +38,7 @@ b <= n-1) by adding them up, never by a solver.
 
 THE PROVER guesses the proof: it runs the code from the entry to the place and twice around the loop, and
 compares the second and third visits. What is the same is "keep"; a number that moved is "lin"; a register that holds the
-specification's next state is "cv"; the rest is unnamed. A guess the checker refuses at one register is
+specification's next state is "cv"; the rest is unnamed. A guess the verifier refuses at one register is
 weakened there (that register becomes unnamed) and tried again. Nothing the prover does is trusted."""
 import copy, json, os, sys, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -234,7 +234,7 @@ def paths(m, head):
 
 
 # ---------------------------------------------------------------------------------------------------------
-# The checker.
+# The verifier.
 def same(v, w):
     """Two register values, the same number or the same thing."""
     if lin(v) is not None and lin(w) is not None: return lin(v) == lin(w)
@@ -371,7 +371,7 @@ def find(rows, data, name, entry):
         elif second.z[r] is not None and second.z[r] == third.z[r]: proof["vectors"][str(r)] = "keep"
     for off, cell in second.frame.items():
         if third.frame.get(off) == cell: proof["frame"][str(off)] = "keep"
-    # weaken where the checker refuses, one name at a time
+    # weaken where the verifier refuses, one name at a time
     for _ in range(96):
         try:
             check(rows, data, name, proof, entry); return proof
@@ -388,7 +388,7 @@ def find(rows, data, name, entry):
 
 
 def smallest(rows, data, name, proof, entry):
-    """The proof with every name taken out that the checker does not need: what is left is what the loop rests on."""
+    """The proof with every name taken out that the verifier does not need: what is left is what the loop rests on."""
     proof = copy.deepcopy(proof)
     for part in ("registers", "vectors", "frame"):
         for key in list(proof[part]):

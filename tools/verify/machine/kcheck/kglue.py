@@ -2,7 +2,7 @@
 """kglue: code that is not a kernel. A loop over a data structure in memory, and calls, by proofs found and checked.
 
     python3 kglue.py merge|push|add OBJECT --find PROOF.json     the prover: finds a proof, writes it (not trusted)
-    python3 kglue.py merge|push|add OBJECT --proof PROOF.json    the checker
+    python3 kglue.py merge|push|add OBJECT --proof PROOF.json    the verifier
 
 A second trial of the way of kloop.py (November 15, 2026), on the hasher's stack of chaining values: the
 functions `push`, `merge` and `add` of lang/hasher.ode, as the Ode compiler and the assembler leave them
@@ -19,7 +19,7 @@ A PROOF names the places of the code's loops, and for each what the registers an
 ANY stack `now` of any count m the stack's memory may hold: kept, or a number c + cm*m. A function with no
 loop has the empty proof.
 
-THE CHECKER runs the code from its entry and from each place, forward along every path, on symbols:
+THE VERIFIER runs the code from its entry and from each place, forward along every path, on symbols:
   - to a place: the registers are what the proof says for the stack now in memory; and if the path began at a
     place, the stack in memory is one turn of the machine from the stack it began with, and the machine does
     turn there (it holds more than `target`);
@@ -61,7 +61,7 @@ class Contract:
         c = kspec.SPEC.contracts[symbol]
         self.name, self.stack = symbol, c["stack"]
         self.args = [(reg, kind, name) for reg, (name, kind) in zip(ARGS, c["args"])]
-        if any(kind not in ("stack", "cv", "byte", "number", "any") for _, kind, _ in self.args): raise Fail(f"{symbol}: an argument of a kind this checker does not know")
+        if any(kind not in ("stack", "cv", "byte", "number", "any") for _, kind, _ in self.args): raise Fail(f"{symbol}: an argument of a kind this verifier does not know")
         stacks = [name for _, kind, name in self.args if kind == "stack"]
         if len(stacks) != 1 or c["leaves"][0]["name"] != stacks[0] or c["leaves"][0]["index"] is not None: raise Fail(f"{symbol}: a function of the stack has one stack, and leaves it")
         self.region, self.left, self.text, self.returned = stacks[0], c["leaves"][0]["expr"], c, c["returns"]
@@ -75,7 +75,7 @@ class Contract:
             self.calls[callee] = (cond[2][1], cond[3][1])
 
     def env(self, T, v):
-        """The arguments in the specification's terms, from what the checker holds of them."""
+        """The arguments in the specification's terms, from what the verifier holds of them."""
         env = {}
         for _, kind, name in self.args:
             if kind == "stack": env[name] = v[name]
@@ -371,7 +371,7 @@ class Machine:
         elif op == ".ret":
             if self.g["rsp"] != ("a", "frame", 0) or self.cells.get(("frame", 0)) != (8, ("q", "return address")): raise Fail("a return to somewhere else")
             nxt = None
-        else: raise Fail(f"an instruction this checker does not know: {' '.join(map(str, i))}")
+        else: raise Fail(f"an instruction this verifier does not know: {' '.join(map(str, i))}")
         self.steps += 1; self.moved = True; self.pc = nxt
 
 
@@ -395,7 +395,7 @@ def paths(m, places):
 
 
 # ---------------------------------------------------------------------------------------------------------
-# The checker.
+# The verifier.
 def same(v, w):
     if lin(v) is not None and lin(w) is not None: return lin(v) == lin(w)
     return v == w

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""kglue_flip: every single-bit change of push, merge or add, given to the decoder, the prover and the checker,
+"""kglue_flip: every single-bit change of push, merge or add, given to the decoder, the prover and the verifier,
 and the processor's word on each change a proof is found for.
 
     python3 kglue_flip.py push|merge|add|avx512|sse41 FOLDER [--jobs N] [--native CASES]
@@ -9,9 +9,9 @@ and the processor's word on each change a proof is found for.
 FOLDER holds push.o, merge.o, add.o (lang/NAME.S assembled) and the one-block kernels' objects (*.o beside
 them: they are linked in, not changed). As kflip.py: each bit of the function's code is flipped in turn;
 "stopped" (the decoder does not know the bytes), "refused" (no proof is found), "ACCEPTED" (a proof is found
-and the checker takes it). With --native every accepted object is linked with kglue_native.c and run on CASES
+and the verifier takes it). With --native every accepted object is linked with kglue_native.c and run on CASES
 random stacks and arguments the contract allows: an accepted change the processor tells from the merge
-machine is an error of the decoder or the checker, and the exit status is 1."""
+machine is an error of the decoder or the verifier, and the exit status is 1."""
 import multiprocessing, os, signal, subprocess, sys, tempfile, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import kcheck, kdecode, kglue, kone, kspec
@@ -39,7 +39,7 @@ def verdict(obj, name):
         if name in kone.CONTRACTS: kone.check(rows, name)
         else: kglue.find(rows, name)
     except kcheck.Fail as e: return "refused", str(e)
-    except (KeyError, IndexError, ValueError, TypeError, AssertionError, RecursionError) as e: return "refused", f"the checker cannot run it ({type(e).__name__}: {e})"
+    except (KeyError, IndexError, ValueError, TypeError, AssertionError, RecursionError) as e: return "refused", f"the verifier cannot run it ({type(e).__name__}: {e})"
     return "ACCEPTED", ""
 
 

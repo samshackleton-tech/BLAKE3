@@ -169,7 +169,7 @@ class Machine:
             if self.zf == (op == ".je"): nxt = num(a[0])
         elif op == ".jmp": nxt = num(a[0])
         elif op == ".ret": nxt = None
-        else: raise Fail(f"an instruction this checker does not know: {' '.join(map(str, i))}")
+        else: raise Fail(f"an instruction this verifier does not know: {' '.join(map(str, i))}")
         self.steps += 1; self.pc = nxt
 
 

@@ -6,7 +6,7 @@
 FOLDER holds the objects (adler32.o, lz4_decode.o, ...). Without it they are assembled here from the assembly
 the Ode compiler printed (programs/NAME/*.S), with clang where there is one. Each function's bytes are read
 by kdecode.py and checked by kbyte.py against the contract in programs/NAME/NAME.spec, with its proof
-(programs/NAME/FUNCTION.proof: the places of its loops; none where the checker runs the loop itself)."""
+(programs/NAME/FUNCTION.proof: the places of its loops; none where the verifier runs the loop itself)."""
 import os, shutil, sys, tempfile, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
@@ -36,7 +36,7 @@ COMPOSED = [("frame", "unframe", "a frame opened: an LZ4 block decoded and its A
 def composed(folder, program, function, parts, made=True):
     """[(symbol, instructions, seconds, what it calls)] of the function and of all it calls; raises where one is not shown."""
     read = lambda *p: open(os.path.join(HERE, *p)).read()
-    spec = ode.Spec(read(program, program + ".spec") + "\n" + read(program, function + ".inner"))
+    spec = ode.with_proof(read(program, program + ".spec"), read(program, function + ".inner"))
     out, todo, seen = [], [("ode_" + function, program, function)], set()
     while todo:
         symbol, where, name = todo.pop(0)

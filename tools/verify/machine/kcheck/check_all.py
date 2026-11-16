@@ -6,7 +6,7 @@
 FOLDER holds the objects (lib32.o, out16.o, avx512.o, sse41.o, and one for each of glue/*.S). Without it they
 are assembled here from the library's sources (c/*.S) and the Ode functions' assembly (glue/*.S), with clang
 where there is one. Each function's bytes are read by kdecode.py and checked against the specification (blake3.spec)
-by the checker for its kind, with its proof from proofs/ where it has a loop. Nothing here is a proof
+by the verifier for its kind, with its proof from proofs/ where it has a loop. Nothing here is a proof
 assistant; the programs are what is trusted (README.md)."""
 import json, os, shutil, sys, tempfile, time
 HERE = os.path.dirname(os.path.abspath(__file__))

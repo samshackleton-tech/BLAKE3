@@ -1,5 +1,5 @@
 // kflip_native: a kernel object run on this processor against BLAKE3 written out here, on inputs the
-// contract allows. kflip.py links it with each changed object its checker accepted: the processor arbitrates.
+// contract allows. kflip.py links it with each changed object its verifier accepted: the processor arbitrates.
 //
 //     cc -O1 -o run kflip_native.c kflip_thunk.S OBJECT && ./run k32|p32|p16|o16 CASES [over|any]
 //

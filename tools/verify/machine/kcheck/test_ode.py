@@ -109,6 +109,22 @@ class Ode(unittest.TestCase):
                       "contract g(v: number) {\n    returns r\n    stack 8\n}\n"):
             with self.assertRaises(ode.Err, msg=again) as e: ode.Spec(first + again)
             self.assertIn("defined twice", str(e.exception))
+        # the language's own names are not a specification's to define
+        for own in sorted(ode.OWN):
+            with self.assertRaises(ode.Err, msg=own): ode.Spec(first + f"def {own}(x) {{ x }}\n")
+            with self.assertRaises(ode.Err, msg=own): ode.Spec(first + f"const {own} = 1\n")
+
+    def test_a_proofs_part_cannot_change_what_the_readers_text_means(self):
+        """ode.with_proof: the proof's part (contracts of the functions inside) is read after the reader's
+        text, and may declare no name the reader's text writes anywhere: not a definition's, not a
+        contract's, not an argument's. What it may add: names the reader's text does not have."""
+        mine = "const N = 4\ndef f(x) { x + N }\ncontract g(v: number) {\n    returns f(v) + h(v)\n    stack 8\n}\n"
+        ok = "contract inner(w: number) {\n    returns f(w)\n    stack 8\n}\ndef helper(y) { y }\n"
+        self.assertIn("inner", ode.with_proof(mine, ok).contracts)
+        for bad in ("def h(x) { 0 }\n",                   # a name the reader's text uses and does not define: it stays undefined
+                    "const N = 5\n", "def f(x) { x }\n", "contract g(v: number) {\n    returns r\n    stack 8\n}\n", "const x = 1\n", "def v(a) { a }\n",
+                    "layout N 8 { a: number at 0 }\n", "def len(a) { 0 }\n", "def helper(y) { y }\ndef helper(y) { 0 }\n"):
+            with self.assertRaises(ode.Err, msg=bad): ode.with_proof(mine, ok + bad)
 
 
 if __name__ == "__main__":

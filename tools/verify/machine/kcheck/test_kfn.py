@@ -116,8 +116,8 @@ class Kfn(unittest.TestCase):
         try:
             for name, old, new in TEXT:
                 self.assertEqual(text.count(old), 1, old)
-                kspec.SPEC = ode.Spec(text.replace(old, new)); kfn.CONTRACTS.clear()
-                with self.assertRaises(kcheck.Fail, msg=f"{name}: {new}"):
+                with self.assertRaises(kcheck.Fail, msg=f"{name}: {new}"):          # (a text the reader of specifications refuses is refused there)
+                    kspec.SPEC = ode.Spec(text.replace(old, new)); kfn.CONTRACTS.clear()
                     kfn.check(self.rows[name], name)
         finally:
             kspec.SPEC = true; kfn.CONTRACTS.clear()

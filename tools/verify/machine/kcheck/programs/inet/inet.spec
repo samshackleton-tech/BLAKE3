@@ -31,7 +31,7 @@ const NO = 18446744073709551615
 // whose plain sum might not fit 64 bits, it says NO and reads none. There is no `trace` line: which
 // instructions run and which addresses are touched depend on n, and not on the bytes.
 //
-// (The second and third lines are one line, said for a sum that is 0 and for one that is not: the checker
+// (The second and third lines are one line, said for a sum that is 0 and for one that is not: the verifier
 // has to be told to take that question both ways. README.md, "What each made the languages gain".)
 contract ode_inet(input: n bytes, n: number) {
     returns r

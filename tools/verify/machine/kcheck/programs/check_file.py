@@ -51,7 +51,7 @@ def main():
     # a program made of others: the proof carries the contracts of the functions called (steps of the proof)
     inner = "".join("\n" + body.decode() for name, body in sorted(proof["files"].items()) if name.endswith(".inner"))
     public = set(ode.Spec(text).contracts)
-    spec = ode.Spec(text + inner)
+    spec = ode.with_proof(text, inner) if inner else ode.Spec(text)
     wanted = [name for name in spec.contracts if name in proof["at"]]
     if not wanted: print("the specification has a contract for no function the proof speaks of"); return 1
     if any(name not in s.at for name in wanted):

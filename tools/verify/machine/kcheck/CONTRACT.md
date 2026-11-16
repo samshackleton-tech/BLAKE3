@@ -61,12 +61,12 @@ thing.
 (`fails REASON if C`, in the order written). `failed(E)` says whether E has no value. A contract speaks of a
 failing input through it: `returns if failed(lz4(input)) then NO else ...`.
 
-**What the checker does with it** (check_binary.py for the hash; programs/check_file.py for the others): it
+**What the verifier does with it** (check_binary.py for the hash; programs/check_file.py for the others): it
 shows all of the above from the binary's bytes, for everything the `requires` lines allow, or it refuses.
 The contracts of the functions inside (proofs/inner.spec) are steps of that showing, in the same form, with
 two lines of their own (`decreases`, `calls`); a reader need not read them.
 
-**Not yet so** (November 15). There are two checkers of functions: `kfn.py` for the hash (words, vectors,
+**Not yet so** (November 15). There are two verifiers of functions: `kfn.py` for the hash (words, vectors,
 calls by contract) and `kbyte.py` for the programs of `programs/` (bytes, numbers, loops with places). The
 first does not yet know `ensures X[a .. b]`, `ensures ... if C`, `ensures CONDITION` or `trace depends on`, and
 refuses a contract that has them; the second follows calls by contract (programs/frame) but not a function

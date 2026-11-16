@@ -1,6 +1,6 @@
 """klin: whole numbers that depend on counts (c + c1*x1 + c2*x2 ...), and what is known of them.
 
-Used by the checkers (kloop.py, kglue.py, kfn.py) and by the specification read on symbols (kspec.py). No
+Used by the verifiers (kloop.py, kglue.py, kfn.py) and by the specification read on symbols (kspec.py). No
 solver in the usual sense: a fact is a number known not to be below zero. A fact that is known both ways is
 an equality, and is used by putting one of its symbols in terms of the others. A question (is this number not
 below zero?) is answered by adding known facts up: first one or two of them, then, if that does not do, by

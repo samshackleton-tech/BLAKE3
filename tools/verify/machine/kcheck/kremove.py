@@ -7,7 +7,7 @@ Each instruction in turn is replaced by a no-op and the kernel checked as before
 is either code the contract never needs (the kernels take 1 to 16 blocks and any start and end flags; the
 contracts fix them), an instruction whose result nothing reads, or one the contract does not speak of
 (`vzeroupper`, a stack probe). The list is for a person to read: it is how the eight unread shuffles of
-`blake3_servil_output16` were found (BLAKE3 #398). It rests on the checker, as everything here does."""
+`blake3_servil_output16` were found (BLAKE3 #398). It rests on the verifier, as everything here does."""
 import os, sys, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import kcheck, kdecode

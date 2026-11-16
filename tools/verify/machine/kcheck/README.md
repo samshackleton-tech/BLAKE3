@@ -1,4 +1,12 @@
-# kcheck: a specification, a binary, and a checker a reader runs (a trial, November 14 and 15, 2026)
+# kcheck: a specification, a binary, and a verifier a reader runs (a trial, November 14 and 15, 2026)
+
+**Two words, kept apart** (since November 15): a **prover** finds or writes out a proof and is trusted for
+nothing; a **verifier** decides whether the code is shown to meet its contract, and is what a reader relies
+on. The programs of this folder (`kfn.py`, `kbyte.py` and the others) are each both at once today: they
+search (which facts to add up, which way to open a definition) and they decide. They are called verifiers
+here because their yes is what is relied on. Taking the search out of them is the work ahead: a first cut
+(the arithmetic's search replaced by written proofs that 33 lines check by adding up) is described in
+DESIGN.md.
 
 **Not a proof in a proof assistant, and checked by none.** A trial of another way to the goal of BLAKE3 #361:
 to hand a skeptical reader a specification, a binary and a proof, such that he checks for himself, in
@@ -22,15 +30,15 @@ this way, not all programs. The languages are our own.
 - **The code is written to be proved** (in Ode), as code is written to be fast: in the specification's
   shape where it can be (`hash.ode`: `subtree` splits its bytes by the specification's rule and calls itself
   on each part), and with a place for each loop where it cannot (`programs/`).
-- **The proof is whatever the checker needs beside the binary**, and is not trusted: the contracts of the
+- **The proof is whatever the verifier needs beside the binary**, and is not trusted: the contracts of the
   functions inside, and for a loop a place (what holds each time round, and what decreases). For the hash's
   own nine functions there is none to write. It travels in the binary, in a section that is not loaded.
-- **The checker does not search.** It runs each function's machine code on symbols along every path; a call
+- **The verifier does not search.** It runs each function's machine code on symbols along every path; a call
   is taken by the callee's contract (a call of itself by its own); what is left at the return is compared
   with the specification's definition. Terms are compared by identity, numbers by adding linear facts up.
   No solver.
 
-**The binary is one file, `b3hashr.o`** (40,856 bytes): the thirteen bodies of code the hash is made of,
+**The binary is one file, `b3hashr.o`** (40,880 bytes): the thirteen bodies of code the hash is made of,
 their constants, their names, the specification, the proof, and nothing for a linker to fill in.
 `python3 check_binary.py b3hashr.o` reads it, follows every call from `b3l_hashr`, and says in 19 s on an
 Apple M6 that `b3l_hashr` in that file meets its public contract:
@@ -81,10 +89,10 @@ sources: 18 functions, 3,831 instructions, 19 s):
   specification.
 
 What a reader relies on: the specification and the public contract, which he reads, with the two pages that
-say what they mean; the checker, unverified Python (4,176 lines for the hash, 910 more for the programs of
-`programs/`, 569 for the stack's); the processor doing what the checker takes each instruction form to do;
+say what they mean; the verifier, unverified Python (4,176 lines for the hash, 910 more for the programs of
+`programs/`, 569 for the stack's); the processor doing what the verifier takes each instruction form to do;
 a loader that maps the file as its headers say; Python. Most of this page is what has been done to find
-where the checker is wrong, and what that found.
+where the verifier is wrong, and what that found.
 
 ## The specification: `blake3.spec`
 
@@ -125,7 +133,7 @@ numbers is refused, and an address is a region and a number. No test changes the
 
 - `ode.py` (694 lines) reads the text and evaluates it over an algebra of words. On numbers: the official
   vectors, at every length, for the hash, the keyed hash and key derivation.
-- `kspec.py` (565 lines) is the other algebra, for the checkers: words are terms; a number may depend on a
+- `kspec.py` (565 lines) is the other algebra, for the verifiers: words are terms; a number may depend on a
   count, and a comparison of such numbers is decided from the code path's facts or the evaluation stops;
   bytes may be some of a message of unknown length. What cannot be worked out on a path (the tree over bytes
   whose count is not known) is named by what it is of, and two names are one thing when they are the same.
@@ -160,13 +168,13 @@ assembly). Nine functions:
 What "written to be proved" meant, each a choice the programmer made as one makes choices for speed:
 
 - **The tree is a recursion, as in the specification.** `subtree` finds the count of chunks for its left
-  part, calls itself on the two parts, and compresses the two values. Its own contract is what the checker
+  part, calls itself on the two parts, and compresses the two values. Its own contract is what the verifier
   takes at those calls. An earlier form of this code kept a stack of subtrees (and one after it, levels): to
   show that such a thing makes the tree takes an induction over counts and their bits, which Lean did by
   lemmas written by hand. Here there is nothing to show: the code's two calls are the definition's two parts.
 - **The wide kernels are a leaf of the recursion.** A part of exactly 32 chunks, on a machine with AVX-512,
   goes to `wide32`: the 32-lane chunk kernel, then five rounds of the 16-lane parent kernel (16, 8, 4, 2, 1
-  parents). The checker opens the specification's `subtree` down to those 32 chunks and their 31 parents,
+  parents). The verifier opens the specification's `subtree` down to those 32 chunks and their 31 parents,
   and it is the term the kernels' contracts give. No new idea was needed, and nothing about trees.
   `wide128` does the same for 128 chunks with sixteen parents to a call while a level has as many (four
   calls of the chunk kernel, eleven of the parent kernel): written after the first timing against the
@@ -178,12 +186,12 @@ What "written to be proved" meant, each a choice the programmer made as one make
 
       requires cvs[i] == node_value(chunk_node(kf.key, t + i, kf.flags, input[1024 * i .. 1024 * i + 1024]), 0) for i in 0..len / 1024
 
-  Inside `take` a value read from `cvs` is that term. At a call the checker shows the line from the caller's
+  Inside `take` a value read from `cvs` is that term. At a call the verifier shows the line from the caller's
   memory: lane by lane where the caller's values are the kernel's (32 at most), and for any `i` in the range
   where they are themselves such an array (`take`'s calls of itself). The programmer says what the memory
   holds; nobody writes a proof.
 - **Every loop runs a number of times that the paths fix**: a block's 64 bytes, a chunk's 16 blocks, the 54
-  doublings that find the left part's count. The checker runs them; none needs an invariant.
+  doublings that find the left part's count. The verifier runs them; none needs an invariant.
 - **Six arguments**, which the calling convention carries in registers: the key and the flags travel as one
   record (`kf`).
 - **The stack is bounded by the length**: `subtree` may use `16896 + 384 * bits((len - 1) / 1024)` bytes, a
@@ -193,7 +201,7 @@ What "written to be proved" meant, each a choice the programmer made as one make
   the bottom it is read from the bytes: a function whose contract does not say `needs avx512` holds no
   instruction with an EVEX prefix (nor, without `needs sse41`, one of the SSSE3 and SSE4.1 maps).
 
-    python3 kfn.py subtree OBJECT          # the checker: the object's bytes, blake3.spec, proofs/inner.spec
+    python3 kfn.py subtree OBJECT          # the verifier: the object's bytes, blake3.spec, proofs/inner.spec
     python3 test_kfn.py                    # 4 tests, 6 minutes
 
 | function | paths to the return | instructions run | checked in |
@@ -208,7 +216,7 @@ What "written to be proved" meant, each a choice the programmer made as one make
 | `subtree` | 109 | 7,392 | 1.1 s |
 | `hashr` | 141 | 20,264 | 3.1 s |
 
-## The checker of functions: `kfn.py`
+## The verifier of functions: `kfn.py`
 
 It follows one function at a time. Memory is in named regions of typed things: a chaining value, bytes (a
 message's, of a length that is a symbol), a record whose `layout` is in `proofs/inner.spec`. A branch on
@@ -227,9 +235,9 @@ A loop is run: a path that jumps back to one instruction more than 100 times is 
 earlier form, a stack of levels with a loop over them, was checked too, by a place for that loop: the name of
 a machine of the specification and what the registers and the memory hold for any state of it, found by a
 prover that comes to the loop three times. When the hash was written as the specification's own recursion no
-loop needed a place, and that part of the checker was taken out.)
+loop needed a place, and that part of the verifier was taken out.)
 
-At a call the checker also shows that what the callee writes is apart from everything else the callee is
+At a call the verifier also shows that what the callee writes is apart from everything else the callee is
 given the address of (the callee's own check took them to be apart), and that what the callee needs of the
 processor the caller's contract allows there.
 
@@ -248,7 +256,7 @@ processor the caller's contract allows there.
   multiple of 1,024 up to 70 chunks, 200 random lengths to 300,000; the three modes' flags; both kernels; the
   message ending where a page that faults begins.
 
-  (All nine functions, the checkers as at commit `2ae7c9e9`; each change was given 900 s at most and none took them.)
+  (All nine functions, the verifiers as at commit `2ae7c9e9`; each change was given 900 s at most and none took them.)
 
   | function | changes | stopped by the decoder | refused (no proof) | accepted | of those, as BLAKE3 on the processor |
   |---|---|---|---|---|---|
@@ -269,7 +277,7 @@ processor the caller's contract allows there.
   again before they are read, and of which register carries the platform word to a callee when it is a
   plain number that is not 5.)
 
-**What that found.** Before the processor was asked, a run of changed instructions through the checker had
+**What that found.** Before the processor was asked, a run of changed instructions through the verifier had
 `hashl` (the earlier form) accept 80 changes of the moves that carry the platform word to its callees: a
 callee's `calls F if plat == 5` was not carried to its caller, so a caller could hand a callee anything as
 the platform, and the AVX-512 kernel be run where the caller's contract says it is not. The condition is now
@@ -318,9 +326,9 @@ separately assembled objects in the same run):
 96% and 98% of the library at 1 MiB, 97% at 16 MiB. At 1 MiB the file is 0.6% to 0.9% slower than the
 objects: the same instructions, laid out by `klink.py` and not by a linker.
 
-**The checker refused my first form of the wide leaf.** I had written `wide32(...)` and then `return 0`
+**The verifier refused my first form of the wide leaf.** I had written `wide32(...)` and then `return 0`
 inside an `if`; Ode's `return` gives the result and does not leave the function, so the code went on, hashed
-the 32 chunks again by halves, and wrote the same value a second time. The checker's message was that `out`
+the 32 chunks again by halves, and wrote the same value a second time. The verifier's message was that `out`
 at the return is not what the contract says: it holds the parent of two named halves where the contract's
 tree had been named whole by the call. Right hash, wrong code; an `else` fixed it.
 
@@ -336,13 +344,13 @@ a whole tree of 32 go to the 16-lane kernel).
 
 Until here what was checked was the objects an assembler makes, one a source file, each with places left
 for a linker to fill in: how far away the function an instruction calls is, or the constant it reads. The
-checker took those from the relocation's name, and a linker was trusted to write them so. Now:
+verifier took those from the relocation's name, and a linker was trusted to write them so. Now:
 
 - **`klink.py`** (134 lines, trusted for nothing) takes from the assembler's objects the bytes of the
   thirteen bodies `hashr` runs (the nine functions of `hash.ode`, the two one-block kernels, K32 with its
   second entry, P16), from each one's first byte to its `ret`, and the read-only data of the three objects
   that have any; lays them out in one section, each on the boundary it had; and writes the distances itself.
-  **`b3hashr.o`**: 40,856 bytes, of which 16,788 are code and 21,494 the specification and the proof; fourteen names; no
+  **`b3hashr.o`**: 40,880 bytes, of which 16,788 are code and 21,511 the specification and the proof; fourteen names; no
   relocations. A linker has only to place it on a 64-byte boundary. The library's other functions that share a source file with a kernel
   (`hash_many`, the XOF's) are not in it.
 - **`kdecode.py` reads a file whose addresses are settled** (an object with no relocation left for its code,
@@ -354,14 +362,14 @@ checker took those from the relocation's name, and a linker was trusted to write
   memory differ within the page, if a read-only part is longer in memory than in the file, if the
   read-only parts do not lie side by side, if the code is not in a part that may be run, or if the file asks
   the loader to change its code (`TEXTREL`).
-- **`check_binary.py FILE`** starts at `b3l_hashr`, checks it from the file's bytes with the checker for its
+- **`check_binary.py FILE`** starts at `b3l_hashr`, checks it from the file's bytes with the verifier for its
   kind, and goes on to every function it calls, found by where the call goes: thirteen bodies, 3,102
   instructions, 19 s. Then it says what else the file loads to be run: in `b3hashr.o`, beside the 16,788
   bytes of the bodies, 859 zero bytes and 529 others (the constants, and what lies between functions).
 
 | file | made by | bytes | `b3l_hashr` in it |
 |---|---|---|---|
-| `b3hashr.o` | `klink.py`, of Apple clang 21's objects | 40,856 | meets its public contract |
+| `b3hashr.o` | `klink.py`, of Apple clang 21's objects | 40,880 | meets its public contract |
 | a shared object of it | GNU ld 2.46 | 41,640 | meets it |
 | a shared object of it | lld 21 | 32,776 | meets it |
 | `khash_native.c` with it (an executable loaded anywhere) | GCC 15.2, GNU ld | 58,168 | meets it |
@@ -458,29 +466,29 @@ that is no way to compute anything.
   of an encoder that always says NO, so each contract has a second line saying when it does not
   (`ensures r != NO if cap >= n + n / 255 + 16`: the room LZ4's users know as its bound).
 - *Varint, first difference*: nothing. They were written after the others and needed no change to either
-  language or to the checker.
-- *UTF-8*: nothing again, and it was written while the checker was frozen for the audit: specification,
+  language or to the verifier.
+- *UTF-8*: nothing again, and it was written while the verifier was frozen for the audit: specification,
   code, proof (one place, four facts), tests and the run against the C library's converter took seven
   minutes by the clock (a model wrote them). The specification is the standard's definition (the fewest bytes, no surrogate, at most 0x10FFFF),
-  not its table of byte ranges; the code tells the same from the first two bytes, and the checker's
+  not its table of byte ranges; the code tells the same from the first two bytes, and the verifier's
   arithmetic shows that the two agree. One thing it taught: **the code has to decide things in the order
   the specification does.** The first form looked at the byte after the first before it had settled how
-  many bytes the sequence has; the specification settles that first, and the checker, reading the
+  many bytes the sequence has; the specification settles that first, and the verifier, reading the
   specification along the code's path, could not go on ("the specification asks how input[i] and 224
   compare, and the code's path does not say"). The answer would have been the same either way. The code
-  was changed. The checker could instead take such a question both ways, as it does for a contract's
+  was changed. The verifier could instead take such a question both ways, as it does for a contract's
   `if`; it does not yet.
-- *Base 64*: nothing in the languages either (also written with the checker frozen; accepted on its first
+- *Base 64*: nothing in the languages either (also written with the verifier frozen; accepted on its first
   run, three minutes after its specification was begun). It is the first whose room is the caller's to
   give (`requires cap >= 4 * ((n + 2) / 3)`), so it has no NO. One thing it showed: **paths multiply.** A
-  letter is a choice of five; the four letters of a group are written in a loop the checker runs through;
+  letter is a choice of five; the four letters of a group are written in a loop the verifier runs through;
   that is 625 paths a turn, and the check takes 13 s where the others take a fraction of one. A place
-  inside the group should join them (not tried); a checker that joined paths that end alike would do it
+  inside the group should join them (not tried); a verifier that joined paths that end alike would do it
   for every program.
-- *The Internet checksum*: nothing in the languages (written with the checker frozen, accepted on its
+- *The Internet checksum*: nothing in the languages (written with the verifier frozen, accepted on its
   first run). Its contract has no `trace` line: no branch and no address depends on the bytes, though every
-  byte goes into the result, and the checker shows it (it refuses Adler-32 without the line; the storing
-  encoder and the varint have none either). And the checker
+  byte goes into the result, and the verifier shows it (it refuses Adler-32 without the line; the storing
+  encoder and the varint have none either). And the verifier
   did arithmetic its author had wrong: I wrote `requires n < 2^32` with four folds of the carries; a
   changed specification with three folds was accepted (three do suffice below 2^32), and so was `n < 2^49`
   with four (the sum then still fits 64 bits, and four folds bring any such sum within 16). The contract
@@ -488,13 +496,13 @@ that is no way to compute anything.
   specification first said the code's own way ("fold the carries in, four times"), with a note that what
   the folds amount to was tried on examples and shown nowhere. It now says what a one's complement sum is
   (`if s == 0 then 0 else (s - 1) % 65535 + 1`) and has no fold in it; the code still folds four times; the
-  checker's arithmetic shows the two are one, in a quarter of a second. Last, the contract was given no
+  verifier's arithmetic shows the two are one, in a quarter of a second. Last, the contract was given no
   `requires` at all: from 2^49 bytes on the function says NO and
   reads nothing (`returns if n < 562949953421312 then checksum(input) else NO`). That is one compare in
   principle; here it is four shifts and a compare, because the decoder reads no constant above 32 bits and
   the machine read no shift by more than 16 (it does now; the code is as it was audited).
 
-**`kbyte.py`** (910 lines) is the checker for these: `kfn.py`'s machine, with memory as bytes and lists of
+**`kbyte.py`** (910 lines) is the verifier for these: `kfn.py`'s machine, with memory as bytes and lists of
 bytes in parts, numbers that depend on counts, and places. A proof (`programs/NAME/FUNCTION.proof`) is a
 place for each loop:
 
@@ -509,10 +517,10 @@ place for each loop:
 
 From each place the code is run on symbols to the next place or to the return; what the next place says must
 hold there; the numbers after `decreases` must have got less, the first, or the first no greater and the
-second less, and so on. There is no induction in the checker and no solver: a fact about the whole input is
+second less, and so on. There is no induction in the verifier and no solver: a fact about the whole input is
 carried from place to place by the specification's own equations, opened one step. The proof is not
 trusted: a wrong place is refused where it does not hold. Finding the places is the prover's work: here
-the model that wrote the code wrote them, from the checker's refusals. Nothing searches for them.
+the model that wrote the code wrote them, from the verifier's refusals. Nothing searches for them.
 
 **Shipped as files, as the hash is.** `programs/kpack.py` (trusted for nothing) makes one file of a
 program: its functions' bytes, their names, and the proof in a section that is not loaded
@@ -597,7 +605,7 @@ and with a wrong one the check fails.
 - A contract with two `stack` lines was read as having the second. A contract now says each such thing once.
 - `bytes_of` was a definition in `blake3.spec`. A contract whose meaning in memory rests on it could have
   been changed by changing the specification. It is the language's own now, as `words` was.
-- The checker's arithmetic was too weak, in a way that depended on luck. It decides `a <= b` by eliminating
+- The verifier's arithmetic was too weak, in a way that depended on luck. It decides `a <= b` by eliminating
   symbols from linear facts (`klin.py`), with a limit on the rows, and it rounds to whole numbers only where
   a row happens to be left with one symbol, which depends on the order of elimination. The packing
   encoder's bound on its output (`255 * e <= 256 * a` at each sequence) is linear and true; with it in the
@@ -607,12 +615,12 @@ and with a wrong one the check fails.
   leaves open is asked again two ways (`Facts.again`): by bounds (the least and greatest each symbol can
   be, from each row and the other symbols' bounds, rounded, to a fixed point: no order), and by the same
   elimination with fifty times the room and the goal's symbols last. Both only ever say "shown" when the
-  facts cannot all hold; `test_kbyte.py` tries 3,000 small systems against all values. The hash's checkers
+  facts cannot all hold; `test_kbyte.py` tries 3,000 small systems against all values. The hash's verifiers
   ask as before. "Not shown" was never "shown wrong", but a prover should not have to learn an order. (Still
-  to do: a search that returns multipliers, which the checker then only adds up.)
+  to do: a search that returns multipliers, which the verifier then only adds up.)
 - The weak arithmetic had been doing a second job. A loop with no place (Adler-32 with an empty proof) used
   to be refused in a fifth of a second, because after two dozen turns the arithmetic could no longer show
-  that a sum fits 64 bits. With the stronger arithmetic it could, and the checker ran on, slower each
+  that a sum fits 64 bits. With the stronger arithmetic it could, and the verifier ran on, slower each
   turn: no verdict in ten minutes. What should have stopped it was never there. Now a path from the entry
   or a place may run 1,000 instructions before it comes to a place or returns (the longest here runs 286),
   and that loop is refused in four seconds for the right reason. This only refuses more.
@@ -646,8 +654,8 @@ specification's and bounds them by the bytes taken in the block:
     fact a % 65521 == s1(input)[i]
     fact a <= 65520 + 255 * (i - i0)
 
-It was accepted on its first run, in 0.2 s, with the checker frozen. I had written here that this needed
-"facts modulo a number, which the checker cannot carry". It carries them as they are: a remainder is a
+It was accepted on its first run, in 0.2 s, with the verifier frozen. I had written here that this needed
+"facts modulo a number, which the verifier cannot carry". It carries them as they are: a remainder is a
 number with a quotient beside it, and the arithmetic knows a number has only one of each.
 
 **Devon's Adler-32** (BLAKE3 #377; `tools/verify/machine/experiments/adler32/adler32.ode` on his branch,
@@ -688,7 +696,7 @@ them), and each of the two is checked against that same text from its own bytes.
 | the file shipped, `odeframe.o`, checked from its bytes | 2.4 s |
 | on a processor (Threadripper), against another decoder and zlib's `adler32` | 30,000 frames, 6,746 opened and 23,254 refused, as the reference |
 
-So using a function through its contract costs the checker close to nothing: the work is in the function
+So using a function through its contract costs the verifier close to nothing: the work is in the function
 called, once, and not again at each use. What it taught:
 
 - **The caller is shown whatever the parts are.** With another Adler-32 in the definitions (`s[0] = 2`) the
@@ -715,10 +723,10 @@ called, once, and not again at each use. What it taught:
   defined twice is refused now (tests in `test_ode.py`, `test_kbinary.py`, `programs/test_files.py`). This
   is of the kind that matters most: it could have said "shown" of something false.
 
-**Not done.** Sigil has no code. No prover searches for places: each was written from the checker's
+**Not done.** Sigil has no code. No prover searches for places: each was written from the verifier's
 refusals. And what `kbyte.py` still lacks, each found by a program that wanted it:
 
-- one checker of functions (`kfn.py` and `kbyte.py` both follow calls now, each with its own kind of memory);
+- one verifier of functions (`kfn.py` and `kbyte.py` both follow calls now, each with its own kind of memory);
 - tables of constants beside the code, and multiplication in Ode (Sigil);
 - facts about a specification itself that take an induction: that what an LZ4 block decodes to only
   grows; that the least place two runs differ is where a walk over them stops. Those specifications were
@@ -749,7 +757,7 @@ every lane's chaining value, block, length byte and flags byte). Times on an App
 clang 21 assembles them and as GNU as 2.46 does (they pad the loops differently) both pass.
 
 The fourth kernel was added to see what a new one costs: three instruction forms in the decoder (a 256-bit
-load, a byte read, a 32-bit store), four cases in the checker, a five-line specification, and it passed on
+load, a byte read, a 32-bit store), four cases in the verifier, a five-line specification, and it passed on
 its first run, a few minutes after the start. Its audit (below) then ran clean, and `kremove.py` on it found
 eight instructions whose results nothing reads (BLAKE3 #398).
 
@@ -761,23 +769,23 @@ eight instructions whose results nothing reads (BLAKE3 #398).
 The table above is each kernel for one number of blocks (16, or 1), run to its end. `kloop.py` shows K32, P32
 and P16 for **every** number of blocks `n >= 1` and every value of the four flag bytes (flags, start, end,
 last length): the kernels' whole interface. It is a first trial of how proofs could be made for code with
-loops: the proof is a small text the prover finds, and the checker reads it and does no searching.
+loops: the proof is a small text the prover finds, and the verifier reads it and does no searching.
 
 - **The specification is the sequence `chunk`**, a lane at a time: `h[0]` is the key; `h[b + 1]` is
   `compress(h[b], block b, counter, length, flags)` with the start byte or-ed in for block 0, and the end
   byte and the length byte for the last block; what is stored is `h[n]`.
 - **A proof** names one place in the code, the head of the loop over blocks, and says what each register and
   frame cell holds there when b blocks are done: kept as it was after the first block, a number `c + cn*n +
-  cb*b`, or a word of the specification's state. K32's, with every name the checker does not need taken out
+  cb*b`, or a word of the specification's state. K32's, with every name the verifier does not need taken out
   (`proofs/k32.json`, 1,088 bytes): the place `+0x133`; `r13 = n - b`; `r14 = 64*b`; six registers kept (the
   flags, the stack and frame pointers, the inputs' table, the output's address); `zmm0` to `zmm15` hold the
   state's eight words for lanes 0-15 and 16-31; four frame cells (the counters) kept.
-- **The checker** runs the code from its entry through the first block; then from the place, for an unknown
+- **The verifier** runs the code from its entry through the first block; then from the place, for an unknown
   b and an unknown state, along every path to the place again or to the return; and compares terms by
   identity with the specification's next state. That is Floyd's method. "Is this the last block?" is decided
   from two linear facts (`b >= 1`, `b <= n-1`) by adding them up.
 - **The prover** runs the loop twice, compares the second and third visits of the place, guesses, and weakens
-  the guess where the checker refuses. Nothing it does is trusted.
+  the guess where the verifier refuses. Nothing it does is trusted.
 
 | kernel | proof found in | proof checked in | paths of the step |
 |---|---|---|---|
@@ -804,7 +812,7 @@ does.
 
 What this trial does not show: more than one loop that needs a proof (the seven rounds inside are run, not
 proved by induction); a loop whose state is a data structure in memory; calls; code that is not a kernel.
-The proof's form is made for this shape of loop. The checker is `kcheck.py` and `kdecode.py` with 300 lines
+The proof's form is made for this shape of loop. The verifier is `kcheck.py` and `kdecode.py` with 300 lines
 more, in Python, unverified.
 
 ## A stack in memory, a loop over it, calls: against an algorithm (`kglue.py`, November 15, an earlier trial)
@@ -822,7 +830,7 @@ three in about 100 seconds, from proofs that name lemmas written by hand (`Lemma
 - **A proof** names the loop's place and what the registers and the frame hold there *for any stack the
   memory may hold* (`proofs/merge.json`, 396 bytes: the count in `r15`; four registers and eight frame cells
   kept). `push` and `add` have no loop and the empty proof.
-- **The checker** runs the code from the entry and from the place along every path. To the place: the stack
+- **The verifier** runs the code from the entry and from the place along every path. To the place: the stack
   in memory is one turn of the machine from the stack the path began with, and the machine does turn there.
   To the return: the machine has stopped and the result is the count. At a call: the callee's contract: what
   it asks is shown from the caller's facts, what it leaves replaces what was there. A stack is a named unknown
@@ -848,7 +856,7 @@ change, with the processor as judge (`kglue_flip.py`, `audit/kglue-flip-*.txt`):
 **What that audit found.** Run first, it had 24 changes of `merge` accepted that the processor told from the
 machine: all in `mov rdx, 64`, the block length given to the kernel. I had written the two kernels' contract
 by hand as "the low byte of the length"; the SSE4.1 kernel reads all of EDX. The contract was wrong, not the
-checker's logic: a callee's contract taken on trust is a hole until it is itself checked against the callee's
+verifier's logic: a callee's contract taken on trust is a hole until it is itself checked against the callee's
 bytes (the Lean proofs have it right for that reason). Reading the accepted changes then showed a second
 thing: `mov rcx, 5` (the platform word that selects the AVX-512 kernel) could become any number, and the
 AVX-512 kernel be called on a machine without it, with the contract none the wiser. The contract now says the
@@ -879,25 +887,25 @@ specification. (The hash above does not use them: it has no stack.)
 | `DESIGN.md` | 175 | the design: what is wanted and given up, the rules for code written to be proved, how it stands to types-as-proofs |
 | `proofs/inner.spec`, `proofs/*.json` | 185 | the inner contracts (of the functions inside), the layouts of two records; the wide kernels' and `merge`'s places |
 | `hash.ode`, `glue/*.S` | 332 | the hash written to be proved; the assembly the Ode compiler prints of it (and of the stack's three functions) |
-| `b3hashr.o` | | the binary: 40,856 bytes, the specification and the proof in it |
+| `b3hashr.o` | | the binary: 40,880 bytes, the specification and the proof in it |
 | `check_binary.py` | 140 | what a reader runs on the binary, or on what a linker made of it |
 | `programs/` | | six other programs (Sigil a specification only): each its specification and public contract, its Ode source, the compiler's assembly, its proof, a harness for the processor; `check_programs.py`, `test_specs.py`, `bench.c`; `blake3-rust/` |
-| `kbyte.py`, `test_kbyte.py` | 910 + 326 | the checker of those programs (bytes, numbers, places); its tests |
+| `kbyte.py`, `test_kbyte.py` | 910 + 326 | the verifier of those programs (bytes, numbers, places); its tests |
 | `kbyte_flip.py`, `kbyte_nop.py` | 117 + 37 | their single-bit audit and every instruction left out, the processor judging |
 | `programs/kpack.py`, `programs/check_file.py`, `programs/test_files.py` | 55 + 78 + 82 | a program as one file with its proof (untrusted); what a reader runs on it, or on what a linker made of it (`--json`: what was checked, for a benchmark's record); tests |
 | `klink.py`, `klink_flip.py`, `test_kbinary.py` | 134 + 72 + 182 | makes the binary of the assembler's objects (untrusted); every single-bit change of what a linker would have written; tests of the reading of a linked file |
 | `check_all.py` | 120 | every function from an assembler's objects, and that the hash's functions end |
 | `ode.py`, `kspec.py`, `klin.py` | 694 + 565 + 256 | the specification's reader; its algebra on symbols; numbers that depend on counts and the facts about them |
 | `kdecode.py` | 581 | reads the ELF file (an object's sections, names and relocations; a linked file as a loader maps it) and decodes the instruction forms the code uses, and no others; no disassembler |
-| `kfn.py`, `test_kfn.py` | 889 + 131 | the checker of functions; its tests |
+| `kfn.py`, `test_kfn.py` | 889 + 131 | the verifier of functions; its tests |
 | `kfn_flip.py`, `khash_native.c` | 133 + 176 | its single-bit audit; the whole hash on a processor against BLAKE3 in C |
 | `khash_bench.c`, `earlier/*.S` | 37 | the speed of `hashr`, of the library, and of the earlier `hashf` (its assembly), in one harness |
-| `kloop.py`, `test_kloop.py` | 439 + 115 | the wide kernels for every number of blocks: the prover, the proof's form, the checker by induction; its tests |
-| `kone.py`, `kone_native.c`, `test_kone.py` | 218 + 86 + 112 | the one-block kernels: the checker (XMM registers as four terms), the processor run, the tests |
-| `kcheck.py`, `test_kcheck.py` | 534 + 163 | the first checker: a kernel's instructions run to the end on symbols (and the terms and the reading of an instruction's text that the others use); its tests |
+| `kloop.py`, `test_kloop.py` | 439 + 115 | the wide kernels for every number of blocks: the prover, the proof's form, the verifier by induction; its tests |
+| `kone.py`, `kone_native.c`, `test_kone.py` | 218 + 86 + 112 | the one-block kernels: the verifier (XMM registers as four terms), the processor run, the tests |
+| `kcheck.py`, `test_kcheck.py` | 534 + 163 | the first verifier: a kernel's instructions run to the end on symbols (and the terms and the reading of an instruction's text that the others use); its tests |
 | `kcheck_cross.py` | 109 | kcheck's reading of each instruction against the Lean model's processor-validated test vectors |
 | `kflip.py`, `kflip_native.c`, `kflip_thunk.S` | 206 + 160 + 66 | the kernels' single-bit audit, and the processor's word on each change accepted |
-| `kglue.py`, `kglue_flip.py`, `kglue_native.c`, `test_kglue.py` | 569 + 136 + 109 + 119 | the stack's functions (the earlier trial): prover, checker; the audit; the tests |
+| `kglue.py`, `kglue_flip.py`, `kglue_native.c`, `test_kglue.py` | 569 + 136 + 109 + 119 | the stack's functions (the earlier trial): prover, verifier; the audit; the tests |
 | `kremove.py` | 41 | which instructions can be replaced by a no-op with the contract still met: for a person to read |
 | `test_ode.py` | 105 | the specification on the vectors, and 24 changes of its text; what is not the language is refused |
 | `audit.sh`, `audit/` | 45 | every single-bit audit, with this machine's processor as the judge; their outputs |
@@ -940,20 +948,20 @@ rows every count is what it was in the run before, at `2ae7c9e9` and `f7c0cfa9`.
    instructions) and the library's own (`test_kcheck.py`, where there is an objdump).
 5. **Every single-bit change of each kernel's code, with a processor as the judge** (`kflip.py --native`). Each
    bit of the kernel's bytes in the object is flipped in turn and the object read and checked as the true one
-   is. A change the checker accepts is then linked with BLAKE3 written out in C and run on an AVX-512
+   is. A change the verifier accepts is then linked with BLAKE3 written out in C and run on an AVX-512
    processor on 1,000 or 2,000 random inputs the contract allows: the chaining values, every byte beside the
    output, the inputs, their table, the key, the kept registers and the stack pointer are compared, and each
    thing the kernel is given lies between two pages that fault. An accepted change the processor tells from
-   BLAKE3 is an error of the decoder or the checker.
+   BLAKE3 is an error of the decoder or the verifier.
 
-   | kernel | changes | stopped by the decoder | refused by the checker | accepted | of those, as BLAKE3 on the processor |
+   | kernel | changes | stopped by the decoder | refused by the verifier | accepted | of those, as BLAKE3 on the processor |
    |---|---|---|---|---|---|
    | P16 | 22,144 | 14,132 | 7,670 | 342 | 342 (1,000 cases each) |
    | K32 | 35,824 | 22,053 | 12,014 | 1,757 | 1,757 (1,000 cases each) |
    | P32 | 35,824 | 22,053 | 11,888 | 1,883 | 1,883 (1,000 cases each) |
    | `output16` | 29,384 | 17,516 | 11,474 | 394 | 394 (2,000 cases each) |
 
-   (Threadripper PRO 7975WX, clang 21.1.8's objects, the checker and decoder as they are at commit `55bcb1c6`;
+   (Threadripper PRO 7975WX, clang 21.1.8's objects, the verifier and decoder as they are at commit `55bcb1c6`;
    17 s for P16, 27 s for `output16`, 13 minutes each for K32 and P32, 48 at a time.
    No change ended without a verdict. Controls in each run: the unchanged object is accepted and runs as BLAKE3;
    asked for a block more than its inputs hold it faults; a refused change of a rotation does not run as BLAKE3.)
@@ -973,14 +981,14 @@ rows every count is what it was in the run before, at `2ae7c9e9` and `f7c0cfa9`.
    whose results nothing reads.
 
    For scale, of 400 changes a kernel that were stopped or refused, 1.5 to 7% run as BLAKE3 on the same
-   inputs all the same: the checker refuses what it cannot show, as it should.
+   inputs all the same: the verifier refuses what it cannot show, as it should.
 
 **What the fifth audit found** (each fixed, each now a test in `test_kcheck.py`):
 
-- *The checker accepted a kernel that faults.* A frame of `0x101` to `0x120` bytes (in place of `0x100`) left
+- *The verifier accepted a kernel that faults.* A frame of `0x101` to `0x120` bytes (in place of `0x100`) left
   the stack pointer off the 64-byte boundary the aligned stores need; kcheck took the frame as aligned whatever
   its size. Six such changes were accepted and crashed on the processor. The frame must now be whole cells.
-- *A changed kernel ran the checker out of memory.* A sum that adds a register to itself in a loop doubles a
+- *A changed kernel ran the verifier out of memory.* A sum that adds a register to itself in a loop doubles a
   flat term each turn. A sum or xor is now at most 64 terms (BLAKE3's widest is 57), and a longer one is refused.
 - *An addition of 32 bits was computed in 64*, and a push, pop or return did not ask that the stack pointer be
   among the saved registers. No accepted change turned on either; both are now as the processor does it.
@@ -1003,7 +1011,7 @@ an 8-bit `or` read as 32 bits.
 - That the things `hashr` is given the addresses of are apart from one another and from the stack (the
   public contract's `requires`: its caller's part).
 - The inner contracts (`proofs/inner.spec`, or the file's own section) are not relied on: a wrong one makes
-  the checker refuse the function it is of, or a function that calls it. Nor are a program's places.
+  the verifier refuse the function it is of, or a function that calls it. Nor are a program's places.
 - For the wide kernels with a number of blocks other than those they are called with here: what is shown
   is what holds if they return.
 - That the regions are apart (the contract's own condition: the stack and the output apart from everything).
@@ -1024,7 +1032,7 @@ an 8-bit `or` read as 32 bits.
 | P32 | not attempted | 0.6 s; written for it: one line in `KERNELS` |
 | `output16` | not attempted | 0.03 s; a few minutes' additions (above) |
 | what is trusted | Lean's kernel, the model (cross-checked on processors), `bv_decide`'s axioms, the lifter (`llvm-objdump`) | these two programs |
-| usable by a caller's Lean proof | yes | no: a caller's theorem would name the kernel's contract as a hypothesis this checker discharges |
+| usable by a caller's Lean proof | yes | no: a caller's theorem would name the kernel's contract as a hypothesis this verifier discharges |
 
 For the whole hash the two are not of the same code: Lean checked the earlier code (`levels/levels.ode`:
 `ladd`, `lroot`, `chunk_node`, `hashl`, and the fast path `wide`, `group`, `groupf`, `finish`, `hashw`,

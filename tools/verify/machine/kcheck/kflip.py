@@ -1,26 +1,26 @@
 #!/usr/bin/env python3
-"""kflip: every single-bit change of a kernel's code, given to the decoder and the checker.
+"""kflip: every single-bit change of a kernel's code, given to the decoder and the verifier.
 
     python3 kflip.py k32|p32|p16|o16 OBJECT [--jobs N] [--every K] [--native CASES] [--refused-sample N] [--detail] [--general]
 
 --general (k32, p32, p16): the kernel for every number of blocks and every flag byte. "Accepted" is then:
-kloop.py's prover finds a proof of the changed kernel and its checker takes it; and the processor runs the
+kloop.py's prover finds a proof of the changed kernel and its verifier takes it; and the processor runs the
 changed kernel on 1 to 20 blocks with any flag bytes.
 
 An audit of kdecode.py and kcheck.py together. Each bit of the kernel's code in the object is flipped in turn
 (--every K: each K-th bit), and the changed object is read and checked as the true one is. Three outcomes:
 
   stopped   the decoder does not know the bytes (it knows only the forms the kernels use)
-  refused   the checker ran the changed code and it does not meet the contract
+  refused   the verifier ran the changed code and it does not meet the contract
   ACCEPTED  the changed code is shown to meet the contract
   NO VERDICT  not decided within the time limit: counted apart, never as refused
 
 An accepted change must be one that changes nothing the contract speaks of. Who says so, apart from the
-checker under audit? The processor: with `--native CASES` (on an x86-64 machine with AVX-512) every accepted
+verifier under audit? The processor: with `--native CASES` (on an x86-64 machine with AVX-512) every accepted
 object is linked with kflip_native.c and run on CASES random inputs the contract allows, against BLAKE3
 written out in C: the chaining values, the bytes beside the output, the inputs, the key, the kept registers,
 the stack pointer. An accepted change the processor tells from BLAKE3 is an error of the decoder or the
-checker: exit status 1. (The other way round is no error: the checker may refuse what happens to work.)
+verifier: exit status 1. (The other way round is no error: the verifier may refuse what happens to work.)
 
 The accepted changes are sorted by where they are:
 
@@ -40,7 +40,7 @@ import kcheck, kdecode
 BASE, DATA = 0x10000, 0x50000000
 
 
-GENERAL = "--general" in sys.argv        # every block count and every flag byte: kloop.py's prover and checker, and the processor run to match
+GENERAL = "--general" in sys.argv        # every block count and every flag byte: kloop.py's prover and verifier, and the processor run to match
 
 
 def verdict(obj, name):
@@ -54,10 +54,10 @@ def verdict(obj, name):
         kspec.fits(obj, kcheck.KERNELS[name]["start"], kcheck.KERNELS[name]["symbol"])
         if GENERAL:
             import kloop
-            kloop.find(rows, data, name, entry)         # accepted: a proof is found, and the checker takes it
+            kloop.find(rows, data, name, entry)         # accepted: a proof is found, and the verifier takes it
         else: kcheck.check(rows, DATA, data, name, entry)
     except kcheck.Fail as e: return "refused", str(e)
-    except (KeyError, IndexError, ValueError, TypeError, AssertionError, RecursionError) as e: return "refused", f"the checker cannot run it ({type(e).__name__}: {e})"
+    except (KeyError, IndexError, ValueError, TypeError, AssertionError, RecursionError) as e: return "refused", f"the verifier cannot run it ({type(e).__name__}: {e})"
     return "ACCEPTED", ""
 
 
@@ -166,7 +166,7 @@ def main():
         print(f"control: the unchanged object on this processor, {cases} cases: {native((name, obj, None, folder, cases))[1]}")
         rot = next((bit for bit, (v, why) in results if v == "refused" and "chaining value is not the specification's" in why), None)
         print(f"control: the unchanged object given inputs shorter than it reads (a block too few, or a block a byte short), on this processor: {native((name, obj, 'over', folder, 20))[1]}")
-        print(f"control: a change the checker refused ({dict(results)[rot][1]}), on this processor: {native((name, obj, rot, folder, 20))[1] if rot is not None else 'NONE FOUND'}")
+        print(f"control: a change the verifier refused ({dict(results)[rot][1]}), on this processor: {native((name, obj, rot, folder, 20))[1] if rot is not None else 'NONE FOUND'}")
         accepted = [bit for bit, (v, why) in results if v == "ACCEPTED"]
         t1 = time.time()
         with multiprocessing.Pool(jobs) as pool:
@@ -180,7 +180,7 @@ def main():
         for bit, r in wrong[:40]:
             at = bit // 8 - sec["off"] - start
             row = next(x for x in rows if x[0] - BASE <= at < x[1] - BASE)
-            print(f"  ACCEPTED BY THE CHECKER, AND THE PROCESSOR SAYS {r}: byte 0x{at:X} bit {bit % 8} of {row[2]}")
+            print(f"  ACCEPTED BY THE VERIFIER, AND THE PROCESSOR SAYS {r}: byte 0x{at:X} bit {bit % 8} of {row[2]}")
         if "--refused-sample" in sys.argv:
             k = int(sys.argv[sys.argv.index("--refused-sample") + 1])
             refused = [bit for bit, (v, why) in results if v != "ACCEPTED"]
@@ -192,7 +192,7 @@ def main():
             print(f"for scale, {len(sample)} of the changes stopped or refused, on this processor ({min(cases, 200)} cases each): "
                   + ", ".join(f"{v} {k}" for k, v in sorted(tally.items())) + " (\"same\": refused or not decoded, yet it works on these inputs)")
     print(f"{name}: {n} single-bit changes of {size} bytes of code ({time.time() - t0:.0f} s, {jobs} at a time): "
-          f"{count['stopped']} stopped by the decoder, {count['refused']} refused by the checker, {count['ACCEPTED']} accepted, {count['NO VERDICT']} with NO VERDICT (the time limit)")
+          f"{count['stopped']} stopped by the decoder, {count['refused']} refused by the verifier, {count['ACCEPTED']} accepted, {count['NO VERDICT']} with NO VERDICT (the time limit)")
     print("accepted, by where the change is: " + (", ".join(f"{k} {v}" for k, v in sorted(kinds.items())) or "none"))
     if unexplained:
         print(f"contract: the {len(unexplained)} instructions with a change the contract does not see (changes accepted in each):")

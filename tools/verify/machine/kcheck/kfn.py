@@ -2,7 +2,7 @@
 """kfn: a function of compiled code against its contract. Records and arrays in memory, bytes of a message of
 any length, calls by contract (a call of itself by its own).
 
-    python3 kfn.py NAME OBJECT            the checker
+    python3 kfn.py NAME OBJECT            the verifier
 
 The third trial of the way of kloop.py and kglue.py (November 15, 2026): BLAKE3's hash of a message as the Ode
 compiler and the assembler leave it (hash.ode, x86-64): `pad`, `chunk_node`, `node_out`, `subtree`, `hashr`.
@@ -13,7 +13,7 @@ of some bytes, or of a record whose `layout` is given), what the caller must sho
 named holds afterwards (`leaves`, in the specification's definitions), what is returned, how much stack it
 may use, which function it calls only on a condition. Everything it does not name is as it was.
 
-THE CHECKER runs the code on symbols from its entry, forward along every path, to the return:
+THE VERIFIER runs the code on symbols from its entry, forward along every path, to the return:
   - a branch on something the path does not fix splits the path, and each side takes the fact with it; a
     path whose facts cannot all hold is dropped;
   - a loop is run: every loop of this code turns a number of times its path fixes (a chunk's 16 blocks, a
@@ -26,7 +26,7 @@ THE CHECKER runs the code on symbols from its entry, forward along every path, t
   - at the return: each thing the contract says is left is the specification's value of it, evaluated on the
     same path (where the specification asks how two numbers compare, the path must have asked too); the
     result, the registers a callee keeps, the stack pointer, and the stack used.
-There is no proof text: the binary, the specification and the contracts are all the checker is given.
+There is no proof text: the binary, the specification and the contracts are all the verifier is given.
 
 No solver: terms are compared by identity, numbers by adding linear facts up (klin.py). What the
 specification's definitions give that cannot be worked out on a path (the tree over bytes whose count the
@@ -38,7 +38,7 @@ specification, and what the registers and the memory hold for any state of it. I
 earlier form so, a stack of levels with a loop over them. The hash was then written as the specification's
 own recursion, no loop needed a place, and that part was taken out.)
 
-WHAT IS NOT CHECKED HERE: this checker (Python, unverified: its audits are its worth)."""
+WHAT IS NOT CHECKED HERE: this verifier (Python, unverified: its audits are its worth)."""
 import copy, itertools, json, os, sys, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import kcheck, kdecode, kspec, ode, kone
@@ -152,12 +152,12 @@ class Contract:
         self.kind = {name: kind for _, kind, name in self.args}
         for _, kind, name in self.args:
             if (kind not in ("number", "byte", "any", "cv", "cvs", "block", "counter", "low byte", "word", "low word") and kind not in kspec.SPEC.layouts and bytes_kind(kind) is None
-                    and lanes_kind(kind, "inputs") is None and lanes_kind(kind, "cvs") is None and packed_kind(kind) is None): raise Fail(f"{symbol}: {name} is of a kind this checker does not know: {kind}")
+                    and lanes_kind(kind, "inputs") is None and lanes_kind(kind, "cvs") is None and packed_kind(kind) is None): raise Fail(f"{symbol}: {name} is of a kind this verifier does not know: {kind}")
             n = bytes_kind(kind)
             if isinstance(n, str) and self.kind.get(n) != "number": raise Fail(f"{symbol}: {name} is {kind}, and {n} is not a number among the arguments")
             if lanes_kind(kind, "inputs") is not None and self.kind.get("n") != "number": raise Fail(f"{symbol}: {name} is {kind}, and no number n says how many blocks each input has")
         if any(leaf.get("part") is not None or leaf.get("cond") is not None for leaf in c["leaves"]) or c.get("trace") or c.get("conditions"):
-            raise Fail(f"{symbol}: a contract with `ensures X[a .. b]`, `ensures ... if C` or `trace depends on`: not this checker's yet")
+            raise Fail(f"{symbol}: a contract with `ensures X[a .. b]`, `ensures ... if C` or `trace depends on`: not this verifier's yet")
         for leaf in c["leaves"]:
             if leaf["index"] is not None and (lanes_kind(self.kind.get(leaf["name"], ""), "cvs") is None or leaf["each"] != (("num", 0), ("num", lanes_kind(self.kind[leaf["name"]], "cvs")))):
                 raise Fail(f"{symbol}: it leaves each of some values that are not all the chaining values at an address")
@@ -604,7 +604,7 @@ class Machine:
             finally: self.facts = mine
             return
         a, b = A.plain(a), A.plain(b)
-        if b - a > 64: raise Fail(f"{name}: {b - a} values asked of, one by one: more than this checker takes")
+        if b - a > 64: raise Fail(f"{name}: {b - a} values asked of, one by one: more than this verifier takes")
         for i in range(a, b): one(i)
 
     def call_kernel(self, A, name, k):
@@ -774,10 +774,10 @@ class Machine:
         elif op == ".ret":
             if self.g["rsp"] != ("a", "frame", 0) or self.mem["frame"].get(0) != (8, "q", ("q", "return address")): raise Fail("a return to somewhere else")
             nxt = None
-        else: raise Fail(f"an instruction this checker does not know: {' '.join(map(str, i))}")
+        else: raise Fail(f"an instruction this verifier does not know: {' '.join(map(str, i))}")
         if nxt is not None and nxt <= self.pc:
             self.back[nxt] = self.back.get(nxt, 0) + 1
-            if self.back[nxt] > TURNS: raise Fail(f"a loop has turned {TURNS} times on one path: not a loop this checker runs")
+            if self.back[nxt] > TURNS: raise Fail(f"a loop has turned {TURNS} times on one path: not a loop this verifier runs")
         self.steps += 1; self.pc = nxt
 
 
@@ -792,7 +792,7 @@ def low_byte(v):
     """The low byte of a register, as a byte of memory."""
     if v[0] == "n": return v[1] & 0xFF
     if v[0] == "z": return v[1]
-    raise Fail(f"the low byte of {v}: not a byte this checker follows")
+    raise Fail(f"the low byte of {v}: not a byte this verifier follows")
 
 
 def paths(m, budget):
@@ -815,7 +815,7 @@ def paths(m, budget):
 
 
 # ---------------------------------------------------------------------------------------------------------
-# The checker.
+# The verifier.
 def returned(e, c, where):
     """At a return: what the contract says is left and returned, the registers a callee keeps, the stack."""
     A = e.A()
@@ -846,9 +846,9 @@ def within(e, c, where):
 
 
 def check(rows, name, proof=None):
-    """The function's instructions meet its contract. (`proof`: for this checker, nothing: a proof with a place
+    """The function's instructions meet its contract. (`proof`: for this verifier, nothing: a proof with a place
     is refused.)"""
-    if proof is not None and proof.get("places"): raise Fail("a proof with a place: this checker runs every loop")
+    if proof is not None and proof.get("places"): raise Fail("a proof with a place: this verifier runs every loop")
     c, T = contract("b3l_" + name), kcheck.Terms()
     m = Machine(T, rows, c); m.pc = rows[0][0]
     budget = [STEPS]

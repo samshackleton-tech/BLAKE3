@@ -70,7 +70,7 @@ class Kglue(unittest.TestCase):
             rows[hits[which]] = (rows[hits[which]][0], rows[hits[which]][1], new)
             with self.assertRaises(kcheck.Fail, msg=f"the prover on {name}: {what}"):
                 kglue.find(rows, name)
-            with self.assertRaises(kcheck.Fail, msg=f"the checker with the true proof on {name}: {what}"):
+            with self.assertRaises(kcheck.Fail, msg=f"the verifier with the true proof on {name}: {what}"):
                 kglue.check(rows, name, self.proofs[name])
 
     def test_a_changed_contract_refuses_the_true_function(self):

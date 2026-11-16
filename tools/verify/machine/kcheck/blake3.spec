@@ -2,7 +2,7 @@
 //
 // The first part is the specification. It says what the hash of a message IS, by definitions; it does not say
 // how to compute it. A reader checks it against the BLAKE3 paper, and a program (ode.py) checks that it gives
-// the official test vectors (test_vectors/test_vectors.json: 35 lengths, the three modes). The checkers read
+// the official test vectors (test_vectors/test_vectors.json: 35 lengths, the three modes). The verifiers read
 // the same text on symbols and compare machine code with it; there is no other specification.
 //
 // The language is made for specifications of this kind:
@@ -172,9 +172,9 @@ def iv_words() { [word(IV[i]) for i in 0..8] }
 // way. `bits(n)`: the length of n in bits. So with the key's bytes those of IV and flags 0 the 32 bytes at
 // `out` are blake3(input) as defined above; with KEYED_HASH, blake3_keyed(key, input).
 //
-// The checker shows the contract from the binary's bytes (check_binary.py b3hashr.o). What it needs beside
+// The verifier shows the contract from the binary's bytes (check_binary.py b3hashr.o). What it needs beside
 // them is in proofs/: the inner contracts, of the functions this one calls, and for a few loops a place. A
-// reader of this contract need not read those: if one were wrong, the checker would refuse the function it
+// reader of this contract need not read those: if one were wrong, the verifier would refuse the function it
 // is of, or the function that relies on it.
 contract b3l_hashr(out: 32 bytes, input: len bytes, len: number, key: 32 bytes, flags: byte, plat: any) {
     requires apart(out, input, key)

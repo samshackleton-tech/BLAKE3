@@ -5,7 +5,7 @@
 
 The language is described at the top of blake3.spec. This file is its reader: a parser (to a tree), and one
 evaluator of the tree over an "algebra" of words: Numbers (words are 32-bit numbers) or Symbols (words are
-the checkers' terms; a comparison of numbers that depend on a count is decided from the path's facts, or the
+the verifiers' terms; a comparison of numbers that depend on a count is decided from the path's facts, or the
 evaluation stops). The same text is thus what gives BLAKE3's test vectors and what code is compared with.
 
     const NAME = EXPR
@@ -19,7 +19,7 @@ evaluation stops). The same text is thus what gives BLAKE3's test vectors and wh
                                                   (an algorithm, not a specification: proofs/inner.spec has one)
 
 A sequence or machine called as a function runs to its end; with more than one state its result is a record
-of them. The checkers ask it for one `turn` and whether it `goes` on. On symbols a definition with a kind
+of them. The verifiers ask it for one `turn` and whether it `goes` on. On symbols a definition with a kind
 that cannot be evaluated (the tree over bytes whose count the path does not fix) gives a value of that
 kind named by what it was given; a machine that cannot be run likewise."""
 import json, os, re, sys, time
@@ -57,6 +57,25 @@ def lex(text):
     return out
 
 
+# The names the language itself gives a meaning (LANGUAGE.md): no specification defines one of them.
+OWN = {"word", "counter", "words", "nothing", "bits", "lo", "hi", "len", "ones", "pow", "word_bytes", "bytes_of", "failed", "reason"}
+
+
+def with_proof(text, inner):
+    """The reader's specification with a proof's part read after it (the contracts of the functions inside, and
+    the layouts and algorithms those contracts speak of). The proof's part is not the reader's, so it must not
+    be able to change what the reader's text means: no name it declares may be written anywhere in the reader's
+    text. (Then no name the reader reads has its meaning from the proof; a name his text uses and does not
+    define stays undefined. A name declared twice, or one of the language's own, is refused by the parser.
+    `kind NAME: ...` lines are let through: they say how a definition of the reader's is to be followed on
+    symbols, not what it is.)"""
+    mine = {value for kind, value, _ in lex(text) if kind == "name"}
+    p = Parser(inner); p.file()
+    for what, name in sorted(p.declared):
+        if what != "kind" and name in mine: raise Err(f"the proof's part declares {name}, a name the reader's specification uses: it is refused")
+    return Spec(text + "\n" + inner)
+
+
 class Parser:
     def __init__(self, text): self.t, self.i = lex(text), 0
     def peek(self, value=None, kind=None):
@@ -73,8 +92,9 @@ class Parser:
 
     def file(self):
         consts, fns, machines, self.contracts, self.layouts, self.kinds, self.seqs = {}, {}, {}, {}, {}, {}, {}
-        said = set()
+        said = self.declared = set()
         def once(what, name):
+            if what == "value" and name in OWN: raise Err(f"line {self.t[self.i - 1][2]}: {name} is the language's own: a specification does not define it")
             # A name is given its meaning once. (A second `def` or `contract` of a name would take the first
             # one's place without a word: and a text may be two texts put end to end, one of them not the reader's.)
             if (what, name) in said: raise Err(f"line {self.t[self.i - 1][2]}: {name} is defined twice")
@@ -444,7 +464,7 @@ class Spec:
             self.fuel -= 1
             if self.fuel < 0: raise Err("too much to follow here")
 
-    # -- what the checkers ask
+    # -- what the verifiers ask
     def call(self, A, name, *args): return self.apply(A, name, list(args))
     def turn(self, A, name, env):
         """One turn of a machine: env names its arguments, its state, and for a `for` machine its counter."""

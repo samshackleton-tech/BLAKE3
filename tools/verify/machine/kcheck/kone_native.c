@@ -1,5 +1,5 @@
 // kone_native: a one-block kernel run on this processor against BLAKE3's compression written out here, on
-// what its contract (kone.py) allows. kglue_flip.py links it with each changed object the checker accepted.
+// what its contract (kone.py) allows. kglue_flip.py links it with each changed object the verifier accepted.
 //
 //     cc -O1 -o run kone_native.c kflip_thunk.S OBJECT && ./run avx512|sse41 CASES
 //

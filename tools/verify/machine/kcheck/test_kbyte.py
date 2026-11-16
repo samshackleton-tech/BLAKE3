@@ -77,8 +77,8 @@ class Adler32(unittest.TestCase):
 class Adler32Blocks(unittest.TestCase):
     """Adler-32 the usual fast way: the two sums are brought below 65521 once in 5552 bytes, not at every byte.
     The specification is the one above, unchanged: it reduces at every byte. The place says the sums' remainders
-    are the specification's and bounds them; the checker's arithmetic does the rest (a number has one quotient
-    and one remainder). Written with the checker frozen: no change to it."""
+    are the specification's and bounds them; the verifier's arithmetic does the rest (a number has one quotient
+    and one remainder). Written with the verifier frozen: no change to it."""
     @classmethod
     def setUpClass(cls): cls.p = Program("adler32", "adler32_blocks", "ode_adler32_blocks")
 
@@ -113,7 +113,7 @@ class Adler32Blocks(unittest.TestCase):
 
 
 class Adler32Blocks4(unittest.TestCase):
-    """The same with four bytes a turn inside a block: the checker steps the specification's sequences four
+    """The same with four bytes a turn inside a block: the verifier steps the specification's sequences four
     places on, one after another."""
     @classmethod
     def setUpClass(cls): cls.p = Program("adler32", "adler32_blocks4", "ode_adler32_blocks4")
@@ -407,7 +407,7 @@ class Lz4Pack(unittest.TestCase):
 
 class Utf8(unittest.TestCase):
     """A validator: the count of code points, or NO where the bytes are not well-formed UTF-8. Written after
-    the checker was frozen for an audit: it needed no change to the checker or to either language."""
+    the verifier was frozen for an audit: it needed no change to the verifier or to either language."""
     @classmethod
     def setUpClass(cls): cls.p = Program("utf8", "utf8", "ode_utf8")
 
@@ -459,7 +459,7 @@ class Utf8(unittest.TestCase):
 
 class Base64(unittest.TestCase):
     """An encoder whose room is the caller's to give (`requires cap >= 4 * ((n + 2) / 3)`), in groups of three
-    bytes. Written, like the UTF-8 validator, while the checker was frozen: no change to it. (A check takes 13 s:
+    bytes. Written, like the UTF-8 validator, while the verifier was frozen: no change to it. (A check takes 13 s:
     the four letters of a group are five-way branches, 625 paths a turn. Its changed instructions are left to the
     single-bit audit.)"""
     @classmethod
@@ -501,8 +501,8 @@ class Inet(unittest.TestCase):
     """The Internet checksum. Its contract has no `trace` line: no branch and no address depends on the bytes,
     though every byte goes into the result. And it has no `requires`: where the sum might not fit it says NO.
     The specification says what a one's complement sum is (the plain sum less as many 65535s as leave it from 1
-    to 65535); the code folds the carries in four times; the checker's arithmetic shows they are the same.
-    Written with the checker frozen: no change to it."""
+    to 65535); the code folds the carries in four times; the verifier's arithmetic shows they are the same.
+    Written with the verifier frozen: no change to it."""
     @classmethod
     def setUpClass(cls): cls.p = Program("inet", "inet", "ode_inet")
 
@@ -607,7 +607,7 @@ class Arithmetic(unittest.TestCase):
 
 
 class Varint(unittest.TestCase):
-    """No proof: the loop turns at most nine times, and the checker runs it."""
+    """No proof: the loop turns at most nine times, and the verifier runs it."""
     @classmethod
     def setUpClass(cls): cls.p = Program("varint", "varint", "ode_varint")
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""kcheck: a trial of a checker made for one job (BLAKE3 #361, November 14, 2026).
+"""kcheck: a trial of a verifier made for one job (BLAKE3 #361, November 14, 2026).
 
 Question: can a small program made for exactly this, and nothing else, show that a wide kernel's machine
 code computes BLAKE3 for every input, in seconds and with no proof written by hand?
@@ -37,7 +37,7 @@ MASK32 = 0xFFFFFFFF
 CHUNK_START, CHUNK_END, PARENT = 1, 2, 4      # as blake3.spec names them: what the callers pack beside the flags
 
 
-from ode import Err as Fail        # one failure: the checker's and the specification reader's
+from ode import Err as Fail        # one failure: the verifier's and the specification reader's
 
 
 WIDEST = 64        # terms in one flat sum or xor. A state word gathers 8 a round: 57 after BLAKE3's 7 rounds
@@ -113,7 +113,7 @@ def spec_output(T, kernel, lane):
     left = c["leaves"][0]
     if ([kind for _, kind in c["args"]] != ["16 descriptors", "16 cvs"] or left["name"] != c["args"][1][0] or left["index"] is None
             or left["each"] != (("num", 0), ("num", 16)) or c["asks"] or c["returns"] is not None or c["stack"] != 4096):
-        raise Fail(f"{kernel['symbol']}: not the contract of sixteen descriptors this checker knows")
+        raise Fail(f"{kernel['symbol']}: not the contract of sixteen descriptors this verifier knows")
     nodes = [dict(block=kspec.words(T.var("input", n, 0, w) for w in range(16)), cv=kspec.words(T.var("cv", n, w) for w in range(8)),
                   length=ode.Word(T.var("length", n)), flags=ode.Word(T.var("flags of", n))) for n in range(16)]
     return kspec.terms(kspec.SPEC.eval(kspec.Symbols(T), left["expr"], {c["args"][0][0]: nodes, left["index"]: lane}))
@@ -394,7 +394,7 @@ class Machine:
             x, y, imm = self.vec(int(a[1])), self.vec(int(a[2])), int(a[3])
             quarter = lambda v, q: v[4 * q:4 * q + 4]
             self.z[int(a[0])] = quarter(x, imm % 4) + quarter(x, imm // 4 % 4) + quarter(y, imm // 16 % 4) + quarter(y, imm // 64 % 4)
-        else: raise Fail(f"an instruction this checker does not know: {' '.join(map(str, i))}")
+        else: raise Fail(f"an instruction this verifier does not know: {' '.join(map(str, i))}")
         self.pc = nxt
 
     def run(self, entry, limit=200000):

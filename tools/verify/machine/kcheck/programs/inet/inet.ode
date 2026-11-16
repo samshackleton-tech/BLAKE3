@@ -8,7 +8,7 @@ fn inet(input, n)
   var i = 0
   var s = 0
   var result = NO
-  // n < 2^49, asked as the checker can follow it today: it reads no constant above 32 bits and no shift
+  // n < 2^49, asked as the verifier can follow it today: it reads no constant above 32 bits and no shift
   // by more than 16
   if (((n >> 16) >> 16) >> 16) >> 1 == 0 {
     while n - i > 1 {

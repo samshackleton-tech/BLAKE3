@@ -59,7 +59,7 @@ class Kloop(unittest.TestCase):
             rows, data, entry = self.changed(old, new)
             with self.assertRaises(kcheck.Fail, msg="the prover on: " + label):
                 kloop.find(rows, data, "k32", entry)
-            with self.assertRaises(kcheck.Fail, msg="the checker with the true proof on: " + label):
+            with self.assertRaises(kcheck.Fail, msg="the verifier with the true proof on: " + label):
                 kloop.check(rows, data, "k32", self.proof, entry)
         rows, data, entry = self.k32
         bad = bytearray(data); bad[0xC0 + 64 + 4] ^= 0x40           # one entry of the message schedule

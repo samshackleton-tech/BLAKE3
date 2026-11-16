@@ -63,7 +63,7 @@ sequence NAME(x) { s[0] = E   s[i + 1] = F }
 
 Three things have no meaning: a place outside a list, a difference below zero, a search with no result. A
 specification that comes to one of them is wrong there, and the reader stops; nothing is given in its
-place. The checker, reading on a path of the code, must be shown that it does not happen (the path's facts
+place. The verifier, reading on a path of the code, must be shown that it does not happen (the path's facts
 show `i < len(bytes)`), or it refuses. So a specification that means to have no value somewhere says so with
 `fails`, before it gets there.
 

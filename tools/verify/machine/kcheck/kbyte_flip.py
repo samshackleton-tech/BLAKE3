@@ -4,9 +4,9 @@ run on this machine's processor.
 
     python3 kbyte_flip.py SPEC SYMBOL OBJECT PROOF [--jobs N] [--native HARNESS.c ARGS...]
 
-The processor is the judge of the checker's yes: the harness (programs/NAME/native.c) is linked with the
+The processor is the judge of the verifier's yes: the harness (programs/NAME/native.c) is linked with the
 changed object and run; exit 0 means the changed function did, on its cases, what the contract says. A
-change the checker accepts and the processor tells from that is the checker's fault. Exit 1 if there is one,
+change the verifier accepts and the processor tells from that is the verifier's fault. Exit 1 if there is one,
 or a change without a verdict."""
 import multiprocessing, os, signal, subprocess, sys, tempfile, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -29,7 +29,7 @@ def verdict(obj, spec_text, symbol, proof):
     except (IndexError, ValueError, KeyError, StopIteration) as e: return "stopped", f"the decoder ran off the bytes ({type(e).__name__})"
     try: kbyte.check(rows, ode.Spec(spec_text), symbol, proof)
     except (kcheck.Fail, ode.Err) as e: return "refused", str(e)
-    except (KeyError, IndexError, ValueError, TypeError, AssertionError, RecursionError, AttributeError) as e: return "refused", f"the checker cannot run it ({type(e).__name__}: {e})"
+    except (KeyError, IndexError, ValueError, TypeError, AssertionError, RecursionError, AttributeError) as e: return "refused", f"the verifier cannot run it ({type(e).__name__}: {e})"
     return "ACCEPTED", ""
 
 

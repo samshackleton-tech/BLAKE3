@@ -6,7 +6,7 @@
 In an assembler's object the four bytes of an instruction that say how far away its operand or the function
 it calls is are left for a linker, and the single-bit audits of the functions (kflip.py, kfn_flip.py) pass
 them by. In klink.py's object they are written, and kdecode.py reads the target from them. This changes each
-of their bits in turn and asks the checker of the function they are in. A change it accepts is, with
+of their bits in turn and asks the verifier of the function they are in. A change it accepts is, with
 --native, linked with khash_native.c and run on this machine's processor against BLAKE3 in C (the whole
 hash: exit 1 if any differs)."""
 import os, subprocess, sys, tempfile
@@ -64,7 +64,7 @@ def main():
             line += ": as BLAKE3 on the processor" if ok else ": DIFFERS on the processor"
             wrong += not ok
         print(line)
-    if wrong: print(f"{wrong} accepted changes DIFFER on the processor: the checker or the decoder is wrong")
+    if wrong: print(f"{wrong} accepted changes DIFFER on the processor: the verifier or the decoder is wrong")
     return 1 if wrong else 0
 
 

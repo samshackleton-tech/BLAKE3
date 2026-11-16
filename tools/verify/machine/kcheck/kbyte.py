@@ -26,11 +26,11 @@ What is shown, for everything the contract's `requires` lines allow, along every
             decreases len - i            numbers never below zero that are less at the next place the code comes
         }                                to: the first, or the first no greater and the second less, and so on
 
-    The checker runs the code from the entry to the place, and from the place (the names any numbers the
+    The verifier runs the code from the entry to the place, and from the place (the names any numbers the
     facts allow, the registers as said, the registers a callee keeps and the stack as they were if they
     were the same on every path, everything else unknown) to the place again or to the return. Every arrival must show what the place says. So each loop is run once, for every count.
 
-A byte read is a number from 0 to 255 that the checker gives a name (`input[i]`); the specification read on
+A byte read is a number from 0 to 255 that the verifier gives a name (`input[i]`); the specification read on
 the same path gives the same name to the same byte. Numbers are compared by adding linear facts up
 (klin.py): no solver. A sequence of the specification at a place the path does not fix is a number with a
 name; at the place after one that is known it is the sequence's own equation of it.
@@ -43,7 +43,7 @@ call; what it ensures is so after it; nothing else of it is used, and it is chec
 given must hold the callee's contract. `check` returns the names called: whoever runs it sees that each is
 checked too, and that no function is called by what it calls.
 
-WHAT IS NOT CHECKED HERE: this checker (Python, unverified)."""
+WHAT IS NOT CHECKED HERE: this verifier (Python, unverified)."""
 import itertools, os, re, sys, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import kcheck, kdecode, kfn, kspec, ode
@@ -94,18 +94,18 @@ class Contract:
         self.kind = {name: kind for _, kind, name in self.args}
         for _, kind, name in self.args:
             n = kfn.bytes_kind(kind)
-            if kind != "number" and n is None: raise Fail(f"{symbol}: {name} is of a kind this checker does not know: {kind}")
+            if kind != "number" and n is None: raise Fail(f"{symbol}: {name} is of a kind this verifier does not know: {kind}")
             if isinstance(n, str) and self.kind.get(n) != "number": raise Fail(f"{symbol}: {name} is {kind}, and {n} is not a number among the arguments")
-        if c["calls"] or c["needs"] or c["given"] or c["decreases"] is not None: raise Fail(f"{symbol}: a clause this checker does not know")
+        if c["calls"] or c["needs"] or c["given"] or c["decreases"] is not None: raise Fail(f"{symbol}: a clause this verifier does not know")
         if not isinstance(c["stack"], int): raise Fail(f"{symbol}: the stack it may use is not a plain number")
         # `returns r`, r a name the specification does not have: the number returned is called r, and `ensures` lines speak of it
         r = c["returns"]
         self.result = r[1] if r is not None and r[0] == "name" and r[1] not in self.kind and r[1] not in spec.consts else None
         for leaf in c["leaves"]:
-            if leaf["index"] is not None: raise Fail(f"{symbol}: `ensures X[i] = ... for i`: not this checker's")
+            if leaf["index"] is not None: raise Fail(f"{symbol}: `ensures X[i] = ... for i`: not this verifier's")
             if leaf["name"] != self.result and self.kind.get(leaf["name"]) in (None, "number"): raise Fail(f"{symbol}: it ensures something of {leaf['name']}, which is not at an address among its arguments nor the result")
         self.writes = set(c["spoils"]) | {leaf["name"] for leaf in c["leaves"] if leaf["name"] != self.result}
-        self.held = set(self.writes)                           # what the checker keeps the bytes of: all it may write
+        self.held = set(self.writes)                           # what the verifier keeps the bytes of: all it may write
         self.stack, self.trace, self.conditions = c["stack"], set(c["trace"]), c["conditions"]
         # What is written is taken to be apart from everything else given: the contract must ask it of the caller.
         # (Things that are only read may overlap: their bytes are then any bytes, alike or not.)
@@ -125,7 +125,7 @@ class Undecided(Err):
 # The specification read on a path: numbers that depend on counts, bytes with names, sequences.
 class Algebra:
     def __init__(self, m): self.m, self.facts, self.T = m, m.facts, m.T
-    def word(self, n): raise Err("a word: this checker's programs are of bytes and numbers")
+    def word(self, n): raise Err("a word: this verifier's programs are of bytes and numbers")
     counter = add = xor = or_ = rotr = words = word
     def num(self, x):
         if isinstance(x, bool) or not isinstance(x, (int, Lin)): raise Err("a number expected")        # a thing with a name only is none
@@ -320,7 +320,7 @@ class Algebra:
                     for m in range(1, d): self.element(spec, seq, plain(Lin.of(j) + m))
                     break
         if n is not None and n > 4096 and not any(self.facts.zero(i - j - 1) is True for j, _ in table):
-            raise Err(f"place {n} of a sequence, with no place near it known: more places than this checker works out one by one")
+            raise Err(f"place {n} of a sequence, with no place near it known: more places than this verifier works out one by one")
         below = Lin.of(n - 1) if n is not None and n > 0 else next((j for j, _ in table if self.facts.zero(i - j - 1) is True), None)
         if n == 0: v = spec.eval(self, seq.first, seq.env)
         elif below is not None:
@@ -442,7 +442,7 @@ class Machine(kfn.Machine):
     def load(self, region, off, size):
         if region == "frame": return super().load(region, off, size)
         if region not in self.len: raise Fail(f"an address in {region}: no such memory")
-        if size != 1: raise Fail(f"a read of {size} bytes of {region}: this checker follows one byte at a time")
+        if size != 1: raise Fail(f"a read of {size} bytes of {region}: this verifier follows one byte at a time")
         off = Lin.of(off); self.inside(region, off, "read")
         if region in self.readonly: return ("l", self.byte(region, off))
         rope = self.held.get(region)
@@ -460,7 +460,7 @@ class Machine(kfn.Machine):
         if region == "frame": return super().store(region, off, size, new)
         if region not in self.len: raise Fail(f"an address in {region}: no such memory")
         if region in self.readonly: raise Fail(f"a write to {region}, which the contract gives to read")
-        if size != 1: raise Fail(f"a write of {size} bytes of {region}: this checker follows one byte at a time")
+        if size != 1: raise Fail(f"a write of {size} bytes of {region}: this verifier follows one byte at a time")
         off = Lin.of(off); self.inside(region, off, "write")
         rope = self.held.get(region)
         if rope is not None:
@@ -532,7 +532,7 @@ class Machine(kfn.Machine):
 
     def call_contract(self, name, c):
         mine, spec, F, A = self.contract, self.contract.spec, self.facts, Algebra(self)
-        if name == mine.name: raise Fail("the function calls itself: not this checker's")
+        if name == mine.name: raise Fail("the function calls itself: not this verifier's")
         for _, kind, arg in mine.args:
             if kind != "number" and arg not in mine.writes and arg not in mine.trace:
                 raise Fail(f"this function is given {arg} to read and its contract does not let the trace depend on it: what a callee does with such bytes is not followed")
@@ -582,7 +582,7 @@ class Machine(kfn.Machine):
             arg, (a, b) = leaf["name"], leaf["part"] or (("num", 0), ("num", None))
             v = self.entitled(A, spec.eval(A, leaf["expr"], after), f"{arg} of {tag}", True)
             if not isinstance(v, (Rope, View, list)): raise Fail(f"what {name} ensures of {arg} is not a list of bytes")
-            if spec.eval(A, a, after) != 0: raise Fail(f"`ensures {arg}[a .. b]` with a that is not 0: not this checker's")
+            if spec.eval(A, a, after) != 0: raise Fail(f"`ensures {arg}[a .. b]` with a that is not 0: not this verifier's")
             n = spans[arg][2] if b == ("num", None) else numb(spec.eval(A, b, after))
             if F.zero(Lin.of(A.length(v)) - n) is not True: raise Fail(f"what {name} ensures of {arg}: {n} bytes are said to be a list not shown to be of that length")
             F.add(spans[arg][2] - n)                                # they are within what it was given: its own check showed each write to be
@@ -962,7 +962,7 @@ def where_holds(e, spec, guard, env):
             if u.kind == "zero": yes.facts.assume_zero(u.x); no.facts.assume_nonzero(u.x)
             else: yes.facts.add(u.x); no.facts.add(-u.x - 1)
             work += [side for side in (yes, no) if side.facts.consistent()]
-            if len(work) + len(holds) > 64: raise Fail("a guard of the contract with more cases than this checker takes")
+            if len(work) + len(holds) > 64: raise Fail("a guard of the contract with more cases than this verifier takes")
     return holds
 
 
@@ -987,7 +987,7 @@ def returned(e, c, where):
                     continue
                 rope, (a, b) = e.held.get(leaf["name"]), leaf["part"] or (("num", 0), ("num", None))
                 n = e.len[leaf["name"]] if b == ("num", None) else numb(spec.eval(A, b, env))
-                if spec.eval(A, a, env) != 0: raise Fail(f"{where}: `ensures {leaf['name']}[a .. b]` with a that is not 0: not this checker's")
+                if spec.eval(A, a, env) != 0: raise Fail(f"{where}: `ensures {leaf['name']}[a .. b]` with a that is not 0: not this verifier's")
                 if rope is None or m.facts.zero(Lin.of(A.length(rope)) - n) is not True or not A.same(rope, want):
                     raise Fail(f"{where}: the bytes at {leaf['name']} are not what the contract says: they are {rope}, it says {want}")
         for cond, guard in c.conditions:

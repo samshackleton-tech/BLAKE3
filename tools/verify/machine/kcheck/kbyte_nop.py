@@ -4,7 +4,7 @@ such object it accepts is run on this machine's processor (the harness, as kbyte
 
     [CFLAGS=...] [LIBS=...] python3 kbyte_nop.py SPEC SYMBOL OBJECT PROOF HARNESS.c ARGS...
 
-Exit 1 if an object the checker accepts does not keep the contract on the processor."""
+Exit 1 if an object the verifier accepts does not keep the contract on the processor."""
 import os, subprocess, sys, tempfile
 sys.path.insert(0, os.getcwd())
 import kbyte, kbyte_flip, kdecode

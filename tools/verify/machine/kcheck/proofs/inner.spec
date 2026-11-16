@@ -1,4 +1,4 @@
-// What the functions inside the binary are claimed to do: the checker's steps from the binary to the claim
+// What the functions inside the binary are claimed to do: the verifier's steps from the binary to the claim
 // in blake3.spec. Each is checked against its function's bytes, and used where that function is called. A
 // reader of blake3.spec need not read this file.
 //
@@ -21,14 +21,14 @@
 // may use below its return address (`bits(n)`: the length of n in bits). `calls F if C`: the function calls F
 // only where C holds (the platform word 5 means the machine has AVX-512, which its caller answers for).
 
-// What sort of thing some definitions of blake3.spec give: where the checker cannot work such a value out
+// What sort of thing some definitions of blake3.spec give: where the verifier cannot work such a value out
 // (the bytes of a chunk whose length it does not know), it still knows its sort, and names it by what it is of.
 kind padded: 64 bytes
-kind chunk_node: node
+kind chunk_node: node120
 kind subtree: cv
 
 // How records lie in memory.
-layout node 120 { h: cv at 0, block: 64 bytes at 32, counter: number at 96, length: number at 104 below 65, flags: byte at 112 }
+layout node120 120 { h: cv at 0, block: 64 bytes at 32, counter: number at 96, length: number at 104 below 65, flags: byte at 112 }
 layout keyed 40 { key: cv at 0, flags: byte at 32 }
 
 // The wide kernels: each lane's chunk, for any number of blocks n. K32 gives lane i the counter t + i;
@@ -82,7 +82,7 @@ contract b3l_pad(block: 64 bytes, src: n bytes, n: number) {
     stack 48
 }
 
-contract b3l_chunk_node(nd: node, input: len bytes, len: number, t: number, flags: byte, plat: any) {
+contract b3l_chunk_node(nd: node120, input: len bytes, len: number, t: number, flags: byte, plat: any) {
     requires apart(nd, input)
     requires len <= 1024
     ensures nd = chunk_node(nd.h, t, flags, input)
@@ -91,7 +91,7 @@ contract b3l_chunk_node(nd: node, input: len bytes, len: number, t: number, flag
     needs avx512 if plat == 5
 }
 
-contract b3l_node_out(out: cv, nd: node, root: byte, plat: any) {
+contract b3l_node_out(out: cv, nd: node120, root: byte, plat: any) {
     requires apart(out, nd)
     ensures out = node_value(nd, root)
     stack 128

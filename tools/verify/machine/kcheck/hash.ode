@@ -2,7 +2,7 @@
 //
 // The code is in the shape of the specification (blake3.ode): `subtree` is the specification's `subtree`, in two
 // parts by the same rule, each part by a call of itself; `chunk_node` and `node_out` are the specification's.
-// So nothing has to be shown about a stack of subtrees or a counter of them: the checker (kfn.py) follows each
+// So nothing has to be shown about a stack of subtrees or a counter of them: the verifier (kfn.py) follows each
 // function once, takes a call by the callee's contract (a call of itself by its own), and compares what is
 // left with the specification's definition unfolded once. No loop here needs a proof: each runs a number of
 // times the paths fix (a chunk's 16 blocks, a block's 64 bytes, the 54 doublings of a count of chunks).

@@ -21,14 +21,14 @@ writes the code so that it can be proved, as he writes it so that it is fast).
 | the specification | what the result IS: definitions by equations, in a language made for specifications and nothing else | the auditor | `blake3.spec`, 147 lines; `LANGUAGE.md` says what such a text means |
 | the public contract | a Hoare triple for each function a user calls: `requires`, `ensures`, and a closed world | the auditor | 7 lines for the hash; `CONTRACT.md` says what any contract means |
 | the code | written to be proved, in Ode | nobody has to | `hash.ode`, 332 lines; `programs/*/*.ode` |
-| the binary | one file: the code's bytes, its constants, its names, the proof; nothing for a linker to fill in | the checker | `b3hashr.o`, 40,856 bytes |
-| the proof | what the checker needs beside the code: the inner contracts; a place for a loop whose count is not fixed | nobody has to | for the hash, `proofs/inner.spec` and no place of its own; for the programs, 0 to 6 places each |
-| the checker | runs the binary on symbols and compares with the specification; does not search | the auditor, once, for every program | 4,176 lines of Python for the hash, 910 more for the programs; unverified |
+| the binary | one file: the code's bytes, its constants, its names, the proof; nothing for a linker to fill in | the verifier | `b3hashr.o`, 40,880 bytes |
+| the proof | what the verifier needs beside the code: the inner contracts; a place for a loop whose count is not fixed | nobody has to | for the hash, `proofs/inner.spec` and no place of its own; for the programs, 0 to 6 places each |
+| the verifier | runs the binary on symbols and compares with the specification; does not search | the auditor, once, for every program | 4,176 lines of Python for the hash, 910 more for the programs; unverified |
 
-The auditor reads the specification and the public contract, and runs the checker on the binary
+The auditor reads the specification and the public contract, and runs the verifier on the binary
 (`python3 check_binary.py b3hashr.o`, or on the shared object or the executable a linker made of it: 19 s).
 What made the binary (the Ode compiler, an assembler, `klink.py`, a linker) he does not rely on. If an
-inner contract were wrong, the checker would refuse that function, or one that calls it: the inner
+inner contract were wrong, the verifier would refuse that function, or one that calls it: the inner
 contracts are steps of the proof, not things said to him.
 
 ## The two languages are apart (Sam, November 15)
@@ -44,14 +44,14 @@ stack, which instructions, what the timing may depend on.
 thing: a line is needed to be allowed more (`writes`, `needs`, `trace depends on`), never to promise the
 usual. So a reader need not know what to look for; what is not there is not done.
 
-**Failure is a value of the specification, not of the checker.** `fails REASON if C` in a definition; a
+**Failure is a value of the specification, not of the verifier.** `fails REASON if C` in a definition; a
 contract says what the function does then (`returns if failed(lz4(input, cap)) then NO else ...`). A
 function given bytes from anywhere (a decoder) must be right for all of them: there is no `requires` for
 "the block is well formed", and the closed world makes "safe on every input" the default, not a second
 theorem.
 
 **A contract may be no way to compute.** `ensures lz4(out[0 .. r], n) == input`: what the encoder wrote
-decodes to the input. Nobody could run that to get `out`; the checker shows it of the code by carrying,
+decodes to the input. Nobody could run that to get `out`; the verifier shows it of the code by carrying,
 from place to place, that the block being written decodes so far to the input so far. It is also true of
 an encoder that always says NO, which is why a contract must be read for what it does not promise; the
 plain encoder's says when it does not say NO.
@@ -76,16 +76,16 @@ the algorithm is BLAKE3.
 What that has meant so far, as rules a programmer (or an AI) follows the way he follows rules for speed:
 
 - **Take the definition's shape.** Where the specification is two parts under a parent, the code calls itself
-  on the two parts. The checker takes each call by the function's own contract, and what the function leaves
+  on the two parts. The verifier takes each call by the function's own contract, and what the function leaves
   is then the definition, opened once. No fact about trees is needed.
-- **A loop whose count the paths fix costs nothing**: the checker runs it (a block's 64 bytes, a chunk's 16
+- **A loop whose count the paths fix costs nothing**: the verifier runs it (a block's 64 bytes, a chunk's 16
   blocks, 54 doublings). A loop whose count is not fixed must follow a sequence of the specification turn by
   turn (the wide kernels' loop over blocks does; the proof is then one place, which a prover finds), or
   become a recursion.
 - **Say what the memory holds, in the specification's words.** `take` is given an array of chunk values that
   a kernel made; one line of its contract says what each element is
   (`asks cvs[i] == node_value(chunk_node(...)) for i in 0..len / 1024`). That line is the array's type. The
-  checker reads elements as that term inside the function, and shows the line at every call.
+  verifier reads elements as that term inside the function, and shows the line at every call.
 - **Each function does something the specification has a word for.** Its contract is one line in the
   specification's definitions. A function for which no such line can be written is cut in the wrong place.
 - **Numbers stay linear.** Sums, differences, multiples by plain numbers, halvings. "The greatest power of
@@ -95,25 +95,25 @@ What that has meant so far, as rules a programmer (or an AI) follows the way he 
 
 What does not fit, and was tried: a data structure whose meaning takes an induction over counts and their
 bits (the stack of subtrees; the levels). The earlier code had them; Lean proved them by lemmas written by
-hand; this checker could follow the code only against an algorithm of the same shape, which is not a
+hand; this verifier could follow the code only against an algorithm of the same shape, which is not a
 specification. The answer here was to change the code, not to add the mathematics.
 
 ## How this stands to "types are proofs"
 
 - *Curry and Howard*: a type is a proposition, a program of that type is its proof, and the type checker is
-  the proof checker. With types that speak of values, `hash : (m : bytes) -> { h | h = blake3(m) }` is a
+  the proof verifier. With types that speak of values, `hash : (m : bytes) -> { h | h = blake3(m) }` is a
   type, and a program that has it is correct. Lean, Coq, Agda and F* take this to all of mathematics: a large
-  checker, and proofs that people write.
+  verifier, and proofs that people write.
 - *Types whose indices are restricted* (DML and ATS, Xi and Pfenning; liquid types): types may speak only of
   terms from a domain that can be decided (linear arithmetic). The programmer writes the invariants as
-  types; the checker solves constraints; nobody writes a proof. This is "not arbitrary mathematics", done
+  types; the verifier solves constraints; nobody writes a proof. This is "not arbitrary mathematics", done
   in the 1990s for array bounds.
 - *Typed assembly* (Morrisett; with indices, Xi and Harper) and *proof-carrying code* (Necula and Lee): the
   types, or the loop invariants, go through the compiler to the binary, and the binary is what is checked, by
-  a small checker against a public policy. The compiler is not trusted.
+  a small verifier against a public policy. The compiler is not trusted.
 
-What is here is proof-carrying code's arrangement (binary and proof to a small checker) with DML's
-restriction (the checker evaluates definitions, compares terms by identity, and adds linear facts; nothing
+What is here is proof-carrying code's arrangement (binary and proof to a small verifier) with DML's
+restriction (the verifier evaluates definitions, compares terms by identity, and adds linear facts; nothing
 else), where the "type" of the function a user calls is the whole specification of its result, not memory
 safety alone. A contract is a function's type. A function's own contract, used at its calls of itself, is the
 rule for a recursive function: the induction. A place is a loop's type. The programmer directs the proof by
@@ -135,9 +135,9 @@ Nearest relatives, as I remember them (not re-read today; to be read against thi
 - Sammler and others, "RefinedC" (2021): refinement types for C whose checking is a search-free procedure
   (no backtracking), producing proofs a proof assistant checks. Nearest in method.
 
-What that tradition has and this has not: a checker of the *source*. Today the programmer learns that his
-code is not provable from the checker of the binary ("at a return: out is not what the contract says"). A
-type checker for Ode that says so of the source line would be the programmer's tool; the binary's checker
+What that tradition has and this has not: a verifier of the *source*. Today the programmer learns that his
+code is not provable from the verifier of the binary ("at a return: out is not what the contract says"). A
+type checker for Ode that says so of the source line would be the programmer's tool; the binary's verifier
 stays the auditor's.
 
 ## Where it stands
@@ -156,22 +156,53 @@ Not done, in the order I would take them:
    is no slower than the earlier `hashf` anywhere (README.md). The rest is code not yet written: a 16-lane
    path for 16 chunks or fewer (a kernel to check); parents many to a call over small parts; AVX2 and
    narrower machines.
-2. **The checker's own worth: the goal (Sam, November 15).** Soundness of the verifier is a hard
+2. **The verifier's own worth: the goal (Sam, November 15).** Soundness of the verifier is a hard
    requirement, and so is that a reader can verify it without believing the whole verifier. The way: shrink
-   the core he relies on, and make it more provable as well as smaller. The verifier writes out its steps
-   as a proof; a tiny kernel checks them; everything clever (running code on symbols, arithmetic, lemmas)
-   moves to the side that needs no trust. What is at the bottom need not be one thing: the kernel is right
-   if any one of these is, and each reader takes the one he trusts: he reads the small kernel himself; a
-   second kernel, written apart, checks the same proof; the kernel is proved in something he already relies
-   on, such as Lean (never required); or the kernel is written in Ode, specified in Ode's specification
-   language, and shown by Ode's own verifier to meet it (circular alone; strong once any one outside check
-   breaks the circle). So the kernel is to be designed so that it could be written in Ode. No technique
-   removes what he must always read: the account of the machine, and what a contract and a specification
-   mean. First step, not started: three functions already checked, their steps written out for a kernel of
-   a few hundred lines; kernel size, proof size and check time measured. Today it is Python, tested and
-   audited, not proved, and two checkers of functions that should be one (`kfn.py`, `kbyte.py`).
-3. **The source's checker** (above), and the compiler printing bytes, not assembly (BLAKE3 #396). (The
-   binary is already one file of settled bytes, made of an assembler's objects by `klink.py`; the checker
+   the core he relies on, and make it more provable as well as smaller. A prover, trusted for nothing,
+   writes out a proof; a small verifier decides by it; everything clever (the search in arithmetic, opening
+   definitions, lemmas, joining paths) moves to the prover's side. What is at the bottom need not be one
+   thing: the verifier is right if any one of these is, and each reader takes the one he trusts: he reads
+   the small verifier himself; a second one, written apart, verifies the same proof; it is proved in
+   something he already relies on, such as Lean (never required); or it is written in Ode, specified in
+   Ode's specification language, and shown by Ode's own verifier to meet it (circular alone; strong once any
+   one outside check breaks the circle). So it is to be designed so that it could be written in Ode. No
+   technique removes what he must always read: the account of the machine, and what a contract and a
+   specification mean.
+
+   **Chosen (Sam, November 15): the verifier runs the instructions and opens the definitions itself; the
+   proof carries what would otherwise be searched for.** (Every step written out would make proofs of
+   megabytes for these small programs: too big.) What was measured that evening, with the programs as they
+   are (`count_steps.py` and the experiment's files are kept beside the reports, not in this folder yet):
+   - Counted on eight functions: an arithmetic fact that is shown rests on three or four of the thirty-odd
+     facts in play; nine tenths of the eliminations show nothing; using a callee's contract is cheap, and
+     paths are the load (`hashr`'s 265 instructions are run 20,404 times); the bulk of the work is running
+     instructions and opening definitions (157,000 openings for `wide128`).
+   - The arithmetic's search taken out: the prover writes, for each fact shown, the rows it starts from and
+     steps "a times this row plus b times that one, divided through, rounded down", ending in a number
+     below zero; 33 lines verify that by adding up. With no search left in the arithmetic, all twelve
+     functions of `programs/` and the hash's nine are still shown. Proofs, gzipped: 0.1 to 6 kB a function
+     of `programs/`, 57 kB for the whole hash. Time: the byte programs 8 to 30 times faster (base 64: 13 s
+     to 1.6 s); the hash's functions less (their time is in definitions). With no proof, with every
+     multiplier changed, with another function's proof: refused.
+   - What would still be relied on after that cut, counted in lines of code without comments: 4,097. About
+     2,400 are what a reader must be given in some form anyway (bytes to instructions 491; what the
+     instructions do, about 700; reading a specification and working it out on names, about 1,200). The
+     cleverness still inside is mostly the last of those (about 630 lines: naming lists, stepping
+     sequences): the next thing to move to the prover's side, as "this definition, of these, is this",
+     one opening verified at a time. And there are two verifiers of functions that should be one
+     (`kfn.py`, `kbyte.py`), and a third way for the wide kernels.
+
+   **Names (November 15, after a hole).** A proof's part (the contracts of the functions inside) is read
+   after the reader's specification, in one space of names. Until that day a second definition of a name
+   took the first one's place, a definition could take the name of one of the language's own (`len`,
+   `bits`), and a name the reader's text used without defining could be given its meaning by the proof.
+   Now (`ode.with_proof`): a name is declared once; the language's own names are no specification's to
+   define; and the proof's part may declare no name that the reader's text writes anywhere. So no name
+   the reader reads has its meaning from the proof. What remains open: names that authenticate nothing
+   (a symbol of the file, or an offset the proof gives, says which bytes are "the function"); Sam is
+   weighing identifiers that authenticate themselves.
+3. **The source's verifier** (above), and the compiler printing bytes, not assembly (BLAKE3 #396). (The
+   binary is already one file of settled bytes, made of an assembler's objects by `klink.py`; the verifier
    reads it as a loader maps it.)
 4. **That the functions return** is now shown as far as the kernels (a `decreases` line where a function
    calls itself; no ring of calls; every loop run to its end). That the wide kernels return for every number

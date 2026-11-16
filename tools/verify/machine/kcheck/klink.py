@@ -78,7 +78,7 @@ PROOF = ["proofs/inner.spec", "proofs/k32.json", "proofs/p32.json", "proofs/p16.
 
 
 def proof(image, where):
-    """What a checker needs beside the code and the specification, to be carried in the file: the contracts of
+    """What a verifier needs beside the code and the specification, to be carried in the file: the contracts of
     the functions inside and the kernels' places; where each function is in the code (for a file whose names
     have been stripped); and which specification the maker had (a reader compares it with his own)."""
     with open(os.path.join(HERE, "blake3.spec"), "rb") as f: spec = f.read()

@@ -1,9 +1,9 @@
-"""kspec: the specification (blake3.spec) read on symbols, for the checkers.
+"""kspec: the specification (blake3.spec) read on symbols, for the verifiers.
 
 ode.py evaluates the specification's text over an algebra of words. Numbers (ode.Numbers) gives the test
-vectors. Symbols, here, gives the checkers their terms: a word is a term of the checker's table (kcheck.Terms);
+vectors. Symbols, here, gives the verifiers their terms: a word is a term of the verifier's table (kcheck.Terms);
 a number may depend on counts (klin.Lin), and a comparison of such numbers is decided from the path's facts or
-the evaluation stops. There is no other specification: every checker takes what it compares code with from
+the evaluation stops. There is no other specification: every verifier takes what it compares code with from
 the one text.
 
 Values that are not plain lists:
@@ -177,7 +177,7 @@ class Symbols:
     def __init__(self, T, facts=None, memo=None, ghost=None):
         self.T, self.facts = T, facts if facts is not None else Facts()
         self.memo = memo if memo is not None else {}        # what was named or evaluated on this path, by what it was given
-        self.ghost = ghost or {}                            # a machine the checker is at a place of: its state there
+        self.ghost = ghost or {}                            # a machine the verifier is at a place of: its state there
         self.unrun = []                                     # the machines that could not be run: (instance, first state)
         self.bound = None                                   # "least" or "most": how `bits` of a number the path does not fix is read
         self.fold = False                                   # at a call: a function with a kind is not opened, only named
@@ -232,7 +232,7 @@ class Symbols:
     def mod(self, x, d): return plain(Lin.of(x) - Lin.of(halved(self.facts, x, d)).scale(ode.Spec.number(d)))
     def bits(self, x):
         """The length in bits of a number. Where the path does not fix it: the least it can be, or the most
-        (the checker says which it needs: the stack a function may use, or the stack a callee may use)."""
+        (the verifier says which it needs: the stack a function may use, or the stack a callee may use)."""
         x = self.facts.subst(Lin.of(x))
         if not x.c: return x.k.bit_length()
         if self.bound == "most":
@@ -334,7 +334,7 @@ class Symbols:
         return Lin.of(v)
 
     def machine_result(self, spec, name, m, env):
-        """A machine called. If the checker is at a place of this very machine, its state there. If it can be
+        """A machine called. If the verifier is at a place of this very machine, its state there. If it can be
         run, it is. Else its result is named by the machine and everything it was given, in the shape of its
         first state. (In the machine's own function the code is checked against it turn by turn.)"""
         state = env[m["states"][0]]
@@ -553,7 +553,7 @@ def as_words(c, spec):
                     and leaf.get("part") is None and leaf.get("index") is None]
         w, b = count([rest, others, [leaf["expr"] for leaf in ensured]], x)
         if not w and not of_words: continue                                       # bytes, as written
-        if b or len(of_words) != len(ensured): raise Err(f"the contract speaks of {x} both as bytes and as words: not this checker's")
+        if b or len(of_words) != len(ensured): raise Err(f"the contract speaks of {x} both as bytes and as words: not this verifier's")
         if "words" in spec.fns or "bytes_of" in spec.fns: raise Err("the specification defines `words` or `bytes_of`: they are the language's own, and a contract's bytes are read by them")
         c = rewrite(c, x)
         c["args"] = [(name, "cv" if name == x else kind) for name, kind in c["args"]]

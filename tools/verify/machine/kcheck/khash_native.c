@@ -1,6 +1,6 @@
 // khash_native: `b3l_hashr` (hash.ode: the hash written to be proved) run on this processor against BLAKE3
 // written out here another way (the reference's stack of subtrees, not the specification's recursion).
-// kfn_flip.py links it with each changed object the checker accepts: the processor arbitrates.
+// kfn_flip.py links it with each changed object the verifier accepts: the processor arbitrates.
 //
 //     cc -O1 -o run khash_native.c kflip_thunk.S pad.o chunk_node.o node_out.o wide32.o wide128.o take.o part32.o subtree.o hashr.o KERNELS.o...
 //     ./run CASES

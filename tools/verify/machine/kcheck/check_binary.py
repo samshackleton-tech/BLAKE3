@@ -8,7 +8,7 @@ for a linker to fill in.
 The claim (the last lines of blake3.spec) is about FUNCTION. Its bytes are read from the file as a loader
 maps it (kdecode.py: whole pages, the parts without leave to write), and so are the bytes of every function
 it calls, and of those they call: each found by where the `call` goes, and checked against the specification by
-the checker for its kind, as check_all.py does for the objects an assembler makes. No assembler and no
+the verifier for its kind, as check_all.py does for the objects an assembler makes. No assembler and no
 linker is relied on: what they made is what is read.
 
 The proof may be in the file: klink.py puts it in a section that is not loaded (`.ode.proof`), and a linker
@@ -43,14 +43,14 @@ def carried(text):
         nonlocal at
         end = text.index(b"\n", at); l = text[at:end].decode(); at = end + 1
         return l.split(" ")
-    if line() != ["ode", "proof", "1"]: raise kcheck.Fail("the proof is not one this checker reads")
+    if line() != ["ode", "proof", "1"]: raise kcheck.Fail("the proof is not one this verifier reads")
     while at < len(text):
         w = line()
         if w[0] == "specification" and w[1] == "sha256": out["spec"] = w[2]
         elif w[0] == "code" and w[2] == "sha256" and w[4] == "begins": out["code"] = (int(w[1]), w[3], bytes.fromhex(w[5]))
         elif w[0] == "at": out["at"][w[2]] = int(w[1])
         elif w[0] == "file": out["files"][w[1]] = text[at:at + int(w[2])]; at += int(w[2])
-        else: raise kcheck.Fail(f"the proof: a line this checker does not know: {' '.join(w)[:60]}")
+        else: raise kcheck.Fail(f"the proof: a line this verifier does not know: {' '.join(w)[:60]}")
     return out
 
 
@@ -61,7 +61,7 @@ def take(proof, spec_path):
     if spec_path is None: mine = proof["files"]["specification"].decode()
     else:
         with open(spec_path) as f: mine = f.read()
-    kspec.SPEC = ode.Spec(mine + "\n" + proof["files"]["proofs/inner.spec"].decode())
+    kspec.SPEC = ode.with_proof(mine, proof["files"]["proofs/inner.spec"].decode())
     kone.CONTRACTS = kone.contracts(); kloop.KERNELS = kloop.kernels(); kfn.CONTRACTS.clear()
     WIDE = {kloop.KERNELS[n]["symbol"]: n for n in ("k32", "p32", "p16")}
     ONE = {c["symbol"]: n for n, c in kone.CONTRACTS.items()}
