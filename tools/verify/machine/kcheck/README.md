@@ -968,6 +968,33 @@ put, so it is put outside what he relies on. The shapes are few and fitted to th
 program will want one more, and adding it touches nothing a reader relies on. (The shipped files carry the
 lemmas written by hand: the audit under way is of them.)
 
+### And the places of loops (`kplace.py`): a function shown with nothing written by hand
+
+A place is what the proof says of a loop: what the registers hold, in the specification's terms, each time
+the code comes round. They were written by whoever wrote the code, from the verifier's refusals.
+`kplace.py` does that for a function with one loop, and it is led the same way: a refusal that names a
+thing the proof says nothing of ("a compare of r12 and n"; "add of r13 and 1") is taken to mean that thing
+wants something said of it. It asks the verifier what each thing the loop writes is when the code first
+comes there (0? 1?), and then tries, the plainest first: the count of bytes taken (`i <= n`,
+`decreases n - i`); another count not above it; the same number every time; place `i` of one of the
+specification's sequences; nothing said; and one fact, that the definition the contract speaks of (or one
+it uses), from here, is the whole.
+
+| function | instructions | found | the proof found |
+|---|---|---|---|
+| `ode_adler32` | 55 | 32 tries, 3.6 s | the two sums are places `i` of `s1` and `s2`: line for line the one written by hand |
+| `ode_common` | 45 | 29 tries, 3.1 s | `alike(a, b, i) == common(a, b)`; the flag is 1: the one written by hand |
+| `ode_utf8` | 300 | 91 tries, 13.4 s | `points(input, i, count) == utf8(input)`, `count <= i`, the state in the stack is 0, four things of which nothing is said: the one written by hand |
+| `ode_inet` | 88 | not found | (it wants `i % 2 == 0` and a bound on a sum: not among the shapes) |
+
+With `kguess.py` before it, **the whole proof of these three comes from the binary and the specification
+alone**: the lemmas (the number that decreases), then the place; the verifier shows the function by what
+the two wrote (`test_kplace.py`). Functions with two loops or more are not tried (six of the twelve;
+`ode_varint`'s loop is run out and `ode_unframe` has none: those two need no proof text at all).
+
+The same caution as above: the shapes are few and fitted to these programs. What it shows is where the
+work of finding a proof lives. Neither file is loaded by a verification.
+
 ### An audit of the part that shows lemmas (`lemma_audit.py`)
 
 The flips of the code's bits do not ask whether the verifier could show a lemma that is not so; and a false
@@ -1159,7 +1186,8 @@ specification. (The hash above does not use them: it has no stack.)
 | `kbyte.py`, `test_kbyte.py` | 1,356 + 804 | the verifier of those programs (bytes, numbers, places, calls by contract, lemmas, definitions that come to an end); its tests |
 | `varith.py`, `kprove.py`, `kproof.py`, `test_varith.py` | 90 + 185 + 29 + 174 | the arithmetic: the verifier's side (a proof added up; nothing searched for), the prover's side (the search and the writing of proofs; trusted for nothing), the reading of a proof's form, their tests |
 | `varith2.c`, `test_varith2.py` | 310 + 129 | a second verifier of the arithmetic's proofs, in C, written apart; the two put against each other on changed proofs |
-| `kguess.py`, `test_kguess.py` | 395 + 78 | a prover that guesses lemmas (the number that decreases; what a definition ensures, of a few shapes); trusted for nothing |
+| `kguess.py`, `test_kguess.py` | 406 + 78 | a prover that guesses lemmas (the number that decreases; what a definition ensures, of a few shapes); trusted for nothing |
+| `kplace.py`, `test_kplace.py` | 235 + 65 | a prover that guesses the place of a loop, led by the verifier's refusals; trusted for nothing |
 | `lemma_audit.py`, `test_lemma_audit.py` | 441 + 66 | the audit of the part that shows lemmas: changed lemmas and changed specifications, judged on numbers |
 | `refute.py`, `refute_run.c`, `test_refute.py` | 421 + 145 + 76 | "false, and here is the input": a contract worked out on numbers beside the code run on the processor (a prover's tool); its tests |
 | `kbyte_flip.py`, `kbyte_nop.py` | 117 + 37 | their single-bit audit and every instruction left out, the processor judging |

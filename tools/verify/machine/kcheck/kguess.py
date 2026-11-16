@@ -66,6 +66,17 @@ def has_words(spec, name, seen=None):
     return found[0] or any(has_words(spec, n, seen) for n in kbyte.uses(spec, name))
 
 
+def uses_closure(spec, name):
+    """The definitions a definition uses, through any number of others."""
+    out, todo = set(), [name]
+    while todo:
+        n = todo.pop()
+        if n not in spec.fns and n not in spec.seqs: continue
+        for b in kbyte.uses(spec, n):
+            if b not in out: out.add(b); todo.append(b)
+    return out
+
+
 def numbers_in(spec, names):
     out = set()
     def see(x):
