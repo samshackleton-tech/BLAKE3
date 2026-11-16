@@ -12,6 +12,16 @@ arithmetic's search is out (November 16):** a prover (`kprove.py`) writes a proo
 every shipped file carries them, and the verifier adds them up (`varith.py`, 90 lines) and searches for
 nothing. What is still searched for inside the verifiers: which way a definition opens, and the paths.
 
+**Since the night of November 16** (the sections near the end of "Programs other than the hash" say each):
+the lemmas (a contract of a definition, in the proof, shown before use; LZ4's specification is the format's
+own again); definitions shown to come to an end on everything a contract allows (`kends.py`); a second
+verifier of the arithmetic, in C, written apart (`varith2.c`); provers that guess lemmas and the places of
+loops (`kguess.py`, `kplace.py`: for three functions the whole proof from the binary and the specification
+alone); two more audits (`lemma_audit.py`, `kadversary.py`); "false, and here is the input" (`refute.py`).
+And three holes of the kind "shown, of something false", found and closed that night, none in "meets its
+contract": what a verification said about a specification's definitions ending, a function the proof left
+out, the kind a lemma gave a value.
+
 **Not a proof in a proof assistant, and checked by none.** A trial of another way to the goal of BLAKE3 #361:
 to hand a skeptical reader a specification, a binary and a proof, such that he checks for himself, in
 seconds, that the binary meets the specification, relying on little.
