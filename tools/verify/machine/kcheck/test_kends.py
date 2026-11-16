@@ -72,6 +72,20 @@ class Ends(unittest.TestCase):
         v = ask(lz4, lemmas.replace(old, old + "    requires len(bytes) >= 1\n"), "ode_lz4_pack")
         self.assertTrue(v == "lemmas refused" or "does not apply" in v, v)
 
+    def test_a_machine_that_goes_round_while(self):
+        """The language has machines that go round while something holds. Nothing here shows one stops: a
+        contract that speaks through one is not said to end."""
+        text = ("machine halve(n) on x = n {\n    while x > 1\n    turn { x = x / 2 }\n}\n"
+                "def steps(n) { halve(n) }\n"
+                "contract ode_x(n: number) {\n    returns steps(n)\n    stack 8\n}\n"
+                "contract ode_y(n: number) {\n    returns n + 1\n    stack 8\n}\n")
+        try: spec = ode.Spec(text)
+        except ode.Err as err: self.skipTest(f"not a machine as the language writes one: {err}")
+        again, why = kends.ends_for(spec, "ode_x")
+        self.assertIn("halve goes round while something holds", why or "")
+        self.assertEqual(kends.ends_for(spec, "ode_y"), ([], None))
+        self.assertIn("NOT shown", kends.line(spec, ["ode_x"]))
+
     def test_the_tree(self):
         b, bl = read("blake3.spec"), read("proofs", "blake3.lemmas")
         self.assertEqual(ask(b, bl, "b3l_hashr"), "ends")

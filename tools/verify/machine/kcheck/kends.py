@@ -48,12 +48,33 @@ def reached(spec, names):
     return seen
 
 
+def machines_named(spec, c, defs):
+    """The machines that go round `while` something holds, named in the contract's text or in a definition it
+    reaches: the specification's language has them, and nothing here shows one comes to an end."""
+    out = set()
+    def walk(x):
+        if isinstance(x, tuple) and len(x) == 3 and x[0] == "call" and isinstance(x[1], str) and x[1] in spec.machines and spec.machines[x[1]]["loop"][0] == "while": out.add(x[1])
+        if isinstance(x, dict):
+            for y in x.values(): walk(y)
+        elif isinstance(x, (tuple, list)):
+            for y in x: walk(y)
+    for part in ("returns", "leaves", "conditions", "asks", "given", "stack"): walk(c.get(part))
+    for d in defs:
+        walk(spec.fns[d][1] if d in spec.fns else [spec.seqs[d][3], spec.seqs[d][4]])
+    for m in list(out):                                          # and what a machine's own turn names
+        walk([spec.machines[m]["turn"], spec.machines[m]["inits"]])
+    return sorted(out)
+
+
 def ends_for(spec, symbol):
     """(the definitions that use themselves among those the contract reaches, None or why it is not shown that
     they come to an end on everything the contract allows). The lemmas are taken as shown (prove_lemmas)."""
     c = spec.contracts[symbol]
     calls = calls_of(spec, c)
-    again = sorted(n for n in reached(spec, [f for f, _ in calls]) if kbyte.ring(spec, n))
+    defs = reached(spec, [f for f, _ in calls])
+    again = sorted(n for n in defs if kbyte.ring(spec, n))
+    round_ = machines_named(spec, c, defs)
+    if round_: return sorted(set(again) | set(round_)), f"{', '.join(round_)} goes round while something holds, and that it stops is not shown"
     if not again: return again, None
     bare = [n for n in again if n not in spec.lemmas or spec.lemmas[n]["decreases"] is None]
     if bare: return again, f"no number that decreases is named for {', '.join(bare)}"

@@ -939,6 +939,10 @@ as a thing of which nothing is known), and every use inside of a definition with
 lemma's `requires`. Inside a ring the showing of the lemmas already asks the same. No search is used: what
 the plain facts do not show is not shown. All thirteen public contracts here pass, BLAKE3's among them.
 
+(The language also has machines that go round `while` something holds; none of the specifications here uses
+one, the proof's own part of the hash does. A contract that spoke through one is "NOT shown" to end: nothing
+here shows such a machine stops.)
+
 What it found beside the hole: `ode_common`'s definitions end *because* its contract gives both runs the
 same length. With `b: m bytes` the line is "NOT shown" (the walk reads the second run past its end), and
 with `requires n <= m` added it is shown again (`test_kends.py`).
