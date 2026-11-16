@@ -1,0 +1,10 @@
+// A lemma about common.spec's definition `alike`: a step of the proof, shown by the verifier before it is used
+// (kbyte.py's prove_lemmas). It is not part of the specification and changes no meaning.
+//
+// `alike` uses itself. The count of bytes still ahead is less at each such use and never below zero: so it
+// comes to an end on every two runs of bytes of which the second is no shorter than the first.
+lemma alike(a: bytes, b: bytes, at: number): number {
+    requires at <= len(a)
+    requires len(a) <= len(b)
+    decreases len(a) - at
+}

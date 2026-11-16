@@ -48,8 +48,7 @@ import itertools, os, re, sys, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import kcheck, kdecode, kfn, kspec, ode
 from kcheck import Fail
-from klin import Lin, Facts, sym
-from kloop import value, lin
+from klin import Lin, Facts, sym, value, lin
 from kspec import plain, halved
 from ode import Err
 
@@ -1078,10 +1077,17 @@ class Opening(Algebra):
         # going through it again, after a question was taken both ways, speaks of the same things
         super().__init__(m); self.spec, self.top, self.opened, self.tag, self.count = spec, top, False, tag, itertools.count()
         self.only = None        # while a sequence's lemma is shown: the one place of which it may be taken (the place before)
+        self.measure = None     # while a lemma with `decreases` is shown: (the definitions that use it back, its number as given)
     def hypothesis(self, name, args, index=None):
         l = self.spec.lemmas[name]
         env = applies(self.spec, self, l, args)
         if env is None or (index is not None and not self.facts.ge0(Lin.of(self.num(index)))): raise Err(f"the lemma of {name} does not apply here")
+        if self.measure is not None and name in self.measure[0]:
+            # a use of the definition by itself (or of one that uses it back): the number that decreases is not
+            # below zero here, and is less for what is used
+            if l["decreases"] is None: raise Err(f"{name} uses {self.top} back, and its lemma names no number that decreases")
+            mine, its = self.measure[1], numb(self.spec.eval(Whole(self.m), l["decreases"], env))
+            if not self.facts.ge0(mine) or not self.facts.ge0(mine - 1 - its): raise Err(f"at its use of {name} the number that decreases ({its}, from {mine}) is not shown to be less, or the one before not to be below zero")
         v = fresh_value(self.m, l["kind"], l["fields"], f"{name}!{self.tag}.{next(self.count)}")
         env["result"] = v
         if index is not None: env[l["index"]] = index
@@ -1103,6 +1109,12 @@ class Opening(Algebra):
             if self.only is not None and self.facts.zero(Lin.of(self.num(i)) - self.only) is not True: raise Err(f"a sequence's lemma is shown from the place before, and place {i} is asked for")
             return self.hypothesis(seq.id[0], seq.id[1], i)
         return super().element(spec, seq, i)
+
+
+class Whole(Algebra):
+    """For the number a lemma says decreases: it is worked out as a whole number that may be below zero (where it
+    must not be is asked at each use, not here)."""
+    def minus(self, x, y): return plain(Lin.of(self.num(x)) - Lin.of(self.num(y)))
 
 
 def lemma_machine(spec, name, l):
@@ -1153,8 +1165,13 @@ def prove_lemmas(spec):
                     if not m.facts.ge0(f): raise Fail(f"{what}: what it ensures is not shown{of} ({f} >= 0)")
         tag = next(FRESH)
         if l["index"] is None:
+            measure = None
+            if l["decreases"] is not None:
+                measure = (ring(spec, name), numb(spec.eval(Whole(m0), l["decreases"], dict(env0))))
+                if name not in measure[0]: raise Fail(f"{what}: it names a number that decreases, and the definition does not use itself")
             def one(m):
                 A = Opening(m, spec, name, tag)
+                A.measure = measure
                 holds(m, A, spec.apply(A, name, list(args)))
             lemma_cases(m0, one, what)
         else:
@@ -1169,6 +1186,45 @@ def prove_lemmas(spec):
                 inner = dict(s.env); inner[var] = plain(k)
                 holds(m, A, spec.eval(A, nxt, inner), plain(k + 1), " of the value after one of which it holds")
             lemma_cases(m0, one, what)
+
+
+def uses(spec, name):
+    """The definitions a definition's own text applies."""
+    out = set()
+    def walk(x):
+        if isinstance(x, tuple) and len(x) == 3 and x[0] == "call" and (x[1] in spec.fns or x[1] in spec.seqs): out.add(x[1])
+        if isinstance(x, (tuple, list)):
+            for y in x: walk(y)
+    if name in spec.fns: walk(spec.fns[name][1])
+    else: walk(spec.seqs[name][3]); walk(spec.seqs[name][4])      # a sequence: its first value and the next from one
+    return out
+
+
+def ring(spec, name):
+    """The definitions that `name` uses (through any number of others) and that use it back: itself among them
+    if it uses itself."""
+    def reach(a):
+        seen, todo = set(), [a]
+        while todo:
+            for b in uses(spec, todo.pop()):
+                if b not in seen: seen.add(b); todo.append(b)
+        return seen
+    return {b for b in reach(name) if name in reach(b)}
+
+
+def ends(spec):
+    """(the definitions that use themselves, straight or through others; those of them not shown to come to an end).
+    Shown: by a lemma that names a number that decreases (prove_lemmas shows it): the definition then comes to an
+    end, with a value or failing, wherever what it is given meets that lemma's `requires`."""
+    again = sorted(name for name in list(spec.fns) + list(spec.seqs) if ring(spec, name))
+    return again, [name for name in again if name not in spec.lemmas or spec.lemmas[name]["decreases"] is None]
+
+
+def ends_line(spec):
+    again, open_ = ends(spec)
+    if not again: return "no definition of the specification uses itself: each comes to an end"
+    if not open_: return f"the definitions that use themselves ({', '.join(again)}): each is shown to come to an end (a number that decreases, in a lemma)"
+    return f"the definitions that use themselves ({', '.join(again)}): NOT shown to come to an end: {', '.join(open_)} (a contract says nothing of an input on which one does not)"
 
 
 def split(m, u):

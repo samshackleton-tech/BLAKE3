@@ -330,9 +330,9 @@ class Lemmas(unittest.TestCase):
     def setUpClass(cls): cls.p = Program("lz4", "lz4_decode", "ode_lz4_decode")
 
     def test_a_lemma_that_is_not_so_is_refused(self):
-        for old, new in (("    ensures len(result) >= len(out)\n}\n\n// The same of the rest", "    ensures len(result) >= len(out) + 1\n}\n\n// The same of the rest"),      # a last sequence with no literals adds nothing
+        for old, new in (("    ensures len(result) >= len(out)\n    decreases len(bytes) - at\n}\n\n// The same of the rest", "    ensures len(result) >= len(out) + 1\n    decreases len(bytes) - at\n}\n\n// The same of the rest"),      # a last sequence with no literals adds nothing
                          ("// The same of the rest of a sequence, from its offset on.\nlemma match(bytes: bytes, at: number, low: number, out: list): list {\n    ensures len(result) >= len(out)", "lemma match(bytes: bytes, at: number, low: number, out: list): list {\n    ensures len(result) >= len(out) + 5"),
-                         ("    ensures len(result) >= len(out)\n}\n\n// The same of the rest", "    ensures len(result) <= len(out)\n}\n\n// The same of the rest"),
+                         ("    ensures len(result) >= len(out)\n    decreases len(bytes) - at\n}\n\n// The same of the rest", "    ensures len(result) <= len(out)\n    decreases len(bytes) - at\n}\n\n// The same of the rest"),
                          ("ensures result.value >= sum", "ensures result.value >= sum + 1"), ("ensures result.next >= at + 1", "ensures result.next >= at + 2"), ("ensures result.next >= at + 1", "ensures result.next == at + 1"),
                          ("ensures len(result) == len(out) + k", "ensures len(result) == len(out) + k + 1"), ("ensures len(result) == len(out) + k", "ensures len(result) >= len(out) + 2 * k"),
                          # what a lemma requires is what makes it so
@@ -370,6 +370,60 @@ class Lemmas(unittest.TestCase):
         # `sequences` and `match` are each other's rest: with the lemma of one, the other is opened where it stands
         self.assertEqual(needed, ["counted", "copies"])
         self.assertTrue(self.p.verdict(spec=without(without(self.p.spec, "sequences"), "match")).startswith("refused"))
+
+    def test_a_definition_that_uses_itself_is_shown_to_come_to_an_end(self):
+        """`decreases E` in a lemma: E is not below zero where the definition uses itself (or one that uses it
+        back), and less at each such use."""
+        s = ode.Spec(self.p.spec)
+        self.assertEqual({n: sorted(kbyte.ring(s, n)) for n in ("counted", "sequences", "match", "lz4", "copies")},
+                         {"counted": ["counted"], "sequences": ["match", "sequences"], "match": ["match", "sequences"], "lz4": [], "copies": []})
+        self.assertEqual(kbyte.ends(s), (["counted", "match", "sequences"], []))
+        counted = "    ensures result.next >= at + 1\n    decreases len(bytes) - at\n"
+        seqs = "    ensures len(result) >= len(out)\n    decreases len(bytes) - at\n}\n\n// The same of the rest"
+        for old, new, want in ((counted, counted.replace("- at", "- at + 1"), "accepted"),                  # still less each time
+                               (counted, counted.replace("- at", "- at - 1"), "accepted"),                  # it uses itself only with a byte ahead
+                               (counted, counted.replace("len(bytes) - at", "at"), "refused"),              # it grows
+                               (counted, counted.replace("len(bytes) - at", "len(bytes)"), "refused"),      # it stays
+                               (seqs, seqs.replace("- at", "- at + len(out)"), "refused"),                  # what is decoded grows by more than is read
+                               (seqs, seqs.replace("    decreases len(bytes) - at\n", ""), "refused"),      # `match` uses `sequences` back
+                               ("    ensures len(result) == len(out) + k\n", "    ensures len(result) == len(out) + k\n    decreases k\n", "refused"),   # a sequence's place: no
+                               (counted, counted + "    decreases at\n", "refused")):                       # said twice
+            self.assertEqual(self.p.spec.count(old), 1, old)
+            v = self.p.verdict(spec=self.p.spec.replace(old, new))
+            self.assertTrue(v.startswith(want), f"{new!r}: {v}")
+        # without the number, the definition is not said to end (and the rest stands)
+        bare = self.p.spec.replace("    decreases len(bytes) - at\n", "")
+        self.assertEqual(kbyte.ends(ode.Spec(bare)), (["counted", "match", "sequences"], ["counted", "match", "sequences"]))
+        self.assertEqual(self.p.verdict(spec=bare), "accepted")
+
+    def test_the_other_programs_definitions_come_to_an_end(self):
+        def lemma(head, *body): return f"\nlemma {head} {{\n" + "".join(f"    {line}\n" for line in body) + "}\n"
+        for key, head, tries in (
+                (("common", "common", "ode_common"), "alike(a: bytes, b: bytes, at: number): number", (
+                    (("requires at <= len(a)", "requires len(a) <= len(b)", "decreases len(a) - at"), "accepted"),
+                    (("requires len(a) <= len(b)", "decreases len(a) - at"), "refused"),                 # from past the end it reads no byte
+                    (("requires at <= len(a)", "decreases len(a) - at"), "refused"),                     # the second run may be the shorter
+                    (("requires at <= len(a)", "requires len(a) <= len(b)", "decreases len(a)"), "refused"),
+                    (("requires at <= len(a)", "requires len(a) <= len(b)", "decreases at"), "refused"))),
+                (("varint", "varint", "ode_varint"), "varint(v: number): list", (
+                    (("decreases v",), "accepted"), (("decreases v / 128",), "accepted"), (("decreases 128",), "refused"), (("decreases 300 - v",), "refused"))),
+                (("utf8", "utf8", "ode_utf8"), "points(bytes: bytes, at: number, count: number): number", (
+                    (("requires at <= len(bytes)", "decreases len(bytes) - at"), "accepted"),
+                    (("decreases len(bytes) - at",), "refused"),
+                    (("requires at <= len(bytes)", "decreases len(bytes) - at - count"), "refused"),
+                    (("requires at <= len(bytes)", "decreases count"), "refused"),
+                    (("requires at <= len(bytes)", "decreases len(bytes)"), "refused")))):
+            p = Program(*key)
+            at = p.spec.index("\nlemma ")
+            self.assertEqual(kbyte.ends(ode.Spec(p.spec))[1], [], key)
+            for body, want in tries:
+                v = p.verdict(spec=p.spec[:at] + lemma(head, *body))
+                self.assertTrue(v.startswith(want), f"{key[0]} {body}: {v}")
+        for folder in ("adler32", "base64", "inet"):
+            self.assertEqual(kbyte.ends(ode.Spec(text(folder, folder + ".spec"))), ([], []))
+        # a definition that comes back to itself through a sequence is seen as one that uses itself
+        s = ode.Spec("def f(x) { if x == 0 then 0 else g(x)[1] }\nsequence g(x) { s[0] = x   s[k + 1] = f(s[k]) }\ndef other(x) { x + 1 }\n")
+        self.assertEqual(kbyte.ends(s), (["f", "g"], ["f", "g"]))
 
     def test_a_proofs_part_gives_a_lemma_and_no_meaning(self):
         """ode.with_proof lets a proof's part hold a lemma of a definition of the reader's, and still no second

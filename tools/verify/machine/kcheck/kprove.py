@@ -1,5 +1,8 @@
 """kprove: the prover's side of the arithmetic. Trusted for nothing: varith.py verifies what it writes.
 
+`search` and `bounds` answer "can these whole numbers not all be >= 0?" by elimination and by the bounds of
+the names: the search itself. klin.py calls them only where it is given no table of proofs.
+
 klin.py's elimination, remembering how each row was made, so that when it comes to a contradiction the few
 rows and steps that led there can be written out (`derive`). `Recorder` sits in klin.Facts.RECORD while a
 function is verified the old way (with the search), and keeps a proof of every answer "shown"; `prove` runs a
@@ -8,6 +11,63 @@ cannot answer."""
 import math, random
 import klin, varith
 from klin import Facts
+
+
+# -- the search (it was klin.py's until November 16, 2026: a verifier that is given proofs does not load this file)
+def search(system, limit=600, last=frozenset()):
+    """Can the numbers in `system` not all be >= 0? Symbols are eliminated one after another; a constant
+    below zero left over says so."""
+    rows = set()
+    for f in system:
+        if not f.c:
+            if f.k < 0: return True
+        else: rows.add(f)
+    while rows:
+        count = {}
+        for f in rows:
+            for s, a in f.c:
+                p = count.setdefault(s, [0, 0]); p[0 if a > 0 else 1] += 1
+        s = min(count, key=lambda s: (s in last, count[s][0] * count[s][1]))
+        pos = [f for f in rows if dict(f.c).get(s, 0) > 0]
+        neg = [f for f in rows if dict(f.c).get(s, 0) < 0]
+        rows = {f for f in rows if s not in dict(f.c)}
+        if len(rows) + len(pos) * len(neg) > limit: return False
+        for p in pos:
+            a = dict(p.c)[s]
+            for n in neg:
+                b = -dict(n.c)[s]
+                g = math.gcd(a, b)
+                r = Facts.norm(p.scale(b // g) + n.scale(a // g))
+                if not r.c:
+                    if r.k < 0: return True
+                else: rows.add(r)
+    return False
+
+
+def bounds(system, rounds=12):
+    """Can the numbers in `system` not all be >= 0, by the bounds of their symbols alone?"""
+    lo, hi = {}, {}
+    for _ in range(rounds):
+        changed = False
+        for f in system:
+            for s, a in f.c:
+                # a * s >= -(the rest), and the rest is at most `most`
+                most = f.k
+                for t, b in f.c:
+                    if t == s: continue
+                    bound = hi.get(t) if b > 0 else lo.get(t)
+                    if bound is None: most = None; break
+                    most += b * bound
+                if most is None: continue
+                if a > 0:
+                    least = -(most // a)                        # s >= -most / a, rounded up
+                    if s not in lo or least > lo[s]: lo[s] = least; changed = True
+                else:
+                    greatest = most // -a                       # s <= most / -a, rounded down
+                    if s not in hi or greatest < hi[s]: hi[s] = greatest; changed = True
+                if s in lo and s in hi and lo[s] > hi[s]: return True
+        if not changed: return False
+    return False
 
 
 def row(f): return (dict(f.c), f.k)

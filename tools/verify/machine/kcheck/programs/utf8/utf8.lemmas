@@ -1,0 +1,10 @@
+// A lemma about utf8.spec's definition `points`: a step of the proof, shown by the verifier before it is used
+// (kbyte.py's prove_lemmas). It is not part of the specification and changes no meaning.
+//
+// `points` uses itself, from where the code point it has just read ends: at least one byte further, and not
+// past the end. The count of bytes still ahead is less at each such use and never below zero: so it comes to an
+// end on all bytes, with a count or failing.
+lemma points(bytes: bytes, at: number, count: number): number {
+    requires at <= len(bytes)
+    decreases len(bytes) - at
+}

@@ -44,7 +44,7 @@ import copy, json, os, sys, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import kcheck, kdecode, kspec, ode
 from kcheck import Fail, num
-from klin import Lin, Facts
+from klin import Lin, Facts, value, lin
 from kspec import byte_or, byte_term
 
 BASE, DATA = 0x10000, 0x50000000
@@ -54,16 +54,6 @@ BASE, DATA = 0x10000, 0x50000000
 # Numbers that depend on n and b (klin.py), as register values.
 N, B = Lin([("n", 1)]), Lin([("b", 1)])
 
-
-def value(x):
-    """A general register's value for a number that may depend on n and b."""
-    x = Lin.of(x)
-    return ("l", x) if x.c else ("n", x.k)
-
-
-def lin(v):
-    """A register's value as such a number, or None."""
-    return Lin.of(v[1]) if v[0] in ("n", "l") else None
 
 
 class Fork(Exception):

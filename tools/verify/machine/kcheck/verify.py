@@ -46,12 +46,12 @@ def main():
     args = [a for k, a in enumerate(sys.argv[1:], 1) if not a.startswith("--") and sys.argv[k - 1] != "--proof"]
     if not args: print(__doc__); return 2
     path, spec_path = args[0], args[1] if len(args) > 1 else None
-    import check_binary, kdecode
+    import kdecode, kproof
     e = kdecode.Elf(path)
     given = sys.argv[sys.argv.index("--proof") + 1] if "--proof" in sys.argv else None
     if given:
-        with open(given, "rb") as f: proof = check_binary.carried(f.read())
-    elif ".ode.proof" in e.index: proof = check_binary.carried(e.bytes_of(".ode.proof"))
+        with open(given, "rb") as f: proof = kproof.carried(f.read())
+    elif ".ode.proof" in e.index: proof = kproof.carried(e.bytes_of(".ode.proof"))
     else: print(f"{path}: it carries no proof (give one with --proof)"); return 2
     if spec_path:
         with open(spec_path) as f: text = f.read()
@@ -66,6 +66,7 @@ def main():
     print("2. The verification:\n")
     sys.stdout.flush()
     if hash_file:
+        import check_binary
         sys.argv = ["check_binary.py", path] + (["--spec", spec_path] if spec_path else []) + (["--proof", given] if given else []) + (["--search"] if "--search" in sys.argv else [])
         code = check_binary.main()
     else:

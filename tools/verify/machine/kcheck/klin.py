@@ -44,6 +44,17 @@ class Lin:
 def sym(name): return Lin([(name, 1)])
 
 
+def value(x):
+    """A general register's value for a number that may depend on names: ("n", a plain number) or ("l", a Lin)."""
+    x = Lin.of(x)
+    return ("l", x) if x.c else ("n", x.k)
+
+
+def lin(v):
+    """A register's value as such a number, or None."""
+    return Lin.of(v[1]) if v[0] in ("n", "l") else None
+
+
 AGAIN = 30000           # rows, where a question is asked again
 
 
@@ -51,11 +62,23 @@ class Facts:
     """Numbers known to be >= 0, numbers known not to be 0, symbols known in terms of others. Whole numbers."""
     thorough = False        # kbyte.py sets it: a question the first elimination does not answer is asked again (see `again`)
     # Who answers "can these numbers not all be >= 0?":
-    #   PROOFS None: the search below (`search`, `bounds`): the prover's way, and the way of every audit so far.
-    #   PROOFS a table (varith.py): only a proof of the table, verified by adding up; nothing is searched for.
-    # RECORD: the prover's (kprove.py), told of each answer "shown" by the search. MISS: the prover's, asked where
-    # the table has no proof. A verifier sets neither.
+    #   PROOFS a table (varith.py): only a proof of the table, verified by adding up. Nothing is searched for,
+    #          and nothing here can search: this file holds no elimination.
+    #   PROOFS None: the prover's search (kprove.py: `search`, `bounds`), loaded then and only then. It is the
+    #          way of the tools that make proofs, of the tests, and of the audits of the rest of the verifier.
+    # RECORD: the prover's, told of each answer "shown" by the search. MISS: the prover's, asked where the table
+    # has no proof. A verifier sets neither.
     PROOFS, RECORD, MISS = None, None, None
+
+    @staticmethod
+    def search(system, limit=600, last=frozenset()):
+        import kprove
+        return kprove.search(system, limit, last)
+
+    @staticmethod
+    def bounds(system, rounds=12):
+        import kprove
+        return kprove.bounds(system, rounds)
     def __init__(self): self.ge, self.ne, self.eq, self.below, self.bad, self.memo, self.asked = [], [], {}, [], False, {}, 0
     def clone(self):
         f = Facts(); f.ge, f.ne, f.eq, f.below, f.bad, f.memo, f.asked = list(self.ge), list(self.ne), dict(self.eq), list(self.below), self.bad, dict(self.memo), self.asked
@@ -114,32 +137,6 @@ class Facts:
         if varith.shown(Facts.PROOFS, [(dict(f.c), f.k) for f in system]): return True
         return Facts.MISS(system, limit, last) if Facts.MISS is not None else False
 
-    @staticmethod
-    def bounds(system, rounds=12):
-        """Can the numbers in `system` not all be >= 0, by the bounds of their symbols alone?"""
-        lo, hi = {}, {}
-        for _ in range(rounds):
-            changed = False
-            for f in system:
-                for s, a in f.c:
-                    # a * s >= -(the rest), and the rest is at most `most`
-                    most = f.k
-                    for t, b in f.c:
-                        if t == s: continue
-                        bound = hi.get(t) if b > 0 else lo.get(t)
-                        if bound is None: most = None; break
-                        most += b * bound
-                    if most is None: continue
-                    if a > 0:
-                        least = -(most // a)                        # s >= -most / a, rounded up
-                        if s not in lo or least > lo[s]: lo[s] = least; changed = True
-                    else:
-                        greatest = most // -a                       # s <= most / -a, rounded down
-                        if s not in hi or greatest < hi[s]: hi[s] = greatest; changed = True
-                    if s in lo and s in hi and lo[s] > hi[s]: return True
-            if not changed: return False
-        return False
-
     def quick(self, goal):
         for f in self.ge:
             if f.c == goal.c and goal.k >= f.k: return True
@@ -164,36 +161,6 @@ class Facts:
         r = Facts.search(system, limit, last)
         if r and Facts.RECORD is not None: Facts.RECORD(system, lambda s: Facts.search(s, limit, last), last)
         return r
-
-    @staticmethod
-    def search(system, limit=600, last=frozenset()):
-        """Can the numbers in `system` not all be >= 0? Symbols are eliminated one after another; a constant
-        below zero left over says so."""
-        rows = set()
-        for f in system:
-            if not f.c:
-                if f.k < 0: return True
-            else: rows.add(f)
-        while rows:
-            count = {}
-            for f in rows:
-                for s, a in f.c:
-                    p = count.setdefault(s, [0, 0]); p[0 if a > 0 else 1] += 1
-            s = min(count, key=lambda s: (s in last, count[s][0] * count[s][1]))
-            pos = [f for f in rows if dict(f.c).get(s, 0) > 0]
-            neg = [f for f in rows if dict(f.c).get(s, 0) < 0]
-            rows = {f for f in rows if s not in dict(f.c)}
-            if len(rows) + len(pos) * len(neg) > limit: return False
-            for p in pos:
-                a = dict(p.c)[s]
-                for n in neg:
-                    b = -dict(n.c)[s]
-                    g = math.gcd(a, b)
-                    r = Facts.norm(p.scale(b // g) + n.scale(a // g))
-                    if not r.c:
-                        if r.k < 0: return True
-                    else: rows.add(r)
-        return False
 
     def consistent(self):
         """False: the facts cannot all hold (a path that assumes them is taken by no run)."""

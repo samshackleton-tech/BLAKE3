@@ -5,11 +5,15 @@
 // What they are for: the decoder gives NO as soon as what it has decoded and is about to decode would pass
 // its room. That is right because what a block decodes to only grows: it is at least as long as what was
 // decoded before any of its sequences.
+//
+// `decreases`: the number of bytes of the block still ahead is less at each use of a definition by itself (or
+// by one that uses it back): so these definitions come to an end on every block, with a value or failing.
 
 // A count read from the bytes is at least what it began with, and ends after where it began.
 lemma counted(bytes: bytes, at: number, sum: number): record(value, next) {
     ensures result.value >= sum
     ensures result.next >= at + 1
+    decreases len(bytes) - at
 }
 
 // `out` with k more bytes copied onto it has k more bytes.
@@ -22,9 +26,11 @@ lemma copies(out: list, offset: number)[k]: list {
 // What the sequences from `at` on decode to, after `out`, is at least as long as `out`.
 lemma sequences(bytes: bytes, at: number, out: list): list {
     ensures len(result) >= len(out)
+    decreases len(bytes) - at
 }
 
 // The same of the rest of a sequence, from its offset on.
 lemma match(bytes: bytes, at: number, low: number, out: list): list {
     ensures len(result) >= len(out)
+    decreases len(bytes) - at
 }

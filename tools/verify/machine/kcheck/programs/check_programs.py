@@ -75,6 +75,8 @@ def main():
                 rows = kbyte.load(os.path.join(folder, function + ".o"), "ode_" + function)
                 tally = kbyte.check(rows, ode.with_proof(spec_text, lemmas(program)) if lemmas(program) else ode.Spec(spec_text), "ode_" + function, proof)
                 total += len(rows)
+                again, open_ = kbyte.ends(ode.with_proof(spec_text, lemmas(program)) if lemmas(program) else ode.Spec(spec_text))
+                if open_: raise kcheck.Fail(f"the specification's {', '.join(open_)} is not shown to come to an end")
                 print(f"  ode_{function:<12} {len(rows):>4} instructions  proof {lines(proof):>3} lines, {proof.count('place +')} places  {1000 * (time.time() - t0):7.1f} ms  meets its contract: {what}")
             except (kcheck.Fail, kdecode.Stop, ode.Err) as e:
                 failed += 1; print(f"  ode_{function}: NOT shown: {e}")

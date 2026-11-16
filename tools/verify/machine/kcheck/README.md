@@ -832,6 +832,43 @@ refusals. And what `kbyte.py` still lacks, each found by a program that wanted i
   that reads and writes one buffer cannot be shown (tried: ASCII made upper-case in place, 44 instructions:
   refused).
 
+### Later that night: the search out of the verifier's files; definitions shown to come to an end
+
+**No file a verification of a shipped binary loads can search.** The arithmetic's search (elimination,
+bounds) was in `klin.py` beside the facts, used where no table of proofs was given. It is now `kprove.py`'s
+(the prover's, 150 lines of code), loaded only where there is no table: by the tools that make proofs, the
+tests, and `--search`. `klin.py` is 174 lines of code and holds no elimination. A verification of a file of
+`programs/` no longer loads the hash's driver or the kernels' two verifiers (`kproof.py`, 16 lines, reads
+the proof's form; the helpers `value` and `lin` moved to `klin.py`): `verify.py` lists 10 files and 3,979
+lines of code for an LZ4 file (it was 12 and 4,587), 11 files and 3,445 for the hash (3,484).
+
+**A definition that uses itself is shown to come to an end.** A specification's definition that never
+ended on some input would have no value there and no failure, and a contract written with it would say
+nothing of that input: a hole a reader could not see by reading the contract. A lemma may now say
+`decreases E`: where the definition uses itself, or another that uses it back, E is not below zero, and it
+is less for what is used. The verifier shows that with the lemma's other clauses (the same opening), so it
+costs a reader nothing:
+
+    lemma points(bytes: bytes, at: number, count: number): number {
+        requires at <= len(bytes)
+        decreases len(bytes) - at
+    }
+
+All seven such definitions of `programs/` have it (`counted`, `sequences`, `match` of LZ4, where the last two
+use each other; `points` of UTF-8; `varint`; `alike`), a verification says so ("the definitions that use
+themselves (...): each is shown to come to an end") or names those that are not, and `check_programs.py`
+fails on one that is not. Refused in the tests: a number that grows, one that stays, one that could be
+below zero, a lemma without the number where another definition of its ring has one. What the first try
+taught: `alike(a, b, at)` reads `b[at]` and so ends, with a value, only where `b` is no shorter than `a`;
+the lemma had to say so (`requires len(a) <= len(b)`), and the public contract already gives both the same
+length.
+
+Not done: BLAKE3's own two (`subtree`, `children` in `blake3.spec`) are read by the other verifier of
+functions (`kfn.py`), which has no lemmas; their recursion is on "the greatest power of two below", and is
+not shown to end by any tool here (tried: `kbyte.prove_lemmas` on `blake3.spec` with the two lemmas stops
+at "a word: this verifier's programs are of bytes and numbers"). A verification of `b3hashr.o` says so in a
+line of its own, and points the reader at the fifteen lines to read.
+
 ## The library's wide kernels, each run to its end (`kcheck.py`, the first trial)
 
 From the library's own assembly sources (`c/blake3_avx512_32.S`, `c/blake3_output16.S`), assembled, the

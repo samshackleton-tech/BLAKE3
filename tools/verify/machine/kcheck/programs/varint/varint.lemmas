@@ -1,0 +1,8 @@
+// A lemma about varint.spec's definition `varint`: a step of the proof, shown by the verifier before it is used
+// (kbyte.py's prove_lemmas). It is not part of the specification and changes no meaning.
+//
+// `varint` uses itself, of the number divided by 128, and only where the number is 128 or more: the number is
+// less at each such use. So it comes to an end on every number.
+lemma varint(v: number): list {
+    decreases v
+}

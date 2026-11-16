@@ -41,10 +41,9 @@ own recursion, no loop needed a place, and that part was taken out.)
 WHAT IS NOT CHECKED HERE: this verifier (Python, unverified: its audits are its worth)."""
 import copy, itertools, json, os, sys, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import kcheck, kdecode, kspec, ode, kone
+import kcheck, kdecode, kspec, ode
 from kcheck import Fail, num, signed
-from klin import Lin, Facts, sym
-from kloop import value, lin
+from klin import Lin, Facts, sym, value, lin
 from kspec import Arr, ByteT, Slice, Named, plain, byte_or, byte_term, term_byte, halved
 from ode import Word, Err
 
@@ -196,7 +195,9 @@ def contract(symbol):
 
 
 # The one-block kernels, by their contracts: checked against the kernels' bytes by kone.py, and read from there.
-def kernels(): return {c["symbol"]: c for c in kone.CONTRACTS.values()}
+def kernels():
+    import kone                 # (only the hash has kernels: a verification of other programs does not load their verifier)
+    return {c["symbol"]: c for c in kone.CONTRACTS.values()}
 
 
 # ---------------------------------------------------------------------------------------------------------

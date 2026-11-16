@@ -21,7 +21,7 @@ its name, where it is, its length in bytes, its instructions, its contract's tex
 import hashlib, json, os, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
-import check_binary, kbyte, kcheck, kdecode, ode, klin, varith
+import kbyte, kcheck, kdecode, kproof, ode, klin, varith
 
 
 def main():
@@ -34,8 +34,8 @@ def main():
     kind = {1: "an object with nothing left for a linker to fill in", 2: "an executable", 3: "a shared object, or an executable that may be loaded anywhere"}[e.type]
     print(f"{os.path.basename(path)}: {kind}, {len(e.b)} bytes; {sum(z - a for a, z, x in s.parts if x)} of them loaded to be run")
     if given is not None:
-        with open(given, "rb") as f: proof, where = check_binary.carried(f.read()), given
-    elif ".ode.proof" in e.index: proof, where = check_binary.carried(e.bytes_of(".ode.proof")), "the file's own section .ode.proof"
+        with open(given, "rb") as f: proof, where = kproof.carried(f.read()), given
+    elif ".ode.proof" in e.index: proof, where = kproof.carried(e.bytes_of(".ode.proof")), "the file's own section .ode.proof"
     else: print("no proof: the file has no section .ode.proof, and none is given (--proof)"); return 2
     if "--show-spec" in sys.argv:
         if "specification" not in proof["files"]: print("the file carries no specification"); return 1
@@ -110,6 +110,7 @@ def main():
         return any(rings(name, above | {symbol}) for name in calls.get(symbol, ()))
     if any(rings(symbol, frozenset()) for symbol in calls): failed += 1; print("  a function is called by what it calls: nothing here shows such calls come to an end")
     if failed: print(f"NOT shown ({failed} of {len(wanted)} failed)"); return 1
+    print("the specification: " + kbyte.ends_line(spec))
     print("the arithmetic: " + ("every fact by a proof the file carries, verified by adding up (varith.py); nothing was searched for" if not searched else
                               f"searched for by this program for {len(searched)} function(s): the file carries no proofs of it, or --search was given"))
     print(f"{len(wanted)} function(s) in this file, {count} instructions, each meets its {'public ' if not inner else ''}contract ({os.path.basename(spec_path)}{', with the inner contracts and lemmas the proof carries' if inner else ''}), from the file's bytes, in {time.time() - t_all:.2f} s")

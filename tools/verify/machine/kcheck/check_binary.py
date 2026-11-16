@@ -30,29 +30,12 @@ import hashlib, json, os, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import kcheck, kdecode, kfn, klin, kloop, kone, kspec, ode, varith
+from kproof import carried
 
 WIDE = {kloop.KERNELS[n]["symbol"]: n for n in ("k32", "p32", "p16")}
 ONE = {c["symbol"]: n for n, c in kone.CONTRACTS.items()}
 PLACES = {}             # the kernels' places, where a proof carried in the file gives them: {name: the JSON's text}
 ARITH = {}              # the arithmetic's proofs the file carries: {a function's name: the table's bytes (varith.py)}
-
-
-def carried(text):
-    """A proof as klink.py writes it: {"spec": sha256, "code": (length, sha256, its first bytes), "at": {name: offset}, "files": {name: bytes}}."""
-    out, at = {"at": {}, "files": {}}, 0
-    def line():
-        nonlocal at
-        end = text.index(b"\n", at); l = text[at:end].decode(); at = end + 1
-        return l.split(" ")
-    if line() != ["ode", "proof", "1"]: raise kcheck.Fail("the proof is not one this verifier reads")
-    while at < len(text):
-        w = line()
-        if w[0] == "specification" and w[1] == "sha256": out["spec"] = w[2]
-        elif w[0] == "code" and w[2] == "sha256" and w[4] == "begins": out["code"] = (int(w[1]), w[3], bytes.fromhex(w[5]))
-        elif w[0] == "at": out["at"][w[2]] = int(w[1])
-        elif w[0] == "file": out["files"][w[1]] = text[at:at + int(w[2])]; at += int(w[2])
-        else: raise kcheck.Fail(f"the proof: a line this verifier does not know: {' '.join(w)[:60]}")
-    return out
 
 
 def take(proof, spec_path):
@@ -168,6 +151,8 @@ def main():
     if failed: print(f"{top}: NOT shown ({failed} failed)"); return 1
     print("the arithmetic: " + ("every fact by a proof the file carries, verified by adding up (varith.py); nothing was searched for" if not searched else
                               f"searched for by this program for {len(searched)} function(s): the file carries no proofs of it, or --search was given"))
+    print("the specification: its definitions `subtree` and `children` use each other (the tree: a message of more than a chunk is two parts); "
+          "NOT shown by this program to come to an end (each part is shorter than the whole: read lines 117 to 131 of blake3.spec)")
     print(f"{top} in this file meets its public contract ({'the specification the file carries' if proof is not None and option('--spec') is None and 'specification' in proof['files'] else 'blake3.spec'}), with all it calls: {len(done)} functions, from the file's bytes, in {time.time() - t_all:.2f} s")
     return 0
 

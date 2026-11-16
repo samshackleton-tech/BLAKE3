@@ -152,10 +152,12 @@ class Parser:
             elif self.maybe("contract"):
                 name = once("contract", self.take(kind="name")); self.contracts[name] = self.contract()
             elif self.maybe("lemma"):
-                # lemma NAME(param: bytes | list | number, ...) [ "[" k "]" ] : list | number | record(field, ...) { requires E | ensures E }
+                # lemma NAME(param: bytes | list | number, ...) [ "[" k "]" ] : list | number | record(field, ...) { requires E | ensures E | decreases E }
                 # A contract of a definition (or of a sequence's place k): where what it is given meets `requires`
                 # and the definition has a value, `ensures` holds of that value, written `result`. A step of a
                 # proof: a verifier shows it before it uses it (kbyte.py), so it changes no meaning.
+                # `decreases E`: a number that is not below zero where the definition uses itself (or another that
+                # uses it back), and less at each such use: so the definition comes to an end, with a value or failing.
                 name = once("lemma", self.take(kind="name")); self.take("("); params = []
                 while not self.maybe(")"):
                     p = self.take(kind="name"); self.take(":"); params.append((p, self.take(kind="name"))); self.maybe(",")
@@ -166,13 +168,14 @@ class Parser:
                     self.take("(")
                     while not self.maybe(")"): fields.append(self.take(kind="name")); self.maybe(",")
                 if kind not in ("list", "number", "record") or any(k not in ("bytes", "list", "number") for _, k in params): raise Err(f"line {self.t[self.i - 1][2]}: a lemma's kinds are bytes, list, number, record(...)")
-                self.take("{"); requires, ensures = [], []
+                self.take("{"); requires, ensures, decreases = [], [], None
                 while not self.maybe("}"):
                     clause = self.take(kind="name")
                     if clause == "requires": requires.append(self.expr())
                     elif clause == "ensures": ensures.append(self.expr())
-                    else: raise Err(f"line {self.t[self.i - 1][2]}: a lemma says `requires` and `ensures`")
-                self.lemmas[name] = dict(params=params, index=index, kind=kind, fields=fields, requires=requires, ensures=ensures)
+                    elif clause == "decreases" and decreases is None and index is None: decreases = self.expr()
+                    else: raise Err(f"line {self.t[self.i - 1][2]}: a lemma says `requires`, `ensures` and, once and of a definition, `decreases`")
+                self.lemmas[name] = dict(params=params, index=index, kind=kind, fields=fields, requires=requires, ensures=ensures, decreases=decreases)
             else: raise Err(f"line {self.t[self.i][2]}: const, def, sequence, contract, layout, kind or machine expected")
         return consts, fns, machines
 
