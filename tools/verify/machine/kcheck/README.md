@@ -952,7 +952,9 @@ definition's value is (`: list`, `: number`, `: record(value, next)`), and a use
 kind. Where a lemma ensured something, a wrong kind was refused (the clause spoke of the wrong kind of
 thing). Where it ensured nothing, nothing looked: `lemma counted(bytes: bytes, at: number, sum: number):
 list { }` was shown, and `counted` gives a record. **Kind: shown, of something false.** I could not make a
-function accepted wrongly with it (a use of the thing as the wrong kind stops the verifier), and it is
+function accepted wrongly with it: with the verifier as it was and seven lemma files each with one false
+kind, the LZ4 decoder with each of 254 instructions left out is accepted in none of the 1,778 cases (and
+the decoder as it is, is refused with each: a use of the thing as the wrong kind stops the verifier). It is
 closed all the same: the value the opening gives must be of the kind said (`kbyte.py`, one check in
 `prove_lemmas`). The lemma audit now changes each lemma's kind, with and without what it ensures, and its
 judge on numbers looks at the kind of what the definition gave; run against the verifier as it was, it
