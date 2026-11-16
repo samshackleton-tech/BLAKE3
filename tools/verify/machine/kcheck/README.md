@@ -593,7 +593,7 @@ and with a wrong one the check fails.
   | `ode_lz4_pack` | 11,784 | 5,415 | 5,516 | 853 | 853 keep the contract |
   | `ode_varint` | 840 | 413 | 419 | 8 | 8 keep the contract |
   | `ode_common` | 1,072 | 526 | 483 | 63 | 63 keep the contract |
-  | `ode_utf8` | 9,576 | 4,305 | 4,399 | 872 | 872 keep the contract |
+  | `ode_utf8` | 9,576 | 4,305 | 4,363 | 908 | 908 keep the contract |
   | `ode_base64` | 6,608 | 3,121 | 2,984 | 503 | 503 keep the contract |
   | `ode_inet` | 2,392 | 1,130 | 1,249 | 13 | 13 keep the contract |
   | `ode_unframe` (its two calls by contract) | 2,232 | 1,098 | 886 | 248 | 248 keep the contract |
@@ -603,11 +603,15 @@ and with a wrong one the check fails.
   `ode_lz4_decode`, and for the packing one `LZ4_decompress_safe` of lz4's `lz4.c` (commit `6b589e80`) as
   well; for UTF-8 a validator by the standard's table of byte ranges and the C library's converter; for
   base 64 an encoder by a table and the C library's `b64_ntop`; for the checksum RFC 1071's own C code.
-  All twelve are of one run, the whole `sh audit.sh 60` on the tree of commit `0a24723d` (the last change to any of these programs): 56,040 changes, 3,515 accepted, none without a
-  verdict; the first eleven rows are what they were at `f7c0cfa9`. The same run left every instruction out
-  of six of them in turn: 38, 47, 4, 11, 12 and 13 objects accepted (`lz4_pack`, `utf8`, `inet`,
-  `adler32_blocks`, `adler32_blocks4`, `unframe`), each keeping its contract on the processor; and checked
-  and ran the eight shipped files (30,000 frames through `odeframe.o`).)
+  All twelve are of one run, the whole `sh audit.sh 60` on the tree of commit `20813274` (November 16): 56,040
+  changes, 3,551 accepted, none without a verdict. Against the run before (`0a24723d`) one row moved:
+  `ode_utf8` has 36 more accepted (908 for 872), each keeping the contract: the verifier shows more of what
+  is so. Every instruction left out in turn, of seven of them: 38, 50, 4, 11, 12, 13 and 19 objects accepted
+  (`lz4_pack`, `utf8`, `inet`, `adler32_blocks`, `adler32_blocks4`, `unframe`, `lz4_decode`), each keeping
+  its contract on the processor. (Those seven steps fell over in the run itself: `kbyte_nop.py`, made to
+  work side by side that night, started its workers afresh under Python 3.14 and they had not what the file
+  had read. The tool was mended and the seven were run again in the same tree; the counts are of that.) It
+  also checked and ran the eight shipped files (30,000 frames through `odeframe.o`).)
 - **The unchanged functions on the processor**: Adler-32 on 6,301 inputs as zlib's; the decoder on 20,000
   blocks as the C decoder (count, bytes, and NO); the plain encoder: 12,877 blocks that decode to their
   input, NO only where the room is less than the block needs; the packing encoder: 15,065 blocks, each
@@ -1322,11 +1326,14 @@ same for every input.
 
 ## What has been done to find it wrong
 
-(Every single-bit audit was run again in the night of November 15 to 16 by `sh audit.sh 60` on the tree of
-commit `0a24723d`, the last change to any of these programs (`ode.py` and `kbyte.py`),
-and `audit/` holds the outputs: 353,192 single-bit changes in all, 18,033 accepted, each of those as its
-specification on the processor, none without a verdict (900 s a change at most). But for the new function's
-rows every count is what it was in the run before, at `2ae7c9e9` and `f7c0cfa9`.)
+(Every single-bit audit was run again on November 16 by `sh audit.sh 60` on the tree of commit `20813274`
+(the arithmetic by proofs, the lemmas, the unbent LZ4, `any`), and `audit/` holds the outputs: 353,192
+single-bit changes in all, 18,069 accepted, each of those as its specification on the processor, none
+without a verdict (900 s a change at most). But for `ode_utf8` (36 more accepted) every count of the flips
+is what it was in the run before, at `0a24723d`. After that commit `kbyte.py` got one more check (the kind a
+lemma says) and three drivers a line: the part of the audit that covers `kbyte.py` is being run again on
+the head, and `audit/` is brought up to it when it ends; see the end of "Programs other than the hash".
+The lemmas have an audit of their own there.)
 
 1. **Changed kernels** (`--mutants`): 15 of 15 refused (rotations, operands, the carry's mask, a message offset,
    a store's offset, a shuffle, a flag, a saved register, the frame's bound, the block step, one entry of the

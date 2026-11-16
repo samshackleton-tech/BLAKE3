@@ -1,41 +1,73 @@
-odeadler32.o: an object with nothing left for a linker to fill in, 6032 bytes; 1136 of them loaded to be run
+odeadler32.o: an object with nothing left for a linker to fill in, 10432 bytes; 1136 of them loaded to be run
 the proof: the file's own section .ode.proof; the specification is the reader's (adler32.spec), the one the maker had
-  ode_adler32        at      0x0    55 instructions  1 places      7.9 ms  meets its public contract
-  ode_adler32_blocks at     0xb0   116 instructions  2 places    271.9 ms  meets its public contract
-  ode_adler32_blocks4 at    0x240   164 instructions  3 places   2662.8 ms  meets its public contract
-3 function(s) in this file, 335 instructions, each meets its public contract (adler32.spec), from the file's bytes, in 2.94 s
-odelz4.o: an object with nothing left for a linker to fill in, 20712 bytes; 3088 of them loaded to be run
+  ode_adler32        at      0x0    55 instructions  1 places      6.5 ms  meets its public contract
+  ode_adler32_blocks at     0xb0   116 instructions  2 places     30.9 ms  meets its public contract
+  ode_adler32_blocks4 at    0x240   164 instructions  3 places     63.5 ms  meets its public contract
+the specification: no definition of the specification uses itself: each comes to an end
+the arithmetic: every fact by a proof the file carries, verified by adding up (varith.py); nothing was searched for
+3 function(s) in this file, 335 instructions, each meets its public contract (adler32.spec), from the file's bytes, in 0.10 s
+the arithmetic: searched for by this program for 3 function(s): the file carries no proofs of it, or --search was given
+3 function(s) in this file, 335 instructions, each meets its public contract (the specification the file carries), from the file's bytes, in 6.25 s
+odelz4.o: an object with nothing left for a linker to fill in, 28864 bytes; 3088 of them loaded to be run
 the proof: the file's own section .ode.proof; the specification is the reader's (lz4.spec), the one the maker had
-  ode_lz4_decode     at      0x0   267 instructions  5 places    746.0 ms  meets its public contract
-  ode_lz4_store      at    0x440   132 instructions  2 places     47.1 ms  meets its public contract
-  ode_lz4_pack       at    0x640   360 instructions  6 places   2938.9 ms  meets its public contract
-3 function(s) in this file, 759 instructions, each meets its public contract (lz4.spec), from the file's bytes, in 3.73 s
-odevarint.o: an object with nothing left for a linker to fill in, 1664 bytes; 112 of them loaded to be run
+  ode_lz4_decode     at      0x0   267 instructions  5 places    483.1 ms  meets its public contract
+  ode_lz4_store      at    0x440   132 instructions  2 places     35.4 ms  meets its public contract
+  ode_lz4_pack       at    0x640   360 instructions  6 places    251.6 ms  meets its public contract
+the specification: the definitions that use themselves (counted, match, sequences): each is shown to come to an end (a number that decreases, in a lemma)
+the arithmetic: every fact by a proof the file carries, verified by adding up (varith.py); nothing was searched for
+3 function(s) in this file, 759 instructions, each meets its contract (lz4.spec, with the inner contracts and lemmas the proof carries), from the file's bytes, in 0.77 s
+the arithmetic: searched for by this program for 3 function(s): the file carries no proofs of it, or --search was given
+3 function(s) in this file, 759 instructions, each meets its contract (the specification the file carries, with the inner contracts and lemmas the proof carries), from the file's bytes, in 10.18 s
+odevarint.o: an object with nothing left for a linker to fill in, 3120 bytes; 112 of them loaded to be run
 the proof: the file's own section .ode.proof; the specification is the reader's (varint.spec), the one the maker had
-  ode_varint         at      0x0    35 instructions  0 places    251.4 ms  meets its public contract
-1 function(s) in this file, 35 instructions, each meets its public contract (varint.spec), from the file's bytes, in 0.25 s
-odecommon.o: an object with nothing left for a linker to fill in, 2008 bytes; 144 of them loaded to be run
+  ode_varint         at      0x0    35 instructions  0 places     37.4 ms  meets its public contract
+the specification: the definitions that use themselves (varint): each is shown to come to an end (a number that decreases, in a lemma)
+the arithmetic: every fact by a proof the file carries, verified by adding up (varith.py); nothing was searched for
+1 function(s) in this file, 35 instructions, each meets its contract (varint.spec, with the inner contracts and lemmas the proof carries), from the file's bytes, in 0.04 s
+the arithmetic: searched for by this program for 1 function(s): the file carries no proofs of it, or --search was given
+1 function(s) in this file, 35 instructions, each meets its contract (the specification the file carries, with the inner contracts and lemmas the proof carries), from the file's bytes, in 0.49 s
+odecommon.o: an object with nothing left for a linker to fill in, 2752 bytes; 144 of them loaded to be run
 the proof: the file's own section .ode.proof; the specification is the reader's (common.spec), the one the maker had
-  ode_common         at      0x0    45 instructions  1 places      6.9 ms  meets its public contract
-1 function(s) in this file, 45 instructions, each meets its public contract (common.spec), from the file's bytes, in 0.01 s
-odeutf8.o: an object with nothing left for a linker to fill in, 5400 bytes; 1200 of them loaded to be run
+  ode_common         at      0x0    45 instructions  1 places      7.1 ms  meets its public contract
+the specification: the definitions that use themselves (alike): each is shown to come to an end (a number that decreases, in a lemma)
+the arithmetic: every fact by a proof the file carries, verified by adding up (varith.py); nothing was searched for
+1 function(s) in this file, 45 instructions, each meets its contract (common.spec, with the inner contracts and lemmas the proof carries), from the file's bytes, in 0.01 s
+the arithmetic: searched for by this program for 1 function(s): the file carries no proofs of it, or --search was given
+1 function(s) in this file, 45 instructions, each meets its contract (the specification the file carries, with the inner contracts and lemmas the proof carries), from the file's bytes, in 0.02 s
+odeutf8.o: an object with nothing left for a linker to fill in, 6744 bytes; 1200 of them loaded to be run
 the proof: the file's own section .ode.proof; the specification is the reader's (utf8.spec), the one the maker had
-  ode_utf8           at      0x0   300 instructions  1 places    219.0 ms  meets its public contract
-1 function(s) in this file, 300 instructions, each meets its public contract (utf8.spec), from the file's bytes, in 0.22 s
-odebase64.o: an object with nothing left for a linker to fill in, 4336 bytes; 832 of them loaded to be run
+  ode_utf8           at      0x0   300 instructions  1 places    111.0 ms  meets its public contract
+the specification: the definitions that use themselves (points): each is shown to come to an end (a number that decreases, in a lemma)
+the arithmetic: every fact by a proof the file carries, verified by adding up (varith.py); nothing was searched for
+1 function(s) in this file, 300 instructions, each meets its contract (utf8.spec, with the inner contracts and lemmas the proof carries), from the file's bytes, in 0.11 s
+the arithmetic: searched for by this program for 1 function(s): the file carries no proofs of it, or --search was given
+1 function(s) in this file, 300 instructions, each meets its contract (the specification the file carries, with the inner contracts and lemmas the proof carries), from the file's bytes, in 0.67 s
+odebase64.o: an object with nothing left for a linker to fill in, 6368 bytes; 832 of them loaded to be run
 the proof: the file's own section .ode.proof; the specification is the reader's (base64.spec), the one the maker had
-  ode_base64         at      0x0   197 instructions  1 places  16681.5 ms  meets its public contract
-1 function(s) in this file, 197 instructions, each meets its public contract (base64.spec), from the file's bytes, in 16.68 s
-odeinet.o: an object with nothing left for a linker to fill in, 4104 bytes; 304 of them loaded to be run
+  ode_base64         at      0x0   197 instructions  1 places   4493.7 ms  meets its public contract
+the specification: no definition of the specification uses itself: each comes to an end
+the arithmetic: every fact by a proof the file carries, verified by adding up (varith.py); nothing was searched for
+1 function(s) in this file, 197 instructions, each meets its public contract (base64.spec), from the file's bytes, in 4.49 s
+the arithmetic: searched for by this program for 1 function(s): the file carries no proofs of it, or --search was given
+1 function(s) in this file, 197 instructions, each meets its public contract (the specification the file carries), from the file's bytes, in 33.50 s
+odeinet.o: an object with nothing left for a linker to fill in, 5304 bytes; 304 of them loaded to be run
 the proof: the file's own section .ode.proof; the specification is the reader's (inet.spec), the one the maker had
-  ode_inet           at      0x0    88 instructions  1 places    364.3 ms  meets its public contract
-1 function(s) in this file, 88 instructions, each meets its public contract (inet.spec), from the file's bytes, in 0.36 s
-odeframe.o: an object with nothing left for a linker to fill in, 13304 bytes; 1936 of them loaded to be run
+  ode_inet           at      0x0    88 instructions  1 places     23.1 ms  meets its public contract
+the specification: no definition of the specification uses itself: each comes to an end
+the arithmetic: every fact by a proof the file carries, verified by adding up (varith.py); nothing was searched for
+1 function(s) in this file, 88 instructions, each meets its public contract (inet.spec), from the file's bytes, in 0.02 s
+the arithmetic: searched for by this program for 1 function(s): the file carries no proofs of it, or --search was given
+1 function(s) in this file, 88 instructions, each meets its public contract (the specification the file carries), from the file's bytes, in 0.72 s
+odeframe.o: an object with nothing left for a linker to fill in, 21920 bytes; 1936 of them loaded to be run
 the proof: the file's own section .ode.proof; the specification is the reader's (frame.spec), the one the maker had
-  ode_unframe        at      0x0    80 instructions  0 places     14.5 ms  meets its public contract; calls ode_adler32_blocks4, ode_lz4_decode by contract
-  ode_lz4_decode     at    0x350   267 instructions  5 places    749.9 ms  meets its contract (a step of the proof)
-  ode_adler32_blocks4 at    0x120   164 instructions  3 places   3272.6 ms  meets its contract (a step of the proof)
-3 function(s) in this file, 511 instructions, each meets its contract (frame.spec, with the contracts of the functions called that the proof carries), from the file's bytes, in 4.04 s
+  ode_unframe        at      0x0    80 instructions  0 places     81.3 ms  meets its public contract; calls ode_adler32_blocks4, ode_lz4_decode by contract
+  ode_lz4_decode     at    0x350   267 instructions  5 places    486.8 ms  meets its contract (a step of the proof)
+  ode_adler32_blocks4 at    0x120   164 instructions  3 places     80.9 ms  meets its contract (a step of the proof)
+the specification: the definitions that use themselves (counted, match, sequences): each is shown to come to an end (a number that decreases, in a lemma)
+the arithmetic: every fact by a proof the file carries, verified by adding up (varith.py); nothing was searched for
+3 function(s) in this file, 511 instructions, each meets its contract (frame.spec, with the inner contracts and lemmas the proof carries), from the file's bytes, in 0.65 s
+the arithmetic: searched for by this program for 3 function(s): the file carries no proofs of it, or --search was given
+3 function(s) in this file, 511 instructions, each meets its contract (the specification the file carries, with the inner contracts and lemmas the proof carries), from the file's bytes, in 10.84 s
 6746 frames opened and 23254 refused (5271 of them for the sum alone), as the reference does
 6201 checksums as zlib's
 9001 checksums as zlib's

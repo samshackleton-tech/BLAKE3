@@ -3,7 +3,7 @@ control: the unchanged object on this processor, 1000 cases: same
 control: the unchanged object given inputs shorter than it reads (a block too few, or a block a byte short), on this processor: CRASHES: status -11
 control: a change the verifier refused (one block: word 0 of lane 0's chaining value is not the specification's), on this processor: DIFFERS: case 0: lane 1 word 0 is a1593524, BLAKE3's is 300eaa35
 the 1752 accepted changes on this processor, 1000 cases each (18 s): 1752 same
-for scale, 400 of the changes stopped or refused, on this processor (200 cases each): 196 CRASHES, 181 DIFFERS, 23 same ("same": refused or not decoded, yet it works on these inputs)
+for scale, 400 of the changes stopped or refused, on this processor (200 cases each): 197 CRASHES, 180 DIFFERS, 23 same ("same": refused or not decoded, yet it works on these inputs)
 k32: 35824 single-bit changes of 4478 bytes of code (312 s, 60 at a time): 22053 stopped by the decoder, 12019 refused by the verifier, 1752 accepted, 0 with NO VERDICT (the time limit)
 accepted, by where the change is: contract 82, linker 352, padding 38, prefetch 1280
 contract: the 26 instructions with a change the contract does not see (changes accepted in each):

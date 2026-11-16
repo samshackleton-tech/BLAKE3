@@ -1,5 +1,5 @@
 control: the unchanged object is ACCEPTED 
-ode_unframe: 2232 single-bit changes of 279 bytes of code (0 s): 1098 stopped by the decoder, 886 refused, 248 accepted, 0 with NO VERDICT (the time limit)
+ode_unframe: 2232 single-bit changes of 279 bytes of code (4 s): 1098 stopped by the decoder, 886 refused, 248 accepted, 0 with NO VERDICT (the time limit)
   accepted: +0x24 byte 0 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .r8) (.imm 0x0)
   accepted: +0x24 byte 2 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rcx) (.imm 0x0)
   accepted: +0x24 byte 2 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rdx) (.imm 0x0)
@@ -250,4 +250,4 @@ ode_unframe: 2232 single-bit changes of 279 bytes of code (0 s): 1098 stopped by
   accepted: +0xE7 byte 1 bit 3: .add 64 (.reg .rax) (.reg .rcx)  ->  .or 64 (.reg .rax) (.reg .rcx)
 control: the unchanged object on this processor (3000): same
 the 248 accepted changes on this processor: 248 same
-for scale, 300 of the changes stopped or refused, on this processor: 179 CRASHES, 87 DIFFERS, 34 same
+for scale, 300 of the changes stopped or refused, on this processor: 180 CRASHES, 86 DIFFERS, 34 same
