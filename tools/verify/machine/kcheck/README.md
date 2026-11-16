@@ -42,7 +42,7 @@ this way, not all programs. The languages are our own.
   with the specification's definition. Terms are compared by identity, numbers by adding linear facts up.
   No solver.
 
-**The binary is one file, `b3hashr.o`** (79,736 bytes): the thirteen bodies of code the hash is made of,
+**The binary is one file, `b3hashr.o`** (80,920 bytes): the thirteen bodies of code the hash is made of,
 their constants, their names, the specification, the proof, and nothing for a linker to fill in.
 `python3 check_binary.py b3hashr.o` reads it, follows every call from `b3l_hashr`, and says in 19 s on an
 Apple M6 that `b3l_hashr` in that file meets its public contract:
@@ -354,7 +354,7 @@ verifier took those from the relocation's name, and a linker was trusted to writ
   thirteen bodies `hashr` runs (the nine functions of `hash.ode`, the two one-block kernels, K32 with its
   second entry, P16), from each one's first byte to its `ret`, and the read-only data of the three objects
   that have any; lays them out in one section, each on the boundary it had; and writes the distances itself.
-  **`b3hashr.o`**: 79,736 bytes, of which 16,788 are code and 60,374 the specification and the proof (38,747 of
+  **`b3hashr.o`**: 80,920 bytes, of which 16,788 are code and 61,554 the specification and the proof (38,747 of
   those the arithmetic's proofs, which `varith.py` adds up); fourteen names; no
   relocations. A linker has only to place it on a 64-byte boundary. The library's other functions that share a source file with a kernel
   (`hash_many`, the XOF's) are not in it.
@@ -374,7 +374,7 @@ verifier took those from the relocation's name, and a linker was trusted to writ
 
 | file | made by | bytes | `b3l_hashr` in it |
 |---|---|---|---|
-| `b3hashr.o` | `klink.py`, of Apple clang 21's objects | 79,736 | meets its public contract |
+| `b3hashr.o` | `klink.py`, of Apple clang 21's objects | 80,920 | meets its public contract |
 | a shared object of it | GNU ld 2.46 | 41,640 | meets it |
 | a shared object of it | lld 21 | 32,776 | meets it |
 | `khash_native.c` with it (an executable loaded anywhere) | GCC 15.2, GNU ld | 58,168 | meets it |
@@ -745,7 +745,7 @@ nothing (`DESIGN.md` has the counts). Now the search is the prover's:
 
 | file | bytes | of them the arithmetic's proofs | verified by the proofs | with the search |
 |---|---|---|---|---|
-| `b3hashr.o` | 79,736 | 38,747 (four of its thirteen functions need any) | 15.4 s | 18.3 s |
+| `b3hashr.o` | 80,920 | 38,747 (four of its thirteen functions need any) | 15.4 s | 18.3 s |
 | `adler32/odeadler32.o` | 10,432 | 4,302 | 0.04 s | 2.2 s |
 | `lz4/odelz4.o` | 28,512 | 6,688 | 0.3 s | 4.2 s |
 | `frame/odeframe.o` | 21,560 | 6,855 | 0.25 s | 4.5 s |
@@ -874,11 +874,28 @@ changed specifications of UTF-8 are accepted now, and both are the same specific
 `b < 193` in the first check of a first byte; `b < 128` made `b < 129` in the count: 244,205 inputs agree on
 each, and the two neighbouring changes that are not the same are refused).
 
-Not done: BLAKE3's own two (`subtree`, `children` in `blake3.spec`) are read by the other verifier of
-functions (`kfn.py`), which has no lemmas; their recursion is on "the greatest power of two below", and is
-not shown to end by any tool here (tried: `kbyte.prove_lemmas` on `blake3.spec` with the two lemmas stops
-at "a word: this verifier's programs are of bytes and numbers"). A verification of `b3hashr.o` says so in a
-line of its own, and points the reader at the fifteen lines to read.
+**BLAKE3's tree too.** `subtree` and `children` (`blake3.spec`) use each other: a message of more than one
+chunk is two parts. The first try stopped at "a word: this verifier's programs are of bytes and numbers";
+what it took is a kind `any` for a lemma: a thing the lemma neither asks about nor says anything of (the
+key, the flags, the values), passed on only. A lemma of kind `any` with no clause says nothing of its
+definition, so there is nothing to show, and it keeps an opening from going into the compression function;
+of a thing of kind `any` nothing can be shown. The file carries five (`proofs/blake3.lemmas`):
+
+    lemma subtree(key: any, flags: any, t: number, bytes: bytes): any {
+        decreases 2 * len(bytes)
+    }
+    lemma children(key: any, flags: any, t: number, bytes: bytes): any {
+        requires len(bytes) > 1024
+        decreases 2 * len(bytes) - 1
+    }
+
+(`children` stands between a tree and its two parts, so its number is one less; the left part is 1024 times
+the greatest power of two that leaves bytes for the right, so each part is shorter than the whole.) Shown in
+0.3 s. Refused in the tests: seven other numbers or `requires`, a lemma that says something of words, and
+three changed specifications in which a part is not smaller (`<=` for `<` in the split among them). A
+verification of `b3hashr.o` says "the definitions that use themselves (children, subtree): each is shown to
+come to an end"; `verify.py` lists what that one line loaded beside the rest (`kbyte.py`, 1,061 lines of
+code: it is no part of what shows the code meets the contract).
 
 ## The library's wide kernels, each run to its end (`kcheck.py`, the first trial)
 
@@ -1027,18 +1044,18 @@ specification. (The hash above does not use them: it has no stack.)
 | `DESIGN.md` | 175 | the design: what is wanted and given up, the rules for code written to be proved, how it stands to types-as-proofs |
 | `proofs/inner.spec`, `proofs/*.json` | 185 | the inner contracts (of the functions inside), the layouts of two records; the wide kernels' and `merge`'s places |
 | `hash.ode`, `glue/*.S` | 332 | the hash written to be proved; the assembly the Ode compiler prints of it (and of the stack's three functions) |
-| `b3hashr.o` | | the binary: 79,736 bytes, the specification and the proof in it |
+| `b3hashr.o` | | the binary: 80,920 bytes, the specification and the proof in it |
 | `VERIFY.md`, `verify.py` | 100 + 95 | the reader's page; one command: the contract, the verification, and which files of this folder ran to reach it (their lines and digests) |
 | `check_binary.py` | 140 | what a reader runs on the binary, or on what a linker made of it |
 | `programs/` | | six other programs (Sigil a specification only): each its specification and public contract, its Ode source, the compiler's assembly, its proof, a harness for the processor; `check_programs.py`, `test_specs.py`, `bench.c`; `blake3-rust/` |
-| `kbyte.py`, `test_kbyte.py` | 1,336 + 792 | the verifier of those programs (bytes, numbers, places, calls by contract, lemmas, definitions that come to an end); its tests |
+| `kbyte.py`, `test_kbyte.py` | 1,356 + 804 | the verifier of those programs (bytes, numbers, places, calls by contract, lemmas, definitions that come to an end); its tests |
 | `varith.py`, `kprove.py`, `kproof.py`, `test_varith.py` | 90 + 185 + 29 + 174 | the arithmetic: the verifier's side (a proof added up; nothing searched for), the prover's side (the search and the writing of proofs; trusted for nothing), the reading of a proof's form, their tests |
 | `refute.py`, `refute_run.c`, `test_refute.py` | 421 + 145 + 76 | "false, and here is the input": a contract worked out on numbers beside the code run on the processor (a prover's tool); its tests |
 | `kbyte_flip.py`, `kbyte_nop.py` | 117 + 37 | their single-bit audit and every instruction left out, the processor judging |
 | `programs/kpack.py`, `programs/check_file.py`, `programs/test_files.py` | 55 + 78 + 82 | a program as one file with its proof (untrusted); what a reader runs on it, or on what a linker made of it (`--json`: what was checked, for a benchmark's record); tests |
 | `klink.py`, `klink_flip.py`, `test_kbinary.py` | 134 + 72 + 182 | makes the binary of the assembler's objects (untrusted); every single-bit change of what a linker would have written; tests of the reading of a linked file |
 | `check_all.py` | 120 | every function from an assembler's objects, and that the hash's functions end |
-| `ode.py`, `kspec.py`, `klin.py` | 752 + 565 + 249 | the specification's reader; its algebra on symbols; numbers that depend on counts and the facts about them (no search: that is `kprove.py`'s) |
+| `ode.py`, `kspec.py`, `klin.py` | 754 + 565 + 249 | the specification's reader; its algebra on symbols; numbers that depend on counts and the facts about them (no search: that is `kprove.py`'s) |
 | `kdecode.py` | 581 | reads the ELF file (an object's sections, names and relocations; a linked file as a loader maps it) and decodes the instruction forms the code uses, and no others; no disassembler |
 | `kfn.py`, `test_kfn.py` | 889 + 131 | the verifier of functions; its tests |
 | `kfn_flip.py`, `khash_native.c` | 133 + 176 | its single-bit audit; the whole hash on a processor against BLAKE3 in C |

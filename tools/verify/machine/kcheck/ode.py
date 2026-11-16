@@ -152,7 +152,7 @@ class Parser:
             elif self.maybe("contract"):
                 name = once("contract", self.take(kind="name")); self.contracts[name] = self.contract()
             elif self.maybe("lemma"):
-                # lemma NAME(param: bytes | list | number, ...) [ "[" k "]" ] : list | number | record(field, ...) { requires E | ensures E | decreases E }
+                # lemma NAME(param: bytes | list | number | any, ...) [ "[" k "]" ] : list | number | record(field, ...) | any { requires E | ensures E | decreases E }
                 # A contract of a definition (or of a sequence's place k): where what it is given meets `requires`
                 # and the definition has a value, `ensures` holds of that value, written `result`. A step of a
                 # proof: a verifier shows it before it uses it (kbyte.py), so it changes no meaning.
@@ -167,7 +167,8 @@ class Parser:
                 if kind == "record":
                     self.take("(")
                     while not self.maybe(")"): fields.append(self.take(kind="name")); self.maybe(",")
-                if kind not in ("list", "number", "record") or any(k not in ("bytes", "list", "number") for _, k in params): raise Err(f"line {self.t[self.i - 1][2]}: a lemma's kinds are bytes, list, number, record(...)")
+                # `any`: a thing of which the lemma asks and says nothing (a word, a list of words, a record: passed on only)
+                if kind not in ("list", "number", "record", "any") or any(k not in ("bytes", "list", "number", "any") for _, k in params): raise Err(f"line {self.t[self.i - 1][2]}: a lemma's kinds are bytes, list, number, record(...), any")
                 self.take("{"); requires, ensures, decreases = [], [], None
                 while not self.maybe("}"):
                     clause = self.take(kind="name")
@@ -694,6 +695,7 @@ class Spec:
         if op == "*": return A.mul(x, y)
         if op == "/": return A.div(x, y)
         if op == "%": return A.mod(x, y)
+        if op in ("|", "&") and hasattr(A, "bits_of") and not (isinstance(x, int) and isinstance(y, int)): return A.bits_of(op, x, y)   # (an opening: passed on)
         if op == "|": return self.number(x) | self.number(y)
         if op == "&": return self.number(x) & self.number(y)
         raise Err(f"no operator {op}")

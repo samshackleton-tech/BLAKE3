@@ -45,6 +45,8 @@ def take(proof, spec_path):
     if spec_path is None: mine = proof["files"]["specification"].decode()
     else:
         with open(spec_path) as f: mine = f.read()
+    global MINE, LEMMAS
+    MINE, LEMMAS = mine, proof["files"].get("proofs/blake3.lemmas", b"").decode()
     kspec.SPEC = ode.with_proof(mine, proof["files"]["proofs/inner.spec"].decode())
     kone.CONTRACTS = kone.contracts(); kloop.KERNELS = kloop.kernels(); kfn.CONTRACTS.clear()
     WIDE = {kloop.KERNELS[n]["symbol"]: n for n in ("k32", "p32", "p16")}
@@ -54,6 +56,22 @@ def take(proof, spec_path):
         if name.endswith(".json"): PLACES[os.path.basename(name)[:-5]] = text.decode()
         if name.endswith(".arith.z"): ARITH[name[:-len(".arith.z")]] = text
     return hashlib.sha256(mine.encode()).hexdigest() == proof.get("spec")
+
+
+def ends():
+    """Do the specification's definitions that use themselves come to an end? Shown by the lemmas the proof
+    carries (`decreases`), with the other verifier's part for lemmas (kbyte.py: loaded for this line alone;
+    it is no part of what shows the code meets the contract)."""
+    import kbyte
+    by_proof = "--search" not in sys.argv and bool(ARITH)
+    try:
+        spec = ode.with_proof(MINE, LEMMAS) if LEMMAS else ode.Spec(MINE)
+        klin.Facts.PROOFS = (varith.unpack(ARITH["lemmas"]) if "lemmas" in ARITH else {}) if by_proof else None
+        kbyte.prove_lemmas(spec)
+        return kbyte.ends_line(spec)
+    except (kcheck.Fail, ode.Err, ValueError, KeyError, IndexError, TypeError) as err:
+        return f"its definitions that use themselves are NOT shown to come to an end: {err}"
+    finally: klin.Facts.PROOFS = None
 
 
 def check(path, symbol):
@@ -151,8 +169,7 @@ def main():
     if failed: print(f"{top}: NOT shown ({failed} failed)"); return 1
     print("the arithmetic: " + ("every fact by a proof the file carries, verified by adding up (varith.py); nothing was searched for" if not searched else
                               f"searched for by this program for {len(searched)} function(s): the file carries no proofs of it, or --search was given"))
-    print("the specification: its definitions `subtree` and `children` use each other (the tree: a message of more than a chunk is two parts); "
-          "NOT shown by this program to come to an end (each part is shorter than the whole: read lines 117 to 131 of blake3.spec)")
+    if "--no-ends" not in sys.argv: print("the specification: " + ends())
     print(f"{top} in this file meets its public contract ({'the specification the file carries' if proof is not None and option('--spec') is None and 'specification' in proof['files'] else 'blake3.spec'}), with all it calls: {len(done)} functions, from the file's bytes, in {time.time() - t_all:.2f} s")
     return 0
 

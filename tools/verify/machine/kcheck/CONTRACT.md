@@ -76,6 +76,8 @@ text, cannot change it). A proof's part may also hold lemmas (`lemma NAME(...) {
 a contract of one of the specification's definitions, of its value `result`): the verifier shows each
 before it uses any, so they change no meaning either, and a reader need not read them. A lemma may
 also name a number that `decreases` at each use of a definition by itself: shown, it says the definition comes
-to an end on what the lemma requires (a definition that did not would leave a contract saying nothing there). The inner contracts of the hash
+to an end on what the lemma requires (a definition that did not would leave a contract saying nothing there). What a
+lemma is given or says may be of kind `any`: a thing passed on, of which the lemma asks and says nothing
+(BLAKE3's words, in the lemmas that show its tree comes to an end). The inner contracts of the hash
 (`proofs/inner.spec`) still name kinds of memory (`cv`: eight words); the public contract does not. That a
 function returns is shown as far as the kernels it calls (README.md).

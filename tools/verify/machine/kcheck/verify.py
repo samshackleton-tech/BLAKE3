@@ -67,23 +67,34 @@ def main():
     sys.stdout.flush()
     if hash_file:
         import check_binary
-        sys.argv = ["check_binary.py", path] + (["--spec", spec_path] if spec_path else []) + (["--proof", given] if given else []) + (["--search"] if "--search" in sys.argv else [])
+        sys.argv = ["check_binary.py", path, "--no-ends"] + (["--spec", spec_path] if spec_path else []) + (["--proof", given] if given else []) + (["--search"] if "--search" in sys.argv else [])
         code = check_binary.main()
     else:
         import check_file
         sys.argv = ["check_file.py", path] + ([spec_path] if spec_path else []) + (["--proof", given] if given else []) + (["--search"] if "--search" in sys.argv else [])
         code = check_file.main()
+    def loaded(but=()):
+        ran = []
+        for name, mod in sorted(sys.modules.items()):
+            f = getattr(mod, "__file__", None)
+            if f and os.path.abspath(f).startswith(HERE + os.sep) and os.path.abspath(f) != os.path.abspath(__file__) and os.path.relpath(f, HERE) not in but:
+                with open(f, "rb") as fh: digest = hashlib.sha256(fh.read()).hexdigest()[:16]
+                ran.append((os.path.relpath(f, HERE), code_lines(f), digest))
+        return ran
+    ran = loaded()
+    more, line = [], None
+    if hash_file and code == 0:
+        line = check_binary.ends()                              # a second question, with a second verifier's part
+        more = loaded(but={r[0] for r in ran})
+        print("   the specification: " + line)
     print("\n3. What ran, to reach that (the files of this folder that were loaded; beside them, Python):\n")
-    ran, total = [], 0
-    for name, mod in sorted(sys.modules.items()):
-        f = getattr(mod, "__file__", None)
-        if f and os.path.abspath(f).startswith(HERE + os.sep) and os.path.abspath(f) != os.path.abspath(__file__):
-            with open(f, "rb") as fh: digest = hashlib.sha256(fh.read()).hexdigest()[:16]
-            n = code_lines(f); total += n
-            ran.append((os.path.relpath(f, HERE), n, digest))
+    total = sum(n for _, n, _ in ran)
     for f, n, digest in ran: print(f"   {f:<26} {n:>5} lines of code   SHA-256 {digest}...")
     print(f"   {'in all':<26} {total:>5} lines of code, {len(ran)} files")
-    absent = [f for f in ("kprove.py", "refute.py", "klink.py", os.path.join("programs", "kpack.py")) if f not in {r[0] for r in ran}]
+    if more:
+        print("   and for the one line about the specification's definitions coming to an end (no part of what shows the code meets the contract):")
+        for f, n, digest in more: print(f"   {f:<26} {n:>5} lines of code   SHA-256 {digest}...")
+    absent = [f for f in ("kprove.py", "refute.py", "klink.py", os.path.join("programs", "kpack.py")) if f not in {r[0] for r in ran + more}]
     if absent: print(f"   not loaded (a prover's or a maker's, trusted for nothing): {', '.join(absent)}")
     return code
 

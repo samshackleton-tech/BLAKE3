@@ -78,6 +78,13 @@ class Opaque:
     def __repr__(self): return f"{self.name}({', '.join(map(repr, self.args))})"
 
 
+class Any:
+    """A thing of which nothing is known and nothing is asked: what a lemma is given or says of kind `any`, and
+    what words make in an opening (this verifier's programs are of bytes and numbers: a word is only passed on)."""
+    def __init__(self, title): self.title = title
+    def __repr__(self): return f"any {self.title}"
+
+
 class Failure:
     """A definition that fails, as a value (so that it can be what something is known to be)."""
     def __init__(self, reason): self.reason = reason
@@ -1036,6 +1043,7 @@ def returned_case(e, c, where):
 
 def fresh_value(m, kind, fields, title):
     """A value of which nothing is known but its kind: a list, a number, a record of numbers, with a name."""
+    if kind == "any": return Any(title)
     if kind == "list":
         n = sym("#" + title); m.facts.add(n)
         return Rope([("list", title, n)])
@@ -1061,7 +1069,7 @@ def applies(spec, A, l, args):
                 for q in A.parts(a):
                     if q[0] == "one" and not (A.facts.ge0(Lin.of(q[1])) and A.facts.ge0(255 - Lin.of(q[1]))): return None
             if kind == "number" and not A.facts.ge0(numb(a)): return None
-            env[p] = a
+            env[p] = a                                                   # (kind `any`: whatever it is)
         for e in l["requires"]:
             for f in order(spec, A, e, env):
                 if not A.facts.ge0(f): return None
@@ -1078,6 +1086,13 @@ class Opening(Algebra):
         super().__init__(m); self.spec, self.top, self.opened, self.tag, self.count = spec, top, False, tag, itertools.count()
         self.only = None        # while a sequence's lemma is shown: the one place of which it may be taken (the place before)
         self.measure = None     # while a lemma with `decreases` is shown: (the definitions that use it back, its number as given)
+    # words, in an opening: things passed on, of which nothing is known (so nothing can be shown of them)
+    def word(self, *args): return Any("a word")
+    counter = add = xor = or_ = rotr = words = word
+    def bits_of(self, op, x, y): return Any("bits of two things")
+    def concat(self, x, y):
+        if isinstance(x, Any) or isinstance(y, Any): return Any("two things, one after the other")
+        return super().concat(x, y)
     def hypothesis(self, name, args, index=None):
         l = self.spec.lemmas[name]
         env = applies(self.spec, self, l, args)
@@ -1150,6 +1165,9 @@ def lemma_cases(m0, one, what):
             work += split(m, u)
         except ode.Fails: pass                                   # no value in this case: the lemma says nothing of it
         except Err as err: raise Fail(str(err) if str(err).startswith(what) else f"{what}: its opening cannot be followed: {err}")
+        except (AttributeError, TypeError, KeyError, IndexError) as err:
+            # a thing of kind `any` where the specification's own functions want a word, a record, a list: not followed
+            raise Fail(f"{what}: its opening cannot be followed: a thing of which nothing is known is used ({type(err).__name__})")
 
 
 def prove_lemmas(spec):
@@ -1164,6 +1182,8 @@ def prove_lemmas(spec):
                 for f in order(spec, A, e, env):
                     if not m.facts.ge0(f): raise Fail(f"{what}: what it ensures is not shown{of} ({f} >= 0)")
         tag = next(FRESH)
+        if l["index"] is None and l["kind"] == "any" and not l["ensures"] and l["decreases"] is None:
+            continue                                 # it says nothing of the definition: there is nothing to show
         if l["index"] is None:
             measure = None
             if l["decreases"] is not None:

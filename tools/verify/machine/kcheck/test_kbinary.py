@@ -82,7 +82,7 @@ class Binary(unittest.TestCase):
         self.assertEqual(proof["at"], kdecode.Settled(e).at)
         self.assertEqual(proof["code"][:2], (len(e.bytes_of(".text")), hashlib.sha256(e.bytes_of(".text")).hexdigest()))
         self.assertEqual(sorted(proof["files"]), ["b3l_hashr.arith.z", "b3l_part32.arith.z", "b3l_subtree.arith.z", "b3l_take.arith.z",       # the arithmetic's proofs (varith.py), of the functions that need any
-                                                  "proofs/inner.spec", "proofs/k32.json", "proofs/p16.json", "proofs/p32.json", "specification"])
+                                                  "proofs/blake3.lemmas", "proofs/inner.spec", "proofs/k32.json", "proofs/p16.json", "proofs/p32.json", "specification"])
         self.assertEqual(proof["files"]["specification"], spec, "the specification the file carries is the one here")
         try:
             # the proof is not trusted: one of its contracts changed, and the function it is of is refused
@@ -100,6 +100,51 @@ class Binary(unittest.TestCase):
         finally:
             import kspec, kone, kloop, kfn, ode
             kspec.SPEC = ode.load(); kone.CONTRACTS = kone.contracts(); kloop.KERNELS = kloop.kernels(); kfn.CONTRACTS.clear(); check_binary.PLACES.clear()
+
+    def test_the_tree_is_shown_to_come_to_an_end(self):
+        """`subtree` and `children` use each other: the lemmas the file carries name a number that decreases
+        (proofs/blake3.lemmas), shown by kbyte.py's part for lemmas with the words only passed on (`any`)."""
+        import kbyte, ode
+        with open(os.path.join(HERE, "blake3.spec")) as f: text = f.read()
+        with open(os.path.join(HERE, "proofs", "blake3.lemmas")) as f: lemmas = f.read()
+        def verdict(text, lemmas):
+            try:
+                spec = ode.with_proof(text, lemmas); kbyte.prove_lemmas(spec)
+                return "shown" if kbyte.ends(spec) == (["children", "subtree"], []) else f"not all: {kbyte.ends(spec)}"
+            except (kcheck.Fail, ode.Err) as err: return f"refused: {err}"
+        self.assertEqual(verdict(text, lemmas), "shown")
+        self.assertEqual(kbyte.ends(ode.Spec(text)), (["children", "subtree"], ["children", "subtree"]))          # without the lemmas: not said
+        for old, new in (("decreases 2 * len(bytes)\n", "decreases len(bytes)\n"),                 # children stands between: one for it
+                         ("decreases 2 * len(bytes) - 1\n", "decreases 2 * len(bytes)\n"),         # not less from subtree to children
+                         ("decreases 2 * len(bytes) - 1\n", "decreases 2 * len(bytes) - 2\n"),     # not less from children to a part of all but one byte
+                         ("    requires len(bytes) > 1024\n", ""),                                 # one chunk has no two parts
+                         ("    requires len(bytes) > 1024\n", "    requires len(bytes) > 1023\n"),
+                         ("decreases 2 * len(bytes)\n", "decreases 2 * t\n"),
+                         ("    decreases 2 * len(bytes) - 1\n", ""),                               # children without the number: subtree uses it back
+                         ("lemma compress(h: any, m: any, t: any, length: any, flags: any): any { }", "lemma compress(h: any, m: any, t: any, length: any, flags: any): any { ensures len(result) == 8 }"),   # said of words: not shown
+                         ("lemma node_value(node: any, root: any): any { }", "lemma node_value(node: any, root: any): list { }")):                                                                        # a kind is something said
+            self.assertEqual(lemmas.count(old), 1, old)
+            self.assertTrue(verdict(text, lemmas.replace(old, new)).startswith("refused"), new)
+        # the specification changed so that a part is not smaller than the whole: the lemmas are not so of it
+        for old, new in (("bytes[1024 * k .. len(bytes)])", "bytes[0 .. len(bytes)])"),
+                         ("the greatest power of two k with 1024 * k < len(bytes)", "the greatest power of two k with 1024 * k <= len(bytes)"),
+                         ("if len(bytes) <= 1024 then node_value", "if len(bytes) <= 1023 then node_value")):
+            self.assertEqual(text.count(old), 1, old)
+            self.assertTrue(verdict(text.replace(old, new), lemmas).startswith("refused"), new)
+        # the file says it, by the lemmas it carries; and says so when they are not there or not so
+        try:
+            with open(os.path.join(HERE, "b3hashr.o"), "rb") as f: e = kdecode.Elf(f.read())
+            proof = check_binary.carried(e.bytes_of(".ode.proof"))
+            check_binary.take(proof, None)
+            self.assertIn("each is shown to come to an end", check_binary.ends())
+            carried = proof["files"]["proofs/blake3.lemmas"]
+            check_binary.take(dict(proof, files={k: v for k, v in proof["files"].items() if k != "proofs/blake3.lemmas"}), None)
+            self.assertIn("NOT shown to come to an end: children, subtree", check_binary.ends())
+            check_binary.take(dict(proof, files=dict(proof["files"], **{"proofs/blake3.lemmas": carried.replace(b"decreases 2 * len(bytes)\n", b"decreases len(bytes)\n")})), None)
+            self.assertIn("NOT shown to come to an end", check_binary.ends())
+        finally:
+            import kspec, kone, kloop, kfn
+            check_binary.take(proof, None)
 
     def test_a_proof_cannot_put_another_contract_in_the_place_of_the_readers(self):
         """The proof carries the contracts of the functions inside, which are read after the reader's

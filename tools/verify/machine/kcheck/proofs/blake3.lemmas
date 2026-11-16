@@ -1,0 +1,21 @@
+// Lemmas about blake3.spec's definitions: steps of a proof, shown by the verifier (kbyte.py's prove_lemmas)
+// before they are used. They are not part of the specification and change no meaning.
+//
+// The tree: `subtree` and `children` use each other. A message of more than one chunk is two parts, each
+// shorter than the whole; so twice the count of bytes (less one in `children`, which stands between a tree
+// and its two parts) is less at each use and never below zero: both come to an end on all bytes.
+//
+// `any`: a thing the lemma neither asks about nor says anything of (the key, the flags, the values: words).
+// The three lemmas that say nothing only keep the opening from going into the compression function.
+lemma compress(h: any, m: any, t: any, length: any, flags: any): any { }
+lemma chunk_node(key: any, t: any, flags: any, bytes: any): any { }
+lemma node_value(node: any, root: any): any { }
+
+lemma subtree(key: any, flags: any, t: number, bytes: bytes): any {
+    decreases 2 * len(bytes)
+}
+
+lemma children(key: any, flags: any, t: number, bytes: bytes): any {
+    requires len(bytes) > 1024
+    decreases 2 * len(bytes) - 1
+}

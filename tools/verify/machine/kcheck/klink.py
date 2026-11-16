@@ -74,7 +74,7 @@ def link(folder):
     return bytes(image), where, {b["symbol"]: b["size"] for b in bodies}, widest
 
 
-PROOF = ["proofs/inner.spec", "proofs/k32.json", "proofs/p32.json", "proofs/p16.json"]
+PROOF = ["proofs/inner.spec", "proofs/blake3.lemmas", "proofs/k32.json", "proofs/p32.json", "proofs/p16.json"]
 
 
 def proof(image, where, more=()):
@@ -110,6 +110,12 @@ def arithmetic(path, top="b3l_hashr"):
         rows = check_binary.check(path, symbol)[0]
         if table: out.append((symbol + ".arith.z", varith.pack(table)))
         todo += sorted({i.split()[1] for _, _, i in rows if i.split()[0] == ".call"})
+    # and the lemmas about the specification's definitions (that those which use themselves come to an end)
+    if check_binary.LEMMAS:
+        import kbyte, ode
+        spec = ode.with_proof(check_binary.MINE, check_binary.LEMMAS)
+        table = kprove.prove(lambda: kbyte.prove_lemmas(spec))
+        if table: out.append(("lemmas.arith.z", varith.pack(table)))
     return out
 
 

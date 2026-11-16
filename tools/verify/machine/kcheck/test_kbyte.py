@@ -425,6 +425,18 @@ class Lemmas(unittest.TestCase):
         s = ode.Spec("def f(x) { if x == 0 then 0 else g(x)[1] }\nsequence g(x) { s[0] = x   s[k + 1] = f(s[k]) }\ndef other(x) { x + 1 }\n")
         self.assertEqual(kbyte.ends(s), (["f", "g"], ["f", "g"]))
 
+    def test_a_lemma_of_kind_any_says_nothing_and_gives_nothing(self):
+        """`any`: a thing passed on. A lemma that says nothing of a definition is not shown (there is nothing to
+        show), and what it gives can be used for nothing: the decoder, whose proof needs to know what `counted`
+        is, is not shown with it."""
+        old = self.p.spec[self.p.spec.index("lemma counted("):]
+        old = old[:old.index("\n}\n") + 3]
+        self.assertEqual(self.p.verdict(spec=self.p.spec.replace(old, "lemma counted(bytes: any, at: any, sum: any): any { }\n")).split(":")[0], "refused")
+        # with something said, it is shown like any other: and this is not so (nothing is known of a thing of kind any)
+        v = self.p.verdict(spec=self.p.spec.replace(old, "lemma counted(bytes: bytes, at: number, sum: number): any {\n    ensures result.value >= sum\n}\n"))
+        self.assertTrue(v.startswith("refused"), v)
+        with self.assertRaises(ode.Err): ode.Spec(text("lz4", "lz4.spec") + "\nlemma counted(bytes: words, at: number, sum: number): any { }\n")
+
     def test_a_proofs_part_gives_a_lemma_and_no_meaning(self):
         """ode.with_proof lets a proof's part hold a lemma of a definition of the reader's, and still no second
         definition of it."""
