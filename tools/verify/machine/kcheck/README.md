@@ -899,6 +899,31 @@ verification of `b3hashr.o` says "the definitions that use themselves (children,
 come to an end"; `verify.py` lists what that one line loaded beside the rest (`kbyte.py`, 1,063 lines of
 code: it is no part of what shows the code meets the contract).
 
+### A second verifier of the arithmetic, written apart (`varith2.c`)
+
+"A is right if B or C is": one of the bottoms the design allows is a second verifier, written apart, that
+verifies the same proof. The first piece small enough to have one is the arithmetic. `varith2.c` (C, 310
+lines, 267 of them code, its own whole numbers of 320 bits; it links only zlib, to open the table) shares no line with
+`varith.py`. It reads the proofs a file carries and says of each whether it adds up: the same rule (two
+rows, each times a whole number above zero, added; divided by what divides every multiple; the plain number
+rounded down; at the end no name and a number below zero).
+
+    cc -O2 -o varith2 varith2.c -lz && ./varith2 b3hashr.o programs/*/ode*.o
+    varith2: 7850 proofs of arithmetic: 7850 add up to "these rows cannot all hold"        (0.2 s)
+
+All 7,850 proofs of the nine shipped files, on its first run. And the two are put against each other
+(`test_varith2.py`): 1,500 of those proofs, each changed in one place (a multiplier, which rows a step
+takes, a plain number, a multiple, a name gone, a step left out, another proof's steps, a multiplier of
+zero or below), and of each what the first says and what the second says: **the same, 1,500 times**, both
+answers among them. Built and passed with Apple clang 21 and with GCC 15.2.
+
+What it does not say: that the rows a proof starts from are ones the verifier knew at the place it used
+the proof. That is `varith.py`'s other half (a start must be among the rows given) and depends on the
+path; a second verifier of it would be a second verifier of functions. So this is the smallest instance of
+the idea, not yet much of the assurance: a mistake in the first one's adding, dividing or rounding would
+be seen by code that shares nothing with it but the file's form. Its worth is also what it shows about
+the proofs' form: 310 lines of another language read it and decide.
+
 ### A prover that guesses (`kguess.py`)
 
 Who finds the number that decreases? The eight lemmas above (six of `programs/`, BLAKE3's two) were written by hand, and one took a second
@@ -1121,6 +1146,9 @@ specification. (The hash above does not use them: it has no stack.)
 | `programs/` | | six other programs (Sigil a specification only): each its specification and public contract, its Ode source, the compiler's assembly, its proof, a harness for the processor; `check_programs.py`, `test_specs.py`, `bench.c`; `blake3-rust/` |
 | `kbyte.py`, `test_kbyte.py` | 1,356 + 804 | the verifier of those programs (bytes, numbers, places, calls by contract, lemmas, definitions that come to an end); its tests |
 | `varith.py`, `kprove.py`, `kproof.py`, `test_varith.py` | 90 + 185 + 29 + 174 | the arithmetic: the verifier's side (a proof added up; nothing searched for), the prover's side (the search and the writing of proofs; trusted for nothing), the reading of a proof's form, their tests |
+| `varith2.c`, `test_varith2.py` | 310 + 129 | a second verifier of the arithmetic's proofs, in C, written apart; the two put against each other on changed proofs |
+| `kguess.py`, `test_kguess.py` | 395 + 78 | a prover that guesses lemmas (the number that decreases; what a definition ensures, of a few shapes); trusted for nothing |
+| `lemma_audit.py`, `test_lemma_audit.py` | 441 + 66 | the audit of the part that shows lemmas: changed lemmas and changed specifications, judged on numbers |
 | `refute.py`, `refute_run.c`, `test_refute.py` | 421 + 145 + 76 | "false, and here is the input": a contract worked out on numbers beside the code run on the processor (a prover's tool); its tests |
 | `kbyte_flip.py`, `kbyte_nop.py` | 117 + 37 | their single-bit audit and every instruction left out, the processor judging |
 | `programs/kpack.py`, `programs/check_file.py`, `programs/test_files.py` | 55 + 78 + 82 | a program as one file with its proof (untrusted); what a reader runs on it, or on what a linker made of it (`--json`: what was checked, for a benchmark's record); tests |
