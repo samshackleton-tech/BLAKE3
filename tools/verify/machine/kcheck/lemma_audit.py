@@ -23,6 +23,8 @@ is noted with what it was given and what it gave, and of each use
     where the lemma names a number that `decreases`, and the use is inside another of its ring: there
     `requires` must hold too, the number of the outer use must not be below zero, and the inner must be less.
 
+A sequence's lemma is judged of places worked out straight (place k of the sequence of things of its kinds).
+
 A SHOWN lemma that fails one of these on some input is a hole in the verifier ("shown, of something false"),
 and the input is printed. One that passes them all is counted "shown, and so on N uses": not proved so (the
 inputs are finitely many), but not found false.
@@ -291,11 +293,50 @@ def noted(spec, todo, count=False):
     return (uses, no_end) if count else uses
 
 
+def places(spec, rng, cases):
+    """Uses of the sequences with lemmas, worked out on numbers: place k of the sequence of some things, for
+    things of the lemma's kinds (the lemma of a sequence speaks of every place)."""
+    uses, deep = [], ode.DEEP
+    ode.DEEP = DEEP_ON_NUMBERS
+    try:
+        for name, l in spec.lemmas.items():
+            if l["index"] is None or name not in spec.seqs or any(kind == "any" for _, kind in l["params"]): continue
+            for _ in range(cases):
+                args = []
+                for p, kind in l["params"]:
+                    if kind in ("bytes", "list"): args.append(some_bytes(rng, rng.choice([0, 1, 2, 3, 5, 8, 20, rng.randrange(0, 60)]), rng.randrange(3)))
+                    else: args.append(rng.choice([0, 1, 2, 3, 4, len(args[0]) if args and isinstance(args[0], list) else 5, (len(args[0]) if args and isinstance(args[0], list) else 5) + 1, rng.randrange(0, 70)]))
+                k = rng.choice([0, 1, 2, 3, 7, rng.randrange(0, 40)])
+                use = dict(name=name, args=args, index=k, value=None, has=False, outer=None)
+                try:
+                    N = ode.Numbers()
+                    use["value"] = spec.apply(N, name, list(args)).at(spec, N, k); use["has"] = True
+                except (ode.Fails, ode.Err, ZeroDivisionError, IndexError, TypeError, KeyError, AttributeError, RecursionError): pass
+                uses.append(use)
+    finally: ode.DEEP = deep
+    return uses
+
+
+def judge_places(spec, uses):
+    """None, or (what is false, the use): a sequence's lemma that does not hold of a place worked out."""
+    checked = 0
+    for u in uses:
+        l = spec.lemmas.get(u["name"])
+        if l is None or l["index"] is None or not u["has"] or not kinds_fit(l, u["args"]): continue
+        env = dict(zip((p for p, _ in l["params"]), u["args"])); env[l["index"]] = u["index"]
+        if not all(truth(spec, None, e, env) is True for e in l["requires"]): continue
+        env["result"] = u["value"]
+        for k, e in enumerate(l["ensures"]):
+            checked += 1
+            if truth(spec, None, e, env) is not True: return f"ensures (its clause {k + 1}) does not hold of place {u['index']}", u, checked
+    return None, None, checked
+
+
 def show(u):
     def short(v):
         if isinstance(v, list): return f"{len(v)} things " + (bytes(v[:24]).hex() if all(isinstance(b, int) and 0 <= b < 256 for b in v[:24]) else "...") + ("..." if len(v) > 24 else "")
         return repr(v)[:80]
-    return f"{u['name']}({', '.join(short(a) for a in u['args'])})" + (f" = {short(u['value'])}" if u["has"] else " (no value)")
+    return f"{u['name']}({', '.join(short(a) for a in u['args'])})" + (f"[{u['index']}]" if "index" in u else "") + (f" = {short(u['value'])}" if u["has"] else " (no value)")
 
 
 def verdict(spec_text, lemma_text, limit=120):
@@ -319,7 +360,12 @@ def audit(program, cases, seed, out=print, control=False):
     todo = runs(program, spec, rng, cases)
     uses = noted(spec, todo)
     bad, _, n = judge(spec, uses)
+    seq_uses = places(spec, rng, cases)
+    bad2, _, n2 = judge_places(spec, seq_uses)
+    bad, n = bad or bad2, n + n2
     by = {}
+    for u in seq_uses:
+        if u["has"]: by[u["name"] + "[k]"] = by.get(u["name"] + "[k]", 0) + 1
     for u in uses: by[u["name"]] = by.get(u["name"], 0) + 1
     if bad: out(f"{program}: CONTROL FAILED: the lemmas as they are, shown, are FALSE on numbers: {bad}"); return 1
     if not n: out(f"{program}: CONTROL FAILED: no use of a definition with a lemma was judged"); return 1
@@ -332,6 +378,8 @@ def audit(program, cases, seed, out=print, control=False):
         # the uses were noted with the lemmas as they are: the definitions are the same, so the uses are the same;
         # the changed lemmas are what is judged of them
         bad, u, n = judge(s, uses)
+        if not bad:
+            bad, u, n2 = judge_places(s, seq_uses); n += n2
         if bad: holes.append((what, bad, u)); out(f"  HOLE: {what}: SHOWN, and FALSE: {bad}: {show(u)}" + (f" inside {show(u['outer'])}" if u["outer"] else ""))
         elif not n: vacuous += 1; out(f"  shown, and judged on no use (nothing here says whether it is so): {what}")
         else: so += 1; out(f"  shown, and so on {n} judgements: {what}")
@@ -348,6 +396,8 @@ def audit(program, cases, seed, out=print, control=False):
         rng = random.Random(seed)
         uses, no_end = noted(s, runs(program, s, rng, max(20, cases // 3)), count=True)
         bad, u, n = judge(s, uses)
+        if not bad:
+            bad, u, n2 = judge_places(s, places(s, rng, max(20, cases // 3))); n += n2
         if bad: holes.append((what, bad, u)); out(f"  HOLE: {what}: the lemmas are SHOWN of it, and FALSE: {bad}: {show(u)}" + (f" inside {show(u['outer'])}" if u["outer"] else ""))
         elif no_end and not kbyte.ends(s)[1]:
             holes.append((what, "no end", None)); out(f"  HOLE?: {what}: its definitions are SHOWN to come to an end, and {no_end} run(s) on numbers did not within the limit: look")

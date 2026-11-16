@@ -27,6 +27,26 @@ class LemmaAudit(unittest.TestCase):
         self.assertIn("the number that decreases is", out)              # a definition "shown" to end that does not get smaller
         self.assertIn("ensures (its clause", out)                       # and something "shown" of a value that is not so
 
+    def test_the_judge_on_numbers_sees_a_false_lemma(self):
+        """The judge alone, with no verifier asked: lemmas that are not so, of a definition and of a sequence."""
+        import ode, random
+        spec_text, lemmas = lemma_audit.read("programs/lz4/lz4.spec"), lemma_audit.read("programs/lz4/lz4.lemmas")
+        def judged(old, new):
+            self.assertEqual(lemmas.count(old), 1, old)
+            s = ode.with_proof(spec_text, lemmas.replace(old, new))
+            rng = random.Random(3)
+            uses = lemma_audit.noted(s, lemma_audit.runs("lz4", s, rng, 60))
+            bad, u, n = lemma_audit.judge(s, uses)
+            if not bad: bad, u, n = lemma_audit.judge_places(s, lemma_audit.places(s, rng, 60))
+            return bad
+        self.assertIsNone(judged("ensures len(result) == len(out) + k", "ensures len(result) == len(out) + k"))
+        self.assertIn("does not hold of place", judged("ensures len(result) == len(out) + k", "ensures len(result) == len(out) + k + 1"))
+        # (without `requires offset >= 1` the lemma is still so on numbers: place 1 from offset 0 has no value, and a
+        # lemma speaks of values. The verifier refuses it all the same: it cannot follow the opening.)
+        self.assertIsNone(judged("    requires offset >= 1\n", ""))
+        self.assertIn("ensures", judged("ensures result.next >= at + 1", "ensures result.next >= at + 2"))
+        self.assertIn("the number that decreases", judged("    ensures result.next >= at + 1\n    decreases len(bytes) - at\n", "    ensures result.next >= at + 1\n    decreases len(bytes)\n"))
+
     def test_the_changed_copies(self):
         text = "lemma f(a: bytes, n: number): number {\n    requires n <= len(a)\n    ensures result >= n + 1\n    decreases len(a) - n\n}\n"
         whats = [w for w, _ in lemma_audit.changed(text)]

@@ -839,8 +839,9 @@ bounds) was in `klin.py` beside the facts, used where no table of proofs was giv
 (the prover's, 150 lines of code), loaded only where there is no table: by the tools that make proofs, the
 tests, and `--search`. `klin.py` is 174 lines of code and holds no elimination. A verification of a file of
 `programs/` no longer loads the hash's driver or the kernels' two verifiers (`kproof.py`, 16 lines, reads
-the proof's form; the helpers `value` and `lin` moved to `klin.py`): `verify.py` lists 10 files and 3,979
-lines of code for an LZ4 file (it was 12 and 4,587), 11 files and 3,445 for the hash (3,484).
+the proof's form; the helpers `value` and `lin` moved to `klin.py`): `verify.py` listed 10 files and 3,979
+lines of code for an LZ4 file (it was 12 and 4,587), 11 files and 3,445 for the hash (3,484). With what
+follows below (definitions that end, `any`, the record) it lists 4,045 and 3,461.
 
 **A definition that uses itself is shown to come to an end.** A specification's definition that never
 ended on some input would have no value there and no failure, and a contract written with it would say
@@ -894,7 +895,7 @@ the greatest power of two that leaves bytes for the right, so each part is short
 0.3 s. Refused in the tests: seven other numbers or `requires`, a lemma that says something of words, and
 three changed specifications in which a part is not smaller (`<=` for `<` in the split among them). A
 verification of `b3hashr.o` says "the definitions that use themselves (children, subtree): each is shown to
-come to an end"; `verify.py` lists what that one line loaded beside the rest (`kbyte.py`, 1,061 lines of
+come to an end"; `verify.py` lists what that one line loaded beside the rest (`kbyte.py`, 1,063 lines of
 code: it is no part of what shows the code meets the contract).
 
 ### An audit of the part that shows lemmas (`lemma_audit.py`)
@@ -904,7 +905,7 @@ lemma, once shown, could show a function by something false. So the lemmas have 
 its own judge: **the specification worked out on numbers** (`ode.Numbers`: no symbols, no facts, nothing of
 the verifier), on inputs made for it (LZ4 blocks an encoder here writes, some with a byte gone wrong; UTF-8
 of the edges; messages of BLAKE3 around the chunk and tree boundaries), every use of a definition with a
-lemma noted with what it was given and what it gave. Of each use: where `requires` holds, `ensures` must
+lemma noted with what it was given and what it gave (a sequence's lemma: places of it worked out straight). Of each use: where `requires` holds, `ensures` must
 hold of the value; and where a use is inside another of its ring, `requires` must hold of it, the outer
 number that `decreases` must not be below zero, and the inner must be less.
 
