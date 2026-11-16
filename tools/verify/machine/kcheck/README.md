@@ -581,8 +581,7 @@ and with a wrong one the check fails.
   `ode_lz4_decode`, and for the packing one `LZ4_decompress_safe` of lz4's `lz4.c` (commit `6b589e80`) as
   well; for UTF-8 a validator by the standard's table of byte ranges and the C library's converter; for
   base 64 an encoder by a table and the C library's `b64_ntop`; for the checksum RFC 1071's own C code.
-  All twelve are of one run, the whole `sh audit.sh 60` on the tree of commit `42ed51e0` (after `kbyte.py`
-  learned calls and `ode.py` to refuse a name defined twice): 56,040 changes, 3,515 accepted, none without a
+  All twelve are of one run, the whole `sh audit.sh 60` on the tree of commit `0a24723d` (the last change to any of these programs): 56,040 changes, 3,515 accepted, none without a
   verdict; the first eleven rows are what they were at `f7c0cfa9`. The same run left every instruction out
   of six of them in turn: 38, 47, 4, 11, 12 and 13 objects accepted (`lz4_pack`, `utf8`, `inet`,
   `adler32_blocks`, `adler32_blocks4`, `unframe`), each keeping its contract on the processor; and checked
@@ -929,7 +928,7 @@ same for every input.
 ## What has been done to find it wrong
 
 (Every single-bit audit was run again in the night of November 15 to 16 by `sh audit.sh 60` on the tree of
-commit `42ed51e0`, the last change to any of these programs (`ode.py`, which all of them read, and `kbyte.py`),
+commit `0a24723d`, the last change to any of these programs (`ode.py` and `kbyte.py`),
 and `audit/` holds the outputs: 353,192 single-bit changes in all, 18,033 accepted, each of those as its
 specification on the processor, none without a verdict (900 s a change at most). But for the new function's
 rows every count is what it was in the run before, at `2ae7c9e9` and `f7c0cfa9`.)
