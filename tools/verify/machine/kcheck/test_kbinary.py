@@ -101,6 +101,36 @@ class Binary(unittest.TestCase):
             import kspec, kone, kloop, kfn, ode
             kspec.SPEC = ode.load(); kone.CONTRACTS = kone.contracts(); kloop.KERNELS = kloop.kernels(); kfn.CONTRACTS.clear(); check_binary.PLACES.clear()
 
+    def test_a_kind_the_proof_gives_a_definition_is_not_taken_on_trust(self):
+        """The proof's part says of three definitions what kind of thing each is (`kind subtree: cv`), for the
+        places where a definition is named and not gone into. Specifications in which that is not so (a tree's
+        value of nine words, or seven; a padded block of 63 bytes; a node whose length may be 65): the function
+        whose contract is that definition is not shown, so the file is not. (A kind is checked where the
+        definition is gone into, as a function that calls itself is checked against its own contract. A function
+        that only uses another by its contract is still shown, as a step: `b3l_chunk_node` with the 63-byte
+        `padded`; it is `b3l_pad` that is refused.)"""
+        with open(os.path.join(HERE, "blake3.spec")) as f: text = f.read()
+        with open(os.path.join(HERE, "b3hashr.o"), "rb") as f: shipped = f.read()
+        proof = check_binary.carried(kdecode.Elf(shipped).bytes_of(".ode.proof"))
+        leaf = "    if len(bytes) <= 1024 then node_value(chunk_node(key, t, flags, bytes), 0)\n"
+        parent = "    else compress(key, children(key, flags, t, bytes), counter(0), 64, flags | PARENT)\n"
+        try:
+            for old, new, functions in (
+                    (leaf, leaf[:-1] + " ++ (if len(bytes) == 1000 then [word(0)] else [])\n", ["b3l_subtree"]),
+                    (leaf, leaf[:-1] + "[0 .. 7]\n", ["b3l_subtree"]),
+                    (parent, parent[:-1] + " ++ [word(0)]\n", ["b3l_subtree"]),
+                    ("def padded(bytes) { [if k < len(bytes) then bytes[k] else 0 for k in 0..64] }", "def padded(bytes) { [if k < len(bytes) then bytes[k] else 0 for k in 0..63] }", ["b3l_pad"]),
+                    ("block: padded(rest), counter: t, length: len(rest),", "block: padded(rest), counter: t, length: len(rest) + 1,", ["b3l_chunk_node"])):
+                self.assertEqual(text.count(old), 1, old)
+                other = os.path.join(self.dir, "kind.spec")
+                with open(other, "w") as f: f.write(text.replace(old, new))
+                try: check_binary.take(proof, other)
+                except Exception: continue                                               # not a specification the proof's part can be read with: nothing is shown
+                for fn in functions:
+                    v = verdict(shipped, fn)
+                    self.assertTrue(v.startswith("refused") or v.startswith("stopped"), f"{new.strip()[:60]}: {fn}: {v}")
+        finally: check_binary.take(proof, None)
+
     def test_the_tree_is_shown_to_come_to_an_end(self):
         """`subtree` and `children` use each other: the lemmas the file carries name a number that decreases
         (proofs/blake3.lemmas), shown by kbyte.py's part for lemmas with the words only passed on (`any`)."""
