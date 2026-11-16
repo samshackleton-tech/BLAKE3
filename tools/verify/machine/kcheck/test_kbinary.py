@@ -177,6 +177,16 @@ class Binary(unittest.TestCase):
             self.assertNotEqual(impossible, carried)
             check_binary.take(dict(proof, files=dict(proof["files"], **{"proofs/blake3.lemmas": impossible})), None)
             self.assertIn("NOT shown to come to an end", check_binary.ends())
+            # and the file's verification is then NOT shown (a proof kept beside it, without the lemmas)
+            without = os.path.join(self.dir, "no-lemmas.proof")
+            whole = e.bytes_of(".ode.proof")
+            head = b"file proofs/blake3.lemmas %d\n" % len(carried)
+            self.assertEqual(whole.count(head + carried), 1)
+            with open(without, "wb") as f: f.write(whole.replace(head + carried, b""))
+            import subprocess
+            r = subprocess.run([sys.executable, os.path.join(HERE, "check_binary.py"), os.path.join(HERE, "b3hashr.o"), "--proof", without], capture_output=True, text=True)
+            self.assertEqual(r.returncode, 1, r.stdout[-600:])
+            self.assertIn("b3l_hashr: NOT shown: its code meets its contract as far as the contract says anything", r.stdout)
         finally:
             import kspec, kone, kloop, kfn
             check_binary.take(proof, None)

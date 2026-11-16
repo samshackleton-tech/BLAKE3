@@ -170,7 +170,12 @@ def main():
     if failed: print(f"{top}: NOT shown ({failed} failed)"); return 1
     print("the arithmetic: " + ("every fact by a proof the file carries, verified by adding up (varith.py); nothing was searched for" if not searched else
                               f"searched for by this program for {len(searched)} function(s): the file carries no proofs of it, or --search was given"))
-    if "--no-ends" not in sys.argv: print("the specification: " + ends(top))
+    if "--no-ends" not in sys.argv:
+        line = ends(top)
+        print("the specification: " + line)
+        if "NOT shown" in line:
+            # (a contract that speaks through a definition not shown to come to an end says nothing of the inputs on which it goes on)
+            print(f"{top}: NOT shown: its code meets its contract as far as the contract says anything; the contract speaks through definitions that are not shown to come to an end"); return 1
     print(f"{top} in this file meets its public contract ({'the specification the file carries' if proof is not None and option('--spec') is None and 'specification' in proof['files'] else 'blake3.spec'}), with all it calls: {len(done)} functions, from the file's bytes, in {time.time() - t_all:.2f} s")
     return 0
 

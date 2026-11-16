@@ -87,6 +87,8 @@ def main():
         line = check_binary.ends()                              # a second question, with a second verifier's part
         more = loaded(but={r[0] for r in ran})
         print("   the specification: " + line)
+        if "NOT shown" in line:
+            print("   NOT shown: the contract speaks through definitions that are not shown to come to an end"); code = 1
     print("\n3. What ran, to reach that (the files of this folder that were loaded; beside them, Python):\n")
     total = sum(n for _, n, _ in ran)
     for f, n, digest in ran: print(f"   {f:<26} {n:>5} lines of code   SHA-256 {digest}...")

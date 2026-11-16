@@ -107,10 +107,14 @@ class Files(unittest.TestCase):
             path = os.path.join(d, "p")
             with open(path, "wb") as f: f.write(carried.replace(head + lemmas, b"file utf8.lemmas %d\n" % len(bad) + bad))
             code, out = run(obj, "--proof", path, "--json", os.path.join(d, "r.json"), "--search")
+            self.assertEqual(code, 1, out)                                    # and so the file is not shown
+            self.assertIn("ode_utf8", out); self.assertIn("meets its public contract", out)        # (the function's own line stands)
+            self.assertTrue(out.rstrip().split("\n")[-1].startswith("NOT shown: each function's code meets its contract as far as the contract says anything"), out)
             self.assertIn("NOT shown to come to an end on everything the contracts allow", out)
             self.assertNotIn("each is shown to come to an end", out)
             with open(os.path.join(d, "r.json")) as f: r = json.load(f)
             self.assertEqual(r["definitions_that_use_themselves"], ["points"]); self.assertEqual(len(r["of_them_not_shown_to_end"]), 1)
+            self.assertFalse(r["shown"])
         code, out = run(obj)
         self.assertEqual(code, 0, out); self.assertIn("(points): each is shown to come to an end on everything the contracts allow", out)
 

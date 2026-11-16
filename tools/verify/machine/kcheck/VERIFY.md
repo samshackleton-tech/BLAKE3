@@ -28,7 +28,7 @@ It prints three things:
 2. **The verification**: each function's instructions, read from the file's own bytes, meet its contract
    on every input the contract allows; or `NOT shown`. And one line about the specification: the
    definitions the contracts speak through come to an end on everything the contracts allow (so a
-   contract says something of every input), or that this is not shown.
+   contract says something of every input). Where that is not shown, the file is not shown.
 3. **What ran**: the files of this folder that were loaded to reach that, with their sizes and digests.
 
 Exit status 0 means shown.

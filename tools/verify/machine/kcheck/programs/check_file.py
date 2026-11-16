@@ -148,7 +148,15 @@ def main():
     for name in left_out:
         print(f"  {name}: NOT verified: the specification has a contract for it and the proof speaks of no such function" + (", and THIS FILE HAS A FUNCTION OF THAT NAME" if name in in_file else " (this file has none of that name)"))
     if in_file: failed += len(in_file)
+    # A contract that speaks through a definition not shown to come to an end says nothing of the inputs on which
+    # it goes on: the file is then NOT shown, though each function's code is (Sam's reader would take "meets its
+    # contract" for more than it would be).
+    endless = not failed and bool(ends[1])
+    if endless: failed += 1
     write_record()
+    if endless:
+        print("the specification: " + ends_line)
+        print("NOT shown: each function's code meets its contract as far as the contract says anything; the contracts speak through definitions that are not shown to come to an end"); return 1
     if failed: print(f"NOT shown ({failed} of {len(wanted) + len(in_file)} failed)"); return 1
     print("the specification: " + ends_line)
     print("the arithmetic: " + ("every fact by a proof the file carries, verified by adding up (varith.py); nothing was searched for" if not searched else

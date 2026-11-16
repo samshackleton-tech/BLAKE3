@@ -945,6 +945,9 @@ length and what the contract `requires`; a part of what the function wrote, as a
 as a thing of which nothing is known), and every use inside of a definition with a lemma must meet that
 lemma's `requires`. Inside a ring the showing of the lemmas already asks the same. No search is used: what
 the plain facts do not show is not shown. All thirteen public contracts here pass, BLAKE3's among them.
+**Where it is not shown, the file is NOT shown** (exit status 1), though each function's own line stands: a
+contract that speaks through a definition that may go on for ever says nothing of the inputs on which it
+does, and "meets its contract" would be taken for more than it is.
 
 (The language also has machines that go round `while` something holds; none of the specifications here uses
 one, the proof's own part of the hash does. A contract that spoke through one is "NOT shown" to end: nothing
