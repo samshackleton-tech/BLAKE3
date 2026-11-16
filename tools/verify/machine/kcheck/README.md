@@ -4,9 +4,10 @@
 nothing; a **verifier** decides whether the code is shown to meet its contract, and is what a reader relies
 on. The programs of this folder (`kfn.py`, `kbyte.py` and the others) are each both at once today: they
 search (which facts to add up, which way to open a definition) and they decide. They are called verifiers
-here because their yes is what is relied on. Taking the search out of them is the work ahead: a first cut
-(the arithmetic's search replaced by written proofs that 33 lines check by adding up) is described in
-DESIGN.md.
+here because their yes is what is relied on. Taking the search out of them is the work under way. **The
+arithmetic's search is out (November 16):** a prover (`kprove.py`) writes a proof of each fact of arithmetic,
+every shipped file carries them, and the verifier adds them up (`varith.py`, 90 lines) and searches for
+nothing. What is still searched for inside the verifiers: which way a definition opens, and the paths.
 
 **Not a proof in a proof assistant, and checked by none.** A trial of another way to the goal of BLAKE3 #361:
 to hand a skeptical reader a specification, a binary and a proof, such that he checks for himself, in
@@ -38,7 +39,7 @@ this way, not all programs. The languages are our own.
   with the specification's definition. Terms are compared by identity, numbers by adding linear facts up.
   No solver.
 
-**The binary is one file, `b3hashr.o`** (40,880 bytes): the thirteen bodies of code the hash is made of,
+**The binary is one file, `b3hashr.o`** (79,736 bytes): the thirteen bodies of code the hash is made of,
 their constants, their names, the specification, the proof, and nothing for a linker to fill in.
 `python3 check_binary.py b3hashr.o` reads it, follows every call from `b3l_hashr`, and says in 19 s on an
 Apple M6 that `b3l_hashr` in that file meets its public contract:
@@ -57,16 +58,16 @@ assembler and no linker is relied on.
 
 **Programs other than the hash** (`programs/`, November 15: to find what the two languages lack). Each has
 its own specification and public contract, code in Ode, and is checked from its bytes
-(`python3 programs/check_programs.py`: eleven functions, 1,759 instructions, 17 s, 12 of them the base-64
-encoder's):
+(`python3 programs/check_programs.py`, with the search: twelve functions, 1,839 instructions, 22 s, 12 of them
+the base-64 encoder's; the shipped files, by the proofs they carry: 3 s in all, see "Shipped as files"):
 
 | | the public contract's `ensures` and `returns` | instructions | proof | checked in |
 |---|---|---|---|---|
 | Adler-32 | `returns adler32(input)` | 55 | 1 place, 7 lines | 5 ms |
 | Adler-32, the sums reduced once in 5,552 bytes | the same line, the same specification | 116 | 2 places, 25 lines | 0.2 s |
 | the same, four bytes a turn | the same | 164 | 3 places, 38 lines | 2 s |
-| LZ4 block decoder | `returns if failed(lz4(input, cap)) then NO else len(lz4(input, cap))`; `ensures out[0 .. len(lz4(input, cap))] = lz4(input, cap) if !failed(lz4(input, cap))` | 267 | 5 places, 96 lines | 0.54 s |
-| LZ4 encoder, literals only | `ensures lz4(out[0 .. r], n) == input if r != NO`; `ensures r != NO if cap >= n + n / 255 + 16` | 132 | 2 places, 26 lines | 34 ms |
+| LZ4 block decoder | `returns if failed(lz4(input)) \|\| len(lz4(input)) > cap then NO else len(lz4(input))`; `ensures out[0 .. len(lz4(input))] = lz4(input) if !failed(lz4(input)) && len(lz4(input)) <= cap` | 267 | 5 places, 96 lines; 4 lemmas | 1.7 s |
+| LZ4 encoder, literals only | `ensures lz4(out[0 .. r]) == input if r != NO`; `ensures r != NO if cap >= n + n / 255 + 16` | 132 | 2 places, 26 lines | 70 ms |
 | LZ4 encoder with matches | the same two lines | 360 | 6 places, 129 lines | 1.9 s |
 | a number's varint | `returns r`; `ensures out[0 .. r] = varint(v)` | 35 | none | 0.17 s |
 | first difference of two runs of bytes | `returns common(a, b)` | 45 | 1 place, 8 lines | 5 ms |
@@ -350,7 +351,8 @@ verifier took those from the relocation's name, and a linker was trusted to writ
   thirteen bodies `hashr` runs (the nine functions of `hash.ode`, the two one-block kernels, K32 with its
   second entry, P16), from each one's first byte to its `ret`, and the read-only data of the three objects
   that have any; lays them out in one section, each on the boundary it had; and writes the distances itself.
-  **`b3hashr.o`**: 40,880 bytes, of which 16,788 are code and 21,511 the specification and the proof; fourteen names; no
+  **`b3hashr.o`**: 79,736 bytes, of which 16,788 are code and 60,374 the specification and the proof (38,747 of
+  those the arithmetic's proofs, which `varith.py` adds up); fourteen names; no
   relocations. A linker has only to place it on a 64-byte boundary. The library's other functions that share a source file with a kernel
   (`hash_many`, the XOF's) are not in it.
 - **`kdecode.py` reads a file whose addresses are settled** (an object with no relocation left for its code,
@@ -369,7 +371,7 @@ verifier took those from the relocation's name, and a linker was trusted to writ
 
 | file | made by | bytes | `b3l_hashr` in it |
 |---|---|---|---|
-| `b3hashr.o` | `klink.py`, of Apple clang 21's objects | 40,880 | meets its public contract |
+| `b3hashr.o` | `klink.py`, of Apple clang 21's objects | 79,736 | meets its public contract |
 | a shared object of it | GNU ld 2.46 | 41,640 | meets it |
 | a shared object of it | lld 21 | 32,776 | meets it |
 | `khash_native.c` with it (an executable loaded anywhere) | GCC 15.2, GNU ld | 58,168 | meets it |
@@ -526,18 +528,19 @@ the model that wrote the code wrote them, from the verifier's refusals. Nothing 
 program: its functions' bytes, their names, and the proof in a section that is not loaded
 (`programs/NAME/odeNAME.o`). `python3 programs/check_file.py FILE SPEC` reads a file as a loader maps it,
 finds each function the specification has a contract for (by its name, or in a stripped file by the code's
-bytes and the proof's offsets), takes the proof from the file, and checks:
+bytes and the proof's offsets), takes the proof from the file, and verifies (the times: by the arithmetic's proofs the file carries, nothing
+searched for; with `--search`, the times of the table further down):
 
-| file | bytes | functions | checked in |
+| file | bytes | functions | verified in |
 |---|---|---|---|
-| `adler32/odeadler32.o` | 6,032 | 3 | 2.4 s |
-| `lz4/odelz4.o` | 20,712 (3,088 of code) | 3 | 2.5 s |
-| `varint/odevarint.o` | 1,664 | 1 | 0.2 s |
-| `utf8/odeutf8.o` | 5,400 | 1 | 0.17 s |
-| `base64/odebase64.o` | 4,336 | 1 | 13 s |
-| `inet/odeinet.o` | 4,104 | 1 | 0.17 s |
-| `common/odecommon.o` | 2,008 | 1 | 0.01 s |
-| `frame/odeframe.o` (a function and the two it calls) | 13,304 (1,936 of code) | 3 | 2.4 s |
+| `adler32/odeadler32.o` | 10,432 | 3 | 0.04 s |
+| `lz4/odelz4.o` | 28,512 (3,088 of code) | 3 | 0.3 s |
+| `varint/odevarint.o` | 2,664 | 1 | 0.01 s |
+| `utf8/odeutf8.o` | 6,064 | 1 | 0.03 s |
+| `base64/odebase64.o` | 6,368 | 1 | 1.7 s |
+| `inet/odeinet.o` | 5,304 | 1 | 0.01 s |
+| `common/odecommon.o` | 2,144 | 1 | under 0.01 s |
+| `frame/odeframe.o` (a function and the two it calls) | 21,560 (1,936 of code) | 3 | 0.25 s |
 | `programs/lz4-rust/main.rs` linked with `odelz4.o` (rustc 1.99.1) | 4,568,904 | 3 | 4.4 s on the Threadripper |
 | the same after `strip` | 364,504 | 3, found by their bytes | 4.4 s |
 
@@ -707,7 +710,7 @@ called, once, and not again at each use. What it taught:
   that asked `n < 2^56 - 4` is still enough for the caller (it passes n - 4); one that asks `2^56 - 5` is
   refused.
 - **A question the callee's contract asks and the path does not answer is taken both ways** ("has
-  `lz4(input, cap)` failed?"): two paths after the call, one with the value named as a list, one with it
+  `lz4(input)` failed?"): two paths after the call, one with the value named as a list, one with it
   failed. This is the piece `kbyte.py` lacked for UTF-8 too, here only at calls.
 - **What `kbyte.py` does not do at a call**: a function that calls itself; a caller whose trace may not
   depend on something it reads (what the callee does with such bytes is not followed); passing bytes of
@@ -722,18 +725,105 @@ called, once, and not again at each use. What it taught:
   defined twice is refused now (tests in `test_ode.py`, `test_kbinary.py`, `programs/test_files.py`). This
   is of the kind that matters most: it could have said "shown" of something false.
 
+### The night of November 16: no search in the arithmetic; LZ4 unbent, with lemmas; "false, and here is the input"
+
+**1. The verifier searches for no arithmetic.** Every fact of arithmetic a verification needs ("these whole
+numbers cannot all be >= 0") was found by elimination inside the verifier: a search, most of which shows
+nothing (`DESIGN.md` has the counts). Now the search is the prover's:
+
+- `kprove.py` (the prover's, trusted for nothing) does the same elimination and remembers how each row was
+  made; when it comes to a contradiction it writes out the rows it started from and the steps that led there.
+- `varith.py` (the verifier's, 90 lines with the reading of a table) takes such a proof and adds up: a step is
+  "a times this row plus b times that one, divided through, rounded down"; the last row must be a number
+  below zero with no name left. A proof that does not add up shows nothing.
+- `klink.py` and `programs/kpack.py` run the prover when a file is made; the file carries the tables
+  (`NAME.arith.z` in its proof section). `check_binary.py` and `programs/check_file.py` verify by them
+  (`klin.Facts.PROOFS`); `--search` is the old way.
+
+| file | bytes | of them the arithmetic's proofs | verified by the proofs | with the search |
+|---|---|---|---|---|
+| `b3hashr.o` | 79,736 | 38,747 (four of its thirteen functions need any) | 15.4 s | 18.3 s |
+| `adler32/odeadler32.o` | 10,432 | 4,302 | 0.04 s | 2.2 s |
+| `lz4/odelz4.o` | 28,512 | 6,688 | 0.3 s | 4.2 s |
+| `frame/odeframe.o` | 21,560 | 6,855 | 0.25 s | 4.5 s |
+| `base64/odebase64.o` | 6,368 | 2,008 | 1.7 s | 13 s |
+| `utf8/odeutf8.o` | 6,064 | 640 | 0.03 s | 0.2 s |
+| `inet/odeinet.o` | 5,304 | 1,179 | 0.01 s | 0.3 s |
+| `varint/odevarint.o` | 2,664 | 976 | 0.01 s | 0.2 s |
+| `common/odecommon.o` | 2,144 | 115 | under 0.01 s | 0.01 s |
+
+(The hash gains least: its time is in opening definitions, not in arithmetic.) `test_varith.py` verifies every
+shipped function with `klin.py`'s search replaced by an error, so that a search anywhere would show; a table
+with every multiple changed, another function's table, and no table are each refused. The names a
+verification gives on its way are now the same every time it is run (a proof speaks of them), and a file is
+made the same twice.
+
+**2. LZ4 is unbent.** `lz4.spec` was written with the room inside the definitions (`lz4(bytes, cap)`, a
+failure ROOM), because the decoder gives NO as soon as what it is about to decode would pass its room, and
+that this is right rests on "what a block decodes to only grows": an induction, which the verifier could
+not do. The specification is now the format's own (`lz4(bytes)`: no `cap`, no ROOM), the room is in the
+decoder's contract (the table above), and the induction is a **lemma**:
+
+    lemma sequences(bytes: bytes, at: number, out: list): list {
+        ensures len(result) >= len(out)
+    }
+
+A lemma is a contract of one of the specification's definitions: `requires` on what it is given, `ensures`
+of its value (`result`), where it has one. The verifier shows it by opening the definition once on names,
+each use inside of a definition that has a lemma taken by that lemma: as a function that calls itself is
+taken by its own contract. (If the definition has a value it was reached by finitely many openings.) Lemmas
+are steps of a proof: `programs/lz4/lz4.lemmas` holds four (`counted`, `copies`, `sequences`, `match`), the
+file carries them, a reader does not read them, and `ode.with_proof` lets them give no name a meaning. Every
+lemma is shown before any is used (`kbyte.prove_lemmas`, 0.04 s), so one that is not so shows nothing.
+
+Where they are used: a contract asks "has `lz4(input)` a value?" on a path that does not say. Both ways are
+now cases, at a call, at a guard and at the return; and in the case that it has one, the definition it is
+known to be (the rest of the block from where the code is) is opened once, the uses inside by their lemmas
+(`kbyte.split_defined`). The decoder, both encoders and the frame are shown against the unbent
+specification; the two specifications agreed on 25,834 cases worked out on numbers.
+
+What it gave beyond LZ4, in "not shown, of something that is so" (the verifier refusing what is true):
+
+- two changed specifications of UTF-8 that the tests listed as "must be refused" are **the same
+  specification**, and are now shown: `fails MALFORMED if b >= 248` can say 249 or 247, because a first byte
+  of 245 and above, read as the first of four, holds a number above 0x10FFFF and fails anyway (2,040,719
+  inputs worked out both ways agree). The line says nothing the rest does not;
+- three changed objects of the UTF-8 validator that keep the contract are now accepted (50 of 344, from 47;
+  each run on the processor: 50 keep it);
+- a frame of four bytes holds an empty block, which decodes to nothing: "fails SHORT if len(bytes) < 5" is
+  the frame's specification too, and is shown.
+
+The cost: a refusal that used to take a tenth of a second can take ten, because the verifier now tries
+the cases before it gives up. What is shown is as fast as before.
+
+**3. "False, and here is the input" (`refute.py`).** A refusal says "not shown"; it does not say whether the
+thing is false. `refute.py` works the public contract out on numbers beside the binary's own code run on
+the processor (x86-64 Linux), on inputs made from `requires`, from the numbers the specification itself
+writes and their neighbours, and at random; each buffer ends where a page that faults begins. It says FALSE
+with the input where the two differ, where the code crashes or does not return, writes before a buffer, or
+does not give back a register a callee keeps. The drivers call it after "NOT shown":
+
+      ode_lz4_decode: NOT shown: ... the result is NO, the contract says ...
+          FALSE (ode_lz4_decode, case 0): returned 0 (0x0), specification says 18446744073709551615
+            input: out(out, cap=0), cap=0, input[1]=00, n=1
+
+(the contract had been changed to `len(lz4(input)) >= cap`: a block of one zero byte decodes to nothing,
+which fits in no room at all). `test_refute.py`: the nine shipped files are not refuted; eleven changed
+specifications and six broken functions each are, within 26 inputs. "Not refuted" is no proof; a FALSE is
+a fact one can check by hand. It is a prover's tool: nothing the verifier says rests on it.
+
 **Not done.** Sigil has no code. No prover searches for places: each was written from the verifier's
 refusals. And what `kbyte.py` still lacks, each found by a program that wanted it:
 
 - one verifier of functions (`kfn.py` and `kbyte.py` both follow calls now, each with its own kind of memory);
 - tables of constants beside the code, and multiplication in Ode (Sigil);
-- facts about a specification itself that take an induction: that what an LZ4 block decodes to only
-  grows; that the least place two runs differ is where a walk over them stops. Those specifications were
-  written as walks over the input so as not to need them. (A fact of arithmetic it does show: that four
-  folds of the carries are a one's complement sum.)
+- lemmas a prover finds: the four of LZ4 were written by hand (the form: a contract of a definition, shown
+  by one opening). `common.spec` is still a walk over the two runs and not "the least place they differ";
+  with a lemma it could be the latter;
 - reads and writes of more than a byte at a time, for speed;
-- taking a specification's question both ways where the code's path does not answer it (UTF-8), and
-  joining paths that have come to the same state (base 64);
+- joining paths that have come to the same state (base 64). (A specification's question the code's path
+  does not answer is now taken both ways where it asks whether something has a value; a comparison of two
+  numbers inside a definition is taken both ways only where a definition is opened for that.)
 - a constant above 32 bits in the code (the checksum's own bound; it asks in four shifts);
 - in-place work: a byte the function may write and has not yet written is unknown to it, so a function
   that reads and writes one buffer cannot be shown (tried: ASCII made upper-case in place, 44 instructions:
@@ -886,15 +976,17 @@ specification. (The hash above does not use them: it has no stack.)
 | `DESIGN.md` | 175 | the design: what is wanted and given up, the rules for code written to be proved, how it stands to types-as-proofs |
 | `proofs/inner.spec`, `proofs/*.json` | 185 | the inner contracts (of the functions inside), the layouts of two records; the wide kernels' and `merge`'s places |
 | `hash.ode`, `glue/*.S` | 332 | the hash written to be proved; the assembly the Ode compiler prints of it (and of the stack's three functions) |
-| `b3hashr.o` | | the binary: 40,880 bytes, the specification and the proof in it |
+| `b3hashr.o` | | the binary: 79,736 bytes, the specification and the proof in it |
 | `check_binary.py` | 140 | what a reader runs on the binary, or on what a linker made of it |
 | `programs/` | | six other programs (Sigil a specification only): each its specification and public contract, its Ode source, the compiler's assembly, its proof, a harness for the processor; `check_programs.py`, `test_specs.py`, `bench.c`; `blake3-rust/` |
-| `kbyte.py`, `test_kbyte.py` | 910 + 326 | the verifier of those programs (bytes, numbers, places); its tests |
+| `kbyte.py`, `test_kbyte.py` | 1,280 + 738 | the verifier of those programs (bytes, numbers, places, calls by contract, lemmas); its tests |
+| `varith.py`, `kprove.py`, `test_varith.py` | 90 + 125 + 174 | the arithmetic: the verifier's side (a proof added up; nothing searched for), the prover's side (trusted for nothing), their tests |
+| `refute.py`, `refute_run.c`, `test_refute.py` | 421 + 145 + 76 | "false, and here is the input": a contract worked out on numbers beside the code run on the processor (a prover's tool); its tests |
 | `kbyte_flip.py`, `kbyte_nop.py` | 117 + 37 | their single-bit audit and every instruction left out, the processor judging |
 | `programs/kpack.py`, `programs/check_file.py`, `programs/test_files.py` | 55 + 78 + 82 | a program as one file with its proof (untrusted); what a reader runs on it, or on what a linker made of it (`--json`: what was checked, for a benchmark's record); tests |
 | `klink.py`, `klink_flip.py`, `test_kbinary.py` | 134 + 72 + 182 | makes the binary of the assembler's objects (untrusted); every single-bit change of what a linker would have written; tests of the reading of a linked file |
 | `check_all.py` | 120 | every function from an assembler's objects, and that the hash's functions end |
-| `ode.py`, `kspec.py`, `klin.py` | 694 + 565 + 256 | the specification's reader; its algebra on symbols; numbers that depend on counts and the facts about them |
+| `ode.py`, `kspec.py`, `klin.py` | 749 + 565 + 282 | the specification's reader; its algebra on symbols; numbers that depend on counts and the facts about them |
 | `kdecode.py` | 581 | reads the ELF file (an object's sections, names and relocations; a linked file as a loader maps it) and decodes the instruction forms the code uses, and no others; no disassembler |
 | `kfn.py`, `test_kfn.py` | 889 + 131 | the verifier of functions; its tests |
 | `kfn_flip.py`, `khash_native.c` | 133 + 176 | its single-bit audit; the whole hash on a processor against BLAKE3 in C |

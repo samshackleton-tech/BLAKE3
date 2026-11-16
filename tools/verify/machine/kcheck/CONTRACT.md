@@ -72,6 +72,8 @@ first does not yet know `ensures X[a .. b]`, `ensures ... if C`, `ensures CONDIT
 refuses a contract that has them; the second follows calls by contract (programs/frame) but not a function
 that calls itself, and knows none of the first one's kinds of memory. In a specification a name is defined
 once: a text that defines one twice is refused (so a proof's inner contracts, read after the reader's
-text, cannot change it). The inner contracts of the hash
+text, cannot change it). A proof's part may also hold lemmas (`lemma NAME(...) { requires ... ensures ... }`:
+a contract of one of the specification's definitions, of its value `result`): the verifier shows each
+before it uses any, so they change no meaning either, and a reader need not read them. The inner contracts of the hash
 (`proofs/inner.spec`) still name kinds of memory (`cv`: eight words); the public contract does not. That a
 function returns is shown as far as the kernels it calls (README.md).

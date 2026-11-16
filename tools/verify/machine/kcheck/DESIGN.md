@@ -21,7 +21,7 @@ writes the code so that it can be proved, as he writes it so that it is fast).
 | the specification | what the result IS: definitions by equations, in a language made for specifications and nothing else | the auditor | `blake3.spec`, 147 lines; `LANGUAGE.md` says what such a text means |
 | the public contract | a Hoare triple for each function a user calls: `requires`, `ensures`, and a closed world | the auditor | 7 lines for the hash; `CONTRACT.md` says what any contract means |
 | the code | written to be proved, in Ode | nobody has to | `hash.ode`, 332 lines; `programs/*/*.ode` |
-| the binary | one file: the code's bytes, its constants, its names, the proof; nothing for a linker to fill in | the verifier | `b3hashr.o`, 40,880 bytes |
+| the binary | one file: the code's bytes, its constants, its names, the proof; nothing for a linker to fill in | the verifier | `b3hashr.o`, 79,736 bytes |
 | the proof | what the verifier needs beside the code: the inner contracts; a place for a loop whose count is not fixed | nobody has to | for the hash, `proofs/inner.spec` and no place of its own; for the programs, 0 to 6 places each |
 | the verifier | runs the binary on symbols and compares with the specification; does not search | the auditor, once, for every program | 4,176 lines of Python for the hash, 910 more for the programs; unverified |
 
@@ -45,7 +45,7 @@ thing: a line is needed to be allowed more (`writes`, `needs`, `trace depends on
 usual. So a reader need not know what to look for; what is not there is not done.
 
 **Failure is a value of the specification, not of the verifier.** `fails REASON if C` in a definition; a
-contract says what the function does then (`returns if failed(lz4(input, cap)) then NO else ...`). A
+contract says what the function does then (`returns if failed(lz4(input)) || len(lz4(input)) > cap then NO else ...`). A
 function given bytes from anywhere (a decoder) must be right for all of them: there is no `requires` for
 "the block is well formed", and the closed world makes "safe on every input" the default, not a second
 theorem.
@@ -172,7 +172,8 @@ Not done, in the order I would take them:
    **Chosen (Sam, November 15): the verifier runs the instructions and opens the definitions itself; the
    proof carries what would otherwise be searched for.** (Every step written out would make proofs of
    megabytes for these small programs: too big.) What was measured that evening, with the programs as they
-   are (`count_steps.py` and the experiment's files are kept beside the reports, not in this folder yet):
+   were (`count_steps.py` is kept beside the reports); the second item is in this folder since November 16
+   (`varith.py`, `kprove.py`; README.md has the files' sizes and times as shipped):
    - Counted on eight functions: an arithmetic fact that is shown rests on three or four of the thirty-odd
      facts in play; nine tenths of the eliminations show nothing; using a callee's contract is cheap, and
      paths are the load (`hashr`'s 265 instructions are run 20,404 times); the bulk of the work is running
@@ -191,6 +192,20 @@ Not done, in the order I would take them:
      sequences): the next thing to move to the prover's side, as "this definition, of these, is this",
      one opening verified at a time. And there are two verifiers of functions that should be one
      (`kfn.py`, `kbyte.py`), and a third way for the wide kernels.
+
+   **Lemmas (November 16).** A fact about a definition of the specification that takes an induction ("what
+   an LZ4 block decodes to only grows") is a lemma: a contract of that definition, `requires` and `ensures`,
+   in the proof's part. The verifier shows it by opening the definition once, each use inside of a
+   definition with a lemma taken by that lemma, and only then uses it. So an induction costs the reader
+   nothing: he does not read the lemma, and what he relies on is one more rule of the verifier (the
+   definition opened once, its own uses by its own lemma), which is the rule a function that calls itself
+   is already verified by. This is what let LZ4's specification be the format's own again: bending a
+   specification toward the code is a cost on the reader (he must believe the two say the same), a lemma is
+   a cost on the prover. Not built: a prover that finds lemmas (the four of LZ4 were written by hand).
+
+   **False, with an input (November 16).** `refute.py` works a public contract out on numbers beside the
+   binary's code run on a processor, and says FALSE with the input where they differ. It is a prover's tool
+   (goal b and b.2: what is false is said to be false, with why); "not refuted" shows nothing.
 
    **Names (November 15, after a hole).** A proof's part (the contracts of the functions inside) is read
    after the reader's specification, in one space of names. Until that day a second definition of a name
