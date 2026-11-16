@@ -844,6 +844,9 @@ refusals. And what `kbyte.py` still lacks, each found by a program that wanted i
   decrease; a lemma that needs a new shape is still written by hand);
 - `common.spec` is still a walk over the two runs and not "the least place they differ"; with a lemma it
   could be the latter;
+- a quick no to a lemma that is not so: most are refused in milliseconds, but one that sends the opening
+  round in cases (LZ4's `sequences` said to be a number) is refused only at the limit of 500 cases, after
+  110 seconds. A wrong proof costs the reader time, never a wrong yes; a bound in time would be better;
 - reads and writes of more than a byte at a time, for speed;
 - joining paths that have come to the same state (base 64). (A specification's question the code's path
   does not answer is now taken both ways where it asks whether something has a value; a comparison of two
