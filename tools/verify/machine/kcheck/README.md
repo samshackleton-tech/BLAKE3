@@ -375,13 +375,18 @@ verifier took those from the relocation's name, and a linker was trusted to writ
 | file | made by | bytes | `b3l_hashr` in it |
 |---|---|---|---|
 | `b3hashr.o` | `klink.py`, of Apple clang 21's objects | 80,920 | meets its public contract |
-| a shared object of it | GNU ld 2.46 | 41,640 | meets it |
-| a shared object of it | lld 21 | 32,776 | meets it |
-| `khash_native.c` with it (an executable loaded anywhere) | GCC 15.2, GNU ld | 58,168 | meets it |
-| the same after `strip` (no names; the proof's section is kept) | | 54,808 | meets it: the functions are found by their bytes |
+| a shared object of it | GNU ld 2.46 | 91,672 | meets it |
+| a shared object of it | lld 21 | 82,808 | meets it |
+| `khash_native.c` with it (an executable loaded anywhere) | GCC 15.2, GNU ld | 108,192 | meets it; on the processor 5,466 hashes as BLAKE3's |
+| the same after `strip` (no names; the proof's section is kept) | | 104,840 | meets it: the functions are found by their bytes |
 | the same after `strip --strip-all -R .ode.proof` (no names, no proof) | | 43,208 | meets it, given the proof beside it (`--proof b3hashr.proof`) |
-| `programs/blake3-rust/main.rs` with it | rustc 1.99.1 (`-C link-arg=b3hashr.o`) | 4,595,808 | meets it |
-| the same after `strip` | | 382,240 | meets it |
+| `programs/blake3-rust/main.rs` with it | rustc 1.99.1 (`-C link-arg=b3hashr.o`) | 4,645,776 | meets it |
+| the same after `strip` | | 432,208 | meets it |
+
+(All remade on November 16 from the file as it is now, with the arithmetic's proofs and the lemmas in it: in each the
+verification searches for nothing and says the tree's definitions come to an end; the stripped file with no
+proof beside it is not shown. The second verifier of the arithmetic, `varith2.c`, reads the same 6,507 proofs
+out of the shared object and out of the Rust executable, stripped or not.)
 
 **The proof is in the file.** `klink.py` writes a section the loader does not map, `.ode.proof`: the inner
 contracts, the wide kernels' places, where each function begins, and the SHA-256 of the specification the
@@ -537,15 +542,16 @@ searched for; with `--search`, the times of the table further down):
 | file | bytes | functions | verified in |
 |---|---|---|---|
 | `adler32/odeadler32.o` | 10,432 | 3 | 0.04 s |
-| `lz4/odelz4.o` | 28,512 (3,088 of code) | 3 | 0.3 s |
-| `varint/odevarint.o` | 2,664 | 1 | 0.01 s |
-| `utf8/odeutf8.o` | 6,064 | 1 | 0.03 s |
+| `lz4/odelz4.o` | 28,864 (3,088 of code) | 3 | 0.3 s |
+| `varint/odevarint.o` | 3,120 | 1 | 0.01 s |
+| `utf8/odeutf8.o` | 6,744 | 1 | 0.03 s |
 | `base64/odebase64.o` | 6,368 | 1 | 1.7 s |
 | `inet/odeinet.o` | 5,304 | 1 | 0.01 s |
-| `common/odecommon.o` | 2,144 | 1 | under 0.01 s |
-| `frame/odeframe.o` (a function and the two it calls) | 21,560 (1,936 of code) | 3 | 0.25 s |
-| `programs/lz4-rust/main.rs` linked with `odelz4.o` (rustc 1.99.1) | 4,568,904 | 3 | 4.4 s on the Threadripper |
-| the same after `strip` | 364,504 | 3, found by their bytes | 4.4 s |
+| `common/odecommon.o` | 2,752 | 1 | under 0.01 s |
+| `frame/odeframe.o` (a function and the two it calls) | 21,920 (1,936 of code) | 3 | 0.25 s |
+| `programs/lz4-rust/main.rs` linked with `odelz4.o` (rustc 1.99.1) | 4,582,912 | 3 | (remade November 16; not timed: the machine was busy) |
+| the same after `strip` | 378,520 | 3, found by their bytes | |
+| each of the eight as a shared object (GNU ld 2.46) | 15,152 to 38,320 | all | each meets its contracts |
 
 The Rust program packs with `ode_lz4_pack` at distances 1 to 8, keeps the smallest, unpacks with
 `ode_lz4_decode`, and relies on nothing but the contracts: with `n + n / 255 + 16` bytes of room the packer
@@ -747,13 +753,13 @@ nothing (`DESIGN.md` has the counts). Now the search is the prover's:
 |---|---|---|---|---|
 | `b3hashr.o` | 80,920 | 38,747 (four of its thirteen functions need any) | 15.4 s | 18.3 s |
 | `adler32/odeadler32.o` | 10,432 | 4,302 | 0.04 s | 2.2 s |
-| `lz4/odelz4.o` | 28,512 | 6,688 | 0.3 s | 4.2 s |
-| `frame/odeframe.o` | 21,560 | 6,855 | 0.25 s | 4.5 s |
+| `lz4/odelz4.o` | 28,864 | 6,728 | 0.3 s | 4.2 s |
+| `frame/odeframe.o` | 21,920 | 6,898 | 0.25 s | 4.5 s |
 | `base64/odebase64.o` | 6,368 | 2,008 | 1.7 s | 13 s |
-| `utf8/odeutf8.o` | 6,064 | 640 | 0.03 s | 0.2 s |
+| `utf8/odeutf8.o` | 6,744 | 699 | 0.03 s | 0.2 s |
 | `inet/odeinet.o` | 5,304 | 1,179 | 0.01 s | 0.3 s |
-| `varint/odevarint.o` | 2,664 | 976 | 0.01 s | 0.2 s |
-| `common/odecommon.o` | 2,144 | 115 | under 0.01 s | 0.01 s |
+| `varint/odevarint.o` | 3,120 | 976 | 0.01 s | 0.2 s |
+| `common/odecommon.o` | 2,752 | 148 | under 0.01 s | 0.01 s |
 
 (The hash gains least: its time is in opening definitions, not in arithmetic.) `test_varith.py` verifies every
 shipped function with `klin.py`'s search replaced by an error, so that a search anywhere would show; a table
@@ -898,6 +904,12 @@ three changed specifications in which a part is not smaller (`<=` for `<` in the
 verification of `b3hashr.o` says "the definitions that use themselves (children, subtree): each is shown to
 come to an end"; `verify.py` lists what that one line loaded beside the rest (`kbyte.py`, 1,063 lines of
 code: it is no part of what shows the code meets the contract).
+
+**How long a verification takes, and where.** `b3hashr.o`: 16 s under CPython 3.14, 7.6 s under PyPy 3.12
+(the same files, the same verdict; the short verifications of `programs/` gain nothing from PyPy: 3.1 s
+against 2.6 for the eight files). Nearly all of it is the specification's definitions opened on names
+(`ode.py`'s `eval` under `kspec.py`'s `kept`: 51 of 60 profiled seconds), and two functions take most
+(`b3l_wide128`, `b3l_part32`). So "faster" is there, and it is also where a proof could carry more.
 
 ### A second verifier of the arithmetic, written apart (`varith2.c`)
 
