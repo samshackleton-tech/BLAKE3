@@ -1607,12 +1607,13 @@ Not yet done of what Sam asked the same day: the names a maker chose taken out o
 a glossary beside it; a reader's own list of names; file names and the contract's name by the same rule; a
 comment's outside documents given by their hashes.
 
-## One verifier of functions; the kernels from Ode source; two holes found by reading (November 17)
+## One verifier of functions; the kernels from Ode source; four holes found by reading (November 17)
 
-**Two holes, each "shown, of something false".** Both were found by reading `kfn.py` and the kernels'
-verifiers in order to merge them, and both were in what a reader relied on until this day. Neither could
-have been found by the audits here, which change one bit at a time: one needs four instructions added, the
-other seven bytes changed.
+**Four holes, each "shown, of something false".** The first two were found by reading `kfn.py` and the
+kernels' verifiers in order to merge them; the other two by reading `kfn.py`'s machine again with the
+question the first two had taught: what does this model take to be so that the processor does not? All four
+were in what a reader relied on until this day. None could have been found by the audits here, which change
+one bit at a time: each needs several instructions added or changed.
 
 1. *The stack pointer.* `kfn.py`'s machine (which is `kbyte.py`'s too) let `mov`, `lea` and `pop` put
    anything in the stack pointer, and then took a push to go to the function's own frame. A copy of the
@@ -1630,9 +1631,25 @@ other seven bytes changed.
    returns a digest that is not BLAKE3's. Now the lea is a row of its own, `.lea_data reg WHERE`, which no
    move of a number is.
 
+3. *The stack below the stack pointer.* What `kfn.py`'s machine remembered of it outlived a call, which
+   writes there (its return address, the callee's frame). A copy of the shipped `ode_unframe` that pushes
+   r15 and pops it before a call, then moves the stack pointer down and pops r15 again, was shown to meet
+   its public contract; on a processor r15 then holds the return address, the function reads its input far
+   outside it, and dies of a fault. Now nothing is remembered of the frame below the stack pointer, after
+   every instruction.
+4. *What a call leaves in the registers.* Every register a callee may change was one unknown, "left by a
+   call"; two of them compared with a number were taken to answer alike, and a path on which they differ
+   was never run. A copy of `ode_unframe` that writes a byte below `out` where rcx is zero and rdx is not
+   (after a call, whose callee is free in what it leaves there) was shown to meet its public contract. Now
+   each is an unknown of its own. (This one was not run on a processor: it needs a callee that leaves the
+   two registers so.)
+
 `test_kholes.py` holds the copies that were shown; each is refused. What found them was a question asked of
 each instruction while reading ("what if this register is the stack pointer?", "what else writes this
-row?"), not a tool. More of that reading is owed: the audits do not reach faults of this kind.
+row?", "who else writes there?", "are these two unknowns one?"), not a tool. One of the day's own changes
+was caught the same way before it shipped (counting down and `test` taken to set the flags as a compare
+does). **More of that reading is owed**: `kbyte.py`'s own parts, the decoder's forms and the specification's
+reader have not been read so, and the audits do not reach faults of this kind.
 
 **One verifier of functions.** The five kernels of the hash (the two one-block kernels; K32, P32 and P16
 for every number of blocks) are verified by `kfn.py`, as the nine functions of `hash.ode` are. `kloop.py`

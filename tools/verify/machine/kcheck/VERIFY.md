@@ -63,11 +63,13 @@ file; the verifier uses them and trusts none of them. A wrong one makes the veri
   programs (they load more than they use). None of them searches for anything. They hold: how the file's bytes are read as instructions; what
   each instruction does; how a specification is read and worked out; how a proof of arithmetic is added up.
   They are tested and audited, **not proved**: that is the weakest part of this, and the work under way is
-  to make that list short enough to read (`DESIGN.md`, "Where it stands"). On November 17, 2026 two faults
+  to make that list short enough to read (`DESIGN.md`, "Where it stands"). On November 17, 2026 four faults
   were found in them by reading, each one a way to have a wrong file shown (a function that wrote below its
-  argument; a kernel that read its constants from an address of the maker's choosing). Both are closed, and
-  the files that were wrongly shown are kept as tests; the audits, which change one bit at a time, could not
-  have found either (`README.md`, last section). There may be more.
+  argument; a kernel that read its constants from an address of the maker's choosing; a register taken to
+  hold what a call had written over; two unknown registers taken for one). They are closed, and the files
+  that were wrongly shown are kept as tests; the audits, which change one bit at a time, could not have
+  found any of them (`README.md`, last section). There may be more: not all of these files have been read
+  that way yet.
 - **Python**, and that the processor does what its manual says.
 - Nothing else. Not the compiler that made the binary, not the assembler, not the linker, not the source,
   not the prover that found the proof: the verifier reads the bytes that will run.
