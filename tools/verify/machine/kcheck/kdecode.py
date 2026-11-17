@@ -185,7 +185,7 @@ def linkable(e):
     made LOCAL, with another function under the GLOBAL name in a second executable section, was verified as
     the shipped file is, and a program linked with it ran the other function. So an object is read only in
     the one shape the makers here write (klink.py, programs/kpack.py), with its names or stripped of them:
-    the sections of KNOWN and no others, each once, of that type and with that leave; and no name but GLOBAL
+    the sections of KNOWN and no others, each once, of that type and with that leave (and the one that says the stack is not to be run, there); and no name but GLOBAL
     names of functions in `.text`, each once. A driver then asks that each such name be verified."""
     seen = set()
     for i, s in enumerate(e.sections):
@@ -196,6 +196,7 @@ def linkable(e):
         seen.add(name)
         if (s["type"], s["flags"]) != KNOWN[name]:
             return f"its section {name} is not of the kind, or has not the leave, this reader takes it to have (type {s['type']}, flags {s['flags']:#x})", {}
+    if ".note.GNU-stack" not in seen: return "it has no section .note.GNU-stack, and a linker takes that as asking for a stack that can be run", {}
     names, text = {}, e.index.get(".text")
     for k, sym in enumerate(e.symbols):
         if k == 0 and not sym["name"] and sym["shndx"] == 0: continue

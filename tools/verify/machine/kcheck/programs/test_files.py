@@ -274,6 +274,14 @@ class Shape(unittest.TestCase):
         code, out = self.verdict(patched(self.blob, [(k, b".text.unlikely\0\0")]))             # a section of a name this reader does not know
         self.assertEqual(code, 1, out); self.assertIn("a section this reader does not read ('.text.unlikely')", out); self.assertNotIn("loaded to be run", out)
 
+    def test_no_word_about_the_stack(self):
+        """An object with no section .note.GNU-stack: a linker takes that as asking for a stack that can be run."""
+        import types
+        e = kdecode.Elf(self.blob)
+        sections = [s for s in e.sections if s["name"] != ".note.GNU-stack"]
+        why, names = kdecode.linkable(types.SimpleNamespace(sections=sections, symbols=e.symbols, index={s["name"]: i for i, s in enumerate(sections)}))
+        self.assertIn("no section .note.GNU-stack", why); self.assertEqual(names, {})
+
     def test_a_name_with_no_contract(self):
         """A reader's specification without a contract for one of the file's functions: that name is given to a
         linker and nothing is shown of it. Said, and NOT shown."""
