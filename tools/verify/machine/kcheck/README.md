@@ -1706,7 +1706,11 @@ So for the file shipped: fourteen functions, each from Ode source (nine in the w
 the instruction layer), one verifier, and for the loops a proof the compiler writes.
 
 **Not yet so.**
-- AUDIT_LINE
+- The whole audit of this state (every single-bit change of every function, the processor judging what is
+  accepted) was started on November 17 and its numbers are not in this page yet. A first run of the kernels'
+  part through `kfn.py`: the one-block kernels 3,016 and 3,528 changes, 49 and 116 accepted; P16 22,144
+  changes, 214 accepted (213 by the earlier verifier); K32 35,824 changes, 1,754 accepted (1,752); every
+  accepted change ran as BLAKE3 on the processor.
 - The place's language is three forms; a loop of a function of `hash.ode` whose count is not fixed would
   need more (none has one).
 - In the instruction layer the programmer writes the place by hand. A loop written in Ode's word-level
