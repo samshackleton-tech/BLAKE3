@@ -86,6 +86,41 @@ class Ends(unittest.TestCase):
         self.assertEqual(kends.ends_for(spec, "ode_y"), ([], None))
         self.assertIn("NOT shown", kends.line(spec, ["ode_x"]))
 
+    def test_a_lemma_that_says_nothing_hides_nothing(self):
+        """`lemma NAME(...): any { }` is taken without NAME being gone through. Over a definition that uses
+        itself it hid that one's uses (found November 16, 2026, in the review of the night)."""
+        utf8 = read("programs", "utf8", "utf8.spec")
+        impossible = "lemma points(bytes: bytes, at: number, count: number): number {\n    requires at < at\n    decreases 0\n}\n"
+        v = ask(utf8, "lemma utf8(bytes: any): any { }\n" + impossible, "ode_utf8")
+        self.assertNotEqual(v, "ends"); self.assertIn("points", v); self.assertIn("not gone through", v)
+        # a definition that never comes to an end, behind such a lemma
+        spin = ("def spin(b, v) { if v == len(b) then 0 else spin(b, v) }\ndef wrap(b) { spin(b, 0) }\n"
+                "contract ode_x(b: n bytes, n: number) {\n    returns wrap(b)\n    stack 8\n}\n")
+        narrow = "lemma spin(b: bytes, v: number): number {\n    requires v == len(b)\n    decreases 0\n}\n"
+        v = ask(spin, "lemma wrap(b: any): any { }\n" + narrow, "ode_x")
+        self.assertNotEqual(v, "ends"); self.assertIn("spin", v)
+        self.assertNotEqual(ask(spin, narrow, "ode_x"), "ends")                         # without it: the use is not one the lemma speaks of
+        # and one level further in: the lemma that says nothing is under a definition that is gone through
+        deeper = spin.replace("returns wrap(b)", "returns outer(b)") + "def outer(b) { wrap(b) + 1 }\n"
+        self.assertNotEqual(ask(deeper, "lemma wrap(b: any): any { }\n" + narrow, "ode_x"), "ends")
+
+    def test_a_sequence_hides_nothing(self):
+        """A sequence is taken a place at a time, never gone through: a definition that uses itself must not be
+        among what it reaches. One written with `for` was not even followed to what it uses."""
+        narrow = "lemma spin(b: bytes, v: number): number {\n    requires v == len(b)\n    decreases 0\n}\n"
+        text = ("def spin(b, v) { if v == len(b) then 0 else spin(b, v) }\n"
+                "sequence turns(b) { s[0] = 0   s[k + 1] = s[k] + spin(b, 0) }\n"
+                "contract ode_x(b: n bytes, n: number) {\n    returns turns(b)[3]\n    stack 8\n}\n")
+        v = ask(text, narrow, "ode_x")
+        self.assertNotEqual(v, "ends"); self.assertIn("spin", v)
+        written = ("def spin(b, v) { if v == len(b) then 0 else spin(b, v) }\n"
+                   "sequence turns(b) {\n    h[0] = 0\n    h[k + 1] = h[k] + spin(b, 0)\n    for k in 0..3\n}\n"
+                   "contract ode_x(b: n bytes, n: number) {\n    returns turns(b)\n    stack 8\n}\n")
+        v = ask(written, narrow, "ode_x")
+        self.assertNotEqual(v, "ends"); self.assertIn("spin", v)
+        inside = written.replace("returns turns(b)", "returns twice(b)") + "def twice(b) { 2 * turns(b) }\n"
+        self.assertNotEqual(ask(inside, narrow, "ode_x"), "ends")
+
     def test_the_tree(self):
         b, bl = read("blake3.spec"), read("proofs", "blake3.lemmas")
         self.assertEqual(ask(b, bl, "b3l_hashr"), "ends")
