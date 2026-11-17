@@ -3,8 +3,8 @@ control: the unchanged object on this processor, 2000 cases: same
 control: the unchanged object given inputs shorter than it reads (a block too few, or a block a byte short), on this processor: CRASHES: status -11
 control: a change the verifier refused (word 0 of lane 0's chaining value is not the specification's), on this processor: DIFFERS: case 0: lane 0 word 0 is 60e6de49, BLAKE3's is 7c0b77bb
 the 394 accepted changes on this processor, 2000 cases each (7 s): 394 same
-for scale, 400 of the changes stopped or refused, on this processor (200 cases each): 222 CRASHES, 172 DIFFERS, 6 same ("same": refused or not decoded, yet it works on these inputs)
-o16: 29384 single-bit changes of 3673 bytes of code (26 s, 60 at a time): 17516 stopped by the decoder, 11474 refused by the verifier, 394 accepted, 0 with NO VERDICT (the time limit)
+for scale, 400 of the changes stopped or refused, on this processor (200 cases each): 219 CRASHES, 175 DIFFERS, 6 same ("same": refused or not decoded, yet it works on these inputs)
+o16: 29384 single-bit changes of 3673 bytes of code (27 s, 56 at a time): 17516 stopped by the decoder, 11474 refused by the verifier, 394 accepted, 0 with NO VERDICT (the time limit)
 accepted, by where the change is: contract 218, linker 128, padding 48
 contract: the 26 instructions with a change the contract does not see (changes accepted in each):
   .zshufi32x4 16 16 24 221 x21; .zshufi32x4 17 17 25 221 x20; .zshufi32x4 19 19 27 221 x19; .zshufi32x4 18 18 26 221 x18; .zshufi32x4 21 21 29 221 x18; .zshufi32x4 31 31 22 221 x18; .zshufi32x4 30 30 20 221 x17; .zshufi32x4 8 8 23 221 x17; .sub 64 (.reg .rsp) (.imm 0x180) x4; .zshufi32x4 30 31 18 136 x4; .zshufi32x4 31 31 18 221 x4; .zshufi32x4 18 17 21 136 x4; .zshufi32x4 17 17 21 221 x4; .zshufi32x4 21 8 19 136 x4; .zshufi32x4 8 8 19 221 x4; .zshufi32x4 19 16 20 136 x4; .zshufi32x4 16 16 20 221 x4; .zshufi32x4 20 22 26 136 x4; .zshufi32x4 22 22 26 221 x4; .zshufi32x4 26 25 29 136 x4; .zshufi32x4 25 25 29 221 x4; .zshufi32x4 29 23 27 136 x4; .zshufi32x4 23 23 27 221 x4; .zshufi32x4 27 24 28 136 x4; .zshufi32x4 24 24 28 221 x4; .dec32 .r11 x2

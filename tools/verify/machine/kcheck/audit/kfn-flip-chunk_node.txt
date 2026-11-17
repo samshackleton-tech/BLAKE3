@@ -1,7 +1,9 @@
 control: the unchanged object is ACCEPTED 
-chunk_node: 2280 single-bit changes of 285 bytes of code (3 s): 1080 stopped by the decoder, 1100 refused (no proof), 100 accepted, 0 with NO VERDICT (the time limit)
+chunk_node: 2280 single-bit changes of 285 bytes of code (3 s): 1080 stopped by the decoder, 1096 refused (no proof), 104 accepted, 0 with NO VERDICT (the time limit)
+  accepted: +0x2C byte 0 bit 3: .mov 64 (.reg .r12) (.reg .rax)  ->  .mov 32 (.reg .r12) (.reg .rax)
   accepted: +0x3B byte 2 bit 4: .mov 64 (.reg .rbp) (.reg .rax)  ->  .mov 64 (.reg .rbp) (.reg .rdx)
   accepted: +0x48 byte 2 bit 5: .cmp 64 (.reg .rax) (.reg .rcx)  ->  .cmp 64 (.reg .rax) (.reg .rbp)
+  accepted: +0x52 byte 0 bit 3: .or 64 (.reg .rax) (.reg .r12)  ->  .or 32 (.reg .rax) (.reg .r12)
   accepted: +0x5D byte 2 bit 0: .mov 64 (.reg .rcx) (.imm 0x5)  ->  .mov 64 (.reg .rax) (.imm 0x5)
   accepted: +0x7E byte 1 bit 0: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
   accepted: +0x7E byte 1 bit 1: .call blake3_servil_compress_in_place_avx512  ->  .call blake3_servil_compress_in_place_avx512
@@ -67,6 +69,7 @@ chunk_node: 2280 single-bit changes of 285 bytes of code (3 s): 1080 stopped by 
   accepted: +0x9A byte 4 bit 5: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
   accepted: +0x9A byte 4 bit 6: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
   accepted: +0x9A byte 4 bit 7: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
+  accepted: +0xA6 byte 0 bit 3: .mov 64 (.reg .r12) (.reg .rax)  ->  .mov 32 (.reg .r12) (.reg .rax)
   accepted: +0xD6 byte 2 bit 5: .mov 64 (.reg .rdx) (.reg .rbp)  ->  .mov 64 (.reg .rdx) (.reg .rcx)
   accepted: +0xD9 byte 1 bit 0: .call b3l_pad  ->  .call b3l_pad
   accepted: +0xD9 byte 1 bit 1: .call b3l_pad  ->  .call b3l_pad
@@ -100,7 +103,8 @@ chunk_node: 2280 single-bit changes of 285 bytes of code (3 s): 1080 stopped by 
   accepted: +0xD9 byte 4 bit 5: .call b3l_pad  ->  .call b3l_pad
   accepted: +0xD9 byte 4 bit 6: .call b3l_pad  ->  .call b3l_pad
   accepted: +0xD9 byte 4 bit 7: .call b3l_pad  ->  .call b3l_pad
+  accepted: +0xFD byte 0 bit 3: .or 64 (.reg .rax) (.reg .r12)  ->  .or 32 (.reg .rax) (.reg .r12)
 control: the unchanged object on this processor, the lengths and 200 more: same
 control: a change no proof was found for, on this processor: DIFFERS: an official vector (0 bytes, plain) is not what hashr gives
-the 100 accepted changes on this processor: 100 same
-for scale, 300 of the changes stopped or refused, on this processor: 174 CRASHES, 85 DIFFERS, 41 same
+the 104 accepted changes on this processor: 104 same
+for scale, 300 of the changes stopped or refused, on this processor: 169 CRASHES, 80 DIFFERS, 51 same

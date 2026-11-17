@@ -1,5 +1,7 @@
 control: the unchanged object is ACCEPTED 
-ode_common: 1072 single-bit changes of 134 bytes of code (0 s): 526 stopped by the decoder, 483 refused, 63 accepted, 0 with NO VERDICT (the time limit)
+ode_common: 1072 single-bit changes of 134 bytes of code (0 s): 526 stopped by the decoder, 479 refused, 67 accepted, 0 with NO VERDICT (the time limit)
+  accepted: +0x18 byte 0 bit 3: .mov 64 (.reg .r13) (.reg .rax)  ->  .mov 32 (.reg .r13) (.reg .rax)
+  accepted: +0x22 byte 0 bit 3: .mov 64 (.reg .r14) (.reg .rax)  ->  .mov 32 (.reg .r14) (.reg .rax)
   accepted: +0x62 byte 3 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x2)
   accepted: +0x62 byte 3 bit 2: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x4)
   accepted: +0x62 byte 3 bit 3: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x8)
@@ -31,6 +33,7 @@ ode_common: 1072 single-bit changes of 134 bytes of code (0 s): 526 stopped by t
   accepted: +0x62 byte 6 bit 5: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x20000000)
   accepted: +0x62 byte 6 bit 6: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x40000000)
   accepted: +0x62 byte 6 bit 7: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0xFFFFFFFF80000000)
+  accepted: +0x69 byte 0 bit 3: .mov 64 (.reg .r14) (.reg .rax)  ->  .mov 32 (.reg .r14) (.reg .rax)
   accepted: +0x6E byte 3 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x2)
   accepted: +0x6E byte 3 bit 2: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x4)
   accepted: +0x6E byte 3 bit 3: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x8)
@@ -62,7 +65,8 @@ ode_common: 1072 single-bit changes of 134 bytes of code (0 s): 526 stopped by t
   accepted: +0x6E byte 6 bit 5: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x20000000)
   accepted: +0x6E byte 6 bit 6: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x40000000)
   accepted: +0x6E byte 6 bit 7: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0xFFFFFFFF80000000)
+  accepted: +0x75 byte 0 bit 3: .mov 64 (.reg .r14) (.reg .rax)  ->  .mov 32 (.reg .r14) (.reg .rax)
   accepted: +0x7A byte 1 bit 7: .mov 64 (.reg .rax) (.reg .r13)  ->  .or 64 (.reg .rax) (.reg .r13)
 control: the unchanged object on this processor (3000): same
-the 63 accepted changes on this processor: 63 same
-for scale, 300 of the changes stopped or refused, on this processor: 177 CRASHES, 85 DIFFERS, 38 same
+the 67 accepted changes on this processor: 67 same
+for scale, 300 of the changes stopped or refused, on this processor: 183 CRASHES, 86 DIFFERS, 31 same

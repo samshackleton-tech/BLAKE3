@@ -49,7 +49,7 @@ lz4: 129 changed lemmas: 126 refused, 3 shown and so on every use tried, 0 shown
   the lemmas shown of it, and so on 607 judgements: the specification's match, line 47: == made <=
   the lemmas shown of it, and so on 607 judgements: the specification's match, line 47: > made >=
   the lemmas shown of it, and so on 556 judgements: the specification's match, line 47: > made !=
-lz4: 90 changed specifications (4 of them no specification): the lemmas 40 times refused, 46 shown and so on every use tried, 0 shown and not judged, 0 SHOWN AND FALSE; 2.9 s
+lz4: 90 changed specifications (4 of them no specification): the lemmas 40 times refused, 46 shown and so on every use tried, 0 shown and not judged, 0 SHOWN AND FALSE; 3.0 s
 frame: the lemmas as they are: shown, and so on 2336 judgements of 2097 uses (copies[k] 164, counted 491, match 654, sequences 952)
   shown, and so on 2336 judgements: counted: `ensures result.value >= sum`: sum made 0
   shown, and so on 2336 judgements: counted: `ensures result.next >= at + 1`: 1 made 0
@@ -101,13 +101,13 @@ frame: 129 changed lemmas: 126 refused, 3 shown and so on every use tried, 0 sho
   the lemmas shown of it, and so on 689 judgements: the specification's match, line 42: == made <=
   the lemmas shown of it, and so on 689 judgements: the specification's match, line 42: > made >=
   the lemmas shown of it, and so on 635 judgements: the specification's match, line 42: > made !=
-frame: 90 changed specifications (4 of them no specification): the lemmas 40 times refused, 46 shown and so on every use tried, 0 shown and not judged, 0 SHOWN AND FALSE; 3.0 s
+frame: 90 changed specifications (4 of them no specification): the lemmas 40 times refused, 46 shown and so on every use tried, 0 shown and not judged, 0 SHOWN AND FALSE; 3.1 s
 utf8: the lemmas as they are: shown, and so on 5257 judgements of 3699 uses (points 3699)
   shown, and judged on no use (nothing here says whether it is so; "comes to an end" is not said with it): points: made to require the impossible (`requires len(bytes) + 1 <= len(bytes)`)
   shown, and judged on no use (nothing here says whether it is so; "comes to an end" is not said with it): points: made to require the impossible (`requires at + 1 <= at`)
   shown, and judged on no use (nothing here says whether it is so; "comes to an end" is not said with it): points: made to require the impossible (`requires count + 1 <= count`)
   shown, and so on 206 judgements: points: `requires at <= len(bytes)`: <= made ==
-utf8: 28 changed lemmas: 24 refused, 1 shown and so on every use tried, 3 shown and not judged, 0 SHOWN AND FALSE; 0.8 s
+utf8: 28 changed lemmas: 24 refused, 1 shown and so on every use tried, 3 shown and not judged, 0 SHOWN AND FALSE; 0.9 s
   the lemmas shown of it, and so on 902 judgements: the specification's length, line 13: 128 made 127
   the lemmas shown of it, and so on 1902 judgements: the specification's length, line 13: 192 made 193
   the lemmas shown of it, and so on 1902 judgements: the specification's length, line 14: 248 made 249
@@ -265,9 +265,9 @@ common: 42 changed lemmas: 35 refused, 4 shown and so on every use tried, 3 show
   the lemmas shown of it, and so on 263 judgements: the specification's alike, line 5: != made ==
   the lemmas shown of it, and so on 9741 judgements: the specification's alike, line 5: != made >
   the lemmas shown of it, and so on 9879 judgements: the specification's alike, line 5: != made <
-common: 13 changed specifications (0 of them no specification): the lemmas 6 times refused, 7 shown and so on every use tried, 0 shown and not judged, 0 SHOWN AND FALSE; 0.8 s
+common: 13 changed specifications (0 of them no specification): the lemmas 6 times refused, 7 shown and so on every use tried, 0 shown and not judged, 0 SHOWN AND FALSE; 0.7 s
 blake3: the lemmas as they are: shown, and so on 1836 judgements of 16420 uses (children 612, chunk_node 912, compress 12460, node_value 912, subtree 1524)
-blake3: 34 changed lemmas: 34 refused, 0 shown and so on every use tried, 0 shown and not judged, 0 SHOWN AND FALSE; 12.9 s
+blake3: 34 changed lemmas: 34 refused, 0 shown and so on every use tried, 0 shown and not judged, 0 SHOWN AND FALSE; 13.2 s
   the lemmas shown of it, and so on 690 judgements: the specification's g, line 43: 16 made 17
   the lemmas shown of it, and so on 690 judgements: the specification's g, line 43: 16 made 15
   the lemmas shown of it, and so on 690 judgements: the specification's g, line 45: 12 made 13
@@ -439,5 +439,5 @@ blake3: 34 changed lemmas: 34 refused, 0 shown and so on every use tried, 0 show
   the lemmas shown of it, and so on 690 judgements: the specification's subtree, line 130: 0 made 1
   the lemmas shown of it, and so on 690 judgements: the specification's subtree, line 130: 64 made 65
   the lemmas shown of it, and so on 690 judgements: the specification's subtree, line 130: 64 made 63
-blake3: 215 changed specifications (28 of them no specification): the lemmas 16 times refused, 171 shown and so on every use tried, 0 shown and not judged, 0 SHOWN AND FALSE; 674.0 s
+blake3: 215 changed specifications (28 of them no specification): the lemmas 16 times refused, 171 shown and so on every use tried, 0 shown and not judged, 0 SHOWN AND FALSE; 670.0 s
 lemma_audit: no changed lemma is shown and false

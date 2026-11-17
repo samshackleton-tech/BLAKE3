@@ -1,5 +1,6 @@
 control: the unchanged object is ACCEPTED 
-hashr: 11008 single-bit changes of 1376 bytes of code (1371 s): 4384 stopped by the decoder, 5851 refused (no proof), 773 accepted, 0 with NO VERDICT (the time limit)
+hashr: 11008 single-bit changes of 1376 bytes of code (1400 s): 4384 stopped by the decoder, 5845 refused (no proof), 779 accepted, 0 with NO VERDICT (the time limit)
+  accepted: +0x1D byte 0 bit 3: .mov 64 (.reg .r14) (.reg .r8)  ->  .mov 32 (.reg .r14) (.reg .r8)
   accepted: +0x23 byte 0 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .r8) (.imm 0x0)
   accepted: +0x23 byte 2 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rcx) (.imm 0x0)
   accepted: +0x23 byte 2 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rdx) (.imm 0x0)
@@ -233,6 +234,7 @@ hashr: 11008 single-bit changes of 1376 bytes of code (1371 s): 4384 stopped by 
   accepted: +0x5F byte 6 bit 5: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x20000000)
   accepted: +0x5F byte 6 bit 6: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0x40000000)
   accepted: +0x5F byte 6 bit 7: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0xFFFFFFFF80000000)
+  accepted: +0x83 byte 0 bit 3: .mov 64 (.reg .rax) (.reg .r14)  ->  .mov 32 (.reg .rax) (.reg .r14)
   accepted: +0x86 byte 0 bit 2: .lea .rcx .rsp 0x0  ->  .lea .r9 .rsp 0x0
   accepted: +0x8E byte 0 bit 2: .mov 64 (.mem .rcx 0x0) (.reg .rax)  ->  .mov 64 (.mem .rcx 0x0) (.reg .r8)
   accepted: +0x9B byte 2 bit 1: .cmp 64 (.reg .rax) (.reg .rcx)  ->  .cmp 64 (.reg .rdx) (.reg .rcx)
@@ -366,6 +368,7 @@ hashr: 11008 single-bit changes of 1376 bytes of code (1371 s): 4384 stopped by 
   accepted: +0xD7 byte 6 bit 5: .mov 64 (.reg .rcx) (.imm 0x1)  ->  .mov 64 (.reg .rcx) (.imm 0x20000001)
   accepted: +0xD7 byte 6 bit 6: .mov 64 (.reg .rcx) (.imm 0x1)  ->  .mov 64 (.reg .rcx) (.imm 0x40000001)
   accepted: +0xD7 byte 6 bit 7: .mov 64 (.reg .rcx) (.imm 0x1)  ->  .mov 64 (.reg .rcx) (.imm 0xFFFFFFFF80000001)
+  accepted: +0xE7 byte 0 bit 3: .mov 64 (.reg .rax) (.reg .r14)  ->  .mov 32 (.reg .rax) (.reg .r14)
   accepted: +0x10E byte 1 bit 1: .mov 64 (.mem .rsp 0x608) (.reg .rax)  ->  .mov 64 (.reg .rax) (.mem .rsp 0x608)
   accepted: +0x10E byte 1 bit 2: .mov 64 (.mem .rsp 0x608) (.reg .rax)  ->  .lea .rax .rsp 0x608
   accepted: +0x10E byte 4 bit 3: .mov 64 (.mem .rsp 0x608) (.reg .rax)  ->  .mov 64 (.mem .rsp 0x600) (.reg .rax)
@@ -443,6 +446,7 @@ hashr: 11008 single-bit changes of 1376 bytes of code (1371 s): 4384 stopped by 
   accepted: +0x22C byte 2 bit 4: .mov 64 (.reg .rax) (.mem .rsp 0x600)  ->  .mov 64 (.reg .rdx) (.mem .rsp 0x600)
   accepted: +0x23F byte 1 bit 3: .jmp 0x10207  ->  .jmp 0x1020F
   accepted: +0x23F byte 1 bit 4: .jmp 0x10207  ->  .jmp 0x10217
+  accepted: +0x2AE byte 0 bit 3: .mov 64 (.reg .rax) (.reg .r14)  ->  .mov 32 (.reg .rax) (.reg .r14)
   accepted: +0x2B1 byte 3 bit 3: .or 64 (.reg .rax) (.imm 0x4)  ->  .or 64 (.reg .rax) (.imm 0xC)
   accepted: +0x2B5 byte 3 bit 2: .or 64 (.reg .rax) (.imm 0x8)  ->  .or 64 (.reg .rax) (.imm 0xC)
   accepted: +0x2E7 byte 1 bit 0: .call b3l_take  ->  .call b3l_take
@@ -564,6 +568,7 @@ hashr: 11008 single-bit changes of 1376 bytes of code (1371 s): 4384 stopped by 
   accepted: +0x3C9 byte 2 bit 4: .mov 64 (.reg .rax) (.mem .rsp 0x600)  ->  .mov 64 (.reg .rdx) (.mem .rsp 0x600)
   accepted: +0x3DC byte 1 bit 3: .jmp 0x103A4  ->  .jmp 0x103AC
   accepted: +0x3DC byte 1 bit 4: .jmp 0x103A4  ->  .jmp 0x103B4
+  accepted: +0x42C byte 0 bit 3: .mov 64 (.reg .rax) (.reg .r14)  ->  .mov 32 (.reg .rax) (.reg .r14)
   accepted: +0x42F byte 3 bit 3: .or 64 (.reg .rax) (.imm 0x4)  ->  .or 64 (.reg .rax) (.imm 0xC)
   accepted: +0x433 byte 3 bit 2: .or 64 (.reg .rax) (.imm 0x8)  ->  .or 64 (.reg .rax) (.imm 0xC)
   accepted: +0x447 byte 0 bit 0: .mov 64 (.reg .rsi) (.reg .rbp)  ->  .mov 64 (.reg .r14) (.reg .rbp)
@@ -703,6 +708,7 @@ hashr: 11008 single-bit changes of 1376 bytes of code (1371 s): 4384 stopped by 
   accepted: +0x522 byte 0 bit 0: .mov 64 (.reg .rdx) (.reg .r12)  ->  .mov 64 (.reg .r10) (.reg .r12)
   accepted: +0x522 byte 2 bit 1: .mov 64 (.reg .rdx) (.reg .r12)  ->  .mov 64 (.reg .rax) (.reg .r12)
   accepted: +0x52C byte 0 bit 0: .mov 64 (.reg .r8) (.reg .r14)  ->  .mov 64 (.reg .rax) (.reg .r14)
+  accepted: +0x52C byte 0 bit 3: .mov 64 (.reg .r8) (.reg .r14)  ->  .mov 32 (.reg .r8) (.reg .r14)
   accepted: +0x52C byte 1 bit 7: .mov 64 (.reg .r8) (.reg .r14)  ->  .or 64 (.reg .r8) (.reg .r14)
   accepted: +0x52C byte 2 bit 0: .mov 64 (.reg .r8) (.reg .r14)  ->  .mov 64 (.reg .r9) (.reg .r14)
   accepted: +0x52C byte 2 bit 1: .mov 64 (.reg .r8) (.reg .r14)  ->  .mov 64 (.reg .r10) (.reg .r14)
@@ -775,5 +781,5 @@ hashr: 11008 single-bit changes of 1376 bytes of code (1371 s): 4384 stopped by 
   accepted: +0x549 byte 4 bit 7: .call b3l_node_out  ->  .call b3l_node_out
 control: the unchanged object on this processor, the lengths and 200 more: same
 control: a change no proof was found for, on this processor: DIFFERS: an official vector (0 bytes, plain) is not what hashr gives
-the 773 accepted changes on this processor: 773 same
-for scale, 300 of the changes stopped or refused, on this processor: 193 CRASHES, 76 DIFFERS, 31 same
+the 779 accepted changes on this processor: 779 same
+for scale, 300 of the changes stopped or refused, on this processor: 203 CRASHES, 70 DIFFERS, 27 same

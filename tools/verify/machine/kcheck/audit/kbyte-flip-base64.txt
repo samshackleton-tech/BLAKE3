@@ -1,14 +1,16 @@
 control: the unchanged object is ACCEPTED 
-ode_base64: 6608 single-bit changes of 826 bytes of code (557 s): 3121 stopped by the decoder, 2984 refused, 503 accepted, 0 with NO VERDICT (the time limit)
+ode_base64: 6608 single-bit changes of 826 bytes of code (610 s): 3121 stopped by the decoder, 2982 refused, 505 accepted, 0 with NO VERDICT (the time limit)
   accepted: +0x11 byte 0 bit 0: .mov 64 (.reg .rbp) (.reg .rsi)  ->  .mov 64 (.reg .r13) (.reg .rsi)
   accepted: +0x11 byte 0 bit 2: .mov 64 (.reg .rbp) (.reg .rsi)  ->  .mov 64 (.reg .rbp) (.reg .r14)
   accepted: +0x11 byte 2 bit 1: .mov 64 (.reg .rbp) (.reg .rsi)  ->  .mov 64 (.reg .rdi) (.reg .rsi)
   accepted: +0x11 byte 2 bit 3: .mov 64 (.reg .rbp) (.reg .rsi)  ->  .mov 64 (.reg .rbp) (.reg .rdi)
   accepted: +0x11 byte 2 bit 4: .mov 64 (.reg .rbp) (.reg .rsi)  ->  .mov 64 (.reg .rbp) (.reg .rsp)
   accepted: +0x11 byte 2 bit 5: .mov 64 (.reg .rbp) (.reg .rsi)  ->  .mov 64 (.reg .rbp) (.reg .rdx)
+  accepted: +0x21 byte 0 bit 3: .mov 64 (.reg .r14) (.reg .rax)  ->  .mov 32 (.reg .r14) (.reg .rax)
   accepted: +0x24 byte 0 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .r8) (.imm 0x0)
   accepted: +0x24 byte 2 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rcx) (.imm 0x0)
   accepted: +0x24 byte 2 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rdx) (.imm 0x0)
+  accepted: +0x2B byte 0 bit 3: .mov 64 (.reg .r15) (.reg .rax)  ->  .mov 32 (.reg .r15) (.reg .rax)
   accepted: +0x2E byte 0 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .r8) (.imm 0x0)
   accepted: +0x2E byte 2 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rcx) (.imm 0x0)
   accepted: +0x2E byte 2 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rdx) (.imm 0x0)
@@ -504,5 +506,5 @@ ode_base64: 6608 single-bit changes of 826 bytes of code (557 s): 3121 stopped b
   accepted: +0x312 byte 2 bit 3: .mov 64 (.mem .rsp 0x38) (.reg .rax)  ->  .mov 64 (.mem .rsp 0x38) (.reg .rcx)
   accepted: +0x328 byte 1 bit 7: .mov 64 (.reg .rax) (.reg .r15)  ->  .or 64 (.reg .rax) (.reg .r15)
 control: the unchanged object on this processor (2000): same
-the 503 accepted changes on this processor: 503 same
-for scale, 300 of the changes stopped or refused, on this processor: 170 CRASHES, 103 DIFFERS, 27 same
+the 505 accepted changes on this processor: 505 same
+for scale, 300 of the changes stopped or refused, on this processor: 169 CRASHES, 101 DIFFERS, 30 same

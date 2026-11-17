@@ -1,6 +1,8 @@
 control: the unchanged object is ACCEPTED 
-part32: 2592 single-bit changes of 324 bytes of code (57 s): 1083 stopped by the decoder, 1375 refused (no proof), 134 accepted, 0 with NO VERDICT (the time limit)
+part32: 2592 single-bit changes of 324 bytes of code (55 s): 1083 stopped by the decoder, 1373 refused (no proof), 136 accepted, 0 with NO VERDICT (the time limit)
+  accepted: +0x2A byte 0 bit 3: .mov 64 (.reg .r15) (.reg .rax)  ->  .mov 32 (.reg .r15) (.reg .rax)
   accepted: +0x2D byte 0 bit 0: .mov 64 (.reg .rax) (.reg .r15)  ->  .mov 64 (.reg .r8) (.reg .r15)
+  accepted: +0x2D byte 0 bit 3: .mov 64 (.reg .rax) (.reg .r15)  ->  .mov 32 (.reg .rax) (.reg .r15)
   accepted: +0x2D byte 1 bit 7: .mov 64 (.reg .rax) (.reg .r15)  ->  .or 64 (.reg .rax) (.reg .r15)
   accepted: +0x2D byte 2 bit 0: .mov 64 (.reg .rax) (.reg .r15)  ->  .mov 64 (.reg .rcx) (.reg .r15)
   accepted: +0x2D byte 2 bit 1: .mov 64 (.reg .rax) (.reg .r15)  ->  .mov 64 (.reg .rdx) (.reg .r15)
@@ -136,5 +138,5 @@ part32: 2592 single-bit changes of 324 bytes of code (57 s): 1083 stopped by the
   accepted: +0x12D byte 4 bit 7: .call b3l_take  ->  .call b3l_take
 control: the unchanged object on this processor, the lengths and 200 more: same
 control: a change no proof was found for, on this processor: DIFFERS: an official vector (102400 bytes, plain) is not what hashr gives
-the 134 accepted changes on this processor: 134 same
-for scale, 300 of the changes stopped or refused, on this processor: 231 CRASHES, 32 DIFFERS, 37 same
+the 136 accepted changes on this processor: 136 same
+for scale, 300 of the changes stopped or refused, on this processor: 206 CRASHES, 45 DIFFERS, 49 same

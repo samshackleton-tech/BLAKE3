@@ -1,20 +1,7 @@
-b3hashr.o: an object with nothing left for a linker to fill in, 80920 bytes; 18176 of them loaded to be run
-the proof: the file's own section .ode.proof; the specification is the one the file carries (185 lines, SHA-256 d6a5129fce2bf1c4...): read it (--show-spec), for it is what is shown
-  b3l_hashr                                  at   0x1cf0   265 instructions   3551.7 ms  everything its contract allows
-  b3l_chunk_node                             at     0x70    81 instructions    235.1 ms  everything its contract allows
-  b3l_node_out                               at    0x190    58 instructions      4.6 ms  everything its contract allows
-  b3l_subtree                                at   0x1970   189 instructions    404.1 ms  everything its contract allows
-  b3l_take                                   at   0x1590   133 instructions    941.3 ms  everything its contract allows
-  blake3_servil_avx512_k32                   at   0x25c0   702 instructions    607.2 ms  a wide kernel: every number of blocks
-  blake3_servil_compress_in_place_avx512     at   0x2280    76 instructions      5.2 ms  a one-block kernel
-  blake3_servil_compress_in_place_sse41      at   0x2400    94 instructions      5.3 ms  a one-block kernel
-  b3l_pad                                    at      0x0    39 instructions    132.9 ms  everything its contract allows
-  b3l_part32                                 at   0x1820    76 instructions   5787.4 ms  everything its contract allows
-  b3l_wide128                                at    0x770   670 instructions   7868.0 ms  everything its contract allows
-  b3l_wide32                                 at    0x250   259 instructions   1779.8 ms  everything its contract allows
-  blake3_servil_avx512_p16                   at   0x3740   460 instructions    271.0 ms  a wide kernel: every number of blocks
-of the 18176 bytes loaded to be run: 16788 are the 13 bodies checked (3102 instructions), 859 are zero, 529 are others (constants the functions read; what lies between functions; whatever else the file holds)
+b3hashr.o: an object with nothing left for a linker to fill in, 81472 bytes; 17984 of them loaded to be run
+the proof: the file's own section .ode.proof; the specification is the one the file carries (185 lines, BLAKE3 b437b009ace453fe081f219608c4ab3d161752dba8fdc634811c45497aaddd81): read it (--show-spec), for it is what is shown
+of the 17984 bytes loaded to be run: 16788 are the 13 bodies checked (3102 instructions), 779 are zero, 417 are others (constants the functions read; what lies between functions; whatever else the file holds)
 the arithmetic: every fact by a proof the file carries, verified by adding up (varith.py); nothing was searched for
-the specification: the definitions that use themselves (children, subtree): each is shown to come to an end (a number that decreases, in a lemma)
-b3l_hashr in this file meets its public contract (the specification the file carries), with all it calls: 13 functions, from the file's bytes, in 21.66 s
+the specification: every definition its contracts use comes to an end on everything the contracts allow
+b3l_hashr in this file meets its public contract (the specification the file carries), with all it calls and every other name the file gives a linker: 14 functions, from the file's bytes, in 22.53 s
 5466 hashes as BLAKE3's (both kernels)

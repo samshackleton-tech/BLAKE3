@@ -1,5 +1,7 @@
 control: the unchanged object is ACCEPTED 
-node_out: 1432 single-bit changes of 179 bytes of code (0 s): 722 stopped by the decoder, 635 refused (no proof), 75 accepted, 0 with NO VERDICT (the time limit)
+node_out: 1432 single-bit changes of 179 bytes of code (0 s): 722 stopped by the decoder, 633 refused (no proof), 77 accepted, 0 with NO VERDICT (the time limit)
+  accepted: +0x14 byte 0 bit 3: .mov 64 (.reg .r12) (.reg .rdx)  ->  .mov 32 (.reg .r12) (.reg .rdx)
+  accepted: +0x49 byte 0 bit 3: .or 64 (.reg .rax) (.reg .r12)  ->  .or 32 (.reg .rax) (.reg .r12)
   accepted: +0x54 byte 2 bit 5: .mov 64 (.reg .rcx) (.reg .rbx)  ->  .mov 64 (.reg .rcx) (.reg .rdi)
   accepted: +0x5A byte 2 bit 1: .xstoreu .rcx 0x0 0  ->  .xstoreu .rbx 0x0 0
   accepted: +0x61 byte 2 bit 1: .xstoreu .rcx 0x10 0  ->  .xstoreu .rbx 0x10 0
@@ -77,5 +79,5 @@ node_out: 1432 single-bit changes of 179 bytes of code (0 s): 722 stopped by the
   accepted: +0x9F byte 4 bit 7: .call blake3_servil_compress_in_place_sse41  ->  .call blake3_servil_compress_in_place_sse41
 control: the unchanged object on this processor, the lengths and 200 more: same
 control: a change no proof was found for, on this processor: DIFFERS: an official vector (0 bytes, plain) is not what hashr gives
-the 75 accepted changes on this processor: 75 same
-for scale, 300 of the changes stopped or refused, on this processor: 158 CRASHES, 94 DIFFERS, 48 same
+the 77 accepted changes on this processor: 77 same
+for scale, 300 of the changes stopped or refused, on this processor: 141 CRASHES, 100 DIFFERS, 59 same

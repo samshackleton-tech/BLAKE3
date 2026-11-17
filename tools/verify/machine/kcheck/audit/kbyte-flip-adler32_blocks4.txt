@@ -1,5 +1,8 @@
 control: the unchanged object is ACCEPTED 
-ode_adler32_blocks4: 4400 single-bit changes of 550 bytes of code (281 s): 2047 stopped by the decoder, 2241 refused, 112 accepted, 0 with NO VERDICT (the time limit)
+ode_adler32_blocks4: 4400 single-bit changes of 550 bytes of code (111 s): 2047 stopped by the decoder, 2237 refused, 116 accepted, 0 with NO VERDICT (the time limit)
+  accepted: +0x1B byte 0 bit 3: .mov 64 (.reg .r12) (.reg .rax)  ->  .mov 32 (.reg .r12) (.reg .rax)
+  accepted: +0x25 byte 0 bit 3: .mov 64 (.reg .r13) (.reg .rax)  ->  .mov 32 (.reg .r13) (.reg .rax)
+  accepted: +0x2F byte 0 bit 3: .mov 64 (.reg .r14) (.reg .rax)  ->  .mov 32 (.reg .r14) (.reg .rax)
   accepted: +0x32 byte 0 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .r8) (.imm 0x0)
   accepted: +0x32 byte 2 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rcx) (.imm 0x0)
   accepted: +0x32 byte 2 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rdx) (.imm 0x0)
@@ -37,6 +40,7 @@ ode_adler32_blocks4: 4400 single-bit changes of 550 bytes of code (281 s): 2047 
   accepted: +0x32 byte 6 bit 7: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0xFFFFFFFF80000000)
   accepted: +0x39 byte 0 bit 0: .mov 64 (.reg .r15) (.reg .rax)  ->  .mov 64 (.reg .rdi) (.reg .rax)
   accepted: +0x39 byte 0 bit 2: .mov 64 (.reg .r15) (.reg .rax)  ->  .mov 64 (.reg .r15) (.reg .r8)
+  accepted: +0x39 byte 0 bit 3: .mov 64 (.reg .r15) (.reg .rax)  ->  .mov 32 (.reg .r15) (.reg .rax)
   accepted: +0x39 byte 2 bit 0: .mov 64 (.reg .r15) (.reg .rax)  ->  .mov 64 (.reg .r14) (.reg .rax)
   accepted: +0x39 byte 2 bit 2: .mov 64 (.reg .r15) (.reg .rax)  ->  .mov 64 (.reg .r11) (.reg .rax)
   accepted: +0x39 byte 2 bit 3: .mov 64 (.reg .r15) (.reg .rax)  ->  .mov 64 (.reg .r15) (.reg .rcx)
@@ -113,5 +117,5 @@ ode_adler32_blocks4: 4400 single-bit changes of 550 bytes of code (281 s): 2047 
   accepted: +0x1FC byte 2 bit 1: .mov 64 (.reg .rax) (.reg .r14)  ->  .mov 64 (.reg .rdx) (.reg .r14)
   accepted: +0x214 byte 1 bit 3: .add 64 (.reg .rax) (.reg .r13)  ->  .or 64 (.reg .rax) (.reg .r13)
 control: the unchanged object on this processor (300): same
-the 112 accepted changes on this processor: 112 same
-for scale, 300 of the changes stopped or refused, on this processor: 158 CRASHES, 99 DIFFERS, 43 same
+the 116 accepted changes on this processor: 116 same
+for scale, 300 of the changes stopped or refused, on this processor: 163 CRASHES, 104 DIFFERS, 33 same

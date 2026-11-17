@@ -1,9 +1,13 @@
 control: the unchanged object is ACCEPTED 
-wide32: 10432 single-bit changes of 1304 bytes of code (264 s): 4260 stopped by the decoder, 5455 refused (no proof), 717 accepted, 0 with NO VERDICT (the time limit)
+wide32: 10432 single-bit changes of 1304 bytes of code (267 s): 4260 stopped by the decoder, 5450 refused (no proof), 722 accepted, 0 with NO VERDICT (the time limit)
+  accepted: +0x27 byte 0 bit 3: .mov 64 (.reg .r14) (.reg .rax)  ->  .mov 32 (.reg .r14) (.reg .rax)
   accepted: +0x2A byte 0 bit 0: .mov 64 (.reg .rax) (.reg .r14)  ->  .mov 64 (.reg .r8) (.reg .r14)
+  accepted: +0x2A byte 0 bit 3: .mov 64 (.reg .rax) (.reg .r14)  ->  .mov 32 (.reg .rax) (.reg .r14)
   accepted: +0x2A byte 1 bit 7: .mov 64 (.reg .rax) (.reg .r14)  ->  .or 64 (.reg .rax) (.reg .r14)
   accepted: +0x2A byte 2 bit 0: .mov 64 (.reg .rax) (.reg .r14)  ->  .mov 64 (.reg .rcx) (.reg .r14)
   accepted: +0x2A byte 2 bit 1: .mov 64 (.reg .rax) (.reg .r14)  ->  .mov 64 (.reg .rdx) (.reg .r14)
+  accepted: +0x33 byte 0 bit 3: .mov 64 (.reg .r15) (.reg .rax)  ->  .mov 32 (.reg .r15) (.reg .rax)
+  accepted: +0x36 byte 0 bit 3: .mov 64 (.reg .rax) (.reg .r14)  ->  .mov 32 (.reg .rax) (.reg .r14)
   accepted: +0x39 byte 3 bit 2: .or 64 (.reg .rax) (.imm 0x40000004)  ->  .or 64 (.reg .rax) (.imm 0x40000404)
   accepted: +0x39 byte 4 bit 2: .or 64 (.reg .rax) (.imm 0x40000004)  ->  .or 64 (.reg .rax) (.imm 0x40040004)
   accepted: +0x47 byte 0 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .r8) (.imm 0x0)
@@ -214,6 +218,7 @@ wide32: 10432 single-bit changes of 1304 bytes of code (264 s): 4260 stopped by 
   accepted: +0xCD byte 2 bit 4: .mov 64 (.mem .rcx 0x0) (.reg .rax)  ->  .mov 64 (.mem .rcx 0x0) (.reg .rdx)
   accepted: +0xCD byte 2 bit 5: .mov 64 (.mem .rcx 0x0) (.reg .rax)  ->  .mov 64 (.mem .rcx 0x0) (.reg .rsp)
   accepted: +0xE4 byte 1 bit 3: .jmp 0x10065  ->  .jmp 0x1005D
+  accepted: +0xFA byte 0 bit 3: .mov 64 (.reg .r8) (.reg .r15)  ->  .mov 32 (.reg .r8) (.reg .r15)
   accepted: +0x105 byte 1 bit 0: .call blake3_servil_avx512_k32  ->  .call blake3_servil_avx512_k32
   accepted: +0x105 byte 1 bit 1: .call blake3_servil_avx512_k32  ->  .call blake3_servil_avx512_k32
   accepted: +0x105 byte 1 bit 2: .call blake3_servil_avx512_k32  ->  .call blake3_servil_avx512_k32
@@ -719,5 +724,5 @@ wide32: 10432 single-bit changes of 1304 bytes of code (264 s): 4260 stopped by 
   accepted: +0x502 byte 2 bit 1: .xstoreu .rcx 0x10 0  ->  .xstoreu .rbx 0x10 0
 control: the unchanged object on this processor, the lengths and 200 more: same
 control: a change no proof was found for, on this processor: DIFFERS: an official vector (102400 bytes, plain) is not what hashr gives
-the 717 accepted changes on this processor: 717 same
-for scale, 300 of the changes stopped or refused, on this processor: 204 CRASHES, 61 DIFFERS, 35 same
+the 722 accepted changes on this processor: 722 same
+for scale, 300 of the changes stopped or refused, on this processor: 193 CRASHES, 62 DIFFERS, 45 same

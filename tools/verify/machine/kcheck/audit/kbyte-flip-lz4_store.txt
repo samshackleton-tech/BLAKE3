@@ -1,5 +1,5 @@
 control: the unchanged object is ACCEPTED 
-ode_lz4_store: 4016 single-bit changes of 502 bytes of code (4 s): 1866 stopped by the decoder, 1830 refused, 320 accepted, 0 with NO VERDICT (the time limit)
+ode_lz4_store: 4016 single-bit changes of 502 bytes of code (5 s): 1866 stopped by the decoder, 1826 refused, 324 accepted, 0 with NO VERDICT (the time limit)
   accepted: +0x1A byte 0 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .r8) (.imm 0x0)
   accepted: +0x1A byte 2 bit 0: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rcx) (.imm 0x0)
   accepted: +0x1A byte 2 bit 1: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rdx) (.imm 0x0)
@@ -37,6 +37,7 @@ ode_lz4_store: 4016 single-bit changes of 502 bytes of code (4 s): 1866 stopped 
   accepted: +0x1A byte 6 bit 7: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0xFFFFFFFF80000000)
   accepted: +0x21 byte 0 bit 0: .mov 64 (.reg .r14) (.reg .rax)  ->  .mov 64 (.reg .rsi) (.reg .rax)
   accepted: +0x21 byte 0 bit 2: .mov 64 (.reg .r14) (.reg .rax)  ->  .mov 64 (.reg .r14) (.reg .r8)
+  accepted: +0x21 byte 0 bit 3: .mov 64 (.reg .r14) (.reg .rax)  ->  .mov 32 (.reg .r14) (.reg .rax)
   accepted: +0x21 byte 2 bit 0: .mov 64 (.reg .r14) (.reg .rax)  ->  .mov 64 (.reg .r15) (.reg .rax)
   accepted: +0x21 byte 2 bit 2: .mov 64 (.reg .r14) (.reg .rax)  ->  .mov 64 (.reg .r10) (.reg .rax)
   accepted: +0x21 byte 2 bit 3: .mov 64 (.reg .r14) (.reg .rax)  ->  .mov 64 (.reg .r14) (.reg .rcx)
@@ -79,6 +80,7 @@ ode_lz4_store: 4016 single-bit changes of 502 bytes of code (4 s): 1866 stopped 
   accepted: +0x24 byte 6 bit 7: .mov 64 (.reg .rax) (.imm 0x0)  ->  .mov 64 (.reg .rax) (.imm 0xFFFFFFFF80000000)
   accepted: +0x2B byte 0 bit 0: .mov 64 (.reg .r15) (.reg .rax)  ->  .mov 64 (.reg .rdi) (.reg .rax)
   accepted: +0x2B byte 0 bit 2: .mov 64 (.reg .r15) (.reg .rax)  ->  .mov 64 (.reg .r15) (.reg .r8)
+  accepted: +0x2B byte 0 bit 3: .mov 64 (.reg .r15) (.reg .rax)  ->  .mov 32 (.reg .r15) (.reg .rax)
   accepted: +0x2B byte 2 bit 0: .mov 64 (.reg .r15) (.reg .rax)  ->  .mov 64 (.reg .r14) (.reg .rax)
   accepted: +0x2B byte 2 bit 2: .mov 64 (.reg .r15) (.reg .rax)  ->  .mov 64 (.reg .r11) (.reg .rax)
   accepted: +0x2B byte 2 bit 3: .mov 64 (.reg .r15) (.reg .rax)  ->  .mov 64 (.reg .r15) (.reg .rcx)
@@ -173,9 +175,11 @@ ode_lz4_store: 4016 single-bit changes of 502 bytes of code (4 s): 1866 stopped 
   accepted: +0x80 byte 2 bit 1: .mov 64 (.reg .rax) (.reg .r13)  ->  .mov 64 (.reg .rdx) (.reg .r13)
   accepted: +0x87 byte 2 bit 5: .mov 64 (.reg .rcx) (.reg .rbx)  ->  .mov 64 (.reg .rcx) (.reg .rdi)
   accepted: +0x8A byte 1 bit 1: .mov 8 (.mem .rcx 0x0) (.reg .rax)  ->  .mov 8 (.mem .rbx 0x0) (.reg .rax)
+  accepted: +0x93 byte 0 bit 3: .mov 64 (.reg .r14) (.reg .rax)  ->  .mov 32 (.reg .r14) (.reg .rax)
   accepted: +0x93 byte 1 bit 7: .mov 64 (.reg .r14) (.reg .rax)  ->  .or 64 (.reg .r14) (.reg .rax)
   accepted: +0xA2 byte 2 bit 5: .mov 64 (.reg .rcx) (.reg .rbx)  ->  .mov 64 (.reg .rcx) (.reg .rdi)
   accepted: +0xA5 byte 1 bit 1: .mov 8 (.mem .rcx 0x0) (.reg .rax)  ->  .mov 8 (.mem .rbx 0x0) (.reg .rax)
+  accepted: +0xAE byte 0 bit 3: .mov 64 (.reg .r14) (.reg .rax)  ->  .mov 32 (.reg .r14) (.reg .rax)
   accepted: +0xAE byte 1 bit 7: .mov 64 (.reg .r14) (.reg .rax)  ->  .or 64 (.reg .r14) (.reg .rax)
   accepted: +0xB8 byte 1 bit 7: .mov 64 (.reg .r15) (.reg .rax)  ->  .or 64 (.reg .r15) (.reg .rax)
   accepted: +0xE2 byte 2 bit 5: .cmp 64 (.reg .rax) (.reg .rcx)  ->  .cmp 64 (.reg .rax) (.reg .rbp)
@@ -321,5 +325,5 @@ ode_lz4_store: 4016 single-bit changes of 502 bytes of code (4 s): 1866 stopped 
   accepted: +0x1B8 byte 1 bit 2: .jmp 0x1018A  ->  .jmp 0x1018E
   accepted: +0x1D7 byte 1 bit 7: .mov 64 (.reg .rax) (.reg .r14)  ->  .or 64 (.reg .rax) (.reg .r14)
 control: the unchanged object on this processor (3000 room): same
-the 320 accepted changes on this processor: 320 same
-for scale, 300 of the changes stopped or refused, on this processor: 151 CRASHES, 103 DIFFERS, 46 same
+the 324 accepted changes on this processor: 324 same
+for scale, 300 of the changes stopped or refused, on this processor: 153 CRASHES, 99 DIFFERS, 48 same
