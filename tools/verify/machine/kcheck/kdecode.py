@@ -211,6 +211,12 @@ def linkable(e):
 
 def decode(code, at, relocs, rodata, rodata_at, base, start):
     """One instruction at `at`: (its length, its text in the lifter's form)."""
+    n, text = decode1(code, at, relocs, rodata, rodata_at, base, start)
+    if n > 15: raise Stop("an instruction of more than fifteen bytes: a processor refuses it")
+    return n, text
+
+
+def decode1(code, at, relocs, rodata, rodata_at, base, start):
     p = at
     def u8():
         nonlocal p
@@ -328,7 +334,8 @@ def decode(code, at, relocs, rodata, rodata_at, base, start):
             mod, reg, rm, mem = modrm(R, X, B, evex=True)
             if rm is None or X: raise Stop("a blend from memory")
             return p - at + 1, f".xpblendd {reg} {v} {rm} {imm(1)}"
-        if mm != 1 or pp == 3: raise Stop("a VEX instruction this does not know")
+        # (38 and 3A are the older encoding's ways into its other maps; VEX names the map itself, and has no instruction there)
+        if mm != 1 or pp == 3 or opc in (0x38, 0x3A): raise Stop("a VEX instruction this does not know")
         text = xmm_form({0: False, 1: True, 2: "f3"}[pp], opc, W, R, X, B, v)
         return p - at, text
     q = at

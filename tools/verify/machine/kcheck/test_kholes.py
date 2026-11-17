@@ -24,7 +24,9 @@ were shown then are refused now; these are the copies.
    and rdx is not (after a call, whose callee is free in what it leaves there) was shown to meet its public
    contract.
 And one of that day's own changes, caught the same way before it was shipped: counting down (`dec`) and
-`test` were taken to set the flags as a compare does; a jump on the order after them is refused now."""
+`test` were taken to set the flags as a compare does; a jump on the order after them is refused now.
+And two things the decoder read that a processor refuses as illegal instructions (class Decoder): of a milder
+kind, since a function with them stops on a fault and computes nothing wrong; but it was shown to return."""
 import os, shutil, subprocess, sys, tempfile, unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE); sys.path.insert(0, os.path.join(HERE, "programs")); sys.path.insert(0, os.path.join(HERE, "..", "lang"))
@@ -157,6 +159,22 @@ class Data(unittest.TestCase):
             self.assertIn("blake3_servil_avx512_k32: NOT shown", r.stdout)
             self.assertIn("b3l_hashr: NOT shown", r.stdout)
         finally: shutil.rmtree(work)
+
+
+class Decoder(unittest.TestCase):
+    """Bytes the decoder read as instructions and a processor stops on (a fault for the one that is too long, an
+    illegal instruction for the others: seen on one, November 17): a function with them was shown to return."""
+    def decode(self, code): return kdecode.decode(bytes.fromhex(code), 0, None, b"", 0, 0, 0)
+
+    def test_an_instruction_is_at_most_fifteen_bytes(self):
+        self.assertEqual(self.decode("66" * 14 + "90"), (15, ".nop"))
+        with self.assertRaisesRegex(kdecode.Stop, "more than fifteen bytes"): self.decode("66" * 20 + "90")
+        with self.assertRaisesRegex(kdecode.Stop, "more than fifteen bytes"): self.decode("66" * 12 + "0f1f840000000000")
+
+    def test_vex_has_no_instruction_at_the_older_encodings_escapes(self):
+        self.assertEqual(self.decode("660f3800c1"), (5, ".xpshufb 0 0 1"))             # PSHUFB as SSSE3 writes it
+        for code in ("c5f93800c1", "c5f93a0ec105", "c4e1793800c1"):
+            with self.assertRaisesRegex(kdecode.Stop, "a VEX instruction this does not know"): self.decode(code)
 
 
 if __name__ == "__main__":

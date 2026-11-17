@@ -1644,12 +1644,18 @@ one bit at a time: each needs several instructions added or changed.
    each is an unknown of its own. (This one was not run on a processor: it needs a callee that leaves the
    two registers so.)
 
+And two of a milder kind, in the decoder: it read an instruction of more than fifteen bytes (a NOP after
+any number of prefixes), and a VEX instruction of map 1 with the opcode 38 or 3A (where VEX has none) as a
+shuffle of bytes or a blend. A processor stops on each (a fault; an illegal instruction: seen on one), so
+a function with them computes nothing wrong, but it was shown to return. Both are stopped by the decoder now.
+
 `test_kholes.py` holds the copies that were shown; each is refused. What found them was a question asked of
 each instruction while reading ("what if this register is the stack pointer?", "what else writes this
 row?", "who else writes there?", "are these two unknowns one?"), not a tool. One of the day's own changes
 was caught the same way before it shipped (counting down and `test` taken to set the flags as a compare
 does). **More of that reading is owed**: `kbyte.py`'s own parts, the decoder's forms and the specification's
-reader have not been read so, and the audits do not reach faults of this kind.
+reader have not been read so (the decoder was, after this was first written: the two above came of it), and
+the audits do not reach faults of this kind.
 
 **One verifier of functions.** The five kernels of the hash (the two one-block kernels; K32, P32 and P16
 for every number of blocks) are verified by `kfn.py`, as the nine functions of `hash.ode` are. `kloop.py`
