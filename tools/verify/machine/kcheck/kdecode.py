@@ -43,15 +43,25 @@ class Elf:
         if b[:4] != b"\x7fELF" or b[4] != 2 or b[5] != 1 or struct.unpack_from("<H", b, 18)[0] != 62: raise Stop("not a little-endian x86-64 ELF object")
         self.type, = struct.unpack_from("<H", b, 16)            # 1: an object to be linked; 2: an executable; 3: a shared object
         shoff, = struct.unpack_from("<Q", b, 40); shentsize, shnum, shstrndx = struct.unpack_from("<HHH", b, 58)
+        # the file is its maker's: every table it points at must lie within it, or the reading stops. (Until
+        # November 17, 2026 a section that named bytes past the file's end, or a name that ran past its table,
+        # was read as whatever the slices happened to give: a maker could choose what the reader saw.)
+        if shnum and (shentsize < 64 or shoff + shentsize * shnum > len(b)): raise Stop("a table of sections outside the file")
+        if not 0 <= shstrndx < shnum: raise Stop("no table of the sections' names")
         self.sections = []
         for i in range(shnum):
-            name, typ, flags, addr, off, size, link, info, align, entsize = struct.unpack_from("<IIQQQQIIQQ", b, shoff + i * shentsize)
+            name, typ, flags, addr, off, size, link, info, align, entsize = struct.unpack_from("IIQQQQIIQQ", b, shoff + i * shentsize)
+            if off + size > len(b) or (typ in (2, 11, 4) and entsize not in (0, 24)): raise Stop(f"its section {i} lies outside the file, or holds other than whole entries")
             self.sections.append(dict(name=name, type=typ, off=off, size=size, link=link, info=info, align=align, flags=flags))
         names = self.sections[shstrndx]
-        cstr = lambda sec, at: b[sec["off"] + at:b.index(b"\0", sec["off"] + at)].decode()
+        def cstr(sec, at):
+            end = b.find(b"\0", sec["off"] + at, sec["off"] + sec["size"])
+            if at < 0 or at >= sec["size"] or end < 0: raise Stop("a name outside the table of names")
+            return b[sec["off"] + at:end].decode()
         for s in self.sections: s["name"] = cstr(names, s["name"])
         self.symbols = []
         for symtab in [s for s in self.sections if s["type"] in ((2,) if self.type == 1 else (2, 11))]:    # .symtab; in a linked file .dynsym too
+            if not 0 <= symtab["link"] < len(self.sections): raise Stop("a table of names that is not one")
             strtab = self.sections[symtab["link"]]
             for i in range(symtab["size"] // 24):
                 name, info, other, shndx, value, size = struct.unpack_from("<IBBHQQ", b, symtab["off"] + 24 * i)
@@ -59,10 +69,11 @@ class Elf:
         self.index = {s["name"]: i for i, s in enumerate(self.sections)}
         phoff, = struct.unpack_from("<Q", b, 32); phentsize, phnum = struct.unpack_from("<HH", b, 54)
         self.segments = []
+        if phnum and (phentsize < 56 or phoff + phentsize * phnum > len(b)): raise Stop("a table of segments outside the file")
         for i in range(phnum if self.type != 1 else 0):
-            typ, flags, off, vaddr, paddr, filesz, memsz, align = struct.unpack_from("<IIQQQQQQ", b, phoff + i * phentsize)
-            self.segments.append(dict(type=typ, flags=flags, off=off, vaddr=vaddr, filesz=filesz, memsz=memsz))
-
+            typ, flags, off, vaddr, paddr, filesz, memsz, align = struct.unpack_from("IIQQQQQQ", b, phoff + i * phentsize)
+            if off + filesz > len(b): raise Stop("a segment outside the file")
+            self.segments.append(dict(type=typ, flags=flags, off=off, vaddr=vaddr, filesz=filesz, memsz=memsz, align=align))
     def bytes_of(self, name):
         if name not in self.index: return b""                 # an object with no read-only data
         s = self.sections[self.index[name]]

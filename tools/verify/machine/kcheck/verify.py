@@ -68,7 +68,14 @@ def main():
     elif "specification" in proof["files"]: text, whose = proof["files"]["specification"].decode(), "the one the file carries (given by its maker: read it)"
     else: print("no specification: the file carries none, and none is given"); return 2
     hash_file = "b3l_hashr" in proof["at"]
-    public = contracts(text, set(proof["at"]) if not hash_file else {"b3l_hashr"})
+    # every public contract of the reader's text, met or not: what the file's proof leaves out is printed
+    # too (until November 17, 2026 only those the proof spoke of were, and a check that said "NOT verified"
+    # for a left-out contract still exited 0)
+    named = {"b3l_hashr"} if hash_file else set(proof["at"])
+    if not hash_file:
+        import re as _re
+        named |= set(_re.findall(r"^contract (\w+)\(", text, _re.M))
+    public = contracts(text, named)
     print(f"1. What is shown, if the verification below says so. The specification: {whose}; {text.count(chr(10))} lines, BLAKE3 {kshow.b3(text.encode())}.")
     print("   Its definitions say what the words of these contracts mean (LANGUAGE.md: what a specification's text and a contract mean).\n")
     for c in public: print("   " + c.replace("\n", "\n   ") + "\n")

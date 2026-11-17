@@ -62,7 +62,10 @@ def main():
     # ... and lemmas about the specification's definitions, which the verifier shows before it uses them
     inner = "".join("\n" + body.decode() for name, body in sorted(proof["files"].items()) if name.endswith((".inner", ".lemmas")))
     public = set(ode.Spec(text).contracts)
-    spec = ode.with_proof(text, inner) if inner else ode.Spec(text)
+    try:
+        spec = ode.with_proof(text, inner) if inner else ode.Spec(text)
+    except ode.Err as err:
+        print(f"{os.path.basename(path)}: NOT shown: the proof's part cannot be read with the specification: {err}"); return 1
     wanted = [name for name in spec.contracts if name in proof["at"]]
     if not wanted: print("the specification has a contract for no function the proof speaks of"); return 1
     # Which functions are verified is the proof's to say (`at`), and the proof is not trusted: a public contract
@@ -164,6 +167,10 @@ def main():
         except (kterms.Fail, ode.Err, KeyError, IndexError, TypeError, AttributeError, RecursionError) as err:
             ends, ends_line = ([], [f"not followed ({type(err).__name__})"]), f"whether its definitions come to an end is NOT shown: {err}"
         finally: klin.Facts.PROOFS = None
+    # a public contract of the specification that the proof leaves out is said. It fails the file where the
+    # file has a function of that name (or names none, so that cannot be told); where it has none, the rest
+    # stands and the first page of verify.py prints the contract too. (Until November 17, 2026 that page
+    # printed only the contracts the proof spoke of.)
     for name in left_out:
         print(f"  {name}: NOT verified: the specification has a contract for it and the proof speaks of no such function" + (", and this file names no functions: whether it holds one for that contract cannot be told" if nameless else ", and THIS FILE HAS A FUNCTION OF THAT NAME" if name in in_file else " (this file has none of that name)"))
     if in_file: failed += len(in_file)

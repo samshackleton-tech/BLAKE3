@@ -63,22 +63,25 @@ file; the verifier uses them and trusts none of them. A wrong one makes the veri
   programs (they load more than they use). None of them searches for anything. They hold: how the file's bytes are read as instructions; what
   each instruction does; how a specification is read and worked out; how a proof of arithmetic is added up.
   They are tested and audited, **not proved**: that is the weakest part of this, and the work under way is
-  to make that list short enough to read (`DESIGN.md`, "Where it stands"). On November 17, 2026 four faults
+  to make that list short enough to read (`DESIGN.md`, "Where it stands"). On November 17, 2026 six faults
   were found in them by reading, each one a way to have a wrong file shown (a function that wrote below its
   argument; a kernel that read its constants from an address of the maker's choosing; a register taken to
-  hold what a call had written over; two unknown registers taken for one). They are closed, and the files
-  that were wrongly shown are kept as tests; the audits, which change one bit at a time, could not have
-  found any of them (`README.md`, last section). There may be more: not all of these files have been read
-  that way yet.
+  hold what a call had written over; two unknown registers taken for one; a layout in the proof that let
+  writes run past a caller's room or deleted a path from checking; a sequence whose value changed shape
+  being named by its first value). They are closed, and the files that were wrongly shown are kept as tests;
+  the audits, which change one bit at a time, could not have found any of them (`README.md`, last section).
+  There may be more: the reading is finished, but reading is not a proof.
 - **Python**, and that the processor does what its manual says.
 - Nothing else. Not the compiler that made the binary, not the assembler, not the linker, not the source,
   not the prover that found the proof: the verifier reads the bytes that will run.
 
 What the audits are (`README.md`, "What has been done to find it wrong"): every single bit of every
-function's code is changed in turn, 353,192 changes; each change the verifier still accepts (18,069) is
-run on a processor against an independent implementation. None accepted so far behaves otherwise. The
-lemmas have an audit of their own: each changed in one place, and each specification they speak of
-changed in one place, judged by the specification worked out on numbers. That is evidence, not proof.
+function's code is changed in turn; in the last whole run, of the state before the last two holes were
+closed, 355,704 changes across the audit's steps, 18,278 accepted, each run on a processor against an
+independent implementation, none behaving otherwise. The lemmas have an audit of their own: each changed
+in one place, and each specification they speak of changed in one place, judged by the specification
+worked out on numbers. `gate.py` runs the adversarial copies and every shipped file in five minutes
+before a merge or a post; the whole sweep is a soak. That is evidence, not proof.
 
 ## If it says NOT shown
 

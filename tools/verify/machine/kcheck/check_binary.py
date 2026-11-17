@@ -60,6 +60,16 @@ def take(proof, spec_path):
     return kshow.b3(mine.encode()) == proof.get("spec")
 
 
+def ring_of(edges):
+    """The functions that are called by what they call (a ring of two or more; a function that calls itself
+    is shown to end by the number its contract says decreases, kfn.py: lessens). Empty where there is none."""
+    def reaches(start, want, seen):
+        if start == want: return True
+        if start in seen: return False
+        return any(reaches(n, want, seen | {start}) for n in edges.get(start, ()) if n != start)
+    return {name for symbol, callees in edges.items() for name in callees if name != symbol and reaches(name, symbol, set())}
+
+
 def ends(top="b3l_hashr"):
     """Do the definitions the public contract speaks through come to an end, on everything it allows? Shown by
     the lemmas the proof carries (`decreases`) and by kends.py (the lemmas' `requires` met from the contract
@@ -123,13 +133,16 @@ def main():
         if "--show-spec" in sys.argv:
             if "specification" not in proof["files"]: print("the file carries no specification"); return 1
             sys.stdout.write(proof["files"]["specification"].decode()); return 0
-        if option("--spec") is None and "specification" in proof["files"]:
-            same = take(proof, None)
-            text = proof["files"]["specification"]
-            print(f"the proof: {where}; the specification is the one the file carries ({text.count(10)} lines, BLAKE3 {kshow.b3(text)}): read it (--show-spec), for it is what is shown")
-        else:
-            same = take(proof, option("--spec") or os.path.join(HERE, "blake3.spec"))
-            print(f"the proof: {where}; the specification is the reader's, " + ("the one the maker had" if same else "NOT the one the maker had"))
+        try:
+            if option("--spec") is None and "specification" in proof["files"]:
+                same = take(proof, None)
+                text = proof["files"]["specification"]
+                print(f"the proof: {where}; the specification is the one the file carries ({text.count(10)} lines, BLAKE3 {kshow.b3(text)}): read it (--show-spec), for it is what is shown")
+            else:
+                same = take(proof, option("--spec") or os.path.join(HERE, "blake3.spec"))
+                print(f"the proof: {where}; the specification is the reader's, " + ("the one the maker had" if same else "NOT the one the maker had"))
+        except ode.Err as err:
+            print(f"{os.path.basename(path)}: NOT shown: the proof's part cannot be read with the specification: {err}"); return 1
         if top not in s.at:
             # no names in the file: the code is looked for by its bytes, and the proof says where each function is in it
             size, digest, begins = proof["code"]
@@ -145,6 +158,7 @@ def main():
     # every name the file gives a linker is verified too, called by `top` or not (kdecode.linkable)
     calls_seen = {top}
     done, todo, covered, failed, count, t_all, searched = {}, [top] + sorted(n for n in offered if n != top), [], 0, 0, time.time(), []
+    edges = {}          # each function checked and what it calls: for the ring check below
     while todo:
         symbol = todo.pop(0)
         if symbol in done: continue
@@ -177,9 +191,17 @@ def main():
         at = s.at[start]
         if (at, at + rows[-1][1] - rows[0][0]) not in covered: covered.append((at, at + rows[-1][1] - rows[0][0])); count += len(rows)      # two ways into one body: once
         calls = sorted({i.split()[1] for _, _, i in rows if i.split()[0] == ".call"})
+        edges[symbol] = calls
         if maintain: print(f"  {symbol:<42} at {s.lo + s.at[symbol]:#8x}  {len(rows):>4} instructions  {1000 * (time.time() - t0):7.1f} ms  {what}")
         calls_seen.update(calls); todo += [c for c in calls if c not in done]
     inside = bytearray(len(s.image))
+    # no function is called by what it calls, except a function that calls itself over a number its contract
+    # says decreases (kfn.py: lessens). (Until November 17, 2026 only programs/check_file.py asked this: a ring
+    # of two could pass, each contract's stack allowing the other's, and nothing showed the calls come to an end.)
+    round_ = sorted(ring_of(edges))
+    if round_:
+        failed += 1
+        print(f"  a ring of calls: {' calls '.join(round_)}, and one of them calls itself around: nothing shows such calls come to an end")
     for a, z in covered: inside[a:z] = b"\1" * (z - a)
     rest = [i for a, z, x in s.parts if x for i in range(a, z) if not inside[i]]
     zeros = sum(1 for i in rest if s.image[i] == 0)

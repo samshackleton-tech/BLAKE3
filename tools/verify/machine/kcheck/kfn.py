@@ -682,6 +682,11 @@ class Machine:
             if one_block(name) is not None: used = self.call_kernel(A, name, one_block(name))
             else: used = self.call_contract(A, name, c)
         except Err as e: raise Fail(f"a call of {name}: {e}")
+        # the facts a callee's contract adds cannot make the path's facts hold falsely together: such a path
+        # would be dropped as no path, and what the code did after the call never checked (November 17, 2026:
+        # it was, until a caller that had been shown the contract of a callee with contradictory `ensures`)
+        if not self.facts.consistent():
+            raise Fail(f"a call of {name}: what it ensures, with what it is given here, cannot all hold: its contract says nothing of this path")
         self.low = min(self.low, sp - used)
         self.left()
 

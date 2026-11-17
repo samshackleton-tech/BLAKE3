@@ -481,10 +481,43 @@ class Spec:
         for name, l in self.lemmas.items():
             if (name in self.seqs) != (l["index"] is not None) or (name not in self.seqs and name not in self.fns): raise Err(f"lemma {name}: of no definition, or a sequence's lemma without its place")
             if len(l["params"]) != len((self.seqs.get(name) or self.fns.get(name))[0]): raise Err(f"lemma {name}: not the definition's parameters")
+        self.check_layouts()
         self.fuel = None        # on symbols: the applications that may still be followed before a result is given a name instead
         self.deep = 0
         numbers = Numbers()
         self.consts = {k: self.eval(numbers, e, {}) for k, e in self.consts.items()}
+
+    def size_of_kind(self, kind, seen=frozenset()):
+        """The bytes a thing of this kind takes up, if that is a plain number. (A `layout`'s fields must be of
+        kinds with plain sizes: where each lies is what a `layout` says.)"""
+        if kind == "cv": return 32
+        if kind == "block": return 64
+        if kind in ("number", "byte"): return 8
+        parts = kind.split()
+        if len(parts) == 2 and parts[1] == "bytes" and parts[0].isdigit(): return int(parts[0])
+        if kind in self.kinds and kind not in seen: return self.size_of_kind(self.kinds[kind], seen | {kind})
+        if kind in self.layouts and kind not in seen: return self.layouts[kind]["size"]
+        raise Err(f"a kind whose size is not a plain number: {kind}")
+
+    def check_layouts(self):
+        """A `layout`'s fields lie within its size, do not overlap, and their `below` is at least 1. (A layout
+        comes with the proof, which is not trusted: until November 17, 2026 a layout whose field ran past its
+        size let a verified function write past what its caller had room for, and one with `below 0` put facts
+        that cannot hold into a caller, whose path was then dropped as no path. `node120` and `keyed` are the
+        layouts the hash's proof carries.)"""
+        for name, lay in self.layouts.items():
+            where = {}
+            for field, f in lay["fields"].items():
+                whole = self.size_of_kind(f["kind"]) * (f["count"] or 1)
+                if f["at"] < 0 or f["at"] + whole > lay["size"]:
+                    raise Err(f"layout {name}: its {field} ({f['count'] or 1} of {f['kind']}, at {f['at']}) does not lie within its {lay['size']} bytes")
+                if f["below"] is not None and f["below"] < 1:
+                    raise Err(f"layout {name}: its {field} is below {f['below']}: no number is, so no value of the layout is")
+                if f["count"] is not None and f["count"] < 1:
+                    raise Err(f"layout {name}: its {field} holds nothing")
+                for o in range(f["at"], f["at"] + whole):
+                    if o in where: raise Err(f"layout {name}: its {field} and its {where[o]} have a byte in common")
+                    where[o] = field
 
     def tick(self):
         """A `while` loop that does not end is an error of the text, not a wait."""

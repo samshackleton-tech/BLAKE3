@@ -352,9 +352,33 @@ class Symbols:
             result = spec.run_machine(self, m, dict(env))
         except Err:
             self.unrun.append((instance, first, {p: env[p] for p in m["params"]}))
-            result = self.like(first, f"{name}#{self.T.mk('machine', *instance)}")
+            named = self.like(first, f"{name}#{self.T.mk('machine', *instance)}")
+            if m["loop"][0] == "for":
+                # the state's shape must be shown to stay over a turn: the name says the result is of the shape
+                # of the first state, and a sequence whose value grows each turn would be named too small
+                # (November 17, 2026: `h[0] = [0]  h[b + 1] = h[b] ++ [0]` was taken for a list of one)
+                try:
+                    env2 = dict(env)
+                    env2[m["states"][0]] = named
+                    env2[m["loop"][1]] = plain(sym(f"{name} turn"))
+                    after = spec.turn(self, name, env2)
+                    if self.shape(after) != self.shape(first):
+                        raise Err(f"the state of {name} is not shown to stay of one shape over a turn: its value cannot be named here")
+                except Err as e:
+                    raise Err(f"{name} cannot be run here, and its turn cannot be followed on names: {e}")
+            result = named
         self.memo[instance] = result
         return result
+
+    def shape(self, v):
+        """The shape of a value, leaves aside: what two values of the same shape are."""
+        if isinstance(v, Word): return "w"
+        if isinstance(v, bool): return "b"
+        if isinstance(v, (int, Lin)): return "n"
+        if isinstance(v, list): return tuple(self.shape(x) for x in v)
+        if isinstance(v, dict): return tuple((k, self.shape(x)) for k, x in sorted(v.items()))
+        if isinstance(v, Counter): return ("counter", self.shape(v.lo), self.shape(v.hi))
+        return ("?", type(v).__name__)
 
     def kept(self, name, args, body):
         """A definition applied to plain words (and plain numbers) only: what it gives does not depend on

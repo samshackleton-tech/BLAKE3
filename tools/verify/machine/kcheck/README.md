@@ -1607,13 +1607,14 @@ Not yet done of what Sam asked the same day: the names a maker chose taken out o
 a glossary beside it; a reader's own list of names; file names and the contract's name by the same rule; a
 comment's outside documents given by their hashes.
 
-## One verifier of functions; the kernels from Ode source; four holes found by reading (November 17)
+## One verifier of functions; the kernels from Ode source; six holes found by reading (November 17)
 
-**Four holes, each "shown, of something false".** The first two were found by reading `kfn.py` and the
-kernels' verifiers in order to merge them; the other two by reading `kfn.py`'s machine again with the
-question the first two had taught: what does this model take to be so that the processor does not? All four
-were in what a reader relied on until this day. None could have been found by the audits here, which change
-one bit at a time: each needs several instructions added or changed.
+**Six holes, each "shown, of something false".** The first two were found by reading `kfn.py` and the
+kernels' verifiers in order to merge them; the next two by reading `kfn.py`'s machine again with the
+question the first two had taught: what does this model take to be so that the processor does not? The last
+two came from finishing that reading in the proof's part and the specification's sequences. All six were in
+what a reader relied on until this day. None could have been found by the audits here, which change one bit
+at a time: each needs several instructions, a contract, a layout or a specification changed.
 
 1. *The stack pointer.* `kfn.py`'s machine (which is `kbyte.py`'s too) let `mov`, `lea` and `pop` put
    anything in the stack pointer, and then took a push to go to the function's own frame. A copy of the
@@ -1644,6 +1645,20 @@ one bit at a time: each needs several instructions added or changed.
    each is an unknown of its own. (This one was not run on a processor: it needs a callee that leaves the
    two registers so.)
 
+5. *The proof's layouts, and paths a proof could delete.* A layout comes with the proof, which Bob does
+   not read; nothing checked where its fields lay, that they did not overlap, or that `below` was at least
+   1. `layout tiny 8 { a: 32 bytes at 0 }` let a callee's writes run past what its caller had room for;
+   two fields at one place were two entries of the model's memory; and `layout impossible 8 { v: number at 0
+   below 0 }` put facts that cannot all hold into a caller, whose path was then dropped as no path and the
+   code after its call never checked. The whole demonstration is kept with this test as `backdoor.o`: the
+   real hash code with one branch added, shown against the reader's own `blake3.spec` and wrong on a
+   processor for every message of a byte or more. Layouts are read strictly now, and after a call the
+   caller's facts must still be able to hold together.
+6. *A sequence whose value changes shape each turn.* What cannot be run was named by the shape of its
+   first value: `sequence grow(n) { h[0] = [0]  h[b + 1] = h[b] ++ [0]  for b in 0..n }` made
+   `len(grow(n))` one, and a function returning the constant one was shown. A sequence's state must now be
+   shown to keep one shape over a turn before it is named.
+
 And two of a milder kind, in the decoder: it read an instruction of more than fifteen bytes (a NOP after
 any number of prefixes), and a VEX instruction of map 1 with the opcode 38 or 3A (where VEX has none) as a
 shuffle of bytes or a blend. A processor stops on each (a fault; an illegal instruction: seen on one), so
@@ -1653,9 +1668,10 @@ a function with them computes nothing wrong, but it was shown to return. Both ar
 each instruction while reading ("what if this register is the stack pointer?", "what else writes this
 row?", "who else writes there?", "are these two unknowns one?"), not a tool. One of the day's own changes
 was caught the same way before it shipped (counting down and `test` taken to set the flags as a compare
-does). **More of that reading is owed**: `kbyte.py`'s own parts, the decoder's forms and the specification's
-reader have not been read so (the decoder was, after this was first written: the two above came of it), and
-the audits do not reach faults of this kind.
+does). The same reading was then finished through the files a verification loads; it also yielded smaller
+closures now in the drivers (a ring of calls between distinct functions is refused, a public contract the
+proof leaves out is printed and said (and fails the file where it has such a function), and tables a file points at outside itself are not read). The audits do
+not reach faults of this kind, and the reading is evidence, not a proof that no seventh hole is there.
 
 **One verifier of functions.** The five kernels of the hash (the two one-block kernels; K32, P32 and P16
 for every number of blocks) are verified by `kfn.py`, as the nine functions of `hash.ode` are. `kloop.py`
@@ -1715,11 +1731,12 @@ So for the file shipped: fourteen functions, each from Ode source (nine in the w
 the instruction layer), one verifier, and for the loops a proof the compiler writes.
 
 **Not yet so.**
-- The whole audit of this state (every single-bit change of every function, the processor judging what is
-  accepted) was started on November 17 and its numbers are not in this page yet. A first run of the kernels'
-  part through `kfn.py`: the one-block kernels 3,016 and 3,528 changes, 49 and 116 accepted; P16 22,144
-  changes, 214 accepted (213 by the earlier verifier); K32 35,824 changes, 1,754 accepted (1,752); every
-  accepted change ran as BLAKE3 on the processor.
+- The whole audit of the state before holes 5 and 6 were closed (355,704 single-bit changes across its
+  steps, 18,278 accepted, 0 with no verdict; every accepted change ran as its specification on the
+  processor) is in `audit/`. It could not see those holes. `gate.py` is the five-minute gate Sam asked
+  for before a merge or a post: the adversarial copies, every shipped file verified, the ELF outside code
+  and proof flipped bit by bit, the lemma tests, and a positive control that `backdoor.o` is refused. The
+  exhaustive sweep remains a soak, not a gate.
 - The place's language is three forms; a loop of a function of `hash.ode` whose count is not fixed would
   need more (none has one).
 - In the instruction layer the programmer writes the place by hand. A loop written in Ode's word-level

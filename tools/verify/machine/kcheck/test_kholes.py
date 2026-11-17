@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Four holes found November 17, 2026 by reading kfn.py and the kernels' verifiers (to merge them, and then
-again with the question the first two had taught); each was "shown, of something false". The copies that
-were shown then are refused now; these are the copies.
+"""Six holes found by reading (four on November 17, 2026 in kfn.py and the kernels' verifiers, to merge them, and
+then again with the question the first two had taught; two more that day in the afternoon, in the proof's part
+and the specification's sequences); each was "shown, of something false". The copies that were shown then are
+refused now; these are the copies.
 
 1. The stack pointer (kfn.py's machine, which is kbyte.py's too). `mov rsp, rdi`, `lea rsp, [rdi]` and
    `pop rsp` put an argument's address in the stack pointer, and the machine then took a push to go to the
@@ -23,10 +24,28 @@ were shown then are refused now; these are the copies.
    which they differ was never run. A copy of ode_unframe that writes a byte below `out` where rcx is zero
    and rdx is not (after a call, whose callee is free in what it leaves there) was shown to meet its public
    contract.
+5. The proof's `layout`s, and the paths a proof could delete (ode.py, kfn.py, kbyte.py). A layout comes with
+   the proof, which Bob does not read; nothing checked where its fields lay, that they did not overlap, or
+   that `below` was at least 1. `layout tiny 8 { a: 32 bytes at 0 }` let a verified function write past what
+   its caller had room for (saved registers, the return address); `layout alias 32 { a: number at 0, b: cv at 0 }`
+   gave two fields of one place two entries of the model's memory; and `layout impossible 8 { v: number at 0
+   below 0 }` - no value of it is - put facts that cannot all hold into a caller, whose path was then dropped
+   as no path and its code after the call never checked. `backdoor.o` here is the whole of it: the real
+   b3hashr.o code with one branch added, which for every message of a byte or more calls a one-instruction
+   callee whose `writes p` is that layout and then writes 32 zero bytes to `out` - it was shown to meet the
+   public contract of the reader's own blake3.spec (exit 0), and on a processor it fails the first official
+   vector (blake3-reports/p16-20261113/hole-layout).
+6. A `sequence` whose value changes shape each turn (kspec.py). What cannot be run was named by the shape of
+   its first value: `sequence grow(n) { h[0] = [0]  h[b + 1] = h[b] ++ [0]  for b in 0..n }` made
+   `len(grow(n))` 1, and a function returning the constant 1 was shown.
+
 And one of that day's own changes, caught the same way before it was shipped: counting down (`dec`) and
 `test` were taken to set the flags as a compare does; a jump on the order after them is refused now.
 And two things the decoder read that a processor refuses as illegal instructions (class Decoder): of a milder
-kind, since a function with them stops on a fault and computes nothing wrong; but it was shown to return."""
+kind, since a function with them stops on a fault and computes nothing wrong; but it was shown to return.
+And two more of the file's reading, milder still: a table the file points at outside itself was read as
+whatever the slices gave, and (found with 5) a public contract the proof left out was not printed by the
+first page of verify.py, and the check said "NOT verified" of it while exiting 0."""
 import os, shutil, subprocess, sys, tempfile, unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE); sys.path.insert(0, os.path.join(HERE, "programs")); sys.path.insert(0, os.path.join(HERE, "..", "lang"))
@@ -175,6 +194,102 @@ class Decoder(unittest.TestCase):
         self.assertEqual(self.decode("660f3800c1"), (5, ".xpshufb 0 0 1"))             # PSHUFB as SSSE3 writes it
         for code in ("c5f93800c1", "c5f93a0ec105", "c4e1793800c1"):
             with self.assertRaisesRegex(kdecode.Stop, "a VEX instruction this does not know"): self.decode(code)
+
+
+class Proof(unittest.TestCase):
+    """What an untrusted proof's `layout` can be made to say (hole 5), and the file that was shown by it."""
+
+    def read(self, inner):
+        with open(os.path.join(HERE, "blake3.spec")) as f: text = f.read()
+        return ode.with_proof(text, inner)
+
+    def test_where_a_layouts_fields_lie_is_checked(self):
+        for layout, why in (("layout tiny 8 { a: 32 bytes at 0 }", "does not lie within its 8 bytes"),
+                            ("layout alias 32 { a: number at 0, b: cv at 0 }", "have a byte in common")):
+            with self.subTest(layout):
+                with self.assertRaisesRegex(ode.Err, why): self.read(layout)
+
+    def test_a_layout_below_zero_has_no_value(self):
+        with self.assertRaisesRegex(ode.Err, "no number is"): self.read("layout impossible 8 { v: number at 0 below 0 }")
+
+    def test_the_file_that_was_shown_by_it_is_refused(self):
+        """backdoor.o: the real b3hashr.o code with one branch added (hole 5's whole demonstration: it was
+        shown to meet the public contract of the reader's own blake3.spec, and on a processor it fails the
+        first official vector). The layout it carries is now refused when the proof is read."""
+        import subprocess
+        r = subprocess.run([sys.executable, os.path.join(HERE, "check_binary.py"), os.path.join(HERE, "backdoor.o"), "--spec", os.path.join(HERE, "blake3.spec")], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 1, r.stdout[-400:])
+        self.assertIn("NOT shown: the proof's part cannot be read", r.stdout)
+        self.assertIn("below 0", r.stdout)
+
+    def test_a_public_contract_the_proof_leaves_out_is_printed_and_said(self):
+        """(Found with hole 5.) A specification the reader brings with a contract for a function this file
+        does not have: the first page of verify.py prints it and the check says NOT verified of it, while
+        the functions the file does have stand. (Until November 17, 2026 that page printed only the
+        contracts the proof spoke of.) Where the file has such a function, programs/test_files.py holds
+        that the file is NOT shown."""
+        import subprocess, tempfile
+        with open(os.path.join(HERE, "programs", "frame", "odeframe.o"), "rb") as f: pass
+        frame = os.path.join(HERE, "programs", "frame", "odeframe.o")
+        with open(os.path.join(HERE, "programs", "frame", "frame.spec")) as f: spec = f.read()
+        extra = spec + "\ncontract ode_absent(out: 32 bytes, n: number) {\n    requires no_overlap(out)\n    returns n\n    stack 0\n}\n"
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "two.spec")
+            with open(path, "w") as f: f.write(extra)
+            r = subprocess.run([sys.executable, os.path.join(HERE, "verify.py"), frame, path], capture_output=True, text=True)
+            self.assertEqual(r.returncode, 0, r.stdout[-400:])
+            self.assertIn("ode_absent: NOT verified", r.stdout)
+            self.assertIn("contract ode_absent", r.stdout)
+            self.assertIn("(this file has none of that name)", r.stdout)
+
+    def test_a_ring_of_calls_is_refused(self):
+        """(Found with hole 5's reading.) Two functions that call one another: until November 17, 2026 nothing
+        in check_binary.py asked that the calls come to an end (only programs/check_file.py did). Each
+        function's own check passes (each call is taken by the other's contract, its stack covered: a ring of
+        constant stacks cannot pass, but one whose stack grows with an argument can, and nothing bound it);
+        the ring is refused by the driver. (For the two functions themselves, on a processor, see
+        blake3-reports/p16-20261113/hole-layout/ring.out: they run for ever.)"""
+        import check_binary
+        self.assertEqual(check_binary.ring_of({"a": ["b"], "b": ["a"]}), {"a", "b"})
+        self.assertEqual(check_binary.ring_of({"a": ["b"], "b": ["c"], "c": ["a"]}), {"a", "b", "c"})
+        self.assertEqual(check_binary.ring_of({"a": ["a"], "b": ["c"], "c": ["b"]}), {"b", "c"})   # a self-call is lessens' to show
+        self.assertEqual(check_binary.ring_of({"a": ["b", "c"], "b": [], "c": []}), set())
+
+    def test_a_sequence_whose_value_changes_shape_is_not_named_by_its_first(self):
+        """Hole 6: a sequence that grows a place each turn was named by the shape of its first value, so
+        `len(grow(n))` was taken for 1 and a function returning the constant 1 was shown."""
+        import kfn, kspec, kterms
+        spec = ode.Spec("""sequence grow(n) {
+ h[0] = [0]
+ h[b + 1] = h[b] ++ [0]
+ for b in 0..n
+}
+contract demo(n: number) {
+ returns len(grow(n))
+ stack 0
+}
+""")
+        self.assertEqual(spec.call(ode.Numbers(), "grow", 2), [0, 0, 0])
+        kspec.SPEC = spec
+        kfn.CONTRACTS.clear()
+        rows = [(kfn.BASE, kfn.BASE + 5, ".mov 32 (.reg .rax) (.imm 0x1)"), (kfn.BASE + 5, kfn.BASE + 6, ".ret")]
+        try:
+            kfn.check(rows, "demo", symbol="demo")
+            self.fail("the shape-changing sequence was named by its first value")
+        except kcheck.Fail as refused:
+            self.assertIn("stay of one shape", str(refused))
+        finally:
+            import kspec as k, kfn as f
+            k.SPEC = ode.load(); f.CONTRACTS.clear()
+
+    def test_a_table_the_file_points_at_outside_itself_is_not_read(self):
+        """(Found with hole 5's reading.) A section header naming bytes past the file's end was read as
+        whatever the slices gave."""
+        with open(os.path.join(HERE, "b3hashr.o"), "rb") as f: b = bytearray(f.read())
+        import struct
+        shoff, = struct.unpack_from("<Q", b, 40)
+        struct.pack_into("<Q", b, shoff + 24, 1 << 40)          # the first section's offset, past the file
+        with self.assertRaises(kdecode.Stop): kdecode.Elf(bytes(b))
 
 
 if __name__ == "__main__":

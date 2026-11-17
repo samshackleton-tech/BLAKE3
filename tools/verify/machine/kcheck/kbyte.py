@@ -526,6 +526,10 @@ class Machine(kfn.Machine):
         except ode.Fails as e: raise Fail(f"a call of {name}: its contract speaks of something the specification gives no value (it fails with {e.reason})")
         except Err as e: raise Fail(f"a call of {name}: {e}")
         finally: self.calling = False
+        # as kfn.py: the facts a callee's contract adds cannot make the path's facts hold falsely together
+        # (a path so made would be dropped as no path, and what the code did after the call never checked)
+        if not self.facts.consistent():
+            raise Fail(f"a call of {name}: what it ensures, with what it is given here, cannot all hold: its contract says nothing of this path")
         CALLED.add(name)
         self.low = min(self.low, sp - used)
         self.left()                                         # (kfn.py: each register a callee may change holds an unknown of its own)
