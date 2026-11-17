@@ -1,5 +1,10 @@
 # The language and its prover: what they are for
 
+**Historical (the Lean experiments of November 11 to 14, 2026).** The current design is `DESIGN.md` in the
+Ode repository (`samshackleton-tech/ode`), which carries on the decisions here that still bind: the coder
+decides and can predict; memory in boundaries, lines and pages with nothing allocated; calls between Ode
+functions; pinning the blame; a contract must be able to hold.
+
 Decisions of Sam Shackleton's, November 11, 2026, written down for whoever works on this next. The
 state of the code is in `../README.md`; this file is the intent. BLAKE3 #361 is the issue.
 

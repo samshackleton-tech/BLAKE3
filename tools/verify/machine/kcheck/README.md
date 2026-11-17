@@ -1,5 +1,9 @@
 # kcheck: a specification, a binary, and a verifier a reader runs (a trial, November 14 and 15, 2026)
 
+**Moved, November 17, 2026.** Ode is a project of its own, and BLAKE3 is its first example. This work
+continues in the Ode repository (`samshackleton-tech/ode`, private for now), from this branch's commit
+`dca7275f`. This folder stays as it was at that commit; its design page there is `DESIGN.md` at the root.
+
 **To verify a shipped binary yourself: `VERIFY.md`** (one page) and `python3 verify.py FILE`, which prints
 the contract you are asked to rely on, the verification, and the files that ran to reach it.
 
