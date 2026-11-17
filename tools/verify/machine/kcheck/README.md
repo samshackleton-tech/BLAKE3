@@ -1699,8 +1699,11 @@ BLAKE3-Servil's own assembly file and reads the same constants (`../wide/test_so
   (`proofs/k32.json`, `p32.json`, `p16.json`, now written by `kernels.py --proofs`).
 - `klink.py` takes the kernels' objects from the sources. `b3hashr.o` remade: every function at the same
   place, every instruction the same; 25 bytes of the kernels differ (the fields that say where their
-  constants are, which now lie elsewhere after the code); 17,984 bytes loaded, 18,176 before.
-  **Its speed has not been measured again.**
+  constants are, which now lie elsewhere after the code); 17,984 bytes loaded, 18,176 before. Its speed,
+  measured again under the bench lock on two machines, one run each (three rounds, the best taken): as the
+  file before, within about 1.5% either way. At 1 MiB 16.00 GiB/s on the Ryzen 7 9700X (97.1% of the
+  library in the same run; the file before 15.77 two days earlier) and 13.03 on the EPYC 9255 (97.8%; before
+  13.21); at 16 KiB 60% of the library on both, as before.
 
 So for the file shipped: fourteen functions, each from Ode source (nine in the word-level language, five in
 the instruction layer), one verifier, and for the loops a proof the compiler writes.
