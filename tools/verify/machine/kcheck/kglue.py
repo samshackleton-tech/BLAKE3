@@ -4,7 +4,7 @@
     python3 kglue.py merge|push|add OBJECT --find PROOF.json     the prover: finds a proof, writes it (not trusted)
     python3 kglue.py merge|push|add OBJECT --proof PROOF.json    the verifier
 
-A second trial of the way of kloop.py (November 15, 2026), on the hasher's stack of chaining values: the
+A second trial of the way of the kernels' loop verifier (November 15, 2026; kfn.py has that way now), on the hasher's stack of chaining values: the
 functions `push`, `merge` and `add` of lang/hasher.ode, as the Ode compiler and the assembler leave them
 (x86-64). `merge` loops over a stack in memory whose count is a symbol, and calls a one-block kernel; `add`
 calls `push` and `merge`. Lean checks the same three in about 100 seconds from proofs with lemmas by hand
@@ -30,7 +30,7 @@ THE VERIFIER runs the code from its entry and from each place, forward along eve
 No solver. A stack is a named unknown stack with some places replaced, and two are compared place by place;
 whether two places are one, or a place is below the count, is decided by adding linear facts up.
 
-The one-block kernels `merge` calls are checked against the same specification by kone.py, and what they ask
+The one-block kernels `merge` calls are checked against the same specification by kfn.py, and what they ask
 of their caller is read from there. WHAT IS NOT CHECKED HERE: that the merge machine is BLAKE3's tree
 (alg/Stack.lean proves that of the same machine: `merge_lazy`)."""
 import copy, json, os, sys, time
@@ -38,7 +38,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import kcheck, kdecode, kspec, ode
 from kcheck import Fail, num, signed
 from klin import Lin, Facts
-from kloop import value, lin
+from klin import value, lin
 from kspec import Stack, plain, byte, byte_or, byte_term
 
 BASE, DATA = 0x10000, 0x50000000
@@ -135,12 +135,12 @@ CONTRACTS, BY_SYMBOL = contracts()
 # The one-block kernels, by their contract: (cv, block, block_len, counter, flags): the 32 bytes at cv become
 # the first eight words of compress(cv, the 64 bytes at block, counter, block_len, flags); no stack but the
 # return address. Where each reads the length and the flags from is CHECKED against the kernels' bytes by
-# kone.py, and read from there: the AVX-512 kernel takes the low byte of each; the SSE4.1 kernel takes all of
+# kfn.py, and read from there: the AVX-512 kernel takes the low byte of each; the SSE4.1 kernel takes all of
 # EDX (and RDX must be below 2^32) and the low word of R8. (This file first said "the low byte" of both, by
 # hand: kglue_flip.py found 24 changes of merge's `mov rdx, 64` accepted that the processor told from the
 # machine. A contract taken on trust is a hole until it is checked.)
-import kone
-COMPRESS = {c["symbol"]: c for c in kone.CONTRACTS.values()}
+import kfn
+COMPRESS = {symbol: kfn.one_block(symbol) for symbol in ("blake3_servil_compress_in_place_avx512", "blake3_servil_compress_in_place_sse41")}
 
 
 # ---------------------------------------------------------------------------------------------------------

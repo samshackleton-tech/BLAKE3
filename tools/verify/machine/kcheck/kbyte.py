@@ -46,8 +46,8 @@ checked too, and that no function is called by what it calls.
 WHAT IS NOT CHECKED HERE: this verifier (Python, unverified)."""
 import itertools, os, re, sys, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import kcheck, kdecode, kfn, kspec, ode
-from kcheck import Fail
+import kdecode, kfn, kspec, kterms, ode
+from kterms import Fail
 from klin import Lin, Facts, sym, value, lin
 from kspec import plain, halved
 from ode import Err
@@ -366,8 +366,10 @@ class Algebra:
 # ---------------------------------------------------------------------------------------------------------
 # The machine: kfn.py's, with memory that is bytes.
 class Machine(kfn.Machine):
+    BOUNDARY = False                    # a program of bytes has no frame on a 64-byte boundary (kfn.py)
+
     def __init__(self, T, rows, c):
-        self.T, self.rows, self.contract = T, {a: (n, kcheck.parse(i)) for a, n, i in rows}, c
+        self.T, self.rows, self.contract = T, {a: (n, kterms.parse(i)) for a, n, i in rows}, c
         self.g = {r: ("q", r + " at entry") for r in G64}
         self.g["rsp"] = ("a", "frame", 0)
         self.x, self.flags, self.facts, self.conds, self.memo = {}, None, Facts(), {}, {}
@@ -1139,7 +1141,7 @@ def lemma_machine(spec, name, l):
     c.name, c.spec, c.args, c.kind, c.result = "lemma " + name, spec, [], {}, None
     c.writes, c.held, c.trace, c.stack, c.conditions = set(), set(), {p for p, k in l["params"] if k == "bytes"}, 0, []
     c.text = dict(asks=[], no_overlap=None, leaves=[], returns=None, spoils=[])
-    m = Machine(kcheck.Terms(), [], c)
+    m = Machine(kterms.Terms(), [], c)
     args = []
     for p, kind in l["params"]:
         if kind == "bytes":
@@ -1301,7 +1303,7 @@ def check(rows, spec, symbol, proof=""):
     """The function's instructions meet its contract. Raises Fail; returns a tally."""
     global FRESH
     FRESH = itertools.count()               # the names given on the way are the same every time: a proof of the arithmetic speaks of them
-    c, T = Contract(spec, symbol), kcheck.Terms()
+    c, T = Contract(spec, symbol), kterms.Terms()
     prove_lemmas(spec)                      # before any is used
     places = read_proof(proof, c)
     CALLED.clear()

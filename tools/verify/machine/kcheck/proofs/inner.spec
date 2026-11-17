@@ -35,6 +35,7 @@ layout keyed 40 { key: cv at 0, flags: byte at 32 }
 // P32 is the same code entered a little later, and gives every lane t; P16 has sixteen lanes.
 contract blake3_servil_avx512_k32(inputs: 32 inputs, n: number, key: cv, t: counter, packed: bytes flags start end length, out: 32 cvs) {
     requires n >= 1
+    requires no_overlap(inputs, key, out)
     ensures out[i] = chunk(key, t + i, flags, start, end, length, n, inputs[i]) for i in 0..32
     stack 4096
     needs avx512
@@ -42,6 +43,7 @@ contract blake3_servil_avx512_k32(inputs: 32 inputs, n: number, key: cv, t: coun
 
 contract blake3_servil_avx512_p32(inputs: 32 inputs, n: number, key: cv, t: counter, packed: bytes flags start end length, out: 32 cvs) {
     requires n >= 1
+    requires no_overlap(inputs, key, out)
     ensures out[i] = chunk(key, t, flags, start, end, length, n, inputs[i]) for i in 0..32
     stack 4096
     needs avx512
@@ -49,6 +51,7 @@ contract blake3_servil_avx512_p32(inputs: 32 inputs, n: number, key: cv, t: coun
 
 contract blake3_servil_avx512_p16(inputs: 16 inputs, n: number, key: cv, t: counter, packed: bytes flags start end length, out: 16 cvs) {
     requires n >= 1
+    requires no_overlap(inputs, key, out)
     ensures out[i] = chunk(key, t, flags, start, end, length, n, inputs[i]) for i in 0..16
     stack 4096
     needs avx512
@@ -69,6 +72,7 @@ contract blake3_servil_compress_in_place_avx512(h: cv, m: block, length: low byt
 }
 
 contract blake3_servil_compress_in_place_sse41(h: cv, m: block, length: word, t: counter, flags: low word) {
+    requires no_overlap(h, m)
     ensures h = compress(h, m, t, length, flags)
     stack 0
     needs sse41

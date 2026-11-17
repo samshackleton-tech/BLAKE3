@@ -12,7 +12,10 @@ import json, os, shutil, sys, tempfile, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
 sys.path.insert(0, HERE)
-import kcheck, kdecode, kfn, kglue, kloop, kone, kspec
+import kcheck, kdecode, kfn, kglue, kspec
+
+K32 = "blake3_servil_avx512_k32"
+WIDE = {"k32": (K32, K32), "p32": ("blake3_servil_avx512_p32", K32), "p16": ("blake3_servil_avx512_p16", "blake3_servil_avx512_p16")}      # (the name a caller uses, where its code begins)
 from test_kcheck import assemble
 
 BASE, DATA = 0x10000, 0x50000000
@@ -24,10 +27,11 @@ def proof(name):
 
 
 def kernel_any_count(folder, name):
-    rows, data, entry = kloop.load(os.path.join(folder, "lib32.o"), name)
+    symbol, start = WIDE[name]
+    rows, data, entry = kfn.load_from(os.path.join(folder, "lib32.o"), symbol, start)
     p, size = proof(name)
-    kloop.check(rows, data, name, p, entry)
-    return kloop.KERNELS[name]["symbol"], len(rows), size, "every number of blocks, every flag byte"
+    kfn.check(rows, None, proof=p, symbol=symbol, entry=entry, data=data)
+    return symbol, len(rows), size, "every number of blocks, every flag byte"
 
 
 def kernel_fixed(folder, name, obj):
@@ -39,9 +43,10 @@ def kernel_fixed(folder, name, obj):
 
 
 def one_block(folder, name):
-    rows = kone.load(os.path.join(folder, name + ".o"), name)
-    kone.check(rows, name)
-    return kone.CONTRACTS[name]["symbol"], len(rows), 0, "every chaining value, block and counter"
+    symbol = "blake3_servil_compress_in_place_" + name
+    rows = kfn.load(os.path.join(folder, name + ".o"), None, symbol)
+    kfn.check(rows, None, symbol=symbol)
+    return symbol, len(rows), 0, "every chaining value, block and counter"
 
 
 def stack_function(folder, name):
@@ -101,7 +106,7 @@ def main():
                 try:
                     symbol, n, size, what = check(folder)
                     print(f"  {symbol:<42} {n:>4} instructions  proof {size:>5} bytes  {1000 * (time.time() - t0):7.1f} ms  meets the specification for {what}")
-                    bodies[kloop.KERNELS[symbol[-3:]]["start"] if symbol[-3:] in ("k32", "p32") else symbol] = n; count += 1       # K32 and P32: two entries of one body
+                    bodies[K32 if symbol[-3:] in ("k32", "p32") else symbol] = n; count += 1       # K32 and P32: two entries of one body
                 except kcheck.Fail as e:
                     failed += 1; print(f"  NOT shown: {e}")
         try:

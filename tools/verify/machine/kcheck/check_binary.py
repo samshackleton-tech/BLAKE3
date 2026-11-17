@@ -29,11 +29,16 @@ to know.)"""
 import hashlib, json, os, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import kcheck, kdecode, kfn, klin, kloop, kone, kshow, kspec, ode, varith
+import kdecode, kfn, klin, kshow, kspec, kterms, ode, varith
 from kproof import carried
 
-WIDE = {kloop.KERNELS[n]["symbol"]: n for n in ("k32", "p32", "p16")}
-ONE = {c["symbol"]: n for n, c in kone.CONTRACTS.items()}
+# The kernels: verified by kfn.py as every other function is (since November 17, 2026; before, by verifiers of
+# their own). A wide kernel loops over the blocks of a chunk, any number of them: its proof names a place in
+# the loop (proofs/NAME.json). {the name a caller uses: (its proof's name, the name its code begins at)}: the
+# 32-lane kernel has two ways in.
+WIDE = {"blake3_servil_avx512_k32": ("k32", "blake3_servil_avx512_k32"), "blake3_servil_avx512_p32": ("p32", "blake3_servil_avx512_k32"),
+        "blake3_servil_avx512_p16": ("p16", "blake3_servil_avx512_p16")}
+ONE = ("blake3_servil_compress_in_place_avx512", "blake3_servil_compress_in_place_sse41")
 PLACES = {}             # the kernels' places, where a proof carried in the file gives them: {name: the JSON's text}
 ARITH = {}              # the arithmetic's proofs the file carries: {a function's name: the table's bytes (varith.py)}
 
@@ -41,16 +46,13 @@ ARITH = {}              # the arithmetic's proofs the file carries: {a function'
 def take(proof, spec_path):
     """The specification (the reader's file; or, with no path, the one the proof carries) with the proof's
     contracts of the functions inside; the kernels' places. True: it is the one the maker had."""
-    global WIDE, ONE
     if spec_path is None: mine = proof["files"]["specification"].decode()
     else:
         with open(spec_path) as f: mine = f.read()
     global MINE, LEMMAS
     MINE, LEMMAS = mine, proof["files"].get("proofs/blake3.lemmas", b"").decode()
     kspec.SPEC = ode.with_proof(mine, proof["files"]["proofs/inner.spec"].decode())
-    kone.CONTRACTS = kone.contracts(); kloop.KERNELS = kloop.kernels(); kfn.CONTRACTS.clear()
-    WIDE = {kloop.KERNELS[n]["symbol"]: n for n in ("k32", "p32", "p16")}
-    ONE = {c["symbol"]: n for n, c in kone.CONTRACTS.items()}
+    kfn.CONTRACTS.clear()
     ARITH.clear()
     for name, text in proof["files"].items():
         if name.endswith(".json"): PLACES[os.path.basename(name)[:-5]] = text.decode()
@@ -70,33 +72,28 @@ def ends(top="b3l_hashr"):
         klin.Facts.PROOFS = (varith.unpack(ARITH["lemmas"]) if "lemmas" in ARITH else {}) if by_proof else None
         kbyte.prove_lemmas(spec)
         return kends.line(spec, [top])
-    except (kcheck.Fail, ode.Err, ValueError, KeyError, IndexError, TypeError, AttributeError, RecursionError) as err:
+    except (kterms.Fail, ode.Err, ValueError, KeyError, IndexError, TypeError, AttributeError, RecursionError) as err:
         return f"its definitions that use themselves are NOT shown to come to an end: {err}"
     finally: klin.Facts.PROOFS = None
 
 
 def check(path, symbol):
-    """(instructions, calls, what kind, where its bytes are in the file's image). Raises kcheck.Fail."""
+    """(instructions, calls, what kind, where its bytes are in the file's image). Raises kterms.Fail."""
     if symbol in WIDE:
-        name = WIDE[symbol]
-        rows, data, entry = kloop.load(path, name)
+        name, start = WIDE[symbol]
+        rows, data, entry = kfn.load_from(path, symbol, start)
         if name in PLACES: places = json.loads(PLACES[name])
         else:
             with open(os.path.join(HERE, "proofs", name + ".json")) as f: places = json.load(f)
-        kloop.check(rows, data, name, places, entry)
-        start = kloop.KERNELS[name]["start"]
-        return rows, "a wide kernel: every number of blocks", start
-    if symbol == "blake3_servil_compress_in_place_avx512":
-        # the first kernel through the verifier of functions and not a verifier of kernels (its source in Ode: ../wide/one.ode)
-        rows = kfn.load(path, None, symbol); kfn.check(rows, None, symbol=symbol)
-        return rows, "a one-block kernel, by the verifier of functions", symbol
+        kfn.check(rows, None, proof=places, symbol=symbol, entry=entry, data=data)
+        return rows, "a wide kernel: every number of blocks, by induction at the place its proof names", start
     if symbol in ONE:
-        rows = kone.load(path, ONE[symbol]); kone.check(rows, ONE[symbol])
+        rows = kfn.load(path, None, symbol); kfn.check(rows, None, symbol=symbol)
         return rows, "a one-block kernel", symbol
     if symbol.startswith("b3l_") and symbol in kspec.SPEC.contracts:
         rows = kfn.load(path, symbol[4:]); kfn.check(rows, symbol[4:])
         return rows, "everything its contract allows", symbol
-    raise kcheck.Fail(f"{symbol}: no contract for it")
+    raise kterms.Fail(f"{symbol}: no contract for it")
 
 
 def main():
@@ -158,7 +155,7 @@ def main():
         try:
             klin.Facts.PROOFS = (varith.unpack(ARITH[symbol]) if symbol in ARITH else {}) if by_proof else None
             rows, what, start = check(path, symbol)
-        except (kcheck.Fail, kdecode.Stop) as err:
+        except (kterms.Fail, kdecode.Stop) as err:
             done[symbol] = None; failed += 1
             if maintain: print(f"  {symbol}: NOT shown: {err}" + (" (with the arithmetic's proofs the file carries and no search: --search to see what a search says)" if by_proof else ""))
             elif symbol == top: print(f"  {symbol}: NOT shown")

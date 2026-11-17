@@ -24,7 +24,7 @@ its BLAKE3 hash, and one over that list (`verifier_blake3`: what "verified" was 
 import hashlib, json, os, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
-import kbyte, kcheck, kdecode, kends, kproof, kshow, ode, klin, varith
+import kbyte, kdecode, kends, kproof, kshow, kterms, ode, klin, varith
 
 
 def main():
@@ -100,10 +100,10 @@ def main():
                 calls[symbol] = kbyte.check(rows, spec, symbol, places)["calls"]
             except (ValueError, KeyError, IndexError, TypeError) as err:
                 if not by_proof: raise
-                raise kcheck.Fail(f"the arithmetic's proofs the file carries cannot be read ({type(err).__name__})")
+                raise kterms.Fail(f"the arithmetic's proofs the file carries cannot be read ({type(err).__name__})")
             finally: klin.Facts.PROOFS = None
             if not by_proof: searched.append(symbol)
-        except (kcheck.Fail, kdecode.Stop, ode.Err) as err:
+        except (kterms.Fail, kdecode.Stop, ode.Err) as err:
             failed += 1
             if maintain: print(f"  {symbol}: NOT shown: {err}" + (" (with the arithmetic's proofs the file carries and no search: --search to see what a search says)" if by_proof else ""))
             elif symbol in public: print(f"  {symbol}: NOT shown")
@@ -161,7 +161,7 @@ def main():
             both = [kends.ends_for(spec, s) for s in mine]
             ends = (sorted({n for a, _ in both for n in a}), [w for _, w in both if w])
             ends_line = kends.line(spec, mine)
-        except (kcheck.Fail, ode.Err, KeyError, IndexError, TypeError, AttributeError, RecursionError) as err:
+        except (kterms.Fail, ode.Err, KeyError, IndexError, TypeError, AttributeError, RecursionError) as err:
             ends, ends_line = ([], [f"not followed ({type(err).__name__})"]), f"whether its definitions come to an end is NOT shown: {err}"
         finally: klin.Facts.PROOFS = None
     for name in left_out:

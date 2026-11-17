@@ -29,7 +29,7 @@ Inside a ring the same is asked where its lemmas are shown (a use of one of the 
 import itertools, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import kbyte, kcheck, kfn, ode
+import kbyte, kfn, kterms, ode
 
 
 def calls_of(spec, c):
@@ -140,7 +140,7 @@ def ends_for(spec, symbol):
                 A = kbyte.Opening(m, spec, None, tag)
                 spec.apply(A, f, [env0[g] for g in given])
             kbyte.lemma_cases(m0, one, what)
-        except (kcheck.Fail, ode.Err) as err: return again, f"{what}: {err}"
+        except (kterms.Fail, ode.Err) as err: return again, f"{what}: {err}"
     return again, None
 
 
@@ -164,7 +164,7 @@ def main():
         with open(sys.argv[2]) as f: lemmas = f.read()
     spec = ode.with_proof(text, lemmas) if lemmas else ode.Spec(text)
     try: kbyte.prove_lemmas(spec)
-    except (kcheck.Fail, ode.Err) as err: print(f"the lemmas are not shown: {err}"); return 1
+    except (kterms.Fail, ode.Err) as err: print(f"the lemmas are not shown: {err}"); return 1
     bad = 0
     for symbol in ode.Spec(text).contracts:
         again, why = ends_for(spec, symbol)

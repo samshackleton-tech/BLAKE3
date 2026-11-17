@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""kone on the library's two one-block kernels: each meets its contract; changed ones do not; each against the
-other's contract does not.
+"""The library's two one-block kernels, by kfn.py (until November 17, 2026 by a verifier of their own, kone.py;
+the cases are those): each meets its contract; changed ones do not; each against the other's contract does not.
 
     python3 test_kone.py"""
 import os, shutil, sys, tempfile, unittest
@@ -8,8 +8,20 @@ import os, shutil, sys, tempfile, unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
 sys.path.insert(0, HERE)
-import kcheck, kone
+import kcheck, kfn
 from test_kcheck import assemble
+
+SYMBOL = {"avx512": "blake3_servil_compress_in_place_avx512", "sse41": "blake3_servil_compress_in_place_sse41"}
+
+
+class kone:
+    """What these tests ask, of kfn.py."""
+    @staticmethod
+    def load(obj, name): return kfn.load(obj, None, SYMBOL[name])
+    @staticmethod
+    def check(rows, name):
+        kfn.CONTRACTS.clear()
+        return kfn.check(rows, None, symbol=SYMBOL[name])["widest"]
 
 SOURCES = {"avx512": "blake3_avx512_x86-64_unix.S", "sse41": "blake3_sse41_x86-64_unix.S"}
 MUTANTS = [
@@ -65,7 +77,7 @@ class Kone(unittest.TestCase):
         true = kspec.SPEC
         text = ode.source()
         head = {"avx512": "contract blake3_servil_compress_in_place_avx512(h: cv, m: block, length: low byte, t: counter, flags: low byte) {\n    requires no_overlap(h, m)\n    ensures h = compress(h, m, t, length, flags)",
-                "sse41": "contract blake3_servil_compress_in_place_sse41(h: cv, m: block, length: word, t: counter, flags: low word) {\n    ensures h = compress(h, m, t, length, flags)"}
+                "sse41": "contract blake3_servil_compress_in_place_sse41(h: cv, m: block, length: word, t: counter, flags: low word) {\n    requires no_overlap(h, m)\n    ensures h = compress(h, m, t, length, flags)"}
         try:
             for name, old, new in (("avx512", "compress(h, m, t, length, flags)", "compress(h, m, t, flags, length)"),
                                    ("avx512", "compress(h, m, t, length, flags)", "compress(h, m, t + 1, length, flags)"),
@@ -75,12 +87,10 @@ class Kone(unittest.TestCase):
                                    ("sse41", "flags: low word", "flags: low byte")):
                 self.assertEqual(text.count(head[name]), 1)
                 kspec.SPEC = ode.Spec(text.replace(head[name], head[name].replace(old, new)))
-                kone.CONTRACTS = kone.contracts()
                 with self.assertRaises(kcheck.Fail, msg=f"{name}: {new}"):
                     kone.check(self.rows[name], name)
         finally:
             kspec.SPEC = true
-            kone.CONTRACTS = kone.contracts()
 
     def test_a_kernel_holds_only_what_its_contract_says_it_needs(self):
         # `needs avx512`, `needs sse41` in a contract: read from the kernel's bytes, by how each instruction is encoded

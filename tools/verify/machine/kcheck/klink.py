@@ -102,7 +102,8 @@ def arithmetic(path, top="b3l_hashr"):
     import check_binary, kdecode, kprove, varith
     e = kdecode.Elf(path)
     check_binary.take(check_binary.carried(e.bytes_of(".ode.proof")), None)
-    out, todo, done = [], [top], set()
+    # (every name the file gives a linker is verified, called by `top` or not: its arithmetic's proofs too)
+    out, todo, done = [], [top] + sorted(n for n in kdecode.linkable(e)[1] if n != top), set()
     while todo:
         symbol = todo.pop(0)
         if symbol in done: continue

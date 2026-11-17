@@ -8,7 +8,7 @@
                                         contracts of the functions inside; lemmas; the arithmetic's proofs
 
 Nothing of it is trusted: each part is something a verifier checks or only uses to find its way."""
-import kcheck
+import kterms
 
 
 def carried(text):
@@ -19,13 +19,13 @@ def carried(text):
         end = text.index(b"\n", at); l = text[at:end].decode(); at = end + 1
         return l.split(" ")
     first = line()
-    if first == ["ode", "proof", "1"]: raise kcheck.Fail("the proof is of the earlier form (ode proof 1, with SHA-256); this verifier reads ode proof 2")
-    if first != ["ode", "proof", "2"]: raise kcheck.Fail("the proof is not one this verifier reads")
+    if first == ["ode", "proof", "1"]: raise kterms.Fail("the proof is of the earlier form (ode proof 1, with SHA-256); this verifier reads ode proof 2")
+    if first != ["ode", "proof", "2"]: raise kterms.Fail("the proof is not one this verifier reads")
     while at < len(text):
         w = line()
         if w[0] == "specification" and w[1] == "blake3": out["spec"] = w[2]
         elif w[0] == "code" and w[2] == "blake3" and w[4] == "begins": out["code"] = (int(w[1]), w[3], bytes.fromhex(w[5]))
         elif w[0] == "at": out["at"][w[2]] = int(w[1])
         elif w[0] == "file": out["files"][w[1]] = text[at:at + int(w[2])]; at += int(w[2])
-        else: raise kcheck.Fail(f"the proof: a line this verifier does not know: {' '.join(w)[:60]}")
+        else: raise kterms.Fail(f"the proof: a line this verifier does not know: {' '.join(w)[:60]}")
     return out

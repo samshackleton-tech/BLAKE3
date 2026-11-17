@@ -3,9 +3,11 @@
 
     python3 kflip.py k32|p32|p16|o16 OBJECT [--jobs N] [--every K] [--native CASES] [--refused-sample N] [--detail] [--general]
 
---general (k32, p32, p16): the kernel for every number of blocks and every flag byte. "Accepted" is then:
-kloop.py's prover finds a proof of the changed kernel and its verifier takes it; and the processor runs the
-changed kernel on 1 to 20 blocks with any flag bytes.
+--general (k32, p32, p16): the kernel for every number of blocks and every flag byte, as kfn.py verifies it
+(since November 17, 2026; before, kloop.py). "Accepted" is then: kwide.py's prover finds a proof of the changed
+kernel and kfn.py's verifier takes it; and the processor runs the changed kernel on 1 to 20 blocks with any
+flag bytes. (Without --general: kcheck.py's machine, for a fixed number of blocks: no verification of a
+shipped file loads that any more.)
 
 An audit of kdecode.py and kcheck.py together. Each bit of the kernel's code in the object is flipped in turn
 (--every K: each K-th bit), and the changed object is read and checked as the true one is. Three outcomes:
@@ -40,7 +42,7 @@ import kcheck, kdecode
 BASE, DATA = 0x10000, 0x50000000
 
 
-GENERAL = "--general" in sys.argv        # every block count and every flag byte: kloop.py's prover and verifier, and the processor run to match
+GENERAL = "--general" in sys.argv        # every block count and every flag byte: kwide.py's prover and kfn.py's verifier, and the processor run to match
 
 
 def verdict(obj, name):
@@ -53,8 +55,8 @@ def verdict(obj, name):
         import kspec
         kspec.fits(obj, kcheck.KERNELS[name]["start"], kcheck.KERNELS[name]["symbol"])
         if GENERAL:
-            import kloop
-            kloop.find(rows, data, name, entry)         # accepted: a proof is found, and the verifier takes it
+            import kwide
+            kwide.find(rows, data, kcheck.KERNELS[name]["symbol"], entry)         # accepted: a proof is found, and the verifier takes it
         else: kcheck.check(rows, DATA, data, name, entry)
     except kcheck.Fail as e: return "refused", str(e)
     except (KeyError, IndexError, ValueError, TypeError, AssertionError, RecursionError) as e: return "refused", f"the verifier cannot run it ({type(e).__name__}: {e})"

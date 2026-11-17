@@ -123,8 +123,8 @@ class Binary(unittest.TestCase):
             with open(other, "wb") as f: f.write(spec + b"\n// a reader's note\n")
             self.assertFalse(check_binary.take(proof, other))
         finally:
-            import kspec, kone, kloop, kfn, ode
-            kspec.SPEC = ode.load(); kone.CONTRACTS = kone.contracts(); kloop.KERNELS = kloop.kernels(); kfn.CONTRACTS.clear(); check_binary.PLACES.clear()
+            import kspec, kfn, ode
+            kspec.SPEC = ode.load(); kfn.CONTRACTS.clear(); check_binary.PLACES.clear()
 
     def test_a_kind_the_proof_gives_a_definition_is_not_taken_on_trust(self):
         """The proof's part says of three definitions what kind of thing each is (`kind subtree: cv`), for the
@@ -213,7 +213,6 @@ class Binary(unittest.TestCase):
             self.assertEqual(r.returncode, 1, r.stdout[-600:])
             self.assertIn("b3l_hashr: NOT shown: its code meets its contract as far as the contract says anything", r.stdout)
         finally:
-            import kspec, kone, kloop, kfn
             check_binary.take(proof, None)
 
     def test_a_proof_cannot_put_another_contract_in_the_place_of_the_readers(self):

@@ -4,7 +4,7 @@ and the processor's word on each change a proof is found for.
 
     python3 kglue_flip.py push|merge|add|avx512|sse41 FOLDER [--jobs N] [--native CASES]
 
-(avx512, sse41: the one-block kernels, run by kone_native.c; sse41 checked by kone.py, avx512 by kfn.py.)
+(avx512, sse41: the one-block kernels, verified by kfn.py since November 17, 2026 and run by kone_native.c.)
 
 FOLDER holds push.o, merge.o, add.o (lang/NAME.S assembled) and the one-block kernels' objects (*.o beside
 them: they are linked in, not changed). As kflip.py: each bit of the function's code is flipped in turn;
@@ -14,10 +14,12 @@ random stacks and arguments the contract allows: an accepted change the processo
 machine is an error of the decoder or the verifier, and the exit status is 1."""
 import multiprocessing, os, signal, subprocess, sys, tempfile, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import kcheck, kdecode, kfn, kglue, kone, kspec
+import kcheck, kdecode, kfn, kglue, kspec
+
+ONE = {"avx512": "blake3_servil_compress_in_place_avx512", "sse41": "blake3_servil_compress_in_place_sse41"}
 
 
-def symbol(name): return kone.CONTRACTS[name]["symbol"] if name in kone.CONTRACTS else "b3l_" + name
+def symbol(name): return ONE.get(name, "b3l_" + name)
 
 LIMIT = 30
 
@@ -36,8 +38,7 @@ def verdict(obj, name):
     except (IndexError, ValueError, KeyError, StopIteration) as e: return "stopped", f"the decoder ran off the bytes ({type(e).__name__})"
     try:
         kspec.fits(obj, symbol(name))
-        if name == "avx512": kfn.CONTRACTS.clear(); kfn.check(rows, None, symbol=symbol(name))      # (since November 17, 2026: by the verifier of functions)
-        elif name in kone.CONTRACTS: kone.check(rows, name)
+        if name in ONE: kfn.check(rows, None, symbol=symbol(name))          # (since November 17, 2026: by the verifier of functions)
         else: kglue.find(rows, name)
     except kcheck.Fail as e: return "refused", str(e)
     except (KeyError, IndexError, ValueError, TypeError, AssertionError, RecursionError) as e: return "refused", f"the verifier cannot run it ({type(e).__name__}: {e})"
@@ -111,7 +112,7 @@ def main():
         here = os.path.dirname(os.path.abspath(__file__))
         work = tempfile.mkdtemp(prefix="kglue-flip-")
         cc = os.environ.get("CC", "cc")
-        subprocess.run([cc, "-O1", "-c", "-o", f"{work}/h.o", f"{here}/{'kone' if name in kone.CONTRACTS else 'kglue'}_native.c"], check=True)
+        subprocess.run([cc, "-O1", "-c", "-o", f"{work}/h.o", f"{here}/{'kone' if name in ONE else 'kglue'}_native.c"], check=True)
         subprocess.run([cc, "-c", "-o", f"{work}/t.o", f"{here}/kflip_thunk.S"], check=True)
         print(f"control: the unchanged object on this processor, {cases} cases: {native((name, obj, None, folder, work, cases))[1]}")
         refused = next((bit for bit, (v, why) in results if v == "refused" and ("not one turn" in why or "not what the contract says" in why or "not the specification's" in why)), None)

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""kloop on the library's wide kernels: a proof is found and checked for each, and wrong kernels and wrong
-proofs are refused.
+"""The library's wide kernels, by kfn.py with kwide.py's prover (until November 17, 2026 by a verifier and a
+prover of their own, kloop.py; the cases are those): a proof is found and checked for each, and wrong kernels
+and wrong proofs are refused.
 
     python3 test_kloop.py"""
 import copy, os, shutil, subprocess, sys, tempfile, unittest
@@ -8,8 +9,25 @@ import copy, os, shutil, subprocess, sys, tempfile, unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
 sys.path.insert(0, HERE)
-import kcheck, kloop
+import kcheck, kfn, kwide
 from test_kcheck import assemble
+
+SYMBOL = {name: "blake3_servil_avx512_" + name for name in ("k32", "p32", "p16")}
+START = {"k32": SYMBOL["k32"], "p32": SYMBOL["k32"], "p16": SYMBOL["p16"]}          # the 32-lane kernel has two ways in
+
+
+class kloop:
+    """What these tests ask, of kfn.py and of kwide.py."""
+    @staticmethod
+    def load(obj, name): return kfn.load_from(obj, SYMBOL[name], START[name])
+    @staticmethod
+    def find(rows, data, name, entry):
+        kfn.CONTRACTS.clear()
+        return kwide.find(rows, data, SYMBOL[name], entry)
+    @staticmethod
+    def check(rows, data, name, proof, entry):
+        kfn.CONTRACTS.clear()
+        return kfn.check(rows, None, proof=proof, symbol=SYMBOL[name], entry=entry, data=data)
 
 # changes of the loop over blocks and of the flags' bytes, which a kernel for one block count does not show
 LOOP_MUTANTS = [
@@ -45,7 +63,7 @@ class Kloop(unittest.TestCase):
             proof = kloop.find(rows, data, name, entry)
             self.assertEqual(proof["place"], place, name)
             done = kloop.check(rows, data, name, proof, entry)
-            self.assertEqual(done["paths"], {"head": 1, "return": 1}, name)
+            self.assertEqual((done["place"], done["return"]), (1, 2), name)          # the step: one path back to the place, one to the return; and the return after one block
 
     def changed(self, old, new):
         rows, data, entry = self.k32
@@ -86,7 +104,7 @@ class Kloop(unittest.TestCase):
         import kspec, ode
         true = kspec.SPEC
         text = ode.source()
-        k32 = "contract blake3_servil_avx512_k32(inputs: 32 inputs, n: number, key: cv, t: counter, packed: bytes flags start end length, out: 32 cvs) {\n    requires n >= 1\n    ensures out[i] = chunk(key, t + i, flags, start, end, length, n, inputs[i]) for i in 0..32"
+        k32 = "contract blake3_servil_avx512_k32(inputs: 32 inputs, n: number, key: cv, t: counter, packed: bytes flags start end length, out: 32 cvs) {\n    requires n >= 1\n    requires no_overlap(inputs, key, out)\n    ensures out[i] = chunk(key, t + i, flags, start, end, length, n, inputs[i]) for i in 0..32"
         self.assertEqual(text.count(k32), 1)
         rows, data, entry = self.k32
         try:
@@ -96,11 +114,9 @@ class Kloop(unittest.TestCase):
                 self.assertEqual(k32.count(old), 1, old)
                 kspec.SPEC = ode.Spec(text.replace(k32, k32.replace(old, new)))
                 with self.assertRaises(kcheck.Fail, msg=new):
-                    kloop.KERNELS = kloop.kernels()
                     kloop.find(rows, data, "k32", entry)
         finally:
             kspec.SPEC = true
-            kloop.KERNELS = kloop.kernels()
 
     def test_the_other_entry_is_refused_with_this_ones_specification(self):
         rows, data, entry = self.k32

@@ -26,30 +26,28 @@ THE VERIFIER runs the code on symbols from its entry, forward along every path, 
   - at the return: each thing the contract says is left is the specification's value of it, evaluated on the
     same path (where the specification asks how two numbers compare, the path must have asked too); the
     result, the registers a callee keeps, the stack pointer, and the stack used.
-There is no proof text: the binary, the specification and the contracts are all the verifier is given.
+A loop whose count the path does not fix (a kernel's loop over the blocks of a chunk) is not run: the proof
+names a PLACE in it and what holds there after any number of turns, and that is shown by induction (below:
+"A loop whose count the path does not fix"). For every other function there is no proof text: the binary,
+the specification and the contracts are all the verifier is given.
 
 No solver: terms are compared by identity, numbers by adding linear facts up (klin.py). What the
 specification's definitions give that cannot be worked out on a path (the tree over bytes whose count the
 path does not fix) is named by what it is of, and two names are one thing when they are the same (kspec.py).
 What a callee leaves is so named, not opened.
 
-(An earlier state of this file also took a loop whose count is not fixed, by a PLACE: a machine of the
-specification, and what the registers and the memory hold for any state of it. It checked the code's
-earlier form so, a stack of levels with a loop over them. The hash was then written as the specification's
-own recursion, no loop needed a place, and that part was taken out.)
-
 WHAT IS NOT CHECKED HERE: this verifier (Python, unverified: its audits are its worth)."""
 import copy, itertools, json, os, sys, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import kcheck, kdecode, kspec, ode
-from kcheck import Fail, num, signed
+import kdecode, kspec, kterms, ode
+from kterms import Fail, num, signed
 from klin import Lin, Facts, sym, value, lin
 from kspec import Arr, ByteT, Slice, Named, plain, byte_or, byte_term, term_byte, halved
 from ode import Word, Counter, Err
 
 BASE, DATA = 0x10000, 0x50000000
-G64 = kcheck.G64
-KEPT = kcheck.SAVED                 # the registers a callee keeps
+G64 = kterms.G64
+KEPT = kterms.SAVED                 # the registers a callee keeps
 ARGS = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
 WORD64 = (1 << 64) - 1
 STEPS = 400000                      # instructions run before a check gives up
@@ -194,10 +192,15 @@ def contract(symbol):
     return CONTRACTS[symbol]
 
 
-# The one-block kernels, by their contracts: checked against the kernels' bytes by kone.py, and read from there.
-def kernels():
-    import kone                 # (only the hash has kernels: a verification of other programs does not load their verifier)
-    return {c["symbol"]: c for c in kone.CONTRACTS.values()}
+def one_block(symbol):
+    """A one-block kernel's contract, for a call of it: (cv, block, length, counter, flags) in the calling
+    convention's order, the length a `low byte` or a `word`, the flags a `low byte` or a `low word`; it leaves
+    the chaining value, uses no stack, returns nothing. None for any other contract."""
+    c = kspec.SPEC.contracts.get(symbol)
+    kinds = [kind for _, kind in c["args"]] if c else []
+    if len(kinds) != 5 or kinds[0] != "cv" or kinds[1] != "block" or kinds[2] not in ("low byte", "word") or kinds[3] != "counter" or kinds[4] not in ("low byte", "low word"): return None
+    if c["stack"] != 0 or len(c["leaves"]) != 1 or c["leaves"][0]["name"] != c["args"][0][0] or c["leaves"][0]["index"] is not None or c["asks"] or c["returns"] is not None: return None
+    return dict(symbol=symbol, length=kinds[2], flags=kinds[4], names=[arg for arg, _ in c["args"]], leaves=c["leaves"][0]["expr"])
 
 
 # ---------------------------------------------------------------------------------------------------------
@@ -208,14 +211,26 @@ def kernels():
 # ("z", a byte): a byte of memory, zero-extended; ("q", name): 64 bits of which nothing is known;
 # ("pair", low, high): two 32-bit terms (a counter); ("low", name): 64 bits of which only the low byte is
 # spoken of, the byte `name`; ("al", n): the plain number n in AL, nothing known above it.
-# An XMM register holds four 32-bit terms (kcheck.Terms), the lowest first.
+# ("t", term): a 32-bit term, zeros above it; ("lowt", term): 64 bits of which only the low 32 are spoken of.
+# A vector register holds 32-bit terms (kterms.Terms), the lowest first: four where only its low 128 bits are
+# known (XMM), sixteen where all 512 are (ZMM). A mask register ("k", number) holds sixteen truths, as terms.
+# An XMM register may hold, for a moment, half of a rotation a word: ("shl" or "shr", term, by how much): the
+# older instructions rotate by two shifts and an or. Nothing takes such a half but a move and that or.
 class Fork(Exception):
     def __init__(self, kind, x): self.kind, self.x = kind, x
 
 
 class Machine:
-    def __init__(self, T, rows, c):
-        self.T, self.rows, self.contract = T, {a: (n, kcheck.parse(i)) for a, n, i in rows}, c
+    # `wide`: where the stack pointer was (from its entry value) when it was rounded down to a 64-byte boundary,
+    # while it is in the part of the frame below that ("wide": sixty-four bytes a cell, as sixteen terms).
+    # `ghost`: at a return, the sequences whose last values a place's induction has shown. `rest`: for a place.
+    # BOUNDARY: this machine takes such a frame (kbyte.py's, which is this one with other memory, does not).
+    # `data`: the file's read-only data ("rodata": numbers of 32 bits are read from it, nothing is written).
+    wide, ghost, rest, BOUNDARY, data = None, {}, 0, True, b""
+
+    def __init__(self, T, rows, c, data=b""):
+        self.data = data
+        self.T, self.rows, self.contract = T, {a: (n, kterms.parse(i)) for a, n, i in rows}, c
         self.g = {r: ("q", r + " at entry") for r in G64}
         self.g["rsp"] = ("a", "frame", 0)
         self.x, self.flags, self.facts, self.conds, self.memo = {}, None, Facts(), {}, {}
@@ -225,7 +240,7 @@ class Machine:
         self.readonly, self.given = set(), {}
         self.low, self.pc, self.steps, self.back = 0, None, 0, {}
         # the things at the addresses given are taken not to overlap: the contract must ask it of the caller
-        addresses = [name for _, kind, name in c.args if kind not in ("number", "byte", "any", "counter", "low byte")]
+        addresses = [name for _, kind, name in c.args if kind not in ("number", "byte", "any", "counter", "low byte", "word", "low word") and packed_kind(kind) is None]
         if len(addresses) > 1 and sorted(c.text["no_overlap"] or []) != sorted(addresses):
             raise Fail(f"{c.name}: the contract does not say `requires no_overlap({', '.join(addresses)})`: the things at the addresses it is given are taken not to overlap")
         A = self.A()
@@ -241,14 +256,29 @@ class Machine:
                 self.g[reg], self.given[name] = ("pair", lo, hi), Counter(Word(lo), Word(hi))
             elif kind == "low byte":                                        # the register's low byte is the number; nothing is said of the rest
                 self.g[reg], self.given[name] = ("low", name), Word(byte_term(T, (0, (name,))))
+            elif kind in ("word", "low word"):                              # a number below 2^32: zeros above it in the register (`word`), or nothing said of what is above (`low word`)
+                self.g[reg], self.given[name] = ("t" if kind == "word" else "lowt", T.var("word", name)), Word(T.var("word", name))
+            elif packed_kind(kind) is not None:                             # a word whose four low bytes are named; of the four above them nothing is said
+                self.g[reg] = ("p", tuple((0, (b,)) for b in packed_kind(kind)) + tuple((0, (f"{name} byte {k}",)) for k in range(4, 8)))
+                for b in packed_kind(kind): self.given[b] = Word(byte_term(T, (0, (b,))))
         for reg, kind, name in c.args:
-            if kind in ("number", "byte", "any", "counter", "low byte"): continue
-            if kind in ("word", "low word") or packed_kind(kind) is not None or lanes_kind(kind, "inputs") is not None or lanes_kind(kind, "cvs") is not None:
-                raise Fail(f"{c.name}: {name} is {kind}: a kernel's argument, and kernels are checked by kloop.py")
+            if kind in ("number", "byte", "any", "counter", "low byte", "word", "low word") or packed_kind(kind) is not None: continue
             self.g[reg] = ("a", name, 0)
+            if lanes_kind(kind, "inputs") is not None:
+                # a table of addresses, each of an input of n blocks of 64 bytes, all given to read. The blocks
+                # lie in memory one after another, so 64 * n is below 2^64.
+                lanes = lanes_kind(kind, "inputs")
+                if name in c.writes or any(lanes_kind(k, "inputs") is not None for _, k, other in c.args if other != name): raise Fail(f"{c.name}: {name} is {kind}: one table of inputs, given to read")
+                self.mem[name] = {0: (None, kind, kspec.Inputs(lanes))}; self.given[name] = kspec.Inputs(lanes); self.readonly.add(name)
+                for i in range(lanes): self.mem[(name, i)] = {0: (None, "blocks", kspec.Blocks(i))}; self.readonly.add((name, i))
+                self.facts.add(WORD64 - self.given["n"].scale(64))
+                continue
             n = bytes_kind(kind)
             if kind == "cvs": v = None                                      # made below, when everything else it speaks of is
             elif kind == "block": v = [Word(T.mk("part", name, w)) for w in range(16)]
+            elif lanes_kind(kind, "cvs") is not None:                       # chaining values the function leaves: of what is there before nothing is said
+                if name not in c.writes: raise Fail(f"{c.name}: {name} is {kind}, and the contract does not say what is left there")
+                v = [[Word(T.mk("part", name, i, w)) for w in range(8)] for i in range(lanes_kind(kind, "cvs"))]
             elif n is None: v = A.of_kind(kspec.SPEC, kind, name)
             elif name in c.writes:
                 if not isinstance(n, int): raise Fail(f"{c.name}: {name} is written, and its length is not a plain number")
@@ -263,7 +293,26 @@ class Machine:
         for name, clause in c.given.items():
             self.mem[name] = {0: (None, "cvs", Given(clause, self.given))}
 
-    def A(self): return kspec.Symbols(self.T, self.facts, self.memo)
+    def A(self): return kspec.Symbols(self.T, self.facts, self.memo, self.ghost)
+
+    def rested(self):
+        """A copy at rest where it is (at a place): a path from it ends when it comes there again."""
+        c = self.clone(); c.rest = c.steps
+        return c
+
+    def floor(self):
+        """The lowest place of the frame (from the entry stack pointer) that is the function's to read and write:
+        the stack pointer, or where it was when it was rounded down to a 64-byte boundary."""
+        return self.g["rsp"][2] if self.wide is None else self.wide
+
+    def top(self):
+        """The stack pointer for a push, a pop or a call: in the frame as it was at entry, not in the part on a 64-byte boundary."""
+        if self.wide is not None: raise Fail("a push, a pop or a call with the stack pointer in the frame on a 64-byte boundary")
+        return self.g["rsp"]
+
+    def cell(self, off, size):
+        """Bytes of the frame on a 64-byte boundary: within what the stack pointer has given."""
+        if self.wide is None or not isinstance(off, int) or off < self.g["rsp"][2] or off + size > 0: raise Fail(f"{size} bytes at {off} of the frame on a 64-byte boundary: outside it")
 
     def clone(self):
         c = copy.copy(self)
@@ -298,6 +347,7 @@ class Machine:
                 if off == 0 and size == (8 if kind == "q" else 16): return v
             elif kind in ("cv", "block"):
                 if size == 16 and isinstance(off, int) and off % 16 == 0 and 0 <= off < 4 * len(v): return tuple(w.v for w in v[off // 4:off // 4 + 4])
+                if size == 4 and isinstance(off, int) and off % 4 == 0 and 0 <= off < 4 * len(v): return ("t", v[off // 4].v)
             elif lanes_kind(kind, "cvs") is not None:
                 if size == 16 and isinstance(off, int) and off % 16 == 0 and 0 <= off < 32 * len(v): return tuple(w.v for w in v[off // 32][off % 32 // 4:off % 32 // 4 + 4])
             elif kind == "cvs":
@@ -331,6 +381,11 @@ class Machine:
                 if size == 16 and isinstance(off, int) and off % 16 == 0 and 0 <= off < 4 * len(v) and isinstance(new, tuple) and len(new) == 4:
                     out = list(v); out[off // 4:off // 4 + 4] = [Word(t) for t in new]
                     return out
+            elif lanes_kind(kind, "cvs") is not None:
+                # sixteen words: two chaining values, as they lie one after another
+                if size == 64 and isinstance(v, list) and isinstance(off, int) and off % 64 == 0 and 0 <= off and off + 64 <= 32 * len(v) and isinstance(new, tuple) and len(new) == 16:
+                    out = list(v); out[off // 32], out[off // 32 + 1] = [Word(t) for t in new[:8]], [Word(t) for t in new[8:]]
+                    return out
             elif kind == "number":
                 if off == 0 and size == 8 and lin(new) is not None: return plain(lin(new))
             elif kind == "byte":
@@ -363,21 +418,42 @@ class Machine:
         raise Fail(f"a write of {size} bytes at {where}: not as a {kind} lies")
 
     def load(self, region, off, size):
-        if region == "frame" and (isinstance(off, Lin) or off < self.g["rsp"][2]): raise Fail(f"a read below the stack pointer or at an unknown place of the frame, at {off}")
+        if region == "rodata":
+            if size != 4 or not isinstance(off, int) or off < 0 or off + 4 > len(self.data): raise Fail(f"a read of {size} bytes at {off} of the file's read-only data")
+            return ("n", int.from_bytes(self.data[off:off + 4], "little"))
+        if region == "wide":
+            self.cell(off, size)
+            if size != 64 or off % 64 or off not in self.mem["wide"]: raise Fail(f"a read of {size} bytes at {off} of the frame on a 64-byte boundary: no sixteen words were written there")
+            return self.mem["wide"][off]
+        if region == "frame" and (isinstance(off, Lin) or off < self.floor()): raise Fail(f"a read below the stack pointer or at an unknown place of the frame, at {off}")
         hit = self.within(region, off, size)
         if hit is None: raise Fail(f"a read of {size} bytes at {region} + {off}: nothing was written there")
         o, (_, kind, v) = hit
+        if isinstance(v, kspec.Inputs):
+            # the table of a kernel's inputs: one of its addresses
+            if size == 8 and isinstance(off, int) and off % 8 == 0 and 0 <= off < 8 * v.lanes: return ("a", (region, off // 8), 0)
+            raise Fail(f"a read of {size} bytes at {region} + {off}: not one of the table's addresses")
+        if isinstance(v, kspec.Blocks):
+            # a block of a lane's input, one of the n the contract gives: sixteen words
+            block = Lin.of(off).over(64)
+            if size != 64 or block is None or not self.facts.ge0(block) or not self.facts.ge0(self.given["n"] - block - 1): raise Fail(f"a read of {size} bytes at {region} + {off}: not a block of the input")
+            return tuple(self.T.var("input", v.lane, plain(block), w) for w in range(16))
         return self.read_in(kind, v, plain(Lin.of(off) - o), size, f"{region} + {off}")
 
     def store(self, region, off, size, new):
         where = f"{region} + {off}"
+        if region == "wide":
+            self.cell(off, size)
+            if size == 1 and new == ("n", 0) and off - off % 64 not in self.mem["wide"]: return        # a zero byte where nothing is yet: the stack is touched before it is used
+            if size != 64 or off % 64 or not isinstance(new, tuple) or len(new) != 16: raise Fail(f"a write of {size} bytes at {off} of the frame on a 64-byte boundary: not sixteen words at a cell")
+            self.mem["wide"][off] = new; return
         if region in self.readonly: raise Fail(f"a write to {region}, which the contract gives to read")
         if region != "frame":
             if region not in self.mem: raise Fail(f"an address in {region}: no such memory")
             n, kind, v = self.mem[region][0]
             self.mem[region][0] = (n, kind, self.write_in(kind, v, off, size, new, where)); return
         if isinstance(off, Lin): raise Fail(f"a write at {where}")
-        if off < self.g["rsp"][2] or off + size > 0: raise Fail(f"a write at {off} from the entry stack pointer: outside the function's own frame")
+        if off < self.floor() or off + size > 0: raise Fail(f"a write at {off} from the entry stack pointer: outside the function's own frame")
         hit = self.within(region, off, size)
         if hit is not None and hit[1][1] not in ("q", "x"):
             o, (n, kind, v) = hit
@@ -460,7 +536,7 @@ class Machine:
         if kind == "cv":
             self.store(region, off, 16, tuple(w.v for w in v[:4])); self.store(region, off + 16, 16, tuple(w.v for w in v[4:])); return
         size = size_of(kind)
-        if off < self.g["rsp"][2] or off + size > 0: raise Fail(f"a callee leaves a {kind} at {off} from the entry stack pointer: outside the function's own frame")
+        if off < self.floor() or off + size > 0: raise Fail(f"a callee leaves a {kind} at {off} from the entry stack pointer: outside the function's own frame")
         self.clear(off, size)
         self.mem["frame"][off] = (size, kind, v)
 
@@ -478,14 +554,44 @@ class Machine:
         raise Fail(f"a {kind} left inside a {okind}, not where one lies")
 
     # -- registers
-    def address(self, base, disp):
+    def address(self, base, disp, index=None):
         b = self.g[base.lstrip(".")]
         if b[0] != "a": raise Fail(f"an address from {base} = {b}")
-        return b[1], plain(Lin.of(b[2]) + signed(num(disp)))
+        off = Lin.of(b[2]) + signed(num(disp))
+        if index is not None:
+            i = lin(self.g[index.lstrip(".")])
+            if i is None: raise Fail(f"an index that is not a number: {index} = {self.g[index.lstrip('.')]}")
+            off = off + i
+        return b[1], plain(off)
+
+    def halves(self, r):
+        if r not in self.x: raise Fail(f"xmm{r} read before it is written")
+        return self.x[r][:4]
 
     def lanes(self, r):
-        if r not in self.x: raise Fail(f"xmm{r} read before it is written")
+        v = self.halves(r)
+        if any(isinstance(t, tuple) for t in v): raise Fail(f"xmm{r} holds half of a rotation")
+        return v
+
+    def vec(self, r):
+        if len(self.x.get(r, ())) != 16: raise Fail(f"zmm{r} read before all of it is written")
         return self.x[r]
+
+    def low32(self, v):
+        """The low 32 bits of what a register holds, zeros above them."""
+        if v[0] == "n": return ("n", v[1] & 0xFFFFFFFF)
+        if v[0] == "p": return ("p", tuple(v[1][:4]) + (0,) * 4)
+        if v[0] == "pair": return ("t", v[1])
+        if v[0] in ("t", "z"): return v
+        raise Fail(f"the low 32 bits of {v}")
+
+    def word(self, o):
+        """An operand as a 32-bit term: a word of memory, a number, the low 32 bits of a register."""
+        v = self.load(*self.address(o[1], o[2]), 4) if o[0] == ".mem" else self.low32(self.operand(o))
+        if v[0] == "t": return v[1]
+        if v[0] == "n": return self.T.const(v[1])
+        if v[0] == "p" and all(b == 0 for b in v[1][1:]): return byte_term(self.T, v[1][0])
+        raise Fail(f"a word from {v}")
 
     def operand(self, o):
         if o[0] == ".reg": return self.g[o[1].lstrip(".")]
@@ -509,16 +615,20 @@ class Machine:
     def arith(self, op, x, y):
         F = self.facts
         if op in ("add", "sub"):
+            # a word below 2^32 and a word moved up 32 bits: the two side by side, nothing carried
+            if op == "add" and x[0] == "t" and y[0] == "pair" and self.T.nodes[y[1]] == ("c", 0): return ("pair", x[1], y[2])
             # bytes beside bytes: where one has a byte the other has zero, nothing is carried
             if op == "add" and x[0] == "p" and y[0] == "p" and all(p == 0 or q == 0 for p, q in zip(x[1], y[1])): return ("p", tuple(q if p == 0 else p for p, q in zip(x[1], y[1])))
             if x[0] == "a" and lin(y) is not None: return ("a", x[1], plain(Lin.of(x[2]) + (lin(y) if op == "add" else -lin(y))))
             if op == "add" and y[0] == "a" and lin(x) is not None: return ("a", y[1], plain(Lin.of(y[2]) + lin(x)))
             if lin(x) is not None and lin(y) is not None: return self.number(lin(x) + lin(y) if op == "add" else lin(x) - lin(y))
         elif op == "shl":
+            if x[0] in ("t", "lowt") and y[1] == 32: return ("pair", self.T.const(0), x[1])              # a word moved up 32 bits: what was above it is gone
             if x[0] == "p" and y[1] % 8 == 0 and 0 <= y[1] < 64: return ("p", (0,) * (y[1] // 8) + tuple(x[1][:8 - y[1] // 8]))      # by whole bytes
             if lin(x) is not None and 0 <= y[1] < 32: return self.number(lin(x).scale(1 << y[1]))
         elif op == "shr":
             if x[0] == "n": return ("n", x[1] >> y[1])
+            if x[0] == "pair" and y[1] == 32: return ("t", x[2])                # a counter's high word
             if x[0] == "l":
                 if F.ge0((1 << y[1]) - 1 - x[1]): return ("n", 0)
                 if y[1] <= 16:
@@ -558,14 +668,14 @@ class Machine:
 
     # -- calls
     def call(self, name):
-        T, sp = self.T, self.g["rsp"][2]
+        T, sp = self.T, self.top()[2]
         only = self.contract.calls.get(name)
         if only is not None and self.conds.get(only) is not True: raise Fail(f"{name} is called on a path that does not say {only[0]} is {only[1]}")
         A = self.A()
         try:
             c = contract(name)
             self.needed(name, c)
-            if name in kernels(): used = self.call_kernel(A, name, kernels()[name])
+            if one_block(name) is not None: used = self.call_kernel(A, name, one_block(name))
             else: used = self.call_contract(A, name, c)
         except Err as e: raise Fail(f"a call of {name}: {e}")
         self.low = min(self.low, sp - used)
@@ -746,13 +856,16 @@ class Machine:
         elif op == ".mov":
             if a[0] == "8" and a[1] == [".reg", ".rax"] and a[2][0] == ".imm": self.g["rax"] = ("al", num(a[2][1]) & 0xFF)      # a count put in AL
             elif a[0] == "8":
-                if a[1][0] != ".mem" or a[2][0] != ".reg": raise Fail("a move of a byte that is not from a register to memory")
-                self.store(*self.address(a[1][1], a[1][2]), 1, self.g[a[2][1].lstrip(".")])
+                if a[1][0] != ".mem" or a[2][0] not in (".reg", ".imm"): raise Fail("a move of a byte that is not from a register or a number to memory")
+                self.store(*self.address(a[1][1], a[1][2]), 1, self.g[a[2][1].lstrip(".")] if a[2][0] == ".reg" else ("n", num(a[2][1]) & 0xFF))
+            elif a[0] == "32":
+                if a[1][0] != ".reg": raise Fail("a move of 32 bits that is not into a register")
+                self.g[a[1][1].lstrip(".")] = self.low32(self.load(*self.address(a[2][1], a[2][2]), 4) if a[2][0] == ".mem" else self.operand(a[2]))
             elif a[0] == "64":
                 v = self.operand(a[2])
                 if a[1][0] == ".reg": self.g[a[1][1].lstrip(".")] = v
                 else: self.store(*self.address(a[1][1], a[1][2]), 8, v)
-            else: raise Fail("a move that is not of 64 bits or of a byte")
+            else: raise Fail("a move that is not of 64 bits, of 32 or of a byte")
         elif op == ".movzx8":
             if a[1][0] == ".reg":                                           # a register's low byte, zeros above it
                 src = self.g[a[1][1].lstrip(".")]
@@ -761,10 +874,44 @@ class Machine:
                 else: raise Fail(f"the low byte of {src}")
             elif a[1][0] != ".mem": raise Fail("a byte that is not from memory or a register")
             else: self.g[a[0].lstrip(".")] = self.load(*self.address(a[1][1], a[1][2]), 1)
+        elif op == ".and" and self.BOUNDARY and a[0] == "64" and a[1] == [".reg", ".rsp"] and a[2][0] == ".imm" and num(a[2][1]) == WORD64 - 63:
+            # the stack pointer rounded down to a 64-byte boundary: from here it is in a part of the frame of its
+            # own ("wide"), whose top is 0 to 63 bytes below where the stack pointer was
+            self.wide = self.top()[2]; self.g["rsp"] = ("a", "wide", 0); self.mem["wide"] = {}; self.flags = None
+        elif op in (".or", ".and") and a[0] == "32":
+            # of 32 bits, zeros above: bytes or-ed, or a register's low byte taken
+            if a[1][0] != ".reg" or a[2][0] != (".reg" if op == ".or" else ".imm"): raise Fail(f"{op} of 32 bits that is not of two registers, or of a register and a number")
+            r = a[1][1].lstrip("."); x = self.low32(self.g[r])
+            if op == ".or": self.g[r] = self.arith("or", x, self.low32(self.operand(a[2])))
+            elif num(a[2][1]) != 0xFF or x[0] not in ("n", "p"): raise Fail(f"an and of {x} that does not take its low byte")
+            else: self.g[r] = ("n", x[1] & 0xFF) if x[0] == "n" else ("p", (x[1][0],) + (0,) * 7)
+            self.flags = None
         elif op in (".add", ".sub", ".or", ".and"):
             if a[0] != "64" or a[1][0] != ".reg": raise Fail(f"{op} that is not of 64 bits into a register")
             r = a[1][1].lstrip(".")
             self.g[r] = self.arith(op[1:], self.g[r], self.operand(a[2])); self.flags = None
+        elif op == ".xor":
+            if a[1][0] != ".reg" or a[1] != a[2]: raise Fail("an xor that is not of a register with itself")
+            self.g[a[1][1].lstrip(".")] = ("n", 0); self.flags = None
+        elif op == ".test":
+            # a register with itself: is the number it holds zero?
+            if a[1][0] != ".reg" or a[1] != a[2]: raise Fail("a test that is not of a register with itself")
+            v = self.g[a[1][1].lstrip(".")] if a[0] == "64" else self.low32(self.g[a[1][1].lstrip(".")])
+            if lin(v) is None: raise Fail(f"a test of {v}")
+            self.flags = ("numbers", lin(v))
+        elif op == ".lea_data": self.g[a[0].lstrip(".")] = ("a", "rodata", num(a[1]))            # the address of the file's read-only data, so many bytes in
+        elif op == ".shr32":
+            r, n = a[0].lstrip("."), num(a[1]); v = self.low32(self.g[r])
+            if v[0] == "n" and 0 <= n < 32: self.g[r] = ("n", v[1] >> n)
+            elif v[0] == "p" and n in (8, 16, 24): self.g[r] = ("p", v[1][n // 8:4] + (0,) * (4 + n // 8))
+            else: raise Fail(f"{v} shifted right by {n}")
+            self.flags = None
+        elif op in (".dec64", ".dec32"):
+            # one less: a number that stays one (a count of turns), and the branch after it asks whether it is zero
+            r = a[0].lstrip("."); v = self.g[r] if op == ".dec64" else self.low32(self.g[r])
+            if lin(v) is None: raise Fail(f"one taken from {v}")
+            self.g[r] = self.number(lin(v) - 1) if op == ".dec64" else ("n", (v[1] - 1) & 0xFFFFFFFF)
+            self.flags = ("numbers", lin(self.g[r]))
         elif op in (".shl64", ".shr64"):
             r = a[0].lstrip("."); self.g[r] = self.arith(op[1:4], self.g[r], ("n", num(a[1]))); self.flags = None
         elif op == ".cmp":
@@ -778,11 +925,38 @@ class Machine:
             if b[0] != "a": raise Fail("lea from a non-address")
             self.g[a[0].lstrip(".")] = ("a", b[1], plain(Lin.of(b[2]) + signed(num(a[2]))))
         elif op == ".xloadu": self.x[int(a[0])] = self.load(*self.address(a[1], a[2]), 16)
-        elif op == ".xstoreu":
-            if int(a[2]) not in self.x: raise Fail(f"xmm{a[2]} stored before it is written")
-            self.store(*self.address(a[0], a[1]), 16, self.x[int(a[2])])
+        elif op == ".xstoreu": self.store(*self.address(a[0], a[1]), 16, self.lanes(int(a[2])))
         elif op == ".xconst": self.x[int(a[0])] = tuple(self.T.const(num(w)) for w in a[1:5])
-        elif op == ".xmov": self.x[int(a[0])] = self.lanes(int(a[1]))
+        elif op == ".xmov": self.x[int(a[0])] = self.halves(int(a[1]))
+        elif op in (".xpslld", ".xpsrld"):
+            n = int(a[2])
+            if not 0 < n < 32: raise Fail("a shift by nothing, or by the word's width")
+            self.x[int(a[0])] = tuple(("shl" if op == ".xpslld" else "shr", t, n) for t in self.lanes(int(a[1])))
+        elif op == ".xpor":
+            # the two halves of a rotation: (x << (32 - n)) | (x >> n)
+            out = []
+            for p, q in zip(self.halves(int(a[1])), self.halves(int(a[2]))):
+                if not (isinstance(p, tuple) and isinstance(q, tuple)): raise Fail("an or that is not of a rotation's halves")
+                if p[0] == "shr": p, q = q, p
+                if not (p[0] == "shl" and q[0] == "shr" and p[1] == q[1] and p[2] + q[2] == 32): raise Fail("an or that is not of a rotation's halves")
+                out.append(self.T.ror(q[1], q[2]))
+            self.x[int(a[0])] = tuple(out)
+        elif op == ".xpshufb":
+            # a shuffle of bytes by a constant that rotates each word's bytes: a rotation of each word by whole bytes
+            src, mask, out = self.lanes(int(a[1])), self.lanes(int(a[2])), []
+            for lane, m in enumerate(mask):
+                k = self.T.nodes[m]
+                if k[0] != "c": raise Fail("a shuffle of bytes by something that is not a constant")
+                idx = [(k[1] >> (8 * j)) & 0xFF for j in range(4)]
+                r = idx[0] - 4 * lane
+                if not 0 <= r < 4 or any(idx[j] != 4 * lane + (r + j) % 4 for j in range(4)): raise Fail("a shuffle of bytes that is not a rotation of each word")
+                out.append(self.T.ror(src[lane], 8 * r) if r else src[lane])
+            self.x[int(a[0])] = tuple(out)
+        elif op == ".xpblendw":
+            # by 16-bit halves: both halves of a word from one source, or this is no blend of words
+            x, y, n = self.lanes(int(a[1])), self.lanes(int(a[2])), int(a[3])
+            if any(((n >> (2 * j)) & 3) not in (0, 3) for j in range(4)): raise Fail("a blend that splits a word")
+            self.x[int(a[0])] = tuple(y[j] if (n >> (2 * j)) & 1 else x[j] for j in range(4))
         elif op == ".xmovq":
             # the low 64 bits from a general register, zero above: a counter's two words; or bytes, each word a byte with zeros above it
             v, T = self.g[a[1].lstrip(".")], self.T
@@ -809,6 +983,50 @@ class Machine:
             # of 128 bits the processor reads the mask's low four bits
             x, y, n = self.lanes(int(a[1])), self.lanes(int(a[2])), int(a[3]) & 15
             self.x[int(a[0])] = tuple(y[j] if (n >> j) & 1 else x[j] for j in range(4))
+        elif op == ".vzeroupper":                                           # ZMM0 to ZMM15 cleared above bit 127
+            for r in range(16):
+                if r in self.x: self.x[r] = self.x[r][:4]
+        elif op == ".zbroadcast": self.x[int(a[0])] = (self.word(a[1]),) * 16
+        elif op == ".zmov": self.x[int(a[0])] = self.vec(int(a[1]))
+        elif op in (".zload", ".zloadi", ".zstore"):
+            # sixty-four bytes as sixteen words. An aligned one faults off a 64-byte boundary: taken only in the frame on one.
+            if op == ".zloadi": aligned, r, at = False, int(a[0]), self.address(a[1], a[3], a[2])
+            elif op == ".zload": aligned, r, at = a[0] == "true", int(a[1]), self.address(a[2], a[3])
+            else: aligned, r, at = a[0] == "true", int(a[3]), self.address(a[1], a[2])
+            if aligned and at[0] != "wide": raise Fail(f"an aligned read or write of 64 bytes at {at[0]} + {at[1]}: not known to be on a 64-byte boundary")
+            if op == ".zstore": self.store(*at, 64, self.vec(r))
+            else: self.x[r] = self.load(*at, 64)
+        elif op == ".zpadddm":                                              # a sum with sixteen words of memory
+            x, y = self.vec(int(a[1])), self.load(*self.address(a[2], a[4], a[3]), 64)
+            self.x[int(a[0])] = tuple(self.T.add(p, q) for p, q in zip(x, y))
+        elif op == ".zpadddc":                                              # a sum with sixteen numbers
+            self.x[int(a[0])] = tuple(self.T.add(p, self.T.const((num(a[2]) >> (32 * k)) & 0xFFFFFFFF)) for k, p in enumerate(self.vec(int(a[1]))))
+        elif op == ".zpcmpud":                                              # a mask: where the first's word is below the second's
+            if int(a[3]) != 1: raise Fail("a comparison other than less-than")
+            self.x[("k", int(a[0]))] = tuple(self.T.ult(p, q) for p, q in zip(self.vec(int(a[1])), self.vec(int(a[2]))))
+        elif op == ".zpaddd_k":                                             # a sum where the mask says so; the word that was there elsewhere
+            if ("k", int(a[1])) not in self.x: raise Fail(f"k{a[1]} read before it is written")
+            d, k, x, y = self.vec(int(a[0])), self.x[("k", int(a[1]))], self.vec(int(a[2])), self.vec(int(a[3]))
+            self.x[int(a[0])] = tuple(self.T.ite(c, self.T.add(p, q), old) for c, p, q, old in zip(k, x, y, d))
+        elif op in (".zpaddd", ".zpxord"):
+            if op == ".zpxord" and a[1] == a[2]: self.x[int(a[0])] = (self.T.const(0),) * 16         # a register with itself: zero, whatever it held
+            else:
+                x, y = self.vec(int(a[1])), self.vec(int(a[2]))
+                self.x[int(a[0])] = tuple((self.T.add if op == ".zpaddd" else self.T.xor)(p, q) for p, q in zip(x, y))
+        elif op == ".zprord":
+            if not 0 < int(a[2]) < 32: raise Fail("a rotation by nothing, or by the word's width")
+            self.x[int(a[0])] = tuple(self.T.ror(t, int(a[2])) for t in self.vec(int(a[1])))
+        elif op in (".zunpckldq", ".zunpckhdq", ".zunpcklqdq", ".zunpckhqdq"):
+            # within each quarter of the register (four words)
+            x, y = self.vec(int(a[1])), self.vec(int(a[2]))
+            pick = {".zunpckldq": lambda q: (x[q], y[q], x[q + 1], y[q + 1]), ".zunpckhdq": lambda q: (x[q + 2], y[q + 2], x[q + 3], y[q + 3]),
+                    ".zunpcklqdq": lambda q: (x[q], x[q + 1], y[q], y[q + 1]), ".zunpckhqdq": lambda q: (x[q + 2], x[q + 3], y[q + 2], y[q + 3])}[op]
+            self.x[int(a[0])] = sum((pick(q) for q in (0, 4, 8, 12)), ())
+        elif op == ".zshufi32x4":
+            # quarters picked: two of the first register, then two of the second
+            x, y, n = self.vec(int(a[1])), self.vec(int(a[2])), int(a[3])
+            quarter = lambda v, q: v[4 * q:4 * q + 4]
+            self.x[int(a[0])] = quarter(x, n % 4) + quarter(x, n // 4 % 4) + quarter(y, n // 16 % 4) + quarter(y, n // 64 % 4)
         elif op == ".decb":
             # a count kept in AL, counted down: a plain number, so the branch after it is decided
             r = a[0].lstrip("."); v = self.g[r]
@@ -816,12 +1034,12 @@ class Machine:
             n = (v[1] - 1) & 0xFF; self.g[r] = ("al", n); self.flags = ("numbers", Lin.of(n))
         elif op == ".push":
             if a[0] == ".rsp": raise Fail("a push of the stack pointer")
-            sp = self.g["rsp"]
+            sp = self.top()
             self.g["rsp"] = ("a", "frame", sp[2] - 8); self.low = min(self.low, sp[2] - 8)
             self.store("frame", sp[2] - 8, 8, self.g[a[0].lstrip(".")])
         elif op == ".pop":
             if a[0] == ".rsp": raise Fail("a pop into the stack pointer")
-            sp = self.g["rsp"]
+            sp = self.top()
             self.g[a[0].lstrip(".")] = self.load("frame", sp[2], 8); self.g["rsp"] = ("a", "frame", sp[2] + 8)
         elif op == ".call": self.call(a[0])
         elif op == ".ret":
@@ -835,8 +1053,9 @@ class Machine:
         # not above where it was at entry. (A push, a pop, a call and a write through it are then where this
         # machine takes them to be; the stack used is counted from wherever it is.)
         sp = self.g["rsp"]
-        if sp[0] != "a" or sp[1] != "frame" or not isinstance(sp[2], int) or sp[2] > 0: raise Fail(f"the stack pointer leaves the function's own frame: {sp}")
-        self.low = min(self.low, sp[2])
+        if self.wide is not None and sp[0] == "a" and sp[1] == "frame": self.wide = None; del self.mem["wide"]         # back in the frame as it was: the part on the boundary is given up
+        if sp[0] != "a" or sp[1] != ("frame" if self.wide is None else "wide") or not isinstance(sp[2], int) or sp[2] > 0: raise Fail(f"the stack pointer leaves the function's own frame: {sp}")
+        self.low = min(self.low, sp[2] if self.wide is None else self.wide - 63 + sp[2])
         self.steps += 1; self.pc = nxt
 
 
@@ -854,13 +1073,14 @@ def low_byte(v):
     raise Fail(f"the low byte of {v}: not a byte this verifier follows")
 
 
-def paths(m, budget):
-    """Every path of m to the return. `budget`: a list of one number, the instructions that may still be run."""
+def paths(m, budget, head=None):
+    """Every path of m to the return, or to the instruction at `head` once it has run at least one instruction.
+    `budget`: a list of one number, the instructions that may still be run."""
     ends, work = [], [m]
     while work:
         m = work.pop()
         while True:
-            if m.pc is None: ends.append(m); break
+            if m.pc is None or (m.pc == head and m.steps > m.rest): ends.append(m); break
             if budget[0] <= 0: raise Fail(f"still running after {STEPS} instructions")
             try:
                 m.one(); budget[0] -= 1
@@ -881,13 +1101,20 @@ def returned(e, c, where):
     left = {}
     for leaf in c.text["leaves"]:
         name = leaf["name"]
+        wrong = None
         try:
-            want = kspec.SPEC.eval(A, leaf["expr"], dict(e.given))
-            n = bytes_kind(c.kind[name])
-            got = e.view(name, 0, c.kind[name], e.given.get(n) if isinstance(n, str) else n)
-            if not kspec.same(A, got, want): raise Fail(f"{where}: {name} at the return is not what the contract says")
+            if leaf["index"] is not None:
+                # each of the chaining values at the address
+                for i in range(lanes_kind(c.kind[name], "cvs")):
+                    want = kspec.SPEC.eval(A, leaf["expr"], dict(e.given, **{leaf["index"]: i}))
+                    if not kspec.same(A, e.view(name, 32 * i, "cv"), want): wrong = f"{name}[{i}]"; break
+            else:
+                want = kspec.SPEC.eval(A, leaf["expr"], dict(e.given))
+                n = bytes_kind(c.kind[name])
+                if not kspec.same(A, e.view(name, 0, c.kind[name], e.given.get(n) if isinstance(n, str) else n), want): wrong = name
         except Err as err: raise Fail(f"{where}: the specification cannot be followed on this path: {err}")
-        left[name] = want
+        if wrong is not None: raise Fail(f"{where}: {wrong} at the return is not what the contract says")
+        if leaf["index"] is None: left[name] = want
     if c.text["returns"] is not None:
         env = dict(e.given); env.update(left)
         try: want = Lin.of(kspec.SPEC.eval(A, c.text["returns"], env))
@@ -904,14 +1131,189 @@ def within(e, c, where):
     if -e.low > given: raise Fail(f"{where}: {-e.low} bytes of stack used, the contract gives {given}")
 
 
-def check(rows, name, proof=None, symbol=None):
-    """The function's instructions meet its contract. (`proof`: for this verifier, nothing: a proof with a place
-    is refused.)"""
-    if proof is not None and proof.get("places"): raise Fail("a proof with a place: this verifier runs every loop")
+# ---------------------------------------------------------------------------------------------------------
+# A loop whose count the path does not fix: a PLACE, and what holds there after any number of turns.
+#
+# The contract leaves, a lane, the last value of a sequence of the specification
+# (`ensures out[i] = chunk(...) for i in 0..16`, where `sequence chunk(...) { h[0] = ...  h[b + 1] = ...  for b in 0..n }`).
+# The proof names one instruction, the PLACE, which the code passes once a turn, and says what the registers
+# hold there when b turns are done (1 <= b <= n - 1):
+#     "keep"                what it held when the code first came back to the place (after the first turn)
+#     {"lin": {...}}        a number that moves with b: c + cn*n + cb*b
+#     {"cv": [lane, w]}     (a ZMM register) word w of the sequence's value h[b], for sixteen lanes from `lane`
+#     (not named)           anything: the code must not read it before writing it
+# The memory is as it was at that first coming back; of the frame on a 64-byte boundary only the cells the proof names.
+#   base   the code is run from its entry to the place and once around (the first turn may differ from the
+#          others). Where that returns, n is 1 and what is left is h[1]. Where it comes back, n is at least 2,
+#          and the place holds what the proof says for b = 1 and h[1].
+#   step   from the place as the proof says, for an unknown b with 1 <= b <= n - 1 and an unknown h[b], every
+#          path is run to the place again or to the return. At the place again: b + 1 <= n - 1, and it holds
+#          what the proof says for b + 1 and h[b + 1] (one turn of the sequence, as the specification writes
+#          it, on that path's facts). At the return: b was n - 1, and what the contract says is left is there,
+#          the sequence's last value being h[b + 1].
+# So for every n the function leaves h[n]; and the place is passed at most n times, so the loop ends.
+TURN = sym("turns done at the place")       # (no argument has this name)
+
+
+class Turns:
+    """The sequence whose last values a contract leaves, a lane each, on a machine's path."""
+    def __init__(self, c):
+        if len(c.text["leaves"]) != 1 or c.text["leaves"][0]["index"] is None or c.text["returns"] is not None: raise Fail(f"{c.name}: a place is of a function that leaves one thing: the last value of a sequence, a lane")
+        self.leaf = c.text["leaves"][0]
+        e = self.leaf["expr"]
+        if e[0] != "call" or e[1] not in kspec.SPEC.machines: raise Fail(f"{c.name}: what it leaves a lane is not the last value of a sequence")
+        self.name, self.m, self.args, self.lanes = e[1], kspec.SPEC.machines[e[1]], e[2], lanes_kind(c.kind[self.leaf["name"]], "cvs")
+        m = self.m
+        if m["state"] is None or m["init"] is None or m["loop"][0] != "for" or m["loop"][2] != ("num", 0) or len(m["params"]) != len(self.args): raise Fail(f"{c.name}: {e[1]} is not a sequence counted from 0")
+
+    def env(self, e, lane):
+        """What the sequence is given for a lane, as the contract writes it."""
+        A = e.A()
+        given = dict(e.given, **{self.leaf["index"]: lane})
+        return A, {p: kspec.SPEC.eval(A, x, given) for p, x in zip(self.m["params"], self.args)}
+
+    def count(self, e, lane):
+        A, env = self.env(e, lane)
+        return Lin.of(kspec.SPEC.eval(A, self.m["loop"][3], env))
+
+    def first(self, e, lane):
+        A, env = self.env(e, lane)
+        return kspec.terms(kspec.SPEC.eval(A, self.m["init"], env))
+
+    def turn(self, e, lane, state, b):
+        """h[b + 1] from h[b] = `state`: one turn, as the specification writes it. What it asks of b and n the path's facts answer: the code must have asked too."""
+        A, env = self.env(e, lane)
+        env[self.m["state"]], env[self.m["loop"][1]] = kspec.words(state), plain(b)
+        return kspec.terms(kspec.SPEC.turn(A, self.name, env))
+
+    def instance(self, e, lane):
+        """The lane's sequence, as kspec.py knows it where the specification speaks of its last value."""
+        A, env = self.env(e, lane)
+        env[self.m["state"]] = kspec.SPEC.eval(A, self.m["init"], env)
+        return (self.name, tuple(A.key(env[p]) for p in self.m["params"]), A.key(kspec.SPEC.state_of(self.m, env)))
+
+
+def held(seen, proof, c, b, state):
+    """What the proof says the place holds with b turns done and the sequence's values `state` (eight words a
+    lane): the registers it names, the ZMM registers, the cells of the frame on a 64-byte boundary (by their
+    place from the stack pointer). `seen`: the machine at its first coming back to the place."""
+    g, x, wide = {}, {}, {}
+    whole = lambda k: type(k) is int                    # (a proof is text from outside: a number in it is a whole number, or it is refused)
+    numbers = {name for _, kind, name in c.args if kind == "number"}
+    if "b" in numbers: raise Fail(f"{c.name}: an argument is named b, the proof's name for the turns done")
+    for r, what in proof["registers"].items():
+        if r not in G64: raise Fail(f"the proof names a register that is none: {r}")
+        if what == "keep": g[r] = seen.g[r]; continue
+        if not isinstance(what, dict) or not isinstance(what.get("lin"), dict) or not all(whole(k) for k in what["lin"].values()): raise Fail(f"the proof's word for {r} is neither keep nor a number that moves with the turns")
+        d = Lin.of(what["lin"].get("1", 0)) + Lin.of(b).scale(what["lin"].get("b", 0))
+        for name, k in what["lin"].items():
+            if name in ("1", "b"): continue
+            if name not in numbers: raise Fail(f"the proof's number for {r} speaks of {name}, which is no number among the arguments")
+            d = d + sym(name).scale(k)
+        g[r] = value(d)
+    for r, what in proof["vectors"].items():
+        r = int(r)
+        if not 0 <= r < 32: raise Fail(f"the proof names a register that is none: zmm{r}")
+        if what == "keep":
+            if len(seen.x.get(r, ())) != 16: raise Fail(f"the proof keeps zmm{r}, which held nothing whole")
+            x[r] = seen.x[r]
+        else:
+            if not isinstance(what, dict) or not isinstance(what.get("cv"), list) or len(what["cv"]) != 2 or not all(whole(k) for k in what["cv"]): raise Fail(f"the proof's word for zmm{r} is neither keep nor a word of the sequence's value")
+            lane, w = what["cv"]
+            if not (0 <= lane and lane + 16 <= len(state) and 0 <= w < 8): raise Fail(f"the proof's word for zmm{r} is none of the sequence's")
+            x[r] = tuple(state[lane + k][w] for k in range(16))
+    for off in proof["frame"]:
+        at = seen.g["rsp"][2] + int(off)
+        if seen.wide is None or at not in seen.mem["wide"]: raise Fail(f"the proof keeps the frame's cell at {off}, which held nothing")
+        wide[at] = seen.mem["wide"][at]
+    return g, x, wide
+
+
+def at_place(seen, proof, c, b, state):
+    """The machine at the place, holding what the proof says and nothing more."""
+    m = seen.rested()
+    g, x, wide = held(seen, proof, c, b, state)
+    m.g = {r: g.get(r, ("q", f"whatever {r} holds at the place")) for r in G64}
+    m.x, m.flags, m.back = x, None, {}
+    if m.wide is not None: m.mem["wide"] = wide
+    return m
+
+
+def agrees(e, seen, proof, c, b, state, where):
+    """A machine come to the place holds what the proof says, and its memory is as it was at the first coming back."""
+    g, x, wide = held(seen, proof, c, b, state)
+    for r, v in g.items():
+        if e.g[r] != v and not (lin(e.g[r]) is not None and lin(v) is not None and e.facts.zero(lin(e.g[r]) - lin(v)) is True): raise Fail(f"{where}: {r} is {e.g[r]} at the place, the proof says {v}")
+    for r, v in x.items():
+        if e.x.get(r) != v: raise Fail(f"{where}: zmm{r} at the place is not what the proof says")
+    if e.wide != seen.wide: raise Fail(f"{where}: the frame on a 64-byte boundary is not as it was")
+    for at, v in wide.items():
+        if e.mem["wide"].get(at) != v: raise Fail(f"{where}: the frame's cell at {at} is not kept")
+    for region in set(e.mem) | set(seen.mem):
+        if region == "wide": continue
+        was, now = seen.mem.get(region), e.mem.get(region)
+        if was is None or now is None or was.keys() != now.keys() or any(not (was[o] is now[o] or was[o] == now[o]) for o in was): raise Fail(f"{where}: what is at {region} is not as it was when the code first came back to the place")
+    within(e, c, where)
+
+
+def left(e, c, turns, state, where):
+    """At a return: what the contract says is left, the sequence's last value being `state`, a lane each."""
+    e.ghost = {turns.instance(e, lane): kspec.words(state[lane]) for lane in range(turns.lanes)}
+    returned(e, c, where)
+
+
+def check_place(rows, c, T, proof, entry, data):
+    if type(proof["place"]) is not int or not all(isinstance(proof.get(part), dict) for part in ("registers", "vectors", "frame")): raise Fail("the proof is not a place and what the registers, the vector registers and the frame hold there")
+    turns, head, budget = Turns(c), BASE + proof["place"], [STEPS]
+    if head not in {a for a, _, _ in rows}: raise Fail("the place is at no instruction")
+    lanes = range(turns.lanes)
+    # base: from the entry to the place, and once around
+    m = Machine(T, rows, c, data); m.pc = entry
+    count = turns.count(m, 0)
+    if any(turns.count(m, lane) != count for lane in lanes): raise Fail("the lanes' sequences are not of one length")
+    ends = paths(m, budget, head)
+    if len(ends) != 1 or ends[0].pc != head: raise Fail("from the entry the code does not come to the place by one path")
+    first = ends[0]
+    start = [turns.first(first, lane) for lane in lanes]
+    around = paths(first.rested(), budget, head)
+    back = [e for e in around if e.pc == head]
+    if len(back) != 1: raise Fail("the first turn does not lead back to the place by one path")
+    seen = back[0]
+    for e in around:
+        if e.pc is not None: continue
+        if e.facts.zero(count - 1) is not True: raise Fail("base: the code returns after its first turn when there are more")
+        left(e, c, turns, [turns.turn(e, lane, start[lane], 0) for lane in lanes], "after one turn")
+    if not seen.facts.ge0(count - 2): raise Fail("base: the code comes back to the place after the last turn")
+    agrees(seen, seen, proof, c, 1, [turns.turn(seen, lane, start[lane], 0) for lane in lanes], "base")
+    # step: from the place with b turns done, 1 <= b <= count - 1, and any values of the sequence
+    unknown = [tuple(T.var("state", lane, w) for w in range(8)) for lane in lanes]
+    m = at_place(seen, proof, c, TURN, unknown)
+    m.facts.add(TURN - 1); m.facts.add(count - TURN - 1)
+    tally = {"place": 0, "return": len(around) - 1}
+    for e in paths(m, budget, head):
+        nxt = [turns.turn(e, lane, unknown[lane], TURN) for lane in lanes]
+        if e.pc == head:
+            if not e.facts.ge0(count - TURN - 2): raise Fail("step: the code comes back to the place after the last turn")
+            agrees(e, seen, proof, c, TURN + 1, nxt, "step")
+            tally["place"] += 1
+        else:
+            if e.facts.zero(count - TURN - 1) is not True: raise Fail("step: the code returns before the last turn")
+            left(e, c, turns, nxt, "step")
+            tally["return"] += 1
+    if not tally["place"] or not tally["return"]: raise Fail("the step has no path back to the place, or the function none to the return")
+    return dict(tally, widest=STEPS - budget[0])
+
+
+def check(rows, name, proof=None, symbol=None, entry=None, data=b""):
+    """The function's instructions meet its contract. `proof`: for a loop whose count the path does not fix, its
+    place and what holds there; nothing for any other function. `entry`: where the function is entered, if
+    not at its first instruction. `data`: the file's read-only data, where the function reads it."""
     global FRESH
     FRESH = itertools.count()               # the names given on the way are the same every time: a proof of the arithmetic speaks of them
-    c, T = contract(symbol or "b3l_" + name), kcheck.Terms()        # (`symbol`: a function that is not one of hash.ode's: a kernel)
-    m = Machine(T, rows, c); m.pc = rows[0][0]
+    c, T = contract(symbol or "b3l_" + name), kterms.Terms()        # (`symbol`: a function that is not one of hash.ode's: a kernel)
+    if proof is not None and "place" in proof: return check_place(rows, c, T, proof, rows[0][0] if entry is None else entry, data)
+    if proof is not None and proof.get("places"): raise Fail("a proof with several places: this verifier takes one")
+    m = Machine(T, rows, c, data); m.pc = rows[0][0] if entry is None else entry
     budget = [STEPS]
     ends = paths(m, budget)
     for e in ends: returned(e, c, "at a return")
@@ -929,6 +1331,14 @@ def load(obj, name, symbol=None):
     rows, _ = kdecode.read(obj, symbol or "b3l_" + name, BASE, DATA)
     kspec.fits(obj, symbol or "b3l_" + name)
     return rows
+
+
+def load_from(obj, symbol, start):
+    """(rows, the file's read-only data, where it is entered): a function that is entered at `symbol` and whose
+    code begins at `start` (the 32-lane kernel has two ways in)."""
+    rows, data = kdecode.read(obj, start, BASE, DATA)
+    kspec.fits(obj, start, symbol)
+    return rows, data, BASE + kdecode.address(obj, symbol) - kdecode.address(obj, start)
 
 
 def main():
