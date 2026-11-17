@@ -764,11 +764,7 @@ class Machine:
         elif op in (".add", ".sub", ".or", ".and"):
             if a[0] != "64" or a[1][0] != ".reg": raise Fail(f"{op} that is not of 64 bits into a register")
             r = a[1][1].lstrip(".")
-            v = self.arith(op[1:], self.g[r], self.operand(a[2]))
-            if r == "rsp":
-                if v[0] != "a" or v[1] != "frame" or isinstance(v[2], Lin): raise Fail("the stack pointer leaves the frame")
-                self.low = min(self.low, v[2])
-            self.g[r] = v; self.flags = None
+            self.g[r] = self.arith(op[1:], self.g[r], self.operand(a[2])); self.flags = None
         elif op in (".shl64", ".shr64"):
             r = a[0].lstrip("."); self.g[r] = self.arith(op[1:4], self.g[r], ("n", num(a[1]))); self.flags = None
         elif op == ".cmp":
@@ -819,10 +815,12 @@ class Machine:
             if v[0] != "al": raise Fail("a byte counted down that no number was put in")
             n = (v[1] - 1) & 0xFF; self.g[r] = ("al", n); self.flags = ("numbers", Lin.of(n))
         elif op == ".push":
+            if a[0] == ".rsp": raise Fail("a push of the stack pointer")
             sp = self.g["rsp"]
             self.g["rsp"] = ("a", "frame", sp[2] - 8); self.low = min(self.low, sp[2] - 8)
             self.store("frame", sp[2] - 8, 8, self.g[a[0].lstrip(".")])
         elif op == ".pop":
+            if a[0] == ".rsp": raise Fail("a pop into the stack pointer")
             sp = self.g["rsp"]
             self.g[a[0].lstrip(".")] = self.load("frame", sp[2], 8); self.g["rsp"] = ("a", "frame", sp[2] + 8)
         elif op == ".call": self.call(a[0])
@@ -833,6 +831,12 @@ class Machine:
         if nxt is not None and nxt <= self.pc:
             self.back[nxt] = self.back.get(nxt, 0) + 1
             if self.back[nxt] > TURNS: raise Fail(f"a loop has turned {TURNS} times on one path: not a loop this verifier runs")
+        # Whatever instruction it was: the stack pointer is in the function's own frame, a plain number of bytes
+        # not above where it was at entry. (A push, a pop, a call and a write through it are then where this
+        # machine takes them to be; the stack used is counted from wherever it is.)
+        sp = self.g["rsp"]
+        if sp[0] != "a" or sp[1] != "frame" or not isinstance(sp[2], int) or sp[2] > 0: raise Fail(f"the stack pointer leaves the function's own frame: {sp}")
+        self.low = min(self.low, sp[2])
         self.steps += 1; self.pc = nxt
 
 
