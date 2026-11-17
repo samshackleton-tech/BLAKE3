@@ -1202,6 +1202,9 @@ eight instructions whose results nothing reads (BLAKE3 #398).
 
 ## Every number of blocks: a proof that is found, then checked (`kloop.py`, November 15)
 
+(Since November 17 `kfn.py` shows this, by the same induction on its own machine, and `kloop.py` is gone: the
+last section. What follows is as it was written.)
+
 The table above is each kernel for one number of blocks (16, or 1), run to its end. `kloop.py` shows K32, P32
 and P16 for **every** number of blocks `n >= 1` and every value of the four flag bytes (flags, start, end,
 last length): the kernels' whole interface. It is a first trial of how proofs could be made for code with
@@ -1298,7 +1301,8 @@ thing: `mov rcx, 5` (the platform word that selects the AVX-512 kernel) could be
 AVX-512 kernel be called on a machine without it, with the contract none the wiser. The contract now says the
 AVX-512 kernel is called only where the platform word is 5.
 
-**The kernels `merge` calls are checked too** (`kone.py`, written after that finding): the library's
+**The kernels `merge` calls are checked too** (`kone.py`, written after that finding; since November 17 by
+`kfn.py`, and `kone.py` is gone: the last section): the library's
 `blake3_servil_compress_in_place_avx512` (76 instructions) and `_sse41` (94), each against `compress` of
 `blake3.spec` for every chaining value, block and counter, in 3 ms. What each asks of its caller is now read
 from that check, not written by hand: the AVX-512 kernel takes the low byte of RDX and of R8; the SSE4.1
@@ -1341,12 +1345,15 @@ specification. (The hash above does not use them: it has no stack.)
 | `check_all.py` | 120 | every function from an assembler's objects, and that the hash's functions end |
 | `ode.py`, `kspec.py`, `klin.py` | 754 + 565 + 249 | the specification's reader; its algebra on symbols; numbers that depend on counts and the facts about them (no search: that is `kprove.py`'s) |
 | `kdecode.py` | 581 | reads the ELF file (an object's sections, names and relocations; a linked file as a loader maps it) and decodes the instruction forms the code uses, and no others; no disassembler |
-| `kfn.py`, `test_kfn.py` | 889 + 131 | the verifier of functions; its tests |
+| `kfn.py`, `test_kfn.py` | 1,360 + 131 | the verifier of functions (since November 17 of the kernels too: a place, by induction); its tests |
 | `kfn_flip.py`, `khash_native.c` | 133 + 176 | its single-bit audit; the whole hash on a processor against BLAKE3 in C |
 | `khash_bench.c`, `earlier/*.S` | 37 | the speed of `hashr`, of the library, and of the earlier `hashf` (its assembly), in one harness |
-| `kloop.py`, `test_kloop.py` | 439 + 115 | the wide kernels for every number of blocks: the prover, the proof's form, the verifier by induction; its tests |
-| `kone.py`, `kone_native.c`, `test_kone.py` | 218 + 86 + 112 | the one-block kernels: the verifier (XMM registers as four terms), the processor run, the tests |
-| `kcheck.py`, `test_kcheck.py` | 534 + 163 | the first verifier: a kernel's instructions run to the end on symbols (and the terms and the reading of an instruction's text that the others use); its tests |
+| `kwide.py`, `test_kloop.py` | 126 + 131 | the prover of a wide kernel's place (trusted for nothing; the audits' adversary); the wide kernels' tests, through `kfn.py` |
+| `kone_native.c`, `test_kone.py` | 86 + 122 | the one-block kernels on the processor; their tests, through `kfn.py` |
+| `kernels.py`, `../wide/*.ode`, `../wide/test_sources.py` | 55 + 1,270 + 104 | the five kernels made from their Ode sources (a maker's step); the sources; that each is the library's kernel byte for byte |
+| `kterms.py` | 79 | 32-bit terms compared by identity; the reading of an instruction's text; the registers' names |
+| `test_kholes.py` | 106 | the two holes of November 17: the copies that were shown, each refused |
+| `kcheck.py`, `test_kcheck.py` | 462 + 163 | the first verifier: a kernel's instructions run to the end on symbols; its tests |
 | `kcheck_cross.py` | 109 | kcheck's reading of each instruction against the Lean model's processor-validated test vectors |
 | `kflip.py`, `kflip_native.c`, `kflip_thunk.S` | 206 + 160 + 66 | the kernels' single-bit audit, and the processor's word on each change accepted |
 | `kglue.py`, `kglue_flip.py`, `kglue_native.c`, `test_kglue.py` | 569 + 136 + 109 + 119 | the stack's functions (the earlier trial): prover, verifier; the audit; the tests |
@@ -1452,8 +1459,8 @@ an 8-bit `or` read as 32 bits.
 
 - The specification and the public contract (`blake3.spec`, 185 lines; for another program, its own
   `.spec`), with what they mean (`LANGUAGE.md`), and the programs that read them and the
-  bytes: for the hash `ode.py`, `kspec.py`, `klin.py`, `kdecode.py`, `kcheck.py`, `kone.py`, `kloop.py`,
-  `kfn.py`: 4,176 lines; for the programs of `programs/`, `kbyte.py` in place of the last four: 910 more;
+  bytes: for the hash `ode.py`, `kspec.py`, `klin.py`, `kdecode.py`, `kterms.py`, `kfn.py` (and the
+  drivers; since November 17, when the kernels' own verifiers went: `verify.py` lists them, 3,072 lines of code); for the programs of `programs/`, `kbyte.py` in place of the last four: 910 more;
   `kglue.py`, 569 (their provers, about 150 of those, need no trust). And Python.
 - No assembler and no linker, when the file checked is the file run (`check_binary.py`). A loader that
   maps the file as its program headers say, and nothing else in the process writing over the code.
@@ -1599,3 +1606,95 @@ not yet so, and the known warts, are the section above this one.
 Not yet done of what Sam asked the same day: the names a maker chose taken out of what is hashed and put in
 a glossary beside it; a reader's own list of names; file names and the contract's name by the same rule; a
 comment's outside documents given by their hashes.
+
+## One verifier of functions; the kernels from Ode source; two holes found by reading (November 17)
+
+**Two holes, each "shown, of something false".** Both were found by reading `kfn.py` and the kernels'
+verifiers in order to merge them, and both were in what a reader relied on until this day. Neither could
+have been found by the audits here, which change one bit at a time: one needs four instructions added, the
+other seven bytes changed.
+
+1. *The stack pointer.* `kfn.py`'s machine (which is `kbyte.py`'s too) let `mov`, `lea` and `pop` put
+   anything in the stack pointer, and then took a push to go to the function's own frame. A copy of the
+   shipped `ode_common` with four instructions added (`mov rax, rsp; mov rsp, rdi; push rbx; mov rsp, rax`)
+   was shown to meet its public contract, the contract unchanged; on a processor it wrote eight bytes just
+   below its argument `a`. `lea` could also move the stack pointer down without the stack being counted.
+   Now: after every instruction, whatever it was, the stack pointer is in the function's own frame at a
+   plain number of bytes not above where it was at entry, and the stack used is counted from there; a push
+   of the stack pointer and a pop into it are refused.
+2. *The address of the file's data.* The decoder wrote `lea reg, [rip + data]` as a move of the number
+   RODATA + where, the same row as a true `mov reg, NUMBER`; the kernels' verifiers took any such number
+   within the data for the data's address. A copy of the shipped `b3hashr.o` with seven bytes changed in
+   the 32-lane kernel (`mov rdi, 0x50004500` for `lea rdi, [rip + the schedule]`) was shown to meet the
+   public contract, exit 0. On a processor it stops on a fault; with a page mapped at that address it
+   returns a digest that is not BLAKE3's. Now the lea is a row of its own, `.lea_data reg WHERE`, which no
+   move of a number is.
+
+`test_kholes.py` holds the copies that were shown; each is refused. What found them was a question asked of
+each instruction while reading ("what if this register is the stack pointer?", "what else writes this
+row?"), not a tool. More of that reading is owed: the audits do not reach faults of this kind.
+
+**One verifier of functions.** The five kernels of the hash (the two one-block kernels; K32, P32 and P16
+for every number of blocks) are verified by `kfn.py`, as the nine functions of `hash.ode` are. `kloop.py`
+and `kone.py`, the kernels' own verifiers, are gone (the sections above that describe them are as they
+were written; what they showed is shown now by `kfn.py`).
+
+- A loop whose count the path does not fix is taken by a **place**: the proof names one instruction the
+  code passes once a turn and says what the registers hold there after any number of turns ("keep"; a
+  number that moves with the turns; a word of the specification's value for sixteen lanes). The verifier
+  runs the base (from the entry to the place and once around) and the step (from the place with an unknown
+  number of turns done, to the place again or to the return), each against one turn of the specification's
+  `sequence`. This is what `kloop.py` did, on `kfn.py`'s own machine and memory. `kfn.py`'s page says what
+  each line of a proof means.
+- The machine learned what the kernels use: ZMM registers as sixteen terms, mask registers, a frame on a
+  64-byte boundary, the file's read-only data, 32-bit moves and shifts, a kernel's kinds of argument, and
+  the older SSE4.1 forms (a rotation as two shifts and an or; a shuffle of bytes that rotates words).
+- The kernels' contracts say `requires no_overlap(...)`, as `kfn.py` asks of every function. One thing is
+  taken of a table of inputs and not written: the n blocks of an input lie in memory one after another, so
+  64 * n is below 2^64 (the callers, which name each block they give, show the blocks are there).
+- `python3 verify.py b3hashr.o` now loads **3,072 lines of code in 10 files** (3,461 in 11 before; with the
+  line about the definitions' coming to an end 4,265, before 4,640). `kcheck.py`'s machine is not among
+  them: the terms and the reading of an instruction's text moved to `kterms.py` (57 lines).
+- `kwide.py` is the prover of a wide kernel's place on `kfn.py`'s machine (what `kloop.py`'s prover was).
+  Nothing of it is loaded by a verification. The audits use it as an adversary: `kflip.py --general` asks
+  it for a proof of every changed kernel.
+- `test_kone.py` and `test_kloop.py` ask `kfn.py` what they asked the old verifiers, every case: 15 + 24
+  changed kernels, 15 changed contracts, 7 wrong proofs, each kernel against the other's contract.
+
+**The kernels from Ode source.** `../wide/one.ode` (the two one-block kernels), `../wide/k32.ode` (K32, with
+P32 as a second `entry`) and `../wide/p16.ode` are the five kernels in Ode's instruction layer. Each, made by
+`kernels.py` (the Ode compiler `odec.py`, then an assembler), is **byte for byte** the kernel of
+BLAKE3-Servil's own assembly file and reads the same constants (`../wide/test_sources.py`).
+
+- **A loop's proof is written by the compiler from the source.** The source says what holds at the loop:
+
+      @block16:
+      place b {
+        keep rsp, rbp, rsi, rdi, r8, r9, r10, r12, r15
+        r13 = n - b
+        r14 = 64 * b
+        zmm0 .. zmm7 = h[b]
+      }
+
+  `odec.py` leaves these lines out of the instructions and writes the proof from them; the one number it
+  does not know (how many bytes into the kernel the place is) the assembler puts in the object. No search.
+  The three proofs so written are, name for name, the ones the prover had found by running the kernels
+  (`proofs/k32.json`, `p32.json`, `p16.json`, now written by `kernels.py --proofs`).
+- `klink.py` takes the kernels' objects from the sources. `b3hashr.o` remade: every function at the same
+  place, every instruction the same; 25 bytes of the kernels differ (the fields that say where their
+  constants are, which now lie elsewhere after the code); 17,984 bytes loaded, 18,176 before.
+  **Its speed has not been measured again.**
+
+So for the file shipped: fourteen functions, each from Ode source (nine in the word-level language, five in
+the instruction layer), one verifier, and for the loops a proof the compiler writes.
+
+**Not yet so.**
+- AUDIT_LINE
+- The place's language is three forms; a loop of a function of `hash.ode` whose count is not fixed would
+  need more (none has one).
+- In the instruction layer the programmer writes the place by hand. A loop written in Ode's word-level
+  language, from which the compiler would derive it, is not there for kernels.
+- `kcheck.py`'s machine (a kernel run to its end for a fixed number of blocks; `output16`), `kglue.py` and
+  `check_all.py` are earlier trials that no verification of a shipped file loads; they still have audits.
+- AArch64; the hash's incremental interface; the kernels the library has beside these five (AVX2, SSE4.1
+  wide, the batch kernels).

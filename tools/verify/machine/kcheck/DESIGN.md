@@ -149,6 +149,13 @@ checksum), eleven functions, 1,759 instructions, checked in 17 seconds; the
 proof carried in the binary; a C and a Rust program linked with it and checked as files; audits with a
 processor as judge (README.md).
 
+Since November 17 (Sam's direction: the target is the single-threaded hash of blake3-servil-core, as fast
+as the library and verifiable; one kind of input to the prover, Ode source; the kernels written in Ode and
+shown by the same verifier as everything else): the hash's five kernels have Ode sources that give the
+library's bytes, a loop's proof is written by the compiler from what the source says holds there, and one
+verifier of functions shows all fourteen functions of the file shipped (README.md, last section). Two
+faults of the verifier were found on the way, by reading (the same section).
+
 Not done, in the order I would take them:
 
 1. **Speed.** Under the bench lock `hashr` runs at 97% to 98% of the library's own one-shot hash from 1 MiB
