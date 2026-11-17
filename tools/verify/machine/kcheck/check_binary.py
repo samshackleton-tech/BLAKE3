@@ -29,7 +29,7 @@ to know.)"""
 import hashlib, json, os, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import kcheck, kdecode, kfn, klin, kloop, kone, kspec, ode, varith
+import kcheck, kdecode, kfn, klin, kloop, kone, kshow, kspec, ode, varith
 from kproof import carried
 
 WIDE = {kloop.KERNELS[n]["symbol"]: n for n in ("k32", "p32", "p16")}
@@ -55,7 +55,7 @@ def take(proof, spec_path):
     for name, text in proof["files"].items():
         if name.endswith(".json"): PLACES[os.path.basename(name)[:-5]] = text.decode()
         if name.endswith(".arith.z"): ARITH[name[:-len(".arith.z")]] = text
-    return hashlib.sha256(mine.encode()).hexdigest() == proof.get("spec")
+    return kshow.b3(mine.encode()) == proof.get("spec")
 
 
 def ends(top="b3l_hashr"):
@@ -96,12 +96,20 @@ def check(path, symbol):
 
 
 def main():
+    global MINE, LEMMAS
+    if not isinstance(sys.stdout, kshow.Plain): sys.stdout = kshow.Plain(sys.stdout)
+    maintain = "--maintain" in sys.argv        # a maintainer's run: the functions inside by name, where each is, why one is not shown
     args = [a for k, a in enumerate(sys.argv[1:], 1) if not a.startswith("--") and sys.argv[k - 1] not in ("--proof", "--spec")]
     path, top = args[0], args[1] if len(args) > 1 else "b3l_hashr"
     option = lambda name: sys.argv[sys.argv.index(name) + 1] if name in sys.argv else None
     e = kdecode.Elf(path)
     if not kdecode.settled(e):
         print(f"{os.path.basename(path)}: its code has relocations for a linker to fill in: check_all.py reads such objects"); return 2
+    offered = {}
+    if e.type == 1:
+        # an object to be linked: read only in the one shape whose every part a linker takes is read here
+        why, offered = kdecode.linkable(e)
+        if why: print(f"{os.path.basename(path)}: NOT shown: {why}"); return 1
     s = kdecode.Settled(e)
     kind = {1: "an object with nothing left for a linker to fill in", 2: "an executable", 3: "a shared object, or an executable that may be loaded anywhere"}[e.type]
     print(f"{os.path.basename(path)}: {kind}, {len(e.b)} bytes; {sum(z - a for a, z, x in s.parts if x)} of them loaded to be run")
@@ -117,20 +125,24 @@ def main():
         if option("--spec") is None and "specification" in proof["files"]:
             same = take(proof, None)
             text = proof["files"]["specification"]
-            print(f"the proof: {where}; the specification is the one the file carries ({text.count(10)} lines, SHA-256 {hashlib.sha256(text).hexdigest()[:16]}...): read it (--show-spec), for it is what is shown")
+            print(f"the proof: {where}; the specification is the one the file carries ({text.count(10)} lines, BLAKE3 {kshow.b3(text)}): read it (--show-spec), for it is what is shown")
         else:
             same = take(proof, option("--spec") or os.path.join(HERE, "blake3.spec"))
             print(f"the proof: {where}; the specification is the reader's, " + ("the one the maker had" if same else "NOT the one the maker had"))
         if top not in s.at:
             # no names in the file: the code is looked for by its bytes, and the proof says where each function is in it
             size, digest, begins = proof["code"]
-            hit = next((k for k in range(0, len(s.image) - size + 1, 16) if s.image[k:k + len(begins)] == begins and hashlib.sha256(s.image[k:k + size]).hexdigest() == digest), None)
+            hit = next((k for k in range(0, len(s.image) - size + 1, 16) if s.image[k:k + len(begins)] == begins and kshow.b3(s.image[k:k + size]) == digest), None)
             if hit is None: print(f"{top}: the file has no such name, and the code the proof is of is not in it"); return 1
             kdecode.GIVEN.update({name: s.lo + hit + off for name, off in proof["at"].items()})
             s = kdecode.Settled(e)
             print(f"the file has no names: the code the proof is of is found by its bytes at {s.lo + hit:#x}, and the proof's names are taken for its functions")
-    else: print(f"the proof: {where}")
-    done, todo, covered, failed, count, t_all, searched = {}, [top], [], 0, 0, time.time(), []
+    else:
+        print(f"the proof: {where}")
+        with open(os.path.join(HERE, "blake3.spec")) as f: MINE = f.read()            # (the lemmas for the line about the definitions' ending)
+        with open(os.path.join(HERE, "proofs", "blake3.lemmas")) as f: LEMMAS = f.read()
+    # every name the file gives a linker is verified too, called by `top` or not (kdecode.linkable)
+    done, todo, covered, failed, count, t_all, searched = {}, [top] + sorted(n for n in offered if n != top), [], 0, 0, time.time(), []
     while todo:
         symbol = todo.pop(0)
         if symbol in done: continue
@@ -142,7 +154,10 @@ def main():
             klin.Facts.PROOFS = (varith.unpack(ARITH[symbol]) if symbol in ARITH else {}) if by_proof else None
             rows, what, start = check(path, symbol)
         except (kcheck.Fail, kdecode.Stop) as err:
-            done[symbol] = None; failed += 1; print(f"  {symbol}: NOT shown: {err}" + (" (with the arithmetic's proofs the file carries and no search: --search to see what a search says)" if by_proof else ""))
+            done[symbol] = None; failed += 1
+            if maintain: print(f"  {symbol}: NOT shown: {err}" + (" (with the arithmetic's proofs the file carries and no search: --search to see what a search says)" if by_proof else ""))
+            elif symbol == top: print(f"  {symbol}: NOT shown")
+            elif symbol in offered: print(f"  {symbol}: NOT verified: the file gives a linker this name, and no contract here is shown of the bytes it leads to")
             if symbol == top:
                 # not shown: is it false? The public contract worked out on numbers beside the code run here (refute.py)
                 import refute
@@ -151,14 +166,16 @@ def main():
             continue
         except (ValueError, KeyError, IndexError, TypeError) as err:
             if not by_proof: raise
-            done[symbol] = None; failed += 1; print(f"  {symbol}: NOT shown: the arithmetic's proofs the file carries cannot be read ({type(err).__name__})"); continue
+            done[symbol] = None; failed += 1
+            if maintain or symbol == top: print(f"  {symbol}: NOT shown" + (f": the arithmetic's proofs the file carries cannot be read ({type(err).__name__})" if maintain else ""))
+            continue
         finally: klin.Facts.PROOFS = None
         searched.append(symbol) if not by_proof else None
         done[symbol] = len(rows)
         at = s.at[start]
         if (at, at + rows[-1][1] - rows[0][0]) not in covered: covered.append((at, at + rows[-1][1] - rows[0][0])); count += len(rows)      # two ways into one body: once
         calls = sorted({i.split()[1] for _, _, i in rows if i.split()[0] == ".call"})
-        print(f"  {symbol:<42} at {s.lo + s.at[symbol]:#8x}  {len(rows):>4} instructions  {1000 * (time.time() - t0):7.1f} ms  {what}")
+        if maintain: print(f"  {symbol:<42} at {s.lo + s.at[symbol]:#8x}  {len(rows):>4} instructions  {1000 * (time.time() - t0):7.1f} ms  {what}")
         todo += [c for c in calls if c not in done]
     inside = bytearray(len(s.image))
     for a, z in covered: inside[a:z] = b"\1" * (z - a)
@@ -167,12 +184,13 @@ def main():
     run = sum(z - a for a, z, x in s.parts if x)
     print(f"of the {run} bytes loaded to be run: {sum(inside)} are the {len(covered)} bodies checked ({count} instructions), {zeros} are zero, {len(rest) - zeros} are others"
           + (" (constants the functions read; what lies between functions; whatever else the file holds)" if len(rest) - zeros else ""))
+    if failed and not maintain: print("  (where, and why: run it again with --maintain)")
     if failed: print(f"{top}: NOT shown ({failed} failed)"); return 1
     print("the arithmetic: " + ("every fact by a proof the file carries, verified by adding up (varith.py); nothing was searched for" if not searched else
                               f"searched for by this program for {len(searched)} function(s): the file carries no proofs of it, or --search was given"))
     if "--no-ends" not in sys.argv:
         line = ends(top)
-        print("the specification: " + line)
+        print("the specification: " + kshow.ends_said(line, maintain))
         if "NOT shown" in line:
             # (a contract that speaks through a definition not shown to come to an end says nothing of the inputs on which it goes on)
             print(f"{top}: NOT shown: its code meets its contract as far as the contract says anything; the contract speaks through definitions that are not shown to come to an end"); return 1

@@ -79,9 +79,16 @@ def load_spec_and_offsets(bin_path, spec_path=None):
     spec = ode.with_proof(text, inner) if inner else ode.Spec(text)
     public = set(ode.Spec(text).contracts)
     at = dict(s.at)
-    if proof is not None:
-        for nm, off in proof["at"].items():
-            if nm not in at: at[nm] = off
+    if proof is not None and "code" in proof and any(nm not in at for nm in proof["at"]):
+        # A file without names: the proof's places are places in the code it is of, and that code is found in
+        # the file by its bytes. (Until November 16, 2026 they were taken as places in the file: in a linked
+        # file stripped of its names the code was entered somewhere else, and a true contract was called FALSE.)
+        import kshow
+        size, digest, begins = proof["code"]
+        hit = next((k for k in range(0, len(s.image) - size + 1, 16) if s.image[k:k + len(begins)] == begins and kshow.b3(s.image[k:k + size]) == digest), None)
+        if hit is not None:
+            for nm, off in proof["at"].items():
+                if nm not in at: at[nm] = hit + off
     return s, spec, public, at
 
 

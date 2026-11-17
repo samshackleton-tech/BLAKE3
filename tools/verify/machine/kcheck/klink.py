@@ -82,9 +82,10 @@ def proof(image, where, more=()):
     the functions inside and the kernels' places; where each function is in the code (for a file whose names
     have been stripped); and which specification the maker had (a reader compares it with his own)."""
     with open(os.path.join(HERE, "blake3.spec"), "rb") as f: spec = f.read()
-    out = b"ode proof 1\n"
-    out += f"specification sha256 {hashlib.sha256(spec).hexdigest()}\n".encode()
-    out += f"code {len(image)} sha256 {hashlib.sha256(image).hexdigest()} begins {image[:32].hex()}\n".encode()
+    import kshow
+    out = b"ode proof 2\n"
+    out += f"specification blake3 {kshow.b3(spec)}\n".encode()
+    out += f"code {len(image)} blake3 {kshow.b3(image)} begins {image[:32].hex()}\n".encode()
     for name, at in sorted(where.items(), key=lambda x: x[1]): out += f"at {at} {name}\n".encode()
     out += f"file specification {len(spec)}\n".encode() + spec          # the specification itself: a reader with the file alone can read what it is shown to meet
     for name in PROOF:

@@ -74,7 +74,7 @@ def unframe(bytes) {
 }
 
 // =========================================================================================================
-// The public contract (what a contract means: CONTRACT.md).
+// The public contract (what a contract means: LANGUAGE.md, part 2).
 //
 // Given room for `cap` bytes at `out` and the `n` bytes of a frame at `input`: where the frame holds
 // something of no more than `cap` bytes, the function returns how many bytes that is, and they are at

@@ -271,7 +271,7 @@ static int file(const char *path) {
     size_t size = 0; const unsigned char *p = section(f, (size_t)len, ".ode.proof", &size);
     const unsigned char *end;
     if (p) end = p + size; else { p = f; end = f + len; }      /* not an ELF file with the section: a proof kept beside a file */
-    if ((size_t)(end - p) < 12 || memcmp(p, "ode proof 1\n", 12)) { printf("%s: no proof this reads (.ode.proof)\n", path); free(f); return 1; }
+    if ((size_t)(end - p) < 12 || memcmp(p, "ode proof 2\n", 12)) { printf("%s: no proof this reads (.ode.proof)\n", path); free(f); return 1; }
     printf("%s:\n", path);
     int bad = 0, tables = 0;
     p += 12;

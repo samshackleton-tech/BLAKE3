@@ -26,7 +26,7 @@ def first_says(proof):
 def beside(folder, name, table_bytes):
     """A proof kept beside a file, holding one table."""
     path = os.path.join(folder, name)
-    with open(path, "wb") as f: f.write(b"ode proof 1\nfile t.arith.z %d\n" % len(table_bytes) + table_bytes)
+    with open(path, "wb") as f: f.write(b"ode proof 2\nfile t.arith.z %d\n" % len(table_bytes) + table_bytes)
     return path
 
 
@@ -88,7 +88,7 @@ class Second(unittest.TestCase):
             changed.append((starts, steps))
         # the tables as bytes: one proof a table, so that a proof the packer cannot write stops only itself
         said = []
-        blob = b"ode proof 1\n"
+        blob = b"ode proof 2\n"
         kept = []
         for k, p in enumerate(changed):
             try: z = varith.pack({k: [p]})

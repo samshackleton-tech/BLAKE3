@@ -44,7 +44,7 @@ class Elf:
         self.sections = []
         for i in range(shnum):
             name, typ, flags, addr, off, size, link, info, align, entsize = struct.unpack_from("<IIQQQQIIQQ", b, shoff + i * shentsize)
-            self.sections.append(dict(name=name, type=typ, off=off, size=size, link=link, info=info, align=align))
+            self.sections.append(dict(name=name, type=typ, off=off, size=size, link=link, info=info, align=align, flags=flags))
         names = self.sections[shstrndx]
         cstr = lambda sec, at: b[sec["off"] + at:b.index(b"\0", sec["off"] + at)].decode()
         for s in self.sections: s["name"] = cstr(names, s["name"])
@@ -53,7 +53,7 @@ class Elf:
             strtab = self.sections[symtab["link"]]
             for i in range(symtab["size"] // 24):
                 name, info, other, shndx, value, size = struct.unpack_from("<IBBHQQ", b, symtab["off"] + 24 * i)
-                self.symbols.append(dict(name=cstr(strtab, name), type=info & 15, bind=info >> 4, shndx=shndx, value=value))
+                self.symbols.append(dict(name=cstr(strtab, name), type=info & 15, bind=info >> 4, shndx=shndx, value=value, other=other & 3))
         self.index = {s["name"]: i for i, s in enumerate(self.sections)}
         phoff, = struct.unpack_from("<Q", b, 32); phentsize, phnum = struct.unpack_from("<HH", b, 54)
         self.segments = []
@@ -169,6 +169,41 @@ class Settled:
 def settled(e):
     """The file's addresses are settled: no relocation is left for its code."""
     return e.type != 1 or not any(s["type"] in (4, 9) and s["info"] == e.index.get(".text") for s in e.sections)
+
+
+KNOWN = {".text": (1, 0x6), ".note.GNU-stack": (1, 0), ".symtab": (2, 0), ".strtab": (3, 0), ".shstrtab": (3, 0), ".ode.proof": (1, 0)}      # a section's name: (its type, its leave)
+
+
+def linkable(e):
+    """For an object that is to be linked (a file of type 1): (why it is not read, {}), or (None, {name: its
+    place in .text}) with every name the file gives a linker.
+
+    A linker takes more from an object than the bytes of `.text` read here: other sections it loads to be
+    run, whatever they are called; names it resolves by rules of its own (a LOCAL name goes to no caller, a
+    WEAK one may give way to another file's, an IFUNC is resolved when the program starts); a stack it is
+    asked to make executable. Until November 16, 2026 a copy of the shipped odeframe.o whose `ode_unframe` was
+    made LOCAL, with another function under the GLOBAL name in a second executable section, was verified as
+    the shipped file is, and a program linked with it ran the other function. So an object is read only in
+    the one shape the makers here write (klink.py, programs/kpack.py), with its names or stripped of them:
+    the sections of KNOWN and no others, each once, of that type and with that leave; and no name but GLOBAL
+    names of functions in `.text`, each once. A driver then asks that each such name be verified."""
+    seen = set()
+    for i, s in enumerate(e.sections):
+        if i == 0 and s["type"] == 0 and s["size"] == 0: continue
+        name = s["name"]
+        if name not in KNOWN or name in seen:
+            return f"it has a section this reader does not read ({name!r}{', a second time' if name in seen else ''}), and a linker would take that too", {}
+        seen.add(name)
+        if (s["type"], s["flags"]) != KNOWN[name]:
+            return f"its section {name} is not of the kind, or has not the leave, this reader takes it to have (type {s['type']}, flags {s['flags']:#x})", {}
+    names, text = {}, e.index.get(".text")
+    for k, sym in enumerate(e.symbols):
+        if k == 0 and not sym["name"] and sym["shndx"] == 0: continue
+        if not (sym["type"] in (0, 2) and sym["bind"] == 1 and sym["other"] == 0 and sym["shndx"] == text and sym["name"]) or sym["name"] in names:
+            return (f"it has a name of a kind this reader does not read ({sym['name']!r}: type {sym['type']}, binding {sym['bind']}, visibility {sym['other']}, "
+                    f"section {sym['shndx']}{', given twice' if sym['name'] in names else ''}), and a linker reads names by rules of its own"), {}
+        names[sym["name"]] = sym["value"]
+    return None, names
 
 
 def decode(code, at, relocs, rodata, rodata_at, base, start):

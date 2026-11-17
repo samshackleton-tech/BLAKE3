@@ -11,7 +11,7 @@ sequence s2(bytes) { s[0] = 0   s[i + 1] = (s[i] + s1(bytes)[i + 1]) % 65521 }
 def adler32(bytes) { 65536 * s2(bytes)[len(bytes)] + s1(bytes)[len(bytes)] }
 
 // =========================================================================================================
-// The public contract (what a contract means: CONTRACT.md).
+// The public contract (what a contract means: LANGUAGE.md, part 2).
 contract ode_adler32(input: len bytes, len: number) {
     returns adler32(input)
     trace depends on input

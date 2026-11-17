@@ -167,7 +167,7 @@ const ALPHABET = [
     0xAA24, 0xAA25, 0xAA26, 0xAA27, 0xAA28, 0xAA40, 0xAA41, 0xAA42, 0xAA44, 0xAA45, 0xAA46, 0xAA47, 0xAA48, 0xAA49, 0xAA4A, 0xAA4B]
 
 // =========================================================================================================
-// The public contract (what a contract means: CONTRACT.md): the sigil of 32 bytes, 25 letters, as UTF-8.
+// The public contract (what a contract means: LANGUAGE.md, part 2): the sigil of 32 bytes, 25 letters, as UTF-8.
 contract ode_sigil32(out: 75 bytes, data: 32 bytes) {
     requires no_overlap(out, data)
     ensures out = sigil_utf8(data)

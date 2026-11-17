@@ -4,7 +4,7 @@
 def varint(v) { if v < 128 then [v] else [128 + v % 128] ++ varint(v / 128) }
 
 // =========================================================================================================
-// The public contract (what a contract means: CONTRACT.md). A number below 2^64 takes at most ten bytes.
+// The public contract (what a contract means: LANGUAGE.md, part 2). A number below 2^64 takes at most ten bytes.
 contract ode_varint(out: 10 bytes, v: number) {
     returns r
     ensures out[0 .. r] = varint(v)

@@ -6,17 +6,17 @@
 Each file meets its specification's public contracts; the proof it carries is the folder's, made with the
 folder's specification; a proof with a line left out, or of other code, is refused; a reader with another
 specification is told so."""
-import hashlib, json, os, subprocess, sys, tempfile, unittest
+import json, os, subprocess, sys, tempfile, unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
-import check_binary, kdecode
+import check_binary, kdecode, kshow
 from check_programs import PROGRAMS
 
 NAMES = sorted({p for p, _, _ in PROGRAMS})
 
 
 def run(*args):
-    r = subprocess.run([sys.executable, os.path.join(HERE, "check_file.py")] + list(args), capture_output=True, text=True)
+    r = subprocess.run([sys.executable, os.path.join(HERE, "check_file.py"), "--maintain"] + list(args), capture_output=True, text=True)
     return r.returncode, r.stdout
 
 
@@ -129,12 +129,12 @@ class Files(unittest.TestCase):
                 with open(os.path.join(d, "r.json")) as f: r = json.load(f)
                 self.assertTrue(r["shown"]); self.assertEqual(r["arithmetic"], how); self.assertEqual(len(r["arithmetic_searched_for"]), searched)
                 self.assertEqual((r["definitions_that_use_themselves"], r["of_them_not_shown_to_end"]), (["counted", "match", "sequences"], []))
-                files = {x["file"]: x["sha256"] for x in r["verifier"]}
+                files = {x["file"]: x["blake3"] for x in r["verifier"]}
                 for name in ("kbyte.py", "ode.py", "klin.py", "varith.py", "kdecode.py", "programs/check_file.py"):
-                    with open(os.path.join(os.path.dirname(HERE), name), "rb") as f: self.assertEqual(files[name], hashlib.sha256(f.read()).hexdigest(), name)
+                    with open(os.path.join(os.path.dirname(HERE), name), "rb") as f: self.assertEqual(files[name], kshow.b3(f.read()), name)
                 self.assertEqual("kprove.py" in files, bool(extra))                      # the search is loaded only where it is asked for
                 self.assertNotIn("check_binary.py", files); self.assertNotIn("kloop.py", files); self.assertNotIn("kone.py", files)
-                self.assertEqual(r["verifier_sha256"], hashlib.sha256("".join(f"{x['sha256']}  {x['file']}\n" for x in r["verifier"]).encode()).hexdigest())
+                self.assertEqual(r["verifier_blake3"], kshow.b3("".join(f"{x['blake3']}  {x['file']}\n" for x in r["verifier"]).encode()))
 
     def test_the_proof_carried_is_the_folders(self):
         for name in NAMES:
@@ -142,12 +142,12 @@ class Files(unittest.TestCase):
             e = kdecode.Elf(obj)
             proof = check_binary.carried(e.bytes_of(".ode.proof"))
             with open(spec, "rb") as f: text = f.read()
-            self.assertEqual(proof["spec"], hashlib.sha256(text).hexdigest(), name)
+            self.assertEqual(proof["spec"], kshow.b3(text), name)
             self.assertEqual(proof["files"]["specification"], text, "the specification the file carries is the folder's")
             code, out = run(obj)                                        # with the file alone: against what it carries, and it says so
             self.assertEqual(code, 0, out); self.assertIn("the specification is the one the file carries", out)
             text = e.bytes_of(".text")
-            self.assertEqual(proof["code"][:2], (len(text), hashlib.sha256(text).hexdigest()))
+            self.assertEqual(proof["code"][:2], (len(text), kshow.b3(text)))
             self.assertEqual(sorted(proof["at"]), sorted("ode_" + f for p, f, _ in PROGRAMS if p == name))
             for function in [f for p, f, _ in PROGRAMS if p == name]:
                 with open(os.path.join(HERE, name, function + ".proof"), "rb") as f: self.assertEqual(proof["files"][function + ".proof"], f.read(), function)
@@ -212,6 +212,159 @@ class Files(unittest.TestCase):
             r = subprocess.run([sys.executable, tool, obj, mine], capture_output=True, text=True)
             self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
             self.assertIn("your own copy (mine.spec)", r.stdout); self.assertIn("NOT shown", r.stdout)
+
+
+def patched(blob, changes):
+    """The file's bytes with (place, bytes) put in."""
+    b = bytearray(blob)
+    for at, new in changes: b[at:at + len(new)] = new
+    return bytes(b)
+
+
+def symbol_entry(blob, name):
+    """Where in the file the entry of `name` in its table of names is (24 bytes: name, kind and binding, visibility, section, value, size)."""
+    e = kdecode.Elf(blob)
+    return e.sections[e.index[".symtab"]]["off"] + 24 * next(k for k, s in enumerate(e.symbols) if s["name"] == name)
+
+
+def section_header(blob, name):
+    """Where in the file the header of that section is (name 4, type 4, flags 8, address 8, offset 8, size 8, ...)."""
+    import struct
+    e = kdecode.Elf(blob)
+    return struct.unpack_from("<Q", blob, 40)[0] + e.index[name] * struct.unpack_from("<H", blob, 58)[0]
+
+
+class Shape(unittest.TestCase):
+    """An object to be linked is read only in the one shape whose every part a linker takes is read here
+    (kdecode.linkable), and every name it gives a linker is of a function shown to meet a contract. Found
+    November 16, 2026: the shipped odeframe.o with `ode_unframe` made LOCAL and another function under the GLOBAL
+    name in a second executable section was verified as the shipped file is; a program linked with it ran the other."""
+    def setUp(self):
+        with open(os.path.join(HERE, "frame", "odeframe.o"), "rb") as f: self.blob = f.read()
+
+    def verdict(self, blob, *more):
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "x.o")
+            with open(path, "wb") as f: f.write(blob)
+            return run(path, *more)
+
+    def test_the_shipped_files_are_of_that_shape(self):
+        for name in NAMES:
+            why, names = kdecode.linkable(kdecode.Elf(os.path.join(HERE, name, f"ode{name}.o")))
+            self.assertIsNone(why, name); self.assertTrue(names, name)
+        self.assertEqual(self.verdict(self.blob)[0], 0)
+
+    def test_a_name_a_linker_reads_by_other_rules(self):
+        at = symbol_entry(self.blob, "ode_unframe")
+        self.assertEqual(self.blob[at + 4:at + 6], b"\x12\x00")                 # GLOBAL, a function, of default visibility
+        for what, change in (("LOCAL: it goes to no caller", (at + 4, b"\x02")), ("WEAK: it may give way", (at + 4, b"\x22")),
+                             ("an IFUNC: resolved when the program starts", (at + 4, b"\x1a")), ("hidden", (at + 5, b"\x02"))):
+            code, out = self.verdict(patched(self.blob, [change]))
+            self.assertEqual(code, 1, what); self.assertIn("a name of a kind this reader does not read", out, what); self.assertNotIn("meets its public contract", out, what)
+
+    def test_a_section_a_linker_would_take(self):
+        import struct
+        stack = section_header(self.blob, ".note.GNU-stack")
+        code, out = self.verdict(patched(self.blob, [(stack + 8, struct.pack("<Q", 4))]))      # the stack asked to be executable
+        self.assertEqual(code, 1, out); self.assertIn("has not the leave", out)
+        code, out = self.verdict(patched(self.blob, [(section_header(self.blob, ".ode.proof") + 8, struct.pack("<Q", 6))]))      # the proof's section, to be loaded and run
+        self.assertEqual(code, 1, out); self.assertIn("has not the leave", out)
+        self.assertEqual(self.blob.count(b".note.GNU-stack\0"), 1)
+        k = self.blob.index(b".note.GNU-stack\0")
+        code, out = self.verdict(patched(self.blob, [(k, b".text.unlikely\0\0")]))             # a section of a name this reader does not know
+        self.assertEqual(code, 1, out); self.assertIn("a section this reader does not read ('.text.unlikely')", out); self.assertNotIn("loaded to be run", out)
+
+    def test_a_name_with_no_contract(self):
+        """A reader's specification without a contract for one of the file's functions: that name is given to a
+        linker and nothing is shown of it. Said, and NOT shown."""
+        obj, spec = os.path.join(HERE, "lz4", "odelz4.o"), os.path.join(HERE, "lz4", "lz4.spec")
+        with open(spec) as f: text = f.read()
+        a = text.index("contract ode_lz4_pack(")
+        z = text.index("\n}\n", a) + 3
+        with tempfile.TemporaryDirectory() as d:
+            mine = os.path.join(d, "mine.spec")
+            with open(mine, "w") as f: f.write(text[:a] + text[z:])
+            code, out = run(obj, mine)
+            self.assertEqual(code, 1, out); self.assertIn("ode_lz4_pack: NOT verified: the file gives a linker this name", out)
+
+    def test_a_file_without_names_and_a_function_left_out(self):
+        """A file stripped of its names whose proof is silent about one of its functions: whether the file holds
+        that function cannot be told. NOT shown (it was exit 0 until November 16, 2026)."""
+        import re, struct
+        with open(os.path.join(HERE, "lz4", "odelz4.o"), "rb") as f: blob = f.read()
+        carried = kdecode.Elf(blob).bytes_of(".ode.proof")
+        line = re.search(rb"at \d+ ode_lz4_pack\n", carried)
+        self.assertIsNotNone(line)
+        stripped = patched(blob, [(section_header(blob, ".symtab") + 32, struct.pack("<Q", 24))])      # its table of names cut to the empty first entry
+        self.assertEqual(kdecode.linkable(kdecode.Elf(stripped)), (None, {}))
+        with tempfile.TemporaryDirectory() as d:
+            x, p = os.path.join(d, "x.o"), os.path.join(d, "p")
+            with open(x, "wb") as f: f.write(stripped)
+            with open(p, "wb") as f: f.write(carried)
+            code, out = run(x, "--proof", p)
+            self.assertEqual(code, 0, out); self.assertIn("the file does not name the functions", out)
+            with open(p, "wb") as f: f.write(carried.replace(line.group(0), b""))
+            code, out = run(x, "--proof", p)
+            self.assertEqual(code, 1, out); self.assertIn("ode_lz4_pack: NOT verified", out); self.assertIn("this file names no functions", out)
+
+
+class Readers(unittest.TestCase):
+    """Two readers. An auditor is told what he has use for, and nothing its maker chose that he need not read;
+    a maintainer asks for the rest (--maintain). Digits are BLAKE3's, all 64. No control character passes."""
+    tool = os.path.join(os.path.dirname(HERE), "verify.py")
+
+    def test_an_auditor_is_not_shown_the_makers_names(self):
+        obj = os.path.join(HERE, "frame", "odeframe.o")
+        r = subprocess.run([sys.executable, self.tool, obj], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        said = r.stdout[r.stdout.index("2. The verification"):r.stdout.index("3. What ran")]
+        self.assertIn("ode_unframe: meets its public contract", said)
+        for inner in ("ode_lz4_decode", "ode_adler32_blocks4", "counted", "sequences"): self.assertNotIn(inner, said, inner)
+        self.assertRegex(r.stdout, r"BLAKE3 [0-9a-f]{64}\b"); self.assertNotIn("SHA-256", r.stdout); self.assertNotIn("...", said)
+        r = subprocess.run([sys.executable, self.tool, obj, "--maintain"], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        for inner in ("ode_lz4_decode", "ode_adler32_blocks4", "counted, match, sequences", "calls ode_adler32_blocks4, ode_lz4_decode by contract"): self.assertIn(inner, r.stdout, inner)
+
+    def test_a_refusal_as_each_reader_is_told_it(self):
+        obj, spec = os.path.join(HERE, "frame", "odeframe.o"), os.path.join(HERE, "frame", "frame.spec")
+        with open(spec) as f: text = f.read()
+        self.assertEqual(text.count("65521"), 2)
+        with tempfile.TemporaryDirectory() as d:
+            mine = os.path.join(d, "mine.spec")
+            with open(mine, "w") as f: f.write(text.replace("65521", "65522"))
+            r = subprocess.run([sys.executable, self.tool, obj, mine], capture_output=True, text=True)
+            said = r.stdout[r.stdout.index("2. The verification"):r.stdout.index("3. What ran")]
+            self.assertEqual(r.returncode, 1, r.stdout); self.assertIn("ode_unframe: NOT shown", said); self.assertIn("--maintain", said)
+            for inner in ("ode_adler32_blocks4", "s1.", "@0x"): self.assertNotIn(inner, said, inner)
+            r = subprocess.run([sys.executable, self.tool, obj, mine, "--maintain"], capture_output=True, text=True)
+            self.assertEqual(r.returncode, 1, r.stdout); self.assertIn("ode_adler32_blocks4: NOT shown:", r.stdout)
+
+    def test_the_carried_specification_is_shown_and_no_control_character_passes(self):
+        obj = os.path.join(HERE, "utf8", "odeutf8.o")
+        with open(os.path.join(HERE, "utf8", "utf8.spec")) as f: text = f.read()
+        r = subprocess.run([sys.executable, self.tool, obj, "--show-spec"], capture_output=True, text=True)
+        self.assertEqual((r.returncode, r.stdout), (0, text))
+        carried = kdecode.Elf(obj).bytes_of(".ode.proof")
+        k = carried.index(b"// ")
+        with tempfile.TemporaryDirectory() as d:
+            p = os.path.join(d, "p")
+            with open(p, "wb") as f: f.write(carried[:k + 3] + b"\x1b[2K\r" + carried[k + 8:])      # in a comment: an escape that takes a line back, and a return
+            for tool in ([self.tool], [os.path.join(HERE, "check_file.py")]):
+                r = subprocess.run([sys.executable] + tool + [obj, "--show-spec", "--proof", p], capture_output=True, text=True)
+                self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+                self.assertNotIn("\x1b", r.stdout); self.assertNotIn("\r", r.stdout); self.assertIn("\\x1b[2K\\x0d", r.stdout)
+
+    def test_the_digits_are_blake3s_and_an_earlier_proof_is_refused(self):
+        self.assertEqual(kshow.b3(b""), "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262")
+        self.assertEqual(kshow.b3(b"abc"), "6437b3ac38465133ffb63b75273a8db548c558465d79db03fd359c6cd5bd9d85")
+        obj = os.path.join(HERE, "utf8", "odeutf8.o")
+        carried = kdecode.Elf(obj).bytes_of(".ode.proof")
+        self.assertTrue(carried.startswith(b"ode proof 2\nspecification blake3 "))
+        with tempfile.TemporaryDirectory() as d:
+            p = os.path.join(d, "p")
+            with open(p, "wb") as f: f.write(carried.replace(b"ode proof 2\n", b"ode proof 1\n", 1))
+            r = subprocess.run([sys.executable, os.path.join(HERE, "check_file.py"), obj, "--proof", p], capture_output=True, text=True)
+            self.assertNotEqual(r.returncode, 0); self.assertIn("earlier form", r.stdout + r.stderr)
 
 
 if __name__ == "__main__":

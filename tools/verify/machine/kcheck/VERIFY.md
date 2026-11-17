@@ -38,9 +38,9 @@ Exit status 0 means shown.
 - **The contract** (printed), and **the definitions it names**: `python3 verify.py FILE` prints the
   contract; the whole specification is `programs/NAME/NAME.spec` (`blake3.spec` for the hash), 12 to 185
   lines. `lz4(input)` means what `lz4.spec` says it means, which is the LZ4 block format written as equations.
-- **What a contract means**: `CONTRACT.md`, one page. The short of it: a contract is a closed world. The
+- **What a contract means**: `LANGUAGE.md`, part 2. The short of it: a contract is a closed world. The
   function reads and writes nothing it does not name, returns, and what a line does not allow is not done.
-- **What a specification's text means**: `LANGUAGE.md`, one page.
+- **What a specification's text means**: `LANGUAGE.md`, part 1. (The two parts are one page.)
 
 The specification can be **your own copy** (`python3 verify.py FILE YOUR.spec`) or the one the file carries.
 If you use the file's, read it: the maker wrote it, and the verification says the code meets *that text*.

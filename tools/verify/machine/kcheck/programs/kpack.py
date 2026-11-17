@@ -7,7 +7,7 @@ section that is not loaded. Trusted for nothing: check_file.py reads what it wro
 FOLDER holds the assembler's objects (FUNCTION.o for each function of PROGRAM: lz4 has lz4_decode, lz4_store
 and lz4_pack). Each function's bytes are taken from its first to its `ret`, laid on a 16-byte boundary, and
 given its name. The proof carried is the folder's FUNCTION.proof files, where each function is, and the
-SHA-256 of the specification the maker had (programs/PROGRAM/PROGRAM.spec). These functions call nothing and
+BLAKE3 hash of the specification the maker had (programs/PROGRAM/PROGRAM.spec). These functions call nothing and
 read no constants, so there is nothing a linker would have had to write."""
 import hashlib, os, struct, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -51,8 +51,9 @@ def pack(program, folder):
     if not where: raise SystemExit(f"kpack: no program {program}")
     image += bytes(klink.up(len(image), 16) - len(image))
     with open(os.path.join(HERE, program, program + ".spec"), "rb") as f: spec = f.read()
-    carried = b"ode proof 1\n" + f"specification sha256 {hashlib.sha256(spec).hexdigest()}\n".encode()
-    carried += f"code {len(image)} sha256 {hashlib.sha256(image).hexdigest()} begins {bytes(image[:32]).hex()}\n".encode()
+    import kshow
+    carried = b"ode proof 2\n" + f"specification blake3 {kshow.b3(spec)}\n".encode()
+    carried += f"code {len(image)} blake3 {kshow.b3(bytes(image))} begins {bytes(image[:32]).hex()}\n".encode()
     for name, at in sorted(where.items(), key=lambda x: x[1]): carried += f"at {at} {name}\n".encode()
     carried += f"file specification {len(spec)}\n".encode() + spec          # the specification itself, for a reader who has the file alone
     for name, text in files: carried += f"file {name} {len(text)}\n".encode() + text

@@ -7,7 +7,7 @@ def alike(a, b, at) { if at == len(a) then at else if a[at] != b[at] then at els
 def common(a, b) { alike(a, b, 0) }
 
 // =========================================================================================================
-// The public contract (what a contract means: CONTRACT.md). Nothing is written, so the two runs may overlap.
+// The public contract (what a contract means: LANGUAGE.md, part 2). Nothing is written, so the two runs may overlap.
 contract ode_common(a: n bytes, b: n bytes, n: number) {
     returns common(a, b)
     trace depends on a, b

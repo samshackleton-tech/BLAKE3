@@ -52,7 +52,7 @@ def utf8(bytes) { points(bytes, 0, 0) }
 const NO = 18446744073709551615
 
 // =========================================================================================================
-// The public contract (what a contract means: CONTRACT.md): the count of code points, or NO where the bytes
+// The public contract (what a contract means: LANGUAGE.md, part 2): the count of code points, or NO where the bytes
 // are not well-formed UTF-8. Nothing is written.
 contract ode_utf8(input: n bytes, n: number) {
     returns if failed(utf8(input)) then NO else utf8(input)

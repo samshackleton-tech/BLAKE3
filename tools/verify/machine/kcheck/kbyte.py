@@ -3,7 +3,7 @@
 
     python3 kbyte.py SPEC SYMBOL OBJECT [PROOF]
 
-SPEC holds the specification and the contract of SYMBOL (CONTRACT.md says what a contract means); OBJECT
+SPEC holds the specification and the contract of SYMBOL (LANGUAGE.md, part 2, says what a contract means); OBJECT
 the function's bytes; PROOF, for a function with a loop whose count the paths do not fix, its places.
 
 What is shown, for everything the contract's `requires` lines allow, along every path of the machine code:

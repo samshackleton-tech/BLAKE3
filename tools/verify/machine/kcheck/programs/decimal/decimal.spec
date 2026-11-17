@@ -25,7 +25,7 @@ def decimal(bytes) {
 const NO = 18446744073709551615
 
 // =========================================================================================================
-// The public contract (what a contract means: CONTRACT.md): the count, or NO where the bytes are not one.
+// The public contract (what a contract means: LANGUAGE.md, part 2): the count, or NO where the bytes are not one.
 // Nothing is written.
 contract ode_decimal(input: n bytes, n: number) {
     returns if failed(decimal(input)) then NO else decimal(input)

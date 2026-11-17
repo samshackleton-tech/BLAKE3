@@ -27,7 +27,7 @@ def checksum(bytes) { 65535 - ones_sum(total(bytes)) }
 const NO = 18446744073709551615
 
 // =========================================================================================================
-// The public contract (what a contract means: CONTRACT.md). There is no `requires`: of 2^49 bytes or more,
+// The public contract (what a contract means: LANGUAGE.md, part 2). There is no `requires`: of 2^49 bytes or more,
 // whose plain sum might not fit 64 bits, it says NO and reads none. There is no `trace` line: which
 // instructions run and which addresses are touched depend on n, and not on the bytes.
 //

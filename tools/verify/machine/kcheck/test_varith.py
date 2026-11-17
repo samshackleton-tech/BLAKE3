@@ -152,9 +152,9 @@ class Drivers(unittest.TestCase):
         return r.returncode, r.stdout + r.stderr
 
     def test_the_drivers_say_how_the_arithmetic_was_answered(self):
-        code, out = self.run_tool(os.path.join(HERE, "programs", "check_file.py"), os.path.join(HERE, "programs", "utf8", "odeutf8.o"))
+        code, out = self.run_tool(os.path.join(HERE, "programs", "check_file.py"), os.path.join(HERE, "programs", "utf8", "odeutf8.o"), "--maintain")
         self.assertEqual(code, 0, out); self.assertIn("nothing was searched for", out)
-        code, out = self.run_tool(os.path.join(HERE, "programs", "check_file.py"), os.path.join(HERE, "programs", "utf8", "odeutf8.o"), "--search")
+        code, out = self.run_tool(os.path.join(HERE, "programs", "check_file.py"), os.path.join(HERE, "programs", "utf8", "odeutf8.o"), "--maintain", "--search")
         self.assertEqual(code, 0, out); self.assertIn("searched for by this program", out)
 
     def test_a_file_whose_arithmetic_proofs_are_damaged_is_not_shown(self):
@@ -166,7 +166,7 @@ class Drivers(unittest.TestCase):
             for label, body in (("cut short", carried[m.end():m.end() + n - 9]), ("not a table", b"x" * n), ("an empty table", varith.pack({}))):
                 p = os.path.join(d, "p")
                 with open(p, "wb") as f: f.write(carried[:m.start()] + b"file varint.arith.z %d\n" % len(body) + body + carried[m.end() + n:])
-                code, out = self.run_tool(os.path.join(HERE, "programs", "check_file.py"), path, "--proof", p)
+                code, out = self.run_tool(os.path.join(HERE, "programs", "check_file.py"), path, "--maintain", "--proof", p)
                 self.assertEqual(code, 1, f"{label}: {out}"); self.assertIn("NOT shown", out, label)
 
 

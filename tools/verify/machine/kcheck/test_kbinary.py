@@ -72,15 +72,39 @@ class Binary(unittest.TestCase):
         self.assertEqual(sorted(kdecode.Settled(e).at), sorted(self.where))
         for symbol in QUICK: self.assertEqual(verdict(shipped, symbol), "accepted", symbol)
 
+    def test_every_name_the_file_gives_a_linker_is_verified(self):
+        """The file gives a linker fourteen names; one of them (the 32-lane kernel's second way in) is called by
+        nothing `b3l_hashr` reaches. Each is verified, called or not (kdecode.linkable)."""
+        why, names = kdecode.linkable(kdecode.Elf(os.path.join(HERE, "b3hashr.o")))
+        self.assertIsNone(why); self.assertEqual(len(names), 14); self.assertIn("blake3_servil_avx512_p32", names)
+        r = subprocess.run([sys.executable, os.path.join(HERE, "check_binary.py"), os.path.join(HERE, "b3hashr.o"), "--maintain"], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr[-400:]); self.assertIn("blake3_servil_avx512_p32", r.stdout); self.assertIn("14 functions", r.stdout)
+        r = subprocess.run([sys.executable, os.path.join(HERE, "check_binary.py"), os.path.join(HERE, "b3hashr.o")], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr[-400:]); self.assertNotIn("b3l_subtree", r.stdout); self.assertNotIn("avx512_k32", r.stdout)
+        self.assertRegex(r.stdout, r"BLAKE3 [0-9a-f]{64}\b")
+
+    def test_a_file_with_no_proof_in_it(self):
+        """With no proof in the file and none given the folder's is used, and the line about the definitions'
+        coming to an end is reached (a NameError until November 16, 2026)."""
+        import struct, tempfile
+        with open(os.path.join(HERE, "b3hashr.o"), "rb") as f: blob = bytearray(f.read())
+        self.assertEqual(struct.unpack_from("<H", blob, 60)[0], 7)
+        struct.pack_into("<H", blob, 60, 6)                                  # its last section, the proof's, no longer listed
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "x.o")
+            with open(path, "wb") as f: f.write(blob)
+            r = subprocess.run([sys.executable, os.path.join(HERE, "check_binary.py"), path], capture_output=True, text=True)
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr[-400:]); self.assertIn("the proof: the files of proofs/", r.stdout); self.assertIn("comes to an end", r.stdout)
+
     def test_the_proof_carried_in_the_file(self):
-        import hashlib
+        import kshow
         with open(os.path.join(HERE, "b3hashr.o"), "rb") as f: shipped = f.read()
         with open(os.path.join(HERE, "blake3.spec"), "rb") as f: spec = f.read()
         e = kdecode.Elf(shipped)
         proof = check_binary.carried(e.bytes_of(".ode.proof"))
-        self.assertEqual(proof["spec"], hashlib.sha256(spec).hexdigest(), "the file shipped was made with the specification here")
+        self.assertEqual(proof["spec"], kshow.b3(spec), "the file shipped was made with the specification here")
         self.assertEqual(proof["at"], kdecode.Settled(e).at)
-        self.assertEqual(proof["code"][:2], (len(e.bytes_of(".text")), hashlib.sha256(e.bytes_of(".text")).hexdigest()))
+        self.assertEqual(proof["code"][:2], (len(e.bytes_of(".text")), kshow.b3(e.bytes_of(".text"))))
         self.assertEqual(sorted(proof["files"]), ["b3l_hashr.arith.z", "b3l_part32.arith.z", "b3l_subtree.arith.z", "b3l_take.arith.z",       # the arithmetic's proofs (varith.py), of the functions that need any
                                                   "proofs/blake3.lemmas", "proofs/inner.spec", "proofs/k32.json", "proofs/p16.json", "proofs/p32.json", "specification"])
         self.assertEqual(proof["files"]["specification"], spec, "the specification the file carries is the one here")
@@ -184,7 +208,7 @@ class Binary(unittest.TestCase):
             self.assertEqual(whole.count(head + carried), 1)
             with open(without, "wb") as f: f.write(whole.replace(head + carried, b""))
             import subprocess
-            r = subprocess.run([sys.executable, os.path.join(HERE, "check_binary.py"), os.path.join(HERE, "b3hashr.o"), "--proof", without], capture_output=True, text=True)
+            r = subprocess.run([sys.executable, os.path.join(HERE, "check_binary.py"), os.path.join(HERE, "b3hashr.o"), "--maintain", "--proof", without], capture_output=True, text=True)
             self.assertEqual(r.returncode, 1, r.stdout[-600:])
             self.assertIn("b3l_hashr: NOT shown: its code meets its contract as far as the contract says anything", r.stdout)
         finally:
@@ -205,7 +229,7 @@ class Binary(unittest.TestCase):
                 path = os.path.join(d, "p")
                 with open(path, "wb") as f: f.write(c[:m.start()] + b"file proofs/inner.spec %d\n" % (n + len(extra)) + c[m.end():m.end() + n] + extra + c[m.end() + n:])
                 for spec in (["--spec", os.path.join(HERE, "blake3.spec")], []):
-                    r = subprocess.run([sys.executable, os.path.join(HERE, "check_binary.py"), os.path.join(HERE, "b3hashr.o"), "--proof", path] + spec, capture_output=True, text=True)
+                    r = subprocess.run([sys.executable, os.path.join(HERE, "check_binary.py"), os.path.join(HERE, "b3hashr.o"), "--maintain", "--proof", path] + spec, capture_output=True, text=True)
                     self.assertNotEqual(r.returncode, 0, r.stdout)
                     self.assertRegex(r.stdout + r.stderr, "the proof's part declares|is the language's own|defined twice")
                     self.assertNotIn("meets its public contract", r.stdout)

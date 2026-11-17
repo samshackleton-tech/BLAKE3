@@ -54,7 +54,7 @@ def lz4(bytes) { sequences(bytes, 0, []) }
 const NO = 18446744073709551615
 
 // =========================================================================================================
-// The public contract (what a contract means: CONTRACT.md).
+// The public contract (what a contract means: LANGUAGE.md, part 2).
 //
 // The decoder is given room for `cap` bytes at `out`, and `n` bytes at `input`. Where the block decodes to
 // no more than `cap` bytes, it returns the count of the bytes decoded, and they are at `out`. Where it does

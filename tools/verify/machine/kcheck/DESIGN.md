@@ -19,7 +19,7 @@ writes the code so that it can be proved, as he writes it so that it is fast).
 | | what it is | who reads it | today |
 |---|---|---|---|
 | the specification | what the result IS: definitions by equations, in a language made for specifications and nothing else | the auditor | `blake3.spec`, 147 lines; `LANGUAGE.md` says what such a text means |
-| the public contract | a Hoare triple for each function a user calls: `requires`, `ensures`, and a closed world | the auditor | 7 lines for the hash; `CONTRACT.md` says what any contract means |
+| the public contract | a Hoare triple for each function a user calls: `requires`, `ensures`, and a closed world | the auditor | 7 lines for the hash; `LANGUAGE.md` (part 2) says what any contract means |
 | the code | written to be proved, in Ode | nobody has to | `hash.ode`, 332 lines; `programs/*/*.ode` |
 | the binary | one file: the code's bytes, its constants, its names, the proof; nothing for a linker to fill in | the verifier | `b3hashr.o`, 80,920 bytes |
 | the proof | what the verifier needs beside the code: the inner contracts; a place for a loop whose count is not fixed | nobody has to | for the hash, `proofs/inner.spec` and no place of its own; for the programs, 0 to 6 places each |

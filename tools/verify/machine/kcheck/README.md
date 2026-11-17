@@ -36,7 +36,7 @@ this way, not all programs. The languages are our own.
   `h[b + 1] = compress(h[b], ...)`); the tree by the paper's own rule (the left part holds `the greatest
   power of two k with 1024 * k < len` chunks; a tree is its two parts' trees under a parent). Evaluated on
   numbers it gives the 105 official test vectors. Nothing in it is a stack, a counter of subtrees, or a loop.
-- **What the reader is promised is a contract** (`CONTRACT.md`, one page, the same for every function):
+- **What the reader is promised is a contract** (`LANGUAGE.md`, part 2, the same for every function):
   what the caller must make true (`requires`), what is then true when the function has returned
   (`ensures`, `returns`), and that it has done nothing else. Memory holds bytes. Silence means the stronger
   thing: a function that reads or writes more, runs other instructions, or lets its timing depend on the
@@ -136,7 +136,7 @@ Nothing is given twice and nothing loops; a definition may be of itself on small
         else compress(key, children(key, flags, t, bytes), counter(0), 64, flags | PARENT)
     }
 
-and the public contract (above), which is all of the contracts a reader need read. `CONTRACT.md` says what
+and the public contract (above), which is all of the contracts a reader need read. `LANGUAGE.md` (part 2) says what
 any contract means; here: `out`, `input` and `key` do not overlap; then the 32 bytes at `out` are the
 hash's eight words as bytes, each word's lowest byte first, of the key's bytes read the same way, the flags
 and the input; it uses that much stack and no more; it runs SSE4.1 instructions, and AVX-512 instructions
@@ -1309,7 +1309,7 @@ specification. (The hash above does not use them: it has no stack.)
 | file | lines | what it is |
 |---|---|---|
 | `blake3.spec` | 185 | the specification (147 lines), and the public contract: that of the function a user calls |
-| `CONTRACT.md`, `LANGUAGE.md` | 69 + 93 | what a contract means; what the specification language's texts mean: a page each, the same for every program |
+| `LANGUAGE.md` | 157 | what a specification's text means and what a contract means: one page in two parts, the same for every program |
 | `DESIGN.md` | 175 | the design: what is wanted and given up, the rules for code written to be proved, how it stands to types-as-proofs |
 | `proofs/inner.spec`, `proofs/*.json` | 185 | the inner contracts (of the functions inside), the layouts of two records; the wide kernels' and `merge`'s places |
 | `hash.ode`, `glue/*.S` | 332 | the hash written to be proved; the assembly the Ode compiler prints of it (and of the stack's three functions) |
@@ -1441,7 +1441,7 @@ an 8-bit `or` read as 32 bits.
 ## What it rests on (what a reader must trust or check)
 
 - The specification and the public contract (`blake3.spec`, 185 lines; for another program, its own
-  `.spec`), with what they mean (`LANGUAGE.md`, `CONTRACT.md`), and the programs that read them and the
+  `.spec`), with what they mean (`LANGUAGE.md`), and the programs that read them and the
   bytes: for the hash `ode.py`, `kspec.py`, `klin.py`, `kdecode.py`, `kcheck.py`, `kone.py`, `kloop.py`,
   `kfn.py`: 4,176 lines; for the programs of `programs/`, `kbyte.py` in place of the last four: 910 more;
   `kglue.py`, 569 (their provers, about 150 of those, need no trust). And Python.
@@ -1495,3 +1495,48 @@ instruction ("Could not decode instruction 62d2").
 2. Keep it a small independent program, with the audits above kept running and a second implementation
    written apart from the first. Smallest reading list; no proof assistant.
 3. Have it emit a certificate (the terms after each instruction) that a proof assistant checks step by step.
+
+## Not yet so, and known warts of the language
+
+(Moved here on November 16, 2026 from the two pages that are now `LANGUAGE.md`: that page holds meaning only.)
+
+**Not yet so** (November 15). There are two verifiers of functions: `kfn.py` for the hash (words, vectors,
+calls by contract) and `kbyte.py` for the programs of `programs/` (bytes, numbers, loops with places). The
+first does not yet know `ensures X[a .. b]`, `ensures ... if C`, `ensures CONDITION` or `trace depends on`, and
+refuses a contract that has them; the second follows calls by contract (programs/frame) but not a function
+that calls itself, and knows none of the first one's kinds of memory. In a specification a name is defined
+once: a text that defines one twice is refused (so a proof's inner contracts, read after the reader's
+text, cannot change it). A proof's part may also hold lemmas (`lemma NAME(...) { requires ... ensures ... }`:
+a contract of one of the specification's definitions, of its value `result`): the verifier shows each
+before it uses any, so they change no meaning either, and a reader need not read them. A lemma may
+also name a number that `decreases` at each use of a definition by itself: shown, it says the definition comes
+to an end on what the lemma requires (a definition that did not would leave a contract saying nothing there). That a
+contract's own uses are ones the lemmas speak of is asked apart (`kends.py`): a lemma comes with the proof,
+and one that requires the impossible is shown and says nothing. What a
+lemma is given or says may be of kind `any`: a thing passed on, of which the lemma asks and says nothing
+(BLAKE3's words, in the lemmas that show its tree comes to an end). The inner contracts of the hash
+(`proofs/inner.spec`) still name kinds of memory (`cv`: eight words); the public contract does not. That a
+function returns is shown as far as the kernels it calls (README.md).
+
+**Known warts** (November 15).
+
+- `+` between a word and a number takes the number as a word. That is a conversion nobody wrote; it should
+  be written.
+- `|` is on words and on numbers, `&` on numbers only, `^` on words only (and `pow` is the power). One sign
+  should mean one thing, on one kind of value.
+- `machine` (states that change, a turn at a time) is still read, for `proofs/inner.spec`'s earlier trial of
+  a stack. It is not part of this language and is in no specification a reader reads.
+- **Nothing makes a definition come to an end.** "A definition may be of itself on smaller things", and
+  nothing checks that they are smaller. The reader stops a definition that goes deeper and deeper (`def k(n)
+  { k(n) + 1 }`: "does not come to an end"), but one whose call of itself is the last thing it does (`def
+  k(n) { k(n + 1) }`) it follows for ever: no verdict, never a wrong one. It matters beyond that: a
+  definition is read as an equation, and an equation with no solution proves anything (from `k(n) = k(n) +
+  1`, 0 = 1). Noether's innermost language is definite for this reason: every computation gives a value or
+  fails, in finite time. This language should be the same, and its reader should refuse a definition it
+  cannot see ending (a `decreases` for definitions; every recursion in the specifications here has an
+  obvious one: bytes left, `len(bytes) - at`).
+- `failed(E)` and `reason(E)` look at a failure, which no definition should: with them inside definitions
+  "what has no value gives none to what is made of it" would not hold. They are used only in contracts,
+  and should be the contract's alone; the reader does not yet refuse them elsewhere.
+- The meaning above is this page and a program in Python; neither is checked against the other but by the
+  tests (`test_ode.py`, `programs/test_specs.py`).

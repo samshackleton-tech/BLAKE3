@@ -24,7 +24,7 @@ def rest(bytes, at) {
 def base64(bytes) { groups(bytes)[len(bytes) / 3] ++ rest(bytes, 3 * (len(bytes) / 3)) }
 
 // =========================================================================================================
-// The public contract (what a contract means: CONTRACT.md). The caller gives room for the letters: four for
+// The public contract (what a contract means: LANGUAGE.md, part 2). The caller gives room for the letters: four for
 // every three bytes or part of three. The count of letters is returned.
 contract ode_base64(out: cap bytes, cap: number, input: n bytes, n: number) {
     requires no_overlap(out, input)
