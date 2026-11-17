@@ -29,28 +29,37 @@ It prints three things:
    on every input the contract allows; or `NOT shown`. And one line about the specification: the
    definitions the contracts speak through come to an end on everything the contracts allow (so a
    contract says something of every input). Where that is not shown, the file is not shown.
-3. **What ran**: the files of this folder that were loaded to reach that, with their sizes and digests.
+3. **What ran**: the files of this folder that were loaded to reach that, with their sizes, and the `b3sum`
+   command that names them (a program cannot vouch for itself; `--digests` prints their BLAKE3 hashes here
+   all the same).
 
 Exit status 0 means shown.
+
+A reader is told, of each public contract, whether it is met, and the counts: nothing its maker chose that
+he need not read. The functions inside by name, where each is, how long each took and why one is not shown
+are a maintainer's: `python3 verify.py FILE --maintain`.
 
 ## What you must read
 
 - **The contract** (printed), and **the definitions it names**: `python3 verify.py FILE` prints the
   contract; the whole specification is `programs/NAME/NAME.spec` (`blake3.spec` for the hash), 12 to 185
-  lines. `lz4(input)` means what `lz4.spec` says it means, which is the LZ4 block format written as equations.
+  lines; `python3 verify.py FILE --show-spec` prints the one the file carries. `lz4(input)` means what `lz4.spec` says it means, which is the LZ4 block format written as equations.
 - **What a contract means**: `LANGUAGE.md`, part 2. The short of it: a contract is a closed world. The
   function reads and writes nothing it does not name, returns, and what a line does not allow is not done.
 - **What a specification's text means**: `LANGUAGE.md`, part 1. (The two parts are one page.)
 
 The specification can be **your own copy** (`python3 verify.py FILE YOUR.spec`) or the one the file carries.
 If you use the file's, read it: the maker wrote it, and the verification says the code meets *that text*.
+Its name is the BLAKE3 hash printed beside it, all 64 digits (`b3sum` gives the same): compare two of them
+with a tool, not by eye. What a file carries is printed with every control character written out (`\x1b`):
+a maker's comment cannot move your terminal's cursor.
 
 You do not read the proof, the lemmas, the contracts of the functions inside, or the source. They are in the
 file; the verifier uses them and trusts none of them. A wrong one makes the verification fail.
 
 ## What you rely on
 
-- **The files listed under "What ran"**: about 3,500 lines of Python for the hash, 4,000 for the other
+- **The files listed under "What ran"**: about 3,500 lines of Python for the hash, 4,300 for the other
   programs (they load more than they use). None of them searches for anything. They hold: how the file's bytes are read as instructions; what
   each instruction does; how a specification is read and worked out; how a proof of arithmetic is added up.
   They are tested and audited, **not proved**: that is the weakest part of this, and the work under way is
@@ -71,11 +80,12 @@ Not shown is not false: the verifier may be unable to show something true. On an
 tool then tries to settle it: it works the contract out on numbers, runs the binary's code on the same
 inputs, and if they differ it prints the input:
 
-      ode_lz4_decode: NOT shown: ...
+      ode_lz4_decode: NOT shown
           FALSE (ode_lz4_decode, case 0): returned 0, specification says 18446744073709551615
             input: out(out, cap=0), cap=0, input[1]=00, n=1
 
-A FALSE is a fact you can check by hand. "Not refuted" settles nothing.
+A FALSE is a fact you can check by hand. "Not refuted" settles nothing. Where and why it was not shown:
+`--maintain`.
 
 ## A second opinion on one part
 
@@ -91,8 +101,13 @@ first verifier's part). It is the beginning of a second verifier, not one.
 ## What it does not show
 
 - **Speed**, and anything else a contract does not say. (A `trace` line says what the timing may depend on.)
-- **That your program reaches these bytes.** The verification is of the function at a name in the file. That
-  the calls in a program linked with it go there, and not to something else of the same name, is not shown.
+- **What else is linked into your program.** A shipped file here is an object to be linked, and it is read
+  only in one shape: its code and its proof and nothing else a linker would take, and no name but those of
+  functions each shown to meet a contract (a copy with a second function hidden under a verified one's name
+  is refused: `README.md`, "An object is read in one shape"). So a program linked with it reaches these
+  bytes under these names, unless another file linked beside it gives a linker the same name: that is not
+  shown. For an executable or a shared object made from one, the verification is of the functions found
+  in it; how its names are resolved when it is loaded is not shown.
 - **The hash on AArch64**, or with an incremental interface: x86-64, one call.
 
 ## Why not Lean, Coq, or an SMT solver?

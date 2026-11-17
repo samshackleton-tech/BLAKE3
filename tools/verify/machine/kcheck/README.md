@@ -22,6 +22,16 @@ And three things found wrong and closed that night, none in "meets its contract"
 of something false" (what a verification said about a specification's definitions ending; the kind a
 lemma gave a value) and one silence (a function the proof left out).
 
+**November 16, evening** (the last section, "An object is read in one shape", says each): found by a
+review of that night and closed. Three of the kind "shown, of something that is not so": a lemma that says
+nothing, or a sequence, hid a definition that uses itself from "comes to an end"; a file without names
+whose proof left a function out was verified with exit 0; and an object with a second function under a
+verified function's name, in a section this reader did not read, was verified as the shipped file is, and a
+program linked with it ran the other function. And Sam's changes of the same day: the contract's word
+`apart` is `no_overlap`; names are BLAKE3 hashes, all 64 digits, worked out by `blake3.spec` itself
+(`kshow.py`); a verification tells an auditor what he has use for and a maintainer the rest (`--maintain`);
+what a file carries is printed with no control character; `CONTRACT.md` and `LANGUAGE.md` are one page.
+
 **Not a proof in a proof assistant, and checked by none.** A trial of another way to the goal of BLAKE3 #361:
 to hand a skeptical reader a specification, a binary and a proof, such that he checks for himself, in
 seconds, that the binary meets the specification, relying on little.
@@ -399,7 +409,7 @@ proof beside it is not shown. The second verifier of the arithmetic, `varith2.c`
 out of the shared object and out of the Rust executable, stripped or not.)
 
 **The proof is in the file.** `klink.py` writes a section the loader does not map, `.ode.proof`: the inner
-contracts, the wide kernels' places, where each function begins, and the SHA-256 of the specification the
+contracts, the wide kernels' places, where each function begins, and the BLAKE3 hash of the specification the
 maker had. A linker carries the section into what it makes. `check_binary.py` takes the proof from there
 (or from `--proof FILE`, or from `proofs/`), and trusts none of it: a wrong inner contract or place makes
 the check fail. **The file carries the specification too** (since November 15, at Sam's word), so that a
@@ -1540,3 +1550,52 @@ function returns is shown as far as the kernels it calls (README.md).
   and should be the contract's alone; the reader does not yet refuse them elsewhere.
 - The meaning above is this page and a program in Python; neither is checked against the other but by the
   tests (`test_ode.py`, `programs/test_specs.py`).
+
+## An object is read in one shape; names are BLAKE3's; two readers (November 16, evening)
+
+**A name in two namespaces.** A contract was matched to its code by a name spelled the same in the file's
+table of symbols. A linker reads that table by rules of its own. A copy of the shipped `odeframe.o`, changed
+only so: its `ode_unframe` made a LOCAL name (a linker gives it to no caller), and a six-byte function added in
+a second executable section under the GLOBAL name `ode_unframe`. `programs/check_file.py` said of it what it
+says of the shipped file: "1936 of them loaded to be run" (1,942 were), "ode_unframe at 0x0 ... meets its
+public contract", "3 function(s) verified in this file", exit 0. A C program linked with it and calling
+`ode_unframe` got 42 from the other function. (Run on an x86-64 Linux machine with `as`, `objcopy`, `ld -r`.)
+
+Now (`kdecode.linkable`): an object to be linked is read only in the shape the makers here write, with its
+names or stripped of them: the sections `.text`, `.note.GNU-stack`, `.symtab`, `.strtab`, `.shstrtab`,
+`.ode.proof` and no others, each once, of its type and with its leave (so no other section a linker would
+load to be run, no stack asked to be executable); and no name but GLOBAL names of functions in `.text`, of
+default visibility, each once (so none that is LOCAL, WEAK or resolved when the program starts). Then every
+name the file gives a linker must be of a function shown to meet a contract: for the hash's file that is
+fourteen, one more than `b3l_hashr` reaches (the 32-lane kernel's second way in), and all fourteen are
+verified. Tests: `programs/test_files.py` (`Shape`), by changing bytes of the shipped files.
+What it does not reach: an executable or a shared object (their names are resolved at load by rules this
+does not read; `VERIFY.md` says so), and another file linked beside this one under the same name.
+
+**Three more of the review.** A file without names whose proof is silent about one of its functions: whether
+the file holds a function for the contract left out cannot be told, and it is now NOT shown (it was exit 0).
+`check_binary.py` with no proof in the file and none given stopped on a name of its own that it had not set.
+`refute.py` took a proof's places for places in the file; in a linked file without names it entered the code
+somewhere else and could call a true contract FALSE.
+
+**Names** (Sam, November 16). A thing's name is the BLAKE3 hash of its bytes, all 64 digits wherever digits
+are shown or compared: 16 digits of SHA-256 were shown before, and two texts that agree in 16 digits cost
+about 2^32 tries to make. There is no new code for the hash: `kshow.b3` works `blake3.spec` out on the bytes
+with `ode.py` (0.1 s for a specification, 0.7 s for `b3hashr.o`), and `b3sum` gives the same digits. The
+proof's form is `ode proof 2` (`specification blake3 ...`, `code N blake3 ...`). `verify.py` lists the files
+that ran and gives the `b3sum` command that names them, for a program cannot vouch for itself; `--digests`
+prints them (three seconds, which is why it is not the default).
+
+**Two readers.** An auditor has no use for the names of the functions inside, the definitions' names in the
+line about their ending, or a refusal's inner terms: each is its maker's, and each was printed. Now a
+verification tells him, of each public contract, whether it is met, and the counts; `--maintain` prints the
+rest for a maintainer. Whatever a file carries is printed through `kshow.Plain`: a control or formatting
+character is written out (`\x1b`), so a maker's comment cannot take back a line on a reader's terminal
+(`ode.py` lets a comment hold any character; a name it lets hold only letters, digits and `_`).
+
+**One page.** `CONTRACT.md` and `LANGUAGE.md` are `LANGUAGE.md`, in two parts. It holds meaning only; what is
+not yet so, and the known warts, are the section above this one.
+
+Not yet done of what Sam asked the same day: the names a maker chose taken out of what is hashed and put in
+a glossary beside it; a reader's own list of names; file names and the contract's name by the same rule; a
+comment's outside documents given by their hashes.

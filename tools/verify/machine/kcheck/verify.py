@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """verify: one command for a reader who has a binary and wants to know what it is shown to do.
 
-    python3 verify.py FILE [SPEC] [--search] [--proof PROOF] [--maintain]
+    python3 verify.py FILE [SPEC] [--search] [--proof PROOF] [--maintain] [--digests]
     python3 verify.py FILE --show-spec        the specification the file carries, to read
 
 FILE: a shipped file of this folder (b3hashr.o, programs/NAME/odeNAME.o), or what a linker made of one.
@@ -11,8 +11,8 @@ It prints, in this order:
      from the specification the file carries, with that text's BLAKE3 hash. Read it: it is what is shown.
   2. the verification itself (check_binary.py for the hash, programs/check_file.py for the others), which
      reads the file's bytes as a loader maps them and takes nothing else from the file on trust;
-  3. what ran: every file of this folder that was loaded to reach the verdict, with its lines of code and
-     digest. That list is what you relied on, beside Python itself. The prover's files are not on it.
+  3. what ran: every file of this folder that was loaded to reach the verdict, with its lines of code
+     (and, with --digests, its BLAKE3 hash). That list is what you relied on, beside Python itself. The prover's files are not on it.
 
 With --maintain (a maintainer's run): each function inside by name, where it is, how long it took, and why one
 is not shown. Without it a reader is told what he has use for, and nothing its maker chose that he need not read.
@@ -87,7 +87,9 @@ def main():
         for name, mod in sorted(sys.modules.items()):
             f = getattr(mod, "__file__", None)
             if f and os.path.abspath(f).startswith(HERE + os.sep) and os.path.abspath(f) != os.path.abspath(__file__) and os.path.relpath(f, HERE) not in but:
-                with open(f, "rb") as fh: digest = kshow.b3(fh.read())
+                digest = None
+                if "--digests" in sys.argv:
+                    with open(f, "rb") as fh: digest = kshow.b3(fh.read())
                 ran.append((os.path.relpath(f, HERE), code_lines(f), digest))
         return ran
     ran = loaded()
@@ -100,13 +102,15 @@ def main():
             print("   NOT shown: the contract speaks through definitions that are not shown to come to an end"); code = 1
     print("\n3. What ran, to reach that (the files of this folder that were loaded; beside them, Python):\n")
     total = sum(n for _, n, _ in ran)
-    for f, n, digest in ran: print(f"   {f:<26} {n:>5} lines of code   BLAKE3 {digest}")
+    for f, n, digest in ran: print(f"   {f:<26} {n:>5} lines of code" + (f"   BLAKE3 {digest}" if digest else ""))
     print(f"   {'in all':<26} {total:>5} lines of code, {len(ran)} files")
-    print("   (the digits: BLAKE3, worked out by ode.py from blake3.spec of this folder; `b3sum FILE` gives the same)")
     if more:
         print("   and for the one line about the specification's definitions coming to an end (no part of what shows the code meets the contract):")
-        for f, n, digest in more: print(f"   {f:<26} {n:>5} lines of code   BLAKE3 {digest}")
+        for f, n, digest in more: print(f"   {f:<26} {n:>5} lines of code" + (f"   BLAKE3 {digest}" if digest else ""))
     absent = [f for f in ("kprove.py", "refute.py", "klink.py", os.path.join("programs", "kpack.py")) if f not in {r[0] for r in ran + more}]
+    names = " ".join(f for f, _, _ in ran + more)
+    if "--digests" in sys.argv: print("   (the digits: BLAKE3, worked out by ode.py from blake3.spec of this folder; `b3sum` gives the same)")
+    else: print(f"   to name them (a program cannot vouch for itself; --digests prints BLAKE3's digits here all the same):\n      b3sum {names}")
     if absent: print(f"   not loaded (a prover's or a maker's, trusted for nothing): {', '.join(absent)}")
     return code
 

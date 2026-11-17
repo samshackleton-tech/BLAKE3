@@ -142,6 +142,7 @@ def main():
         with open(os.path.join(HERE, "blake3.spec")) as f: MINE = f.read()            # (the lemmas for the line about the definitions' ending)
         with open(os.path.join(HERE, "proofs", "blake3.lemmas")) as f: LEMMAS = f.read()
     # every name the file gives a linker is verified too, called by `top` or not (kdecode.linkable)
+    calls_seen = {top}
     done, todo, covered, failed, count, t_all, searched = {}, [top] + sorted(n for n in offered if n != top), [], 0, 0, time.time(), []
     while todo:
         symbol = todo.pop(0)
@@ -176,7 +177,7 @@ def main():
         if (at, at + rows[-1][1] - rows[0][0]) not in covered: covered.append((at, at + rows[-1][1] - rows[0][0])); count += len(rows)      # two ways into one body: once
         calls = sorted({i.split()[1] for _, _, i in rows if i.split()[0] == ".call"})
         if maintain: print(f"  {symbol:<42} at {s.lo + s.at[symbol]:#8x}  {len(rows):>4} instructions  {1000 * (time.time() - t0):7.1f} ms  {what}")
-        todo += [c for c in calls if c not in done]
+        calls_seen.update(calls); todo += [c for c in calls if c not in done]
     inside = bytearray(len(s.image))
     for a, z in covered: inside[a:z] = b"\1" * (z - a)
     rest = [i for a, z, x in s.parts if x for i in range(a, z) if not inside[i]]
@@ -194,7 +195,7 @@ def main():
         if "NOT shown" in line:
             # (a contract that speaks through a definition not shown to come to an end says nothing of the inputs on which it goes on)
             print(f"{top}: NOT shown: its code meets its contract as far as the contract says anything; the contract speaks through definitions that are not shown to come to an end"); return 1
-    print(f"{top} in this file meets its public contract ({'the specification the file carries' if proof is not None and option('--spec') is None and 'specification' in proof['files'] else 'blake3.spec'}), with all it calls: {len(done)} functions, from the file's bytes, in {time.time() - t_all:.2f} s")
+    print(f"{top} in this file meets its public contract ({'the specification the file carries' if proof is not None and option('--spec') is None and 'specification' in proof['files'] else 'blake3.spec'}), with all it calls{' and every other name the file gives a linker' if any(n not in calls_seen for n in offered) else ''}: {len(done)} functions, from the file's bytes, in {time.time() - t_all:.2f} s")
     return 0
 
 

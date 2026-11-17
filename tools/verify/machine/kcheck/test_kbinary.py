@@ -75,6 +75,7 @@ class Binary(unittest.TestCase):
     def test_every_name_the_file_gives_a_linker_is_verified(self):
         """The file gives a linker fourteen names; one of them (the 32-lane kernel's second way in) is called by
         nothing `b3l_hashr` reaches. Each is verified, called or not (kdecode.linkable)."""
+        import subprocess
         why, names = kdecode.linkable(kdecode.Elf(os.path.join(HERE, "b3hashr.o")))
         self.assertIsNone(why); self.assertEqual(len(names), 14); self.assertIn("blake3_servil_avx512_p32", names)
         r = subprocess.run([sys.executable, os.path.join(HERE, "check_binary.py"), os.path.join(HERE, "b3hashr.o"), "--maintain"], capture_output=True, text=True)
@@ -86,7 +87,7 @@ class Binary(unittest.TestCase):
     def test_a_file_with_no_proof_in_it(self):
         """With no proof in the file and none given the folder's is used, and the line about the definitions'
         coming to an end is reached (a NameError until November 16, 2026)."""
-        import struct, tempfile
+        import struct, subprocess, tempfile
         with open(os.path.join(HERE, "b3hashr.o"), "rb") as f: blob = bytearray(f.read())
         self.assertEqual(struct.unpack_from("<H", blob, 60)[0], 7)
         struct.pack_into("<H", blob, 60, 6)                                  # its last section, the proof's, no longer listed
