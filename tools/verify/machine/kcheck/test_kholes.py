@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Two holes found November 17, 2026 while reading for the merge of the kernels' verifiers into kfn.py; each
-was "shown, of something false". The copies that were shown then are refused now; these are the copies.
+"""Four holes found November 17, 2026 by reading kfn.py and the kernels' verifiers (to merge them, and then
+again with the question the first two had taught); each was "shown, of something false". The copies that
+were shown then are refused now; these are the copies.
 
 1. The stack pointer (kfn.py's machine, which is kbyte.py's too). `mov rsp, rdi`, `lea rsp, [rdi]` and
    `pop rsp` put an argument's address in the stack pointer, and the machine then took a push to go to the
@@ -11,7 +12,19 @@ was "shown, of something false". The copies that were shown then are refused now
    verifiers took any such number within the data for its address. A copy of b3hashr.o with seven bytes
    changed in the 32-lane kernel (`mov rdi, 0x50004500` for `lea rdi, [rip + the schedule]`) was shown to
    meet the public contract; on a processor it stopped on a fault, and with a page mapped at that address it
-   returned a digest that is not BLAKE3's."""
+   returned a digest that is not BLAKE3's.
+3. The stack below the stack pointer (kfn.py's machine). What the machine remembered of it outlived a call,
+   which writes there (the return address, the callee's frame). A copy of the shipped ode_unframe that pushes
+   r15 and pops it before a call, then moves the stack pointer down and pops r15 again, was shown to meet its
+   public contract; on a processor r15 then holds the return address, and the function reads its input far
+   outside it.
+4. What a call leaves in the registers (kfn.py's machine). Every register a callee may change was the one
+   unknown "left by a call"; two of them compared with a number were taken to answer alike, so a path on
+   which they differ was never run. A copy of ode_unframe that writes a byte below `out` where rcx is zero
+   and rdx is not (after a call, whose callee is free in what it leaves there) was shown to meet its public
+   contract.
+And one of that day's own changes, caught the same way before it was shipped: counting down (`dec`) and
+`test` were taken to set the flags as a compare does; a jump on the order after them is refused now."""
 import os, shutil, subprocess, sys, tempfile, unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE); sys.path.insert(0, os.path.join(HERE, "programs")); sys.path.insert(0, os.path.join(HERE, "..", "lang"))
@@ -55,6 +68,12 @@ class Stack(unittest.TestCase):
     def test_the_kernel_as_it_is_meets_the_contract_with_room_on_the_stack(self):
         self.kernel(self.source)
 
+    def test_counting_down_says_only_whether_the_number_is_zero(self):
+        at = "  dec al\n  jz @done\n"
+        self.assertEqual(self.source.count(at), 2)             # (the source has two kernels: the first is the one tried here)
+        with self.assertRaises(kcheck.Fail) as refused: self.kernel(self.source.replace(at, "  dec al\n  jb @done\n  jz @done\n", 1))
+        self.assertIn("say only whether a number is zero", str(refused.exception))
+
     def test_no_way_out_of_the_frame(self):
         for what, added, why in WAYS:
             with self.subTest(what):
@@ -76,6 +95,44 @@ class Stack(unittest.TestCase):
         with self.assertRaises(kcheck.Fail) as refused:
             self.common(text.replace(at, "_ode_common:\n    mov rax, rsp\n    mov rsp, rdi\n    push rbx\n    mov rsp, rax\n    push rbx\n"), "+0x3e")
         self.assertIn("leaves the function's own frame", str(refused.exception))
+
+
+class Calls(unittest.TestCase):
+    """ode_unframe (programs/frame: it calls two functions by their contracts) with instructions added around a call."""
+    @classmethod
+    def setUpClass(cls):
+        cls.work = tempfile.mkdtemp()
+        read = lambda *p: open(os.path.join(HERE, "programs", *p)).read()
+        cls.spec = ode.with_proof(read("frame", "frame.spec"), read("frame", "unframe.inner") + check_programs.lemmas("frame"))
+        cls.source, cls.proof = read("frame", "unframe.S"), read("frame", "unframe.proof")
+
+    @classmethod
+    def tearDownClass(cls): shutil.rmtree(cls.work)
+
+    def unframe(self, text):
+        with open(os.path.join(self.work, "u.S"), "w") as f: f.write(text)
+        assemble(os.path.join(self.work, "u.S"), os.path.join(self.work, "u.o"))
+        kbyte.check(kbyte.load(os.path.join(self.work, "u.o"), "ode_unframe"), self.spec, "ode_unframe", self.proof)
+
+    def changed(self, old, new):
+        self.assertEqual(self.source.count(old), 1, old)
+        return self.source.replace(old, new)
+
+    def test_as_shipped(self): self.unframe(self.source)
+
+    def test_nothing_is_remembered_of_the_stack_below_the_stack_pointer(self):
+        call = "    mov rcx, r15\n    call CALL(ode_lz4_decode)\n"
+        with self.assertRaises(kcheck.Fail) as refused:
+            self.unframe(self.changed(call, "    mov rcx, r15\n    push r15\n    pop r11\n    call CALL(ode_lz4_decode)\n    sub rsp, 8\n    pop r15\n"))
+        self.assertIn("nothing was written there", str(refused.exception))
+
+    def test_what_a_call_leaves_in_two_registers_is_two_unknowns(self):
+        after = "    call CALL(ode_lz4_decode)\n    mov qword ptr [rsp + 0], rax\n"
+        evil = "    mov byte ptr [rbx - 1], 65\n.Lskip:\n    mov qword ptr [rsp + 0], rax\n"         # a byte written below `out`
+        for asked in ("    cmp rcx, 0\n    jne .Lskip\n    cmp rdx, 0\n    je .Lskip\n",            # where rcx is zero and rdx is not
+                      "    cmp rcx, 0\n    jne .Lskip\n"):                                         # (where rcx is zero: this one was always refused)
+            with self.assertRaises(kcheck.Fail) as refused: self.unframe(self.changed(after, "    call CALL(ode_lz4_decode)\n" + asked + evil))
+            self.assertIn("a write at out + -1", str(refused.exception))
 
 
 class Data(unittest.TestCase):

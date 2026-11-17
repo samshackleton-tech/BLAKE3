@@ -226,7 +226,9 @@ class Machine:
     # `ghost`: at a return, the sequences whose last values a place's induction has shown. `rest`: for a place.
     # BOUNDARY: this machine takes such a frame (kbyte.py's, which is this one with other memory, does not).
     # `data`: the file's read-only data ("rodata": numbers of 32 bits are read from it, nothing is written).
-    wide, ghost, rest, BOUNDARY, data = None, {}, 0, True, b""
+    # `calls`: how many calls the path has made: what a call leaves in a register is an unknown of its own,
+    # named by the register and the call (two unknowns under one name would be taken to answer alike).
+    wide, ghost, rest, BOUNDARY, data, calls = None, {}, 0, True, b"", 0
 
     def __init__(self, T, rows, c, data=b""):
         self.data = data
@@ -653,12 +655,14 @@ class Machine:
 
     def branch(self, op):
         if self.flags is None: raise Fail("a branch on flags no compare set")
-        kind, x = self.flags
+        kind, x = self.flags[0], self.flags[1]
         if kind == "numbers":
             if op in (".je", ".jne"):
                 z = self.facts.zero(x)
                 if z is None: raise Fork("zero", x)
                 return z == (op == ".je")
+            # (counting down and `test` leave the carry flag as it was, or clear it: their flags say whether the number is zero, and no more)
+            if len(self.flags) > 2: raise Fail("an order asked of flags that say only whether a number is zero")
             ge = True if self.facts.ge0(x) else False if self.facts.ge0(-x - 1) else None      # unsigned: both sides are whole numbers not below zero
             if ge is None: raise Fork("ge", x)
             return ge == (op == ".jae")
@@ -679,8 +683,14 @@ class Machine:
             else: used = self.call_contract(A, name, c)
         except Err as e: raise Fail(f"a call of {name}: {e}")
         self.low = min(self.low, sp - used)
+        self.left()
+
+    def left(self):
+        """After a call: each register a callee may change holds an unknown of its own (the result too, where the
+        contract says nothing of it); the vector registers and the flags hold nothing."""
+        self.calls += 1
         for r in G64:
-            if r not in KEPT and r not in ("rsp", "rax"): self.g[r] = ("q", "left by a call")
+            if (r not in KEPT and r not in ("rsp", "rax")) or (r == "rax" and self.g[r] == ("q", "left by a call")): self.g[r] = ("q", f"left in {r} by call {self.calls}")
         self.x, self.flags = {}, None
 
     def needed(self, name, c):
@@ -898,7 +908,7 @@ class Machine:
             if a[1][0] != ".reg" or a[1] != a[2]: raise Fail("a test that is not of a register with itself")
             v = self.g[a[1][1].lstrip(".")] if a[0] == "64" else self.low32(self.g[a[1][1].lstrip(".")])
             if lin(v) is None: raise Fail(f"a test of {v}")
-            self.flags = ("numbers", lin(v))
+            self.flags = ("numbers", lin(v), "zero")
         elif op == ".lea_data": self.g[a[0].lstrip(".")] = ("a", "rodata", num(a[1]))            # the address of the file's read-only data, so many bytes in
         elif op == ".shr32":
             r, n = a[0].lstrip("."), num(a[1]); v = self.low32(self.g[r])
@@ -911,7 +921,7 @@ class Machine:
             r = a[0].lstrip("."); v = self.g[r] if op == ".dec64" else self.low32(self.g[r])
             if lin(v) is None: raise Fail(f"one taken from {v}")
             self.g[r] = self.number(lin(v) - 1) if op == ".dec64" else ("n", (v[1] - 1) & 0xFFFFFFFF)
-            self.flags = ("numbers", lin(self.g[r]))
+            self.flags = ("numbers", lin(self.g[r]), "zero")
         elif op in (".shl64", ".shr64"):
             r = a[0].lstrip("."); self.g[r] = self.arith(op[1:4], self.g[r], ("n", num(a[1]))); self.flags = None
         elif op == ".cmp":
@@ -1031,7 +1041,7 @@ class Machine:
             # a count kept in AL, counted down: a plain number, so the branch after it is decided
             r = a[0].lstrip("."); v = self.g[r]
             if v[0] != "al": raise Fail("a byte counted down that no number was put in")
-            n = (v[1] - 1) & 0xFF; self.g[r] = ("al", n); self.flags = ("numbers", Lin.of(n))
+            n = (v[1] - 1) & 0xFF; self.g[r] = ("al", n); self.flags = ("numbers", Lin.of(n), "zero")
         elif op == ".push":
             if a[0] == ".rsp": raise Fail("a push of the stack pointer")
             sp = self.top()
@@ -1056,6 +1066,12 @@ class Machine:
         if self.wide is not None and sp[0] == "a" and sp[1] == "frame": self.wide = None; del self.mem["wide"]         # back in the frame as it was: the part on the boundary is given up
         if sp[0] != "a" or sp[1] != ("frame" if self.wide is None else "wide") or not isinstance(sp[2], int) or sp[2] > 0: raise Fail(f"the stack pointer leaves the function's own frame: {sp}")
         self.low = min(self.low, sp[2] if self.wide is None else self.wide - 63 + sp[2])
+        # Nothing is remembered of the stack below the stack pointer: a call writes there (its return address, the
+        # callee's own frame), and so may whatever interrupts the program.
+        floor = self.floor()
+        for o in [o for o in self.mem["frame"] if o < floor]: del self.mem["frame"][o]
+        if self.wide is not None:
+            for o in [o for o in self.mem["wide"] if o < sp[2]]: del self.mem["wide"][o]
         self.steps += 1; self.pc = nxt
 
 

@@ -528,9 +528,7 @@ class Machine(kfn.Machine):
         finally: self.calling = False
         CALLED.add(name)
         self.low = min(self.low, sp - used)
-        for r in G64:
-            if r not in KEPT and r not in ("rsp", "rax"): self.g[r] = ("q", "left by a call")
-        self.x, self.flags = {}, None
+        self.left()                                         # (kfn.py: each register a callee may change holds an unknown of its own)
 
     def public(self, v, what):
         """A list given to a callee holds nothing the trace may not depend on."""
