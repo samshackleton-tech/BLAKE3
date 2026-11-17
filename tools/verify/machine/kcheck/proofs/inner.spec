@@ -62,6 +62,7 @@ contract blake3_servil_output16(nodes: 16 descriptors, out: 16 cvs) {
 }
 
 contract blake3_servil_compress_in_place_avx512(h: cv, m: block, length: low byte, t: counter, flags: low byte) {
+    requires no_overlap(h, m)
     ensures h = compress(h, m, t, length, flags)
     stack 0
     needs avx512

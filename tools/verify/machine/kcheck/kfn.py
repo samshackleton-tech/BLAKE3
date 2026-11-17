@@ -45,7 +45,7 @@ import kcheck, kdecode, kspec, ode
 from kcheck import Fail, num, signed
 from klin import Lin, Facts, sym, value, lin
 from kspec import Arr, ByteT, Slice, Named, plain, byte_or, byte_term, term_byte, halved
-from ode import Word, Err
+from ode import Word, Counter, Err
 
 BASE, DATA = 0x10000, 0x50000000
 G64 = kcheck.G64
@@ -205,7 +205,10 @@ def kernels():
 #
 # A general register holds: ("n", number); ("l", a number that depends on counts: whole, within 64 bits);
 # ("a", region, offset): an address; ("p", eight bytes, each a number or a number or-ed with named flag bytes);
-# ("z", a byte): a byte of memory, zero-extended; ("q", name): 64 bits of which nothing is known.
+# ("z", a byte): a byte of memory, zero-extended; ("q", name): 64 bits of which nothing is known;
+# ("pair", low, high): two 32-bit terms (a counter); ("low", name): 64 bits of which only the low byte is
+# spoken of, the byte `name`; ("al", n): the plain number n in AL, nothing known above it.
+# An XMM register holds four 32-bit terms (kcheck.Terms), the lowest first.
 class Fork(Exception):
     def __init__(self, kind, x): self.kind, self.x = kind, x
 
@@ -222,7 +225,7 @@ class Machine:
         self.readonly, self.given = set(), {}
         self.low, self.pc, self.steps, self.back = 0, None, 0, {}
         # the things at the addresses given are taken not to overlap: the contract must ask it of the caller
-        addresses = [name for _, kind, name in c.args if kind not in ("number", "byte", "any")]
+        addresses = [name for _, kind, name in c.args if kind not in ("number", "byte", "any", "counter", "low byte")]
         if len(addresses) > 1 and sorted(c.text["no_overlap"] or []) != sorted(addresses):
             raise Fail(f"{c.name}: the contract does not say `requires no_overlap({', '.join(addresses)})`: the things at the addresses it is given are taken not to overlap")
         A = self.A()
@@ -233,9 +236,14 @@ class Machine:
             elif kind == "byte":
                 self.g[reg] = ("p", ((0, (name,)),) + (0,) * 7); self.given[name] = Word(byte_term(T, (0, (name,))))
             elif kind == "any": self.g[reg] = ("q", name)
+            elif kind == "counter":                                         # 64 bits in the register: the counter's two words
+                lo, hi = T.var(name, "low"), T.var(name, "high")
+                self.g[reg], self.given[name] = ("pair", lo, hi), Counter(Word(lo), Word(hi))
+            elif kind == "low byte":                                        # the register's low byte is the number; nothing is said of the rest
+                self.g[reg], self.given[name] = ("low", name), Word(byte_term(T, (0, (name,))))
         for reg, kind, name in c.args:
-            if kind in ("number", "byte", "any"): continue
-            if kind in ("counter", "low byte", "word", "low word") or packed_kind(kind) is not None or lanes_kind(kind, "inputs") is not None or lanes_kind(kind, "cvs") is not None:
+            if kind in ("number", "byte", "any", "counter", "low byte"): continue
+            if kind in ("word", "low word") or packed_kind(kind) is not None or lanes_kind(kind, "inputs") is not None or lanes_kind(kind, "cvs") is not None:
                 raise Fail(f"{c.name}: {name} is {kind}: a kernel's argument, and kernels are checked by kloop.py")
             self.g[reg] = ("a", name, 0)
             n = bytes_kind(kind)
@@ -475,6 +483,10 @@ class Machine:
         if b[0] != "a": raise Fail(f"an address from {base} = {b}")
         return b[1], plain(Lin.of(b[2]) + signed(num(disp)))
 
+    def lanes(self, r):
+        if r not in self.x: raise Fail(f"xmm{r} read before it is written")
+        return self.x[r]
+
     def operand(self, o):
         if o[0] == ".reg": return self.g[o[1].lstrip(".")]
         if o[0] == ".imm": return ("n", num(o[1]))
@@ -497,10 +509,13 @@ class Machine:
     def arith(self, op, x, y):
         F = self.facts
         if op in ("add", "sub"):
+            # bytes beside bytes: where one has a byte the other has zero, nothing is carried
+            if op == "add" and x[0] == "p" and y[0] == "p" and all(p == 0 or q == 0 for p, q in zip(x[1], y[1])): return ("p", tuple(q if p == 0 else p for p, q in zip(x[1], y[1])))
             if x[0] == "a" and lin(y) is not None: return ("a", x[1], plain(Lin.of(x[2]) + (lin(y) if op == "add" else -lin(y))))
             if op == "add" and y[0] == "a" and lin(x) is not None: return ("a", y[1], plain(Lin.of(y[2]) + lin(x)))
             if lin(x) is not None and lin(y) is not None: return self.number(lin(x) + lin(y) if op == "add" else lin(x) - lin(y))
         elif op == "shl":
+            if x[0] == "p" and y[1] % 8 == 0 and 0 <= y[1] < 64: return ("p", (0,) * (y[1] // 8) + tuple(x[1][:8 - y[1] // 8]))      # by whole bytes
             if lin(x) is not None and 0 <= y[1] < 32: return self.number(lin(x).scale(1 << y[1]))
         elif op == "shr":
             if x[0] == "n": return ("n", x[1] >> y[1])
@@ -729,7 +744,8 @@ class Machine:
         elif op == ".jmp": nxt = num(a[0])
         elif op == ".nop": pass
         elif op == ".mov":
-            if a[0] == "8":
+            if a[0] == "8" and a[1] == [".reg", ".rax"] and a[2][0] == ".imm": self.g["rax"] = ("al", num(a[2][1]) & 0xFF)      # a count put in AL
+            elif a[0] == "8":
                 if a[1][0] != ".mem" or a[2][0] != ".reg": raise Fail("a move of a byte that is not from a register to memory")
                 self.store(*self.address(a[1][1], a[1][2]), 1, self.g[a[2][1].lstrip(".")])
             elif a[0] == "64":
@@ -738,8 +754,13 @@ class Machine:
                 else: self.store(*self.address(a[1][1], a[1][2]), 8, v)
             else: raise Fail("a move that is not of 64 bits or of a byte")
         elif op == ".movzx8":
-            if a[1][0] != ".mem": raise Fail("a byte that is not from memory")
-            self.g[a[0].lstrip(".")] = self.load(*self.address(a[1][1], a[1][2]), 1)
+            if a[1][0] == ".reg":                                           # a register's low byte, zeros above it
+                src = self.g[a[1][1].lstrip(".")]
+                if src[0] == "low": self.g[a[0].lstrip(".")] = ("p", ((0, (src[1],)),) + (0,) * 7)
+                elif src[0] == "p": self.g[a[0].lstrip(".")] = ("p", (src[1][0],) + (0,) * 7)
+                else: raise Fail(f"the low byte of {src}")
+            elif a[1][0] != ".mem": raise Fail("a byte that is not from memory or a register")
+            else: self.g[a[0].lstrip(".")] = self.load(*self.address(a[1][1], a[1][2]), 1)
         elif op in (".add", ".sub", ".or", ".and"):
             if a[0] != "64" or a[1][0] != ".reg": raise Fail(f"{op} that is not of 64 bits into a register")
             r = a[1][1].lstrip(".")
@@ -764,6 +785,39 @@ class Machine:
         elif op == ".xstoreu":
             if int(a[2]) not in self.x: raise Fail(f"xmm{a[2]} stored before it is written")
             self.store(*self.address(a[0], a[1]), 16, self.x[int(a[2])])
+        elif op == ".xconst": self.x[int(a[0])] = tuple(self.T.const(num(w)) for w in a[1:5])
+        elif op == ".xmov": self.x[int(a[0])] = self.lanes(int(a[1]))
+        elif op == ".xmovq":
+            # the low 64 bits from a general register, zero above: a counter's two words; or bytes, each word a byte with zeros above it
+            v, T = self.g[a[1].lstrip(".")], self.T
+            if v[0] == "pair": self.x[int(a[0])] = (v[1], v[2], T.const(0), T.const(0))
+            elif v[0] == "p":
+                if any(b != 0 for k, b in enumerate(v[1]) if k % 4): raise Fail(f"a register moved to a vector register whose words are not each a byte: {v}")
+                self.x[int(a[0])] = tuple(T.const(b) if isinstance(b, int) else byte_term(T, b) for b in (v[1][0], v[1][4])) + (T.const(0), T.const(0))
+            else: raise Fail(f"a general register moved to a vector register: {v}")
+        elif op in (".xpaddd", ".xpxor"):
+            x, y = self.lanes(int(a[1])), self.lanes(int(a[2]))
+            self.x[int(a[0])] = tuple((self.T.add if op == ".xpaddd" else self.T.xor)(p, q) for p, q in zip(x, y))
+        elif op == ".xprord":
+            if not 0 < int(a[2]) < 32: raise Fail("a rotation by nothing, or by the word's width")
+            self.x[int(a[0])] = tuple(self.T.ror(t, int(a[2])) for t in self.lanes(int(a[1])))
+        elif op == ".xpshufd":
+            s, n = self.lanes(int(a[1])), int(a[2]); self.x[int(a[0])] = tuple(s[(n >> (2 * j)) & 3] for j in range(4))
+        elif op == ".xshufps":
+            x, y, n = self.lanes(int(a[1])), self.lanes(int(a[2])), int(a[3])
+            self.x[int(a[0])] = (x[n & 3], x[(n >> 2) & 3], y[(n >> 4) & 3], y[(n >> 6) & 3])
+        elif op == ".xpunpcklqdq": x, y = self.lanes(int(a[1])), self.lanes(int(a[2])); self.x[int(a[0])] = (x[0], x[1], y[0], y[1])
+        elif op == ".xpunpckldq": x, y = self.lanes(int(a[1])), self.lanes(int(a[2])); self.x[int(a[0])] = (x[0], y[0], x[1], y[1])
+        elif op == ".xpunpckhdq": x, y = self.lanes(int(a[1])), self.lanes(int(a[2])); self.x[int(a[0])] = (x[2], y[2], x[3], y[3])
+        elif op == ".xpblendd":
+            # of 128 bits the processor reads the mask's low four bits
+            x, y, n = self.lanes(int(a[1])), self.lanes(int(a[2])), int(a[3]) & 15
+            self.x[int(a[0])] = tuple(y[j] if (n >> j) & 1 else x[j] for j in range(4))
+        elif op == ".decb":
+            # a count kept in AL, counted down: a plain number, so the branch after it is decided
+            r = a[0].lstrip("."); v = self.g[r]
+            if v[0] != "al": raise Fail("a byte counted down that no number was put in")
+            n = (v[1] - 1) & 0xFF; self.g[r] = ("al", n); self.flags = ("numbers", Lin.of(n))
         elif op == ".push":
             sp = self.g["rsp"]
             self.g["rsp"] = ("a", "frame", sp[2] - 8); self.low = min(self.low, sp[2] - 8)
@@ -846,13 +900,13 @@ def within(e, c, where):
     if -e.low > given: raise Fail(f"{where}: {-e.low} bytes of stack used, the contract gives {given}")
 
 
-def check(rows, name, proof=None):
+def check(rows, name, proof=None, symbol=None):
     """The function's instructions meet its contract. (`proof`: for this verifier, nothing: a proof with a place
     is refused.)"""
     if proof is not None and proof.get("places"): raise Fail("a proof with a place: this verifier runs every loop")
     global FRESH
     FRESH = itertools.count()               # the names given on the way are the same every time: a proof of the arithmetic speaks of them
-    c, T = contract("b3l_" + name), kcheck.Terms()
+    c, T = contract(symbol or "b3l_" + name), kcheck.Terms()        # (`symbol`: a function that is not one of hash.ode's: a kernel)
     m = Machine(T, rows, c); m.pc = rows[0][0]
     budget = [STEPS]
     ends = paths(m, budget)
@@ -867,9 +921,9 @@ def find(rows, name):
     return dict(function=name, places=[])
 
 
-def load(obj, name):
-    rows, _ = kdecode.read(obj, "b3l_" + name, BASE, DATA)
-    kspec.fits(obj, "b3l_" + name)
+def load(obj, name, symbol=None):
+    rows, _ = kdecode.read(obj, symbol or "b3l_" + name, BASE, DATA)
+    kspec.fits(obj, symbol or "b3l_" + name)
     return rows
 
 

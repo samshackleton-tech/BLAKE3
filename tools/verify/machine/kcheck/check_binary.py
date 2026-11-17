@@ -86,6 +86,10 @@ def check(path, symbol):
         kloop.check(rows, data, name, places, entry)
         start = kloop.KERNELS[name]["start"]
         return rows, "a wide kernel: every number of blocks", start
+    if symbol == "blake3_servil_compress_in_place_avx512":
+        # the first kernel through the verifier of functions and not a verifier of kernels (its source in Ode: ../wide/one.ode)
+        rows = kfn.load(path, None, symbol); kfn.check(rows, None, symbol=symbol)
+        return rows, "a one-block kernel, by the verifier of functions", symbol
     if symbol in ONE:
         rows = kone.load(path, ONE[symbol]); kone.check(rows, ONE[symbol])
         return rows, "a one-block kernel", symbol

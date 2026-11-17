@@ -64,7 +64,7 @@ class Kone(unittest.TestCase):
         import kspec, ode
         true = kspec.SPEC
         text = ode.source()
-        head = {"avx512": "contract blake3_servil_compress_in_place_avx512(h: cv, m: block, length: low byte, t: counter, flags: low byte) {\n    ensures h = compress(h, m, t, length, flags)",
+        head = {"avx512": "contract blake3_servil_compress_in_place_avx512(h: cv, m: block, length: low byte, t: counter, flags: low byte) {\n    requires no_overlap(h, m)\n    ensures h = compress(h, m, t, length, flags)",
                 "sse41": "contract blake3_servil_compress_in_place_sse41(h: cv, m: block, length: word, t: counter, flags: low word) {\n    ensures h = compress(h, m, t, length, flags)"}
         try:
             for name, old, new in (("avx512", "compress(h, m, t, length, flags)", "compress(h, m, t, flags, length)"),
