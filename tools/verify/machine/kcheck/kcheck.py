@@ -403,10 +403,10 @@ class Machine:
         while self.pc is not None:
             if self.pc not in self.rows: raise Fail(f"no instruction at 0x{self.pc:X}")
             if self.steps >= limit: raise Fail("still running")
-            # the schedule's address is a number the lifter wrote: it names the object's read-only data
+            # the schedule's address: the object's read-only data, so many bytes in
             nxt, i = self.rows[self.pc]
-            if i[0] == ".mov" and i[1] == "64" and i[3][0] == ".imm" and num(i[3][1]) >= self.data_at and num(i[3][1]) < self.data_at + len(self.data):
-                self.setreg(i[2][1], ("a", "rodata", num(i[3][1]) - self.data_at)); self.steps += 1; self.pc = nxt; continue
+            if i[0] == ".lea_data":
+                self.setreg(i[1], ("a", "rodata", num(i[2]))); self.steps += 1; self.pc = nxt; continue
             self.step()
         for r in SAVED:
             if self.g[r] != entry_regs[r]: raise Fail(f"{r} is not restored")

@@ -194,8 +194,8 @@ class Machine(kcheck.Machine):
         if self.steps >= 200000: raise Fail("still running")
         nxt, i = self.rows[self.pc]
         self.moved = True
-        if i[0] == ".mov" and i[1] == "64" and i[3][0] == ".imm" and self.data_at <= num(i[3][1]) < self.data_at + len(self.data):
-            self.setreg(i[2][1], ("a", "rodata", num(i[3][1]) - self.data_at)); self.steps += 1; self.pc = nxt
+        if i[0] == ".lea_data":
+            self.setreg(i[1], ("a", "rodata", num(i[2]))); self.steps += 1; self.pc = nxt
         else: self.step()
 
     def returned(self):

@@ -12,7 +12,9 @@ lifter's, instruction for instruction: two readings of the same bytes, made apar
 
 Decoding starts at SYMBOL and goes on, instruction after instruction, to the first `ret` (so a second entry
 that falls into the same body, as P32 into K32, is read with it). The object's read-only data is placed at
-RODATA, as the lifter places it; `lea reg, [rip + data]` is that data's address.
+RODATA, as the lifter places it. `lea reg, [rip + data]` is the row `.lea_data reg WHERE` (the lifter writes
+it as a move of the number RODATA + WHERE: `--compare` reads the one as the other; the verifiers must not,
+for a true move of that number is no address).
 
 Two kinds of file. An object whose code has relocations (an assembler's output): an operand's or a call's
 target is what its relocation names. A file whose addresses are settled (`settled` below: an object with no
@@ -534,7 +536,8 @@ def decode(code, at, relocs, rodata, rodata_at, base, start):
     if op == 0x8D:
         mod, reg, rm, mem = modrm(R, X, B)
         if rm is not None or not W: raise Stop("a lea this does not know")
-        if mem[0] == "rip": return p - at, f".mov 64 {r64(reg)} (.imm {bv(rodata_at + data_at(mem[1], p))})"
+        # the address of the file's read-only data, so many bytes in: a row of its own, which no move of a number is
+        if mem[0] == "rip": return p - at, f".lea_data .{G[reg]} {bv(data_at(mem[1], p))}"
         b, index, disp = mem
         if index: raise Stop("an indexed lea")
         return p - at, f".lea .{G[reg]} .{b} {bv(disp)}"
@@ -596,7 +599,8 @@ def main():
     rows, rodata = read(obj, symbol, base, rodata_at)
     if compare:
         with open(a[4]) as f: theirs = [tuple(l.rstrip("\n").split("\t")) for l in f]
-        ours = [(f"{x:X}", f"{y:X}", i) for x, y, i in rows]
+        lifters = lambda i: f".mov 64 (.reg {i.split()[1]}) (.imm {bv(rodata_at + int(i.split()[2], 16))})" if i.startswith(".lea_data ") else i
+        ours = [(f"{x:X}", f"{y:X}", lifters(i)) for x, y, i in rows]
         with open(a[5]) as f: data = f.read().split()
         same_data = data == [f"{rodata_at:X}", rodata.hex().upper()]
         diff = [(o, t) for o, t in zip(ours, theirs) if o != t]

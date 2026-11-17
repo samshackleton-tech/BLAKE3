@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
-"""The stack pointer stays in the function's own frame (kfn.py's machine, which is kbyte.py's too).
+"""Two holes found November 17, 2026 while reading for the merge of the kernels' verifiers into kfn.py; each
+was "shown, of something false". The copies that were shown then are refused now; these are the copies.
 
-Found November 17, 2026: `mov rsp, rdi`, `lea rsp, [rdi]` and `pop rsp` put an argument's address in the stack
-pointer, and the machine then took a push to go to the function's own frame. A copy of the shipped ode_common
-with four instructions added wrote eight bytes below `a` on a processor and was shown to meet its public
-contract. Each such copy is refused now; these are the copies."""
+1. The stack pointer (kfn.py's machine, which is kbyte.py's too). `mov rsp, rdi`, `lea rsp, [rdi]` and
+   `pop rsp` put an argument's address in the stack pointer, and the machine then took a push to go to the
+   function's own frame. A copy of the shipped ode_common with four instructions added wrote eight bytes
+   below `a` on a processor and was shown to meet its public contract.
+2. The address of the file's data (kdecode.py; kcheck.py, kloop.py). The decoder wrote `lea reg, [rip + data]`
+   as a move of the number RODATA + where, the same row as a true `mov reg, NUMBER`, and the kernels'
+   verifiers took any such number within the data for its address. A copy of b3hashr.o with seven bytes
+   changed in the 32-lane kernel (`mov rdi, 0x50004500` for `lea rdi, [rip + the schedule]`) was shown to
+   meet the public contract; on a processor it stopped on a fault, and with a page mapped at that address it
+   returned a digest that is not BLAKE3's."""
 import os, shutil, subprocess, sys, tempfile, unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE); sys.path.insert(0, os.path.join(HERE, "programs")); sys.path.insert(0, os.path.join(HERE, "..", "lang"))
@@ -69,6 +76,30 @@ class Stack(unittest.TestCase):
         with self.assertRaises(kcheck.Fail) as refused:
             self.common(text.replace(at, "_ode_common:\n    mov rax, rsp\n    mov rsp, rdi\n    push rbx\n    mov rsp, rax\n    push rbx\n"), "+0x3e")
         self.assertIn("leaves the function's own frame", str(refused.exception))
+
+
+class Data(unittest.TestCase):
+    def test_a_number_moved_is_not_the_address_of_the_data(self):
+        obj = os.path.join(HERE, "b3hashr.o")
+        e = kdecode.Elf(obj); s = kdecode.Settled(e)
+        start = s.at["blake3_servil_avx512_k32"]
+        rows, data = kdecode.read(obj, "blake3_servil_avx512_k32", 0, 0)
+        at, row = next((a, i) for a, _, i in rows if i.startswith(".lea_data "))
+        self.assertTrue(row.startswith(".lea_data .rdi "))
+        where = e.sections[e.index[".text"]]["off"] + (start - s.lo) + at
+        b = bytearray(e.b)
+        self.assertEqual(bytes(b[where:where + 3]), bytes.fromhex("488d3d"))                    # lea rdi, [rip + ...]
+        b[where:where + 7] = bytes.fromhex("48c7c7") + (0x50000000 + int(row.split()[2], 16)).to_bytes(4, "little")    # mov rdi, that number
+        work = tempfile.mkdtemp()
+        try:
+            changed = os.path.join(work, "changed.o")
+            with open(changed, "wb") as f: f.write(bytes(b))
+            self.assertIn(".mov 64 (.reg .rdi) (.imm 0x5000", "\n".join(i for _, _, i in kdecode.read(changed, "blake3_servil_avx512_k32", 0, 0)[0]))
+            r = subprocess.run([sys.executable, os.path.join(HERE, "check_binary.py"), changed, "--maintain"], capture_output=True, text=True)
+            self.assertEqual(r.returncode, 1, r.stdout[-400:])
+            self.assertIn("blake3_servil_avx512_k32: NOT shown", r.stdout)
+            self.assertIn("b3l_hashr: NOT shown", r.stdout)
+        finally: shutil.rmtree(work)
 
 
 if __name__ == "__main__":
