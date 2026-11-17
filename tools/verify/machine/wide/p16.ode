@@ -116,6 +116,14 @@ kernel p16 replaces "blake3_servil_avx512_p16" {
   mov esi, ebx
   shr esi, 24
   @block16:
+  // The loop over the blocks. What holds here when b blocks are done (1 <= b <= n - 1): the proof of the
+  // loop is written from these lines, and the verifier shows them (kcheck/kfn.py, "a place").
+  place b {
+    keep rsp, rbp, rsi, rdi, r8, r9, r10, r12, r15
+    r13 = n - b
+    r14 = 64 * b
+    zmm0 .. zmm7 = h[b]
+  }
   mov rax, QWORD PTR [r12 + 0]
   vmovdqu32 zmm16, ZMMWORD PTR [rax + r14]
   mov rax, QWORD PTR [r12 + 8]

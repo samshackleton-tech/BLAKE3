@@ -17,9 +17,11 @@ sys.path.insert(0, HERE)
 import kdecode
 
 HASH = ["pad", "chunk_node", "node_out", "wide32", "wide128", "take", "part32", "subtree", "hashr"]
-BODIES = [(name + ".o", "b3l_" + name) for name in HASH] + [("avx512.o", "blake3_servil_compress_in_place_avx512"), ("sse41.o", "blake3_servil_compress_in_place_sse41"),
-                                                              ("lib32.o", "blake3_servil_avx512_k32"), ("lib32.o", "blake3_servil_avx512_p16")]
-ENTRIES = [("lib32.o", "blake3_servil_avx512_p32", "blake3_servil_avx512_k32")]         # a second way into a body
+# The kernels: from their Ode sources (kernels.py makes these objects; until November 17, 2026 they were taken from
+# the objects of BLAKE3-Servil's own assembly files, avx512.o, sse41.o and lib32.o: the same bytes, function for function).
+BODIES = [(name + ".o", "b3l_" + name) for name in HASH] + [("one.o", "blake3_servil_compress_in_place_avx512"), ("one_sse41.o", "blake3_servil_compress_in_place_sse41"),
+                                                              ("k32.o", "blake3_servil_avx512_k32"), ("p16.o", "blake3_servil_avx512_p16")]
+ENTRIES = [("k32.o", "blake3_servil_avx512_p32", "blake3_servil_avx512_k32")]         # a second way into a body
 
 
 def up(n, to, rest=0):

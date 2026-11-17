@@ -8,7 +8,7 @@
 # for (or, for a kernel, that the verifier accepts) is linked with BLAKE3 written out in C and run on the
 # processor on inputs the contract allows. The outputs go to audit/*.txt; the last lines here are one a
 # function. Exit 1 if any accepted change is told from BLAKE3 by the processor, or any change has no verdict.
-# Run it after any change of kdecode.py, kcheck.py, kloop.py, kglue.py, kone.py, kfn.py, kbyte.py, kspec.py,
+# Run it after any change of kdecode.py, kfn.py, kbyte.py, kspec.py, kterms.py, kcheck.py, kglue.py,
 # ode.py, klin.py, blake3.spec, proofs/inner.spec or a program's specification or proof: an unverified
 # verifier is worth what its audits are worth.
 # (The functions of hash.ode are judged by the whole hash: each accepted change of one of them is linked with
@@ -20,11 +20,12 @@ jobs=${1:-$(nproc)}
 only=${2:-all}
 grep -q avx512vl /proc/cpuinfo || { echo "this machine has no AVX-512 VL: the processor cannot judge"; exit 2; }
 work=$(mktemp -d); mkdir -p "$work/glue" "$work/hash" audit
-clang -c -o "$work/lib32.o" "$root/c/blake3_avx512_32.S" && clang -c -o "$work/out16.o" "$root/c/blake3_output16.S" || exit 2
+clang -c -o "$work/out16.o" "$root/c/blake3_output16.S" || exit 2
 for f in push merge add; do clang -c -o "$work/glue/$f.o" "glue/$f.S" || exit 2; done
-cc -c -o "$work/glue/avx512.o" "$root/c/blake3_avx512_x86-64_unix.S" && cc -c -o "$work/glue/sse41.o" "$root/c/blake3_sse41_x86-64_unix.S" || exit 2
 for f in pad chunk_node node_out wide32 wide128 take part32 subtree hashr; do clang -c -o "$work/hash/$f.o" "glue/$f.S" || exit 2; done
-cp "$work/glue/avx512.o" "$work/glue/sse41.o" "$work/lib32.o" "$work/hash/"
+# the five kernels: made from their Ode sources (kernels.py), as the file shipped has them since November 17, 2026
+python3 kernels.py "$work/hash" > /dev/null || exit 2
+cp "$work/hash/one.o" "$work/glue/avx512.o" && cp "$work/hash/one_sse41.o" "$work/glue/sse41.o" || exit 2
 bad=0
 run() {     # OUTPUT COMMAND...
     out=$1; shift
@@ -32,8 +33,11 @@ run() {     # OUTPUT COMMAND...
 }
 if [ "$only" = all ]; then
 for k in p16 k32 p32; do
-    run "kflip-$k.txt" python3 kflip.py $k "$work/lib32.o" --jobs "$jobs" --native 1000 --refused-sample 400 --detail
-    run "kflip-general-$k.txt" python3 kflip.py $k "$work/lib32.o" --jobs "$jobs" --native 1000 --refused-sample 400 --detail --general
+    obj="$work/hash/k32.o"; [ $k = p16 ] && obj="$work/hash/p16.o"
+    # every number of blocks, as kfn.py verifies the kernel, with kwide.py's prover as the adversary
+    run "kflip-general-$k.txt" python3 kflip.py $k "$obj" --jobs "$jobs" --native 1000 --refused-sample 400 --detail --general
+    # (kcheck.py's machine, a fixed number of blocks: what no verification of a shipped file loads any more)
+    run "kflip-$k.txt" python3 kflip.py $k "$obj" --jobs "$jobs" --native 1000 --refused-sample 400 --detail
 done
 run "kflip-o16.txt" python3 kflip.py o16 "$work/out16.o" --jobs "$jobs" --native 2000 --refused-sample 400 --detail
 for f in push merge add; do run "kglue-flip-$f.txt" python3 kglue_flip.py $f "$work/glue" --jobs "$jobs" --native 3000; done

@@ -478,8 +478,12 @@ def kernels(text):
     return "\n".join(rest), data, kerns
 
 
-def expand(name, lines, defs, env):
-    """A kernel's lines as instructions: defs and fors expanded, `$x`, `@label` and `#data` replaced."""
+def expand(name, lines, defs, env, notes=None):
+    """A kernel's lines as instructions: defs and fors expanded, `$x`, `@label` and `#data` replaced.
+    What is no instruction is left out of them and, where `notes` is a list, put there with the number of
+    the instruction it stands before: ("place", number, the count's name, its lines) for
+    `place b { ... }` (what holds there after b turns of the loop: the proof of the loop is written from it);
+    ("entry", number, NAME) for `entry "NAME"` (the kernel is entered there too, under that name)."""
     out, i = [], 0
     def block(start):
         depth, j = 1, start
@@ -499,6 +503,17 @@ def expand(name, lines, defs, env):
             body, i = block(i)
             for k in range(int(m.group(2)), int(m.group(3))):
                 out += expand(name, body, defs, {**env, m.group(1): str(k)})
+            continue
+        m = re.fullmatch(r"place\s+(\w+)\s*\{", s)
+        if m:
+            assert not env, f"kernel {name}: a place inside a def or a for"
+            body, i = block(i)
+            if notes is not None: notes.append(("place", len(out), m.group(1), [l.split("//")[0].strip() for l in body if l.split("//")[0].strip()]))
+            continue
+        m = re.fullmatch(r'entry\s+"(\w+)"', s)
+        if m:
+            assert not env, f"kernel {name}: an entry inside a def or a for"
+            if notes is not None: notes.append(("entry", len(out), m.group(1)))
             continue
         for k, v in env.items():
             s = re.sub(r"\$" + k + r"\b", v, s)
@@ -530,15 +545,25 @@ def kernel_aarch64(src, name, prefix="b3l_"):
             + "".join(("" if x.endswith(":") else "        ") + x + "\n" for x in ins))
 
 
-def kernel_x86(src, name, prefix="b3l_"):
+def kernel_x86(src, name, prefix="b3l_", shipped=False):
     """The assembly of an x86-64 kernel of the source, with the data it names: its lines, defs and fors
     expanded, under its symbol. No instruction is added or changed. After its first line, the same text
-    Lean prints for it (`asm PREFIX only NAME`): prove.sh compares the two."""
+    Lean prints for it (`asm PREFIX only NAME`): prove.sh compares the two.
+    `shipped`: as it is shipped: under the name the source says it `replaces`, with its other entries
+    (`entry "NAME"`) as names of their own; and where the source has a `place`, how many bytes into the
+    kernel it is, as four bytes in a section `.ode.place` that is not loaded (the assembler knows the number;
+    place_of() gives the rest of the place's proof)."""
     _, data, kerns = kernels(contracts_of(read_source(src))[2])
-    found = [lines for n, _, lines in kerns if n == name]
+    found = [(lines, replaces) for n, replaces, lines in kerns if n == name]
     if len(found) != 1:
         sys.exit(f"{src}: no x86-64 `kernel {name}`")
-    ins = expand(name, found[0], {}, {})
+    notes = []
+    ins = expand(name, found[0][0], {}, {}, notes)
+    symbol = found[0][1] if shipped else prefix + name
+    if shipped:
+        if symbol is None: sys.exit(f"{src}: kernel {name} does not say what it replaces")
+        for note in sorted(notes, key=lambda n: -n[1]):             # from the last, so the numbers before it stay
+            ins[note[1]:note[1]] = [f".Lode_place_{name}:"] if note[0] == "place" else [f".global {note[2]}", f"{note[2]}:"]
     # A leading alignment directive belongs before the entry symbols, not
     # after them: padding inside a labelled entry changes the called code.
     alignment = ins.pop(0) if ins and ins[0].startswith(".p2align ") else ".p2align 4"
@@ -549,8 +574,65 @@ def kernel_x86(src, name, prefix="b3l_"):
             ".intel_syntax noprefix\n#ifdef __APPLE__\n.static_data\n#else\n.section .rodata\n#endif\n")
     for n, ws in used:
         text += f".p2align 6\n.Lode_data_{n}:\n" + "".join(f"    .long {w}\n" for w in ws)
-    text += f".text\n.text\n.global {prefix}{name}\n.global _{prefix}{name}\n{alignment}\n{prefix}{name}:\n_{prefix}{name}:\n"
-    return text + "".join((x + "\n") if x.endswith(":") else ("    " + x + "\n") for x in ins)
+    text += f".text\n.text\n.global {symbol}\n.global _{symbol}\n{alignment}\n{symbol}:\n_{symbol}:\n"
+    text += "".join((x + "\n") if x.endswith(":") else ("    " + x + "\n") for x in ins)
+    if shipped and any(note[0] == "place" for note in notes):
+        text += f"#if defined(__ELF__)\n.section .ode.place,\"\",@progbits\n    .long .Lode_place_{name} - {symbol}\n#endif\n"
+    return text
+
+
+def place_of(src, name):
+    """What a kernel's source says holds at its loop's place, as the proof kfn.py's verifier reads (without
+    the place's number of bytes into the kernel, which the assembler knows: kernel_x86(shipped=True)); None
+    if the source has no place. The lines of `place b { ... }`:
+        keep rsp, rbp, r12            these registers hold what they held when the code first came back here
+        keep zmm9                     a ZMM register, likewise
+        keep [rsp + 0x800]            sixty-four bytes of the frame, likewise
+        r13 = n - b                   a number that moves with the turns done (b) and a number among the arguments
+        zmm0 .. zmm7 = h[b]           the words 0 .. 7 of the sequence's value after b turns, for lanes 0 to 15
+        zmm8 .. zmm15 = h[b] lanes 16 the same, for the sixteen lanes from 16"""
+    _, _, kerns = kernels(contracts_of(read_source(src))[2])
+    found = [lines for n, _, lines in kerns if n == name]
+    if len(found) != 1: sys.exit(f"{src}: no x86-64 `kernel {name}`")
+    notes = []
+    expand(name, found[0], {}, {}, notes)
+    places = [note for note in notes if note[0] == "place"]
+    if not places: return None
+    if len(places) != 1: sys.exit(f"{src}: kernel {name} has more than one place")
+    _, _, b, lines = places[0]
+    proof = dict(registers={}, vectors={}, frame={})
+    for line in lines:
+        m = re.fullmatch(r"keep\s+(.*)", line)
+        if m:
+            for x in [x.strip() for x in m.group(1).split(",")]:
+                f = re.fullmatch(r"\[rsp(?:\s*\+\s*(\w+))?\]", x)
+                if f: proof["frame"][str(int(f.group(1) or "0", 0))] = "keep"
+                elif re.fullmatch(r"zmm\d+", x): proof["vectors"][x[3:]] = "keep"
+                else: proof["registers"][x] = "keep"
+            continue
+        m = re.fullmatch(r"zmm(\d+)\s*\.\.\s*zmm(\d+)\s*=\s*h\[" + b + r"\](?:\s+lanes\s+(\d+))?", line)
+        if m:
+            first, last, lane = int(m.group(1)), int(m.group(2)), int(m.group(3) or "0")
+            if last - first != 7: sys.exit(f"{src}: kernel {name}: `{line}`: the value has eight words")
+            for w in range(8): proof["vectors"][str(first + w)] = {"cv": [lane, w]}
+            continue
+        m = re.fullmatch(r"(\w+)\s*=\s*(.*)", line)
+        if m:
+            # a sum of terms: NUMBER, NAME, NUMBER * NAME, each with its sign
+            lin = {"1": 0}
+            for sign, term in re.findall(r"([+-]?)\s*([^+-]+)", m.group(2)):
+                parts = [p.strip() for p in term.split("*")]
+                k = -1 if sign == "-" else 1
+                names = [p for p in parts if not re.fullmatch(r"\d+|0x[0-9a-fA-F]+", p)]
+                for p in parts:
+                    if p not in names: k *= int(p, 0)
+                if len(names) > 1 or (names and not re.fullmatch(r"\w+", names[0])): sys.exit(f"{src}: kernel {name}: `{line}`: not a sum of numbers and of names times numbers")
+                key = "1" if not names else "b" if names[0] == b else names[0]
+                lin[key] = lin.get(key, 0) + k
+            proof["registers"][m.group(1)] = {"lin": {k: v for k, v in lin.items() if v or k == "1"}}
+            continue
+        sys.exit(f"{src}: kernel {name}: a line of its place that is not understood: `{line}`")
+    return proof
 
 
 def fn_aarch64(src, name):

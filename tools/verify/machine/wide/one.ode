@@ -83,3 +83,95 @@ kernel compress1 replaces "blake3_servil_compress_in_place_avx512" {
   vmovdqu xmmword ptr [rdi+0x10], xmm1
   ret
 }
+
+// The same for processors with SSE4.1 and no more: the crate's `blake3_servil_compress_in_place_sse41`
+// (c/blake3_sse41_x86-64_unix.S), instruction for instruction. A rotation is two shifts and an or, or a
+// shuffle of bytes by one of two constants; the length is all of edx and the flags all of r8d.
+data one_rot8 = 0x00030201, 0x04070605, 0x080B0A09, 0x0C0F0E0D
+data one_rot16 = 0x01000302, 0x05040706, 0x09080B0A, 0x0D0C0F0E
+
+kernel compress1_sse41 replaces "blake3_servil_compress_in_place_sse41" {
+  .p2align 6
+  // half of a round
+  def g(x, y) {
+    paddd xmm0, $x
+    paddd xmm0, xmm1
+    pxor xmm3, xmm0
+    pshufb xmm3, xmm15
+    paddd xmm2, xmm3
+    pxor xmm1, xmm2
+    movdqa xmm11, xmm1
+    pslld xmm1, 20
+    psrld xmm11, 12
+    por xmm1, xmm11
+    paddd xmm0, $y
+    paddd xmm0, xmm1
+    pxor xmm3, xmm0
+    pshufb xmm3, xmm14
+    paddd xmm2, xmm3
+    pxor xmm1, xmm2
+    movdqa xmm11, xmm1
+    pslld xmm1, 25
+    psrld xmm11, 7
+    por xmm1, xmm11
+  }
+  movups xmm0, xmmword ptr [rdi]
+  movups xmm1, xmmword ptr [rdi+0x10]
+  movaps xmm2, xmmword ptr [rip + #one_iv]
+  shl r8, 32
+  add rdx, r8
+  movq xmm3, rcx
+  movq xmm4, rdx
+  punpcklqdq xmm3, xmm4
+  movups xmm4, xmmword ptr [rsi]
+  movups xmm5, xmmword ptr [rsi+0x10]
+  movaps xmm8, xmm4
+  shufps xmm4, xmm5, 136
+  shufps xmm8, xmm5, 221
+  movaps xmm5, xmm8
+  movups xmm6, xmmword ptr [rsi+0x20]
+  movups xmm7, xmmword ptr [rsi+0x30]
+  movaps xmm8, xmm6
+  shufps xmm6, xmm7, 136
+  pshufd xmm6, xmm6, 0x93
+  shufps xmm8, xmm7, 221
+  pshufd xmm7, xmm8, 0x93
+  movaps xmm14, xmmword ptr [rip + #one_rot8]
+  movaps xmm15, xmmword ptr [rip + #one_rot16]
+  mov al, 7
+  @round:
+  g(xmm4, xmm5)
+  pshufd xmm0, xmm0, 0x93
+  pshufd xmm3, xmm3, 0x4E
+  pshufd xmm2, xmm2, 0x39
+  g(xmm6, xmm7)
+  pshufd xmm0, xmm0, 0x39
+  pshufd xmm3, xmm3, 0x4E
+  pshufd xmm2, xmm2, 0x93
+  dec al
+  jz @done
+  // the block's words permuted for the next round
+  movdqa xmm8, xmm4
+  shufps xmm8, xmm5, 214
+  pshufd xmm9, xmm4, 0x0F
+  pshufd xmm4, xmm8, 0x39
+  movdqa xmm8, xmm6
+  shufps xmm8, xmm7, 250
+  pblendw xmm9, xmm8, 0xCC
+  movdqa xmm8, xmm7
+  punpcklqdq xmm8, xmm5
+  pblendw xmm8, xmm6, 0xC0
+  pshufd xmm8, xmm8, 0x78
+  punpckhdq xmm5, xmm7
+  punpckldq xmm6, xmm5
+  pshufd xmm7, xmm6, 0x1E
+  movdqa xmm5, xmm9
+  movdqa xmm6, xmm8
+  jmp @round
+  @done:
+  pxor xmm0, xmm2
+  pxor xmm1, xmm3
+  movups xmmword ptr [rdi], xmm0
+  movups xmmword ptr [rdi+0x10], xmm1
+  ret
+}

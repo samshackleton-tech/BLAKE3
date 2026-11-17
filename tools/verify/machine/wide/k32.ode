@@ -17,6 +17,7 @@ kernel k32 replaces "blake3_servil_avx512_k32" {
   mov r10d, 1
   jmp @enter32
   @p32:
+  entry "blake3_servil_avx512_p32"
   endbr64
   xor r10d, r10d
   @enter32:
@@ -83,6 +84,16 @@ kernel k32 replaces "blake3_servil_avx512_k32" {
   xor r14d, r14d
   mov rsi, rsp
   @block32:
+  // The loop over the blocks. What holds here when b blocks are done (1 <= b <= n - 1): the proof of the
+  // loop is written from these lines, and the verifier shows them (kcheck/kfn.py, "a place").
+  place b {
+    keep rsp, rbp, rbx, rsi, r12, r15
+    keep [rsp + 2048], [rsp + 2112], [rsp + 2176], [rsp + 2240]
+    r13 = n - b
+    r14 = 64 * b
+    zmm0 .. zmm7 = h[b]
+    zmm8 .. zmm15 = h[b] lanes 16
+  }
   vmovdqa32 ZMMWORD PTR [rsp + 2304], zmm15
   mov rax, QWORD PTR [r12 + 0]
   vmovdqu32 zmm16, ZMMWORD PTR [rax + r14]

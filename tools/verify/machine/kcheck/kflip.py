@@ -166,9 +166,10 @@ def main():
         subprocess.run([cc, "-O1", "-c", "-o", f"{folder}/h.o", f"{here}/kflip_native.c"], check=True)
         subprocess.run([cc, "-c", "-o", f"{folder}/t.o", f"{here}/kflip_thunk.S"], check=True)
         print(f"control: the unchanged object on this processor, {cases} cases: {native((name, obj, None, folder, cases))[1]}")
-        rot = next((bit for bit, (v, why) in results if v == "refused" and "chaining value is not the specification's" in why), None)
+        # (a change refused for what the kernel leaves: kcheck.py's words for it, or kfn.py's and kwide.py's)
+        rot = next((bit for bit, (v, why) in results if v == "refused" and any(said in why for said in ("chaining value is not the specification's", "at the return is not what the contract says", "at the place is not what the proof says"))), None)
         print(f"control: the unchanged object given inputs shorter than it reads (a block too few, or a block a byte short), on this processor: {native((name, obj, 'over', folder, 20))[1]}")
-        print(f"control: a change the verifier refused ({dict(results)[rot][1]}), on this processor: {native((name, obj, rot, folder, 20))[1] if rot is not None else 'NONE FOUND'}")
+        print(f"control: a change the verifier refused ({dict(results)[rot][1] if rot is not None else 'for what the kernel leaves'}), on this processor: {native((name, obj, rot, folder, 20))[1] if rot is not None else 'NONE FOUND'}")
         accepted = [bit for bit, (v, why) in results if v == "ACCEPTED"]
         t1 = time.time()
         with multiprocessing.Pool(jobs) as pool:

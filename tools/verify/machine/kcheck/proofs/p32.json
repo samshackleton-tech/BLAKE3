@@ -1,26 +1,25 @@
 {
- "kernel": "p32",
  "place": 307,
  "registers": {
-  "rbx": "keep",
   "rsp": "keep",
   "rbp": "keep",
+  "rbx": "keep",
   "rsi": "keep",
   "r12": "keep",
+  "r15": "keep",
   "r13": {
    "lin": {
-    "b": -1,
+    "1": 0,
     "n": 1,
-    "1": 0
+    "b": -1
    }
   },
   "r14": {
    "lin": {
-    "b": 64,
-    "1": 0
+    "1": 0,
+    "b": 64
    }
-  },
-  "r15": "keep"
+  }
  },
  "vectors": {
   "0": {

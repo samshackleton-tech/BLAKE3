@@ -47,6 +47,8 @@ class Binary(unittest.TestCase):
         for obj, src in (("lib32.o", "c/blake3_avx512_32.S"), ("avx512.o", "c/blake3_avx512_x86-64_unix.S"), ("sse41.o", "c/blake3_sse41_x86-64_unix.S")):
             assemble(os.path.join(ROOT, src), os.path.join(cls.dir, obj))
         for name in klink.HASH: assemble(os.path.join(HERE, "glue", name + ".S"), os.path.join(cls.dir, name + ".o"))
+        import kernels
+        kernels.make(cls.dir)                   # the five kernels from their Ode sources, as klink.py takes them
         image, where, sizes, align = klink.link(cls.dir)
         cls.where, cls.blob = where, klink.elf(image, where, sizes, align)
         e = kdecode.Elf(cls.blob)
@@ -107,6 +109,7 @@ class Binary(unittest.TestCase):
         self.assertEqual(proof["at"], kdecode.Settled(e).at)
         self.assertEqual(proof["code"][:2], (len(e.bytes_of(".text")), kshow.b3(e.bytes_of(".text"))))
         self.assertEqual(sorted(proof["files"]), ["b3l_hashr.arith.z", "b3l_part32.arith.z", "b3l_subtree.arith.z", "b3l_take.arith.z",       # the arithmetic's proofs (varith.py), of the functions that need any
+                                                  "blake3_servil_avx512_k32.arith.z", "blake3_servil_avx512_p16.arith.z", "blake3_servil_avx512_p32.arith.z",
                                                   "proofs/blake3.lemmas", "proofs/inner.spec", "proofs/k32.json", "proofs/p16.json", "proofs/p32.json", "specification"])
         self.assertEqual(proof["files"]["specification"], spec, "the specification the file carries is the one here")
         try:
