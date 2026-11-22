@@ -545,20 +545,32 @@ WORKTREES = os.path.join(tempfile.gettempdir(), "blake3-servil-mutants")
 
 
 def one_run_at_a_time():
-    """This run's hold on the worktrees: a lock beside them, kept until the
-    process ends. Two runs at once share the shards' worktrees and
-    outcomes, and each fails in the other's files (November 16: a second
-    run started by hand took a landing gate's logs from under it). A second
-    run stops here and says what to do."""
+    """This run's hold on the worktrees and on the target directory: a lock
+    for each, kept until the process ends. Two runs at once share the
+    shards' worktrees and outcomes, and each fails in the other's files
+    (November 16: a second run started by hand took a landing gate's logs
+    from under it). Two runs that build in one target directory share each
+    shard's build and its same-code records (TARGET_DIR/mutants/<label>-<k>),
+    whatever their worktrees: a linked worktree builds in the main
+    checkout's target/ (#453), so a TMPDIR of its own does not set a run
+    apart. A second run stops here and says what to do. Closing what this
+    returns gives both up."""
+    import contextlib
     import fcntl
 
-    lock = open(WORKTREES + ".lock", "w")
-    try:
-        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except BlockingIOError:
-        lock.close()
-        sys.exit(f"mutants: another run is using {WORKTREES} (it holds {WORKTREES}.lock): wait for it, or give this run a TMPDIR of its own")
-    return lock
+    held = contextlib.ExitStack()
+    os.makedirs(TARGET_DIR, exist_ok=True)
+    for path, doing, way_out in (
+        (WORKTREES + ".lock", f"using {WORKTREES}", "give this run a TMPDIR of its own"),
+        (os.path.join(TARGET_DIR, "mutants.lock"), f"building in {TARGET_DIR}", "give this run a CARGO_TARGET_DIR of its own"),
+    ):
+        lock = held.enter_context(open(path, "w"))
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            held.close()
+            sys.exit(f"mutants: another run is {doing} (it holds {path}): wait for it, or {way_out}")
+    return held
 
 
 def remove_leftovers():
