@@ -25,6 +25,11 @@ default = ["std"]
 # detection on x86, which now reads CPUID directly, with or without std.)
 std = []
 
+# Experimental: route single-threaded one-shot hashing (`hash_serial_on`)
+# through the Lean-4-verified Ode machine code (`blake3_servil_ode_hashr` on
+# x86-64, `blake3_servil_ode_hashr_arm64` on AArch64).
+ode-verified = []
+
 [dependencies]
 # BUILD_VERSION, in a crate of its own: its build script reruns on every
 # edit, and the library's, which assembles the kernels, does not.

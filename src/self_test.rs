@@ -786,7 +786,7 @@ mod test {
     /// The self-test runs every assembly entry point this machine has but
     /// the l kernels: the hybrids' (with SHA-3 or without), and SME2's with SME2. It runs again when another test held the SME2 turn.
     #[test]
-    #[cfg(blake3_neon)]
+    #[cfg(all(blake3_neon, not(feature = "ode-verified")))]
     fn test_self_test_runs_every_kernel() {
         use crate::{RAN, RAN_ENTRIES, Ran};
         let mut want: std::vec::Vec<(std::string::String, *const ())> = std::vec::Vec::new();

@@ -1307,7 +1307,7 @@ mod test {
     /// The control: a message a turn left in its chunk state on x86-64
     /// finishes by other kernels, so the record does tell.
     #[test]
-    #[cfg(feature = "std")]
+    #[cfg(all(feature = "std", not(feature = "ode-verified")))]
     fn a_message_whole_in_the_stage_runs_the_one_shot_calls_kernels() {
         crate::initialize();
         let input = painted();

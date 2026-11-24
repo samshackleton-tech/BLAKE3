@@ -149,7 +149,7 @@ pub(crate) fn every_platform() -> Vec<crate::platform::Platform> {
 /// 2, 4 and 8 chunks take the kernel at their own width. The digests are the test vectors' either
 /// way, so the decision alone can catch a mutant that drops the rounding.
 #[test]
-#[cfg(all(target_arch = "x86_64", blake3_sse41_ffi, feature = "std"))]
+#[cfg(all(target_arch = "x86_64", blake3_sse41_ffi, feature = "std", not(feature = "ode-verified")))]
 fn test_whole_chunks_round_up_to_the_lanes() {
     use crate::{CHUNK_LEN, Ran};
     // The startup self-test first: it runs inside a process's first call,
@@ -1836,6 +1836,7 @@ mod dispatch {
     /// from sixteen chunks (its parents too once a tree has them); the
     /// SME2 kernel with an integer lane from LANE_MIN_CHUNKS chunks.
     #[test]
+    #[cfg(not(feature = "ode-verified"))]
     fn test_one_message_dispatch() {
         if !crate::platform::sme2_detected() {
             return;
@@ -1880,6 +1881,7 @@ mod dispatch {
     /// kernels up to nine and SME2 from ten (ONE_BLOCK_PAD_MIN's cousin,
     /// SME2_TAIL_MIN).
     #[test]
+    #[cfg(not(feature = "ode-verified"))]
     fn test_batch_dispatch() {
         if !crate::platform::sme2_detected() {
             return;
@@ -1995,7 +1997,7 @@ fn test_cold_prefetches_every_length() {
 /// update prefetch, the warm one-shot path never. The NEON hybrids' paths:
 /// SME2's own prefetch is the SME2 rows' (the hybrids run on every AArch64
 /// core with the SHA-3 extension).
-#[cfg(all(blake3_neon, feature = "std"))]
+#[cfg(all(blake3_neon, feature = "std", not(feature = "ode-verified")))]
 mod prefetch_counts {
     use crate::platform::{PREFETCHED, Platform};
     use crate::{CHUNK_LEN, IV, RAN_ENTRIES};

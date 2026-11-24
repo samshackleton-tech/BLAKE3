@@ -252,6 +252,7 @@ mod avx512;
 #[path = "ffi_avx512_32.rs"]
 mod avx512_32;
 #[cfg(blake3_sse41_ffi)]
+#[cfg_attr(feature = "ode-verified", allow(dead_code))]
 #[path = "ffi_chunk_root.rs"]
 mod chunk_root;
 #[cfg(blake3_neon)]
@@ -266,6 +267,8 @@ mod sme2;
 mod ffi_output;
 #[cfg(blake3_sse41_ffi)]
 mod ffi_partial;
+#[cfg(feature = "ode-verified")]
+mod ffi_ode;
 #[cfg(blake3_sse41_ffi)]
 #[path = "ffi_sse41.rs"]
 mod sse41;
@@ -276,6 +279,7 @@ mod many;
 mod pair;
 mod self_test;
 mod stack_vec;
+#[cfg_attr(feature = "ode-verified", allow(dead_code))]
 mod tree;
 
 /// A kind of kernel or path a call ran, for the tests that check which
@@ -1472,6 +1476,11 @@ pub(crate) const SME2_SIZED_BATCH: usize = 16;
 #[inline]
 #[doc(hidden)]
 pub(crate) fn hash_serial_on(input: &[u8], key: &CVWords, flags: u8, platform: Platform) -> Hash {
+    #[cfg(feature = "ode-verified")]
+    {
+        return ffi_ode::hash(input, key, flags, platform);
+    }
+    #[cfg(not(feature = "ode-verified"))]
     Hash(tree::hash(&tree::PlatformKernels { key, flags, platform }, input))
 }
 

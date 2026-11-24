@@ -222,12 +222,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         assert_assembles_x86();
         build_sse41_avx2_assembly();
         build_avx512_assembly();
+        if env::var_os("CARGO_FEATURE_ODE_VERIFIED").is_some() {
+            let mut build = new_build();
+            build.file("c/blake3_ode_x86_64.S");
+            build.compile("blake3_ode_x86_64_assembly");
+        }
     }
 
     if is_aarch64() {
         println!("cargo::rustc-cfg=blake3_neon");
         assert_assembles_sha3();
         build_neon_hybrid_assembly();
+        if env::var_os("CARGO_FEATURE_ODE_VERIFIED").is_some() {
+            let mut build = new_build();
+            build.file("c/blake3_ode_aarch64.S");
+            build.compile("blake3_ode_aarch64_assembly");
+        }
 
         // SME2 sits on top of NEON: the SME2 wrapper falls back to NEON for
         // inputs that don't fill a group of sixteen. It is built on every
