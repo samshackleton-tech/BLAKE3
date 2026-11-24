@@ -17,7 +17,7 @@ links = "blake3_servil_core"
 include = ["/src", "/c", "/build.rs", "/README.md", "/CHANGELOG.md", "/QUALITY.md", "/LICENSE-*", "/tools/require_nextest.rs"]
 
 [features]
-default = ["std"]
+default = ["std", "ode-verified"]
 
 # Enables std::io traits, including impl Write for Hasher, impl Read and Seek
 # for OutputReader, and the Hasher::update_reader method. This feature is
