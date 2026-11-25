@@ -168,6 +168,59 @@ fn build_neon_hybrid_assembly() {
     build.compile("blake3_neon_hybrid_assembly");
 }
 
+const ODE_CONTRACT_X86_64: &str = "7jb2pyzuwz6tqd3qmjsra3mk36tl4547sfpy3at5scbk772lbila";
+const ODE_CONTRACT_AARCH64: &str = "ckdrhllybtjzr7vgscyhlgz6sxqaga347kozoepvqk3b54ohbfra";
+
+fn audit_ode_bundle(obj_path: &str, proof_path: &str, expect_contract: &str) {
+    println!("cargo::rerun-if-changed={obj_path}");
+    println!("cargo::rerun-if-changed={proof_path}");
+    for var in ["ODE_AUDIT_CMD", "ODE_REPO", "ODE_REQUIRE_AUDIT", "ODE_SKIP_AUDIT"] {
+        println!("cargo::rerun-if-env-changed={var}");
+    }
+    if env::var("ODE_SKIP_AUDIT").ok().as_deref() == Some("1") {
+        warn(&format!("ode-verified: ODE_SKIP_AUDIT=1 set; skipping ode audit of {obj_path}"));
+        return;
+    }
+
+    let mut cmd = if let Ok(explicit) = env::var("ODE_AUDIT_CMD") {
+        std::process::Command::new(explicit)
+    } else if let Ok(repo) = env::var("ODE_REPO") {
+        let tool = PathBuf::from(&repo).join("lang").join("ode_tool.py");
+        let py = env::var("ODE_PYTHON").unwrap_or_else(|_| "python3".to_string());
+        let mut c = std::process::Command::new(py);
+        c.arg(tool);
+        c
+    } else if std::process::Command::new("ode").arg("--help").output().is_ok() {
+        std::process::Command::new("ode")
+    } else {
+        if env::var("ODE_REQUIRE_AUDIT").ok().as_deref() == Some("1") {
+            panic!(
+                "ode-verified: ODE_REQUIRE_AUDIT=1 is set, but no `ode` auditor was found \
+                 (set ODE_REPO=/path/to/ode or ODE_AUDIT_CMD=/path/to/ode)"
+            );
+        }
+        warn(&format!(
+            "ode-verified: `ode` auditor not found; set ODE_REPO=/path/to/ode (and \
+             ODE_REQUIRE_AUDIT=1 to fail if absent) to run `ode audit` automatically during build"
+        ));
+        return;
+    };
+
+    cmd.args(["audit", obj_path, "--proof", proof_path, "--expect-contract", expect_contract]);
+    let output = cmd.output().unwrap_or_else(|e| {
+        panic!("ode-verified: failed to run `ode audit` on {obj_path}: {e}");
+    });
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    if !output.status.success() || !stdout.contains("VERDICT:           shown") {
+        panic!(
+            "ode-verified: `ode audit` REFUSED {obj_path} against contract {expect_contract}!\n\
+             exit: {:?}\nstdout:\n{stdout}\nstderr:\n{stderr}",
+            output.status.code()
+        );
+    }
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // The supported targets, and every other one stopped here, before
     // anything is built: a build elsewhere would run code no machine of
@@ -223,6 +276,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         build_sse41_avx2_assembly();
         build_avx512_assembly();
         if env::var_os("CARGO_FEATURE_ODE_VERIFIED").is_some() {
+            audit_ode_bundle(
+                "c/ode/blake3_ode_x86_64.o",
+                "c/ode/blake3_ode_x86_64.proof",
+                ODE_CONTRACT_X86_64,
+            );
             let mut build = new_build();
             build.file("c/blake3_ode_x86_64.S");
             build.compile("blake3_ode_x86_64_assembly");
@@ -234,6 +292,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         assert_assembles_sha3();
         build_neon_hybrid_assembly();
         if env::var_os("CARGO_FEATURE_ODE_VERIFIED").is_some() {
+            audit_ode_bundle(
+                "c/ode/blake3_ode_aarch64.o",
+                "c/ode/blake3_ode_aarch64.proof",
+                ODE_CONTRACT_AARCH64,
+            );
             let mut build = new_build();
             build.file("c/blake3_ode_aarch64.S");
             build.compile("blake3_ode_aarch64_assembly");
