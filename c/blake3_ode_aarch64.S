@@ -1,16 +1,16 @@
-// Lean-4-verified AArch64 BLAKE3 single-threaded hash (`b3l_hashr_arm64`,
-// 7/7 functions = 1,832 instructions = 7,328 bytes, including 4-way NEON
-// `b3l_wide4_arm64` with `ldr q`/`str q` and resident m[0..3]).
-// Verified `shown` by `odeverify` directly against `kcheck/blake3.spec`.
-// Generated verbatim from the verified ELF objects (`proof-core/test_hashr_arm64.py`).
-
+// Lean-4-verified single-threaded BLAKE3 for AArch64 (8/8 functions, 100% Ode source,
+// custom calling + verified tail calls `b` + zero-copy 64 B + direct 4-KiB 4-way NEON).
+// Audited bundle BLAKE3(contract) = ckdrhllybtjzr7vgscyhlgz6sxqaga347kozoepvqk3b54ohbfra
+// Audited bundle BLAKE3(binary)   = q3orellrrn5bxzxt4n5f77vljg3cu4d5hut66zjd4m2l7sjhl5hq
 #ifdef __APPLE__
-#define LSYM(n) L_ode_##n
+#define SYM(x) _##x
+#define LSYM(x) L_ode_##x
 #else
-#define LSYM(n) .L_ode_##n
+#define SYM(x) x
+#define LSYM(x) .L_ode_##x
 #endif
 .text
-.p2align 6
+.p2align 4
 LSYM(blake3_servil_compress_in_place_arm64):
   .word 0x4c407800
   .word 0x91004009
@@ -128,41 +128,78 @@ LSYM(blake3_servil_compress_in_place_arm64):
   .word 0x91004009
   .word 0x4c007921
   .word 0xd65f03c0
-LSYM(b3l_pad_arm64):
+.p2align 4
+LSYM(b3l_pad_fast_arm64):
+  .word 0xf101005f
+  .word 0x54000341
   .word 0xd2800803
-  .word 0xf100007f
-  .word 0x54000180
-  .word 0xd1000463
-  .word 0x8b030005
+  .word 0xd2800104
+  .word 0xf100009f
+  .word 0x540004e0
+  .word 0xd1000484
+  .word 0xd1002063
+  .word 0x8b030025
+  .word 0x8b030006
+  .word 0x39401ca7
+  .word 0x39001cc7
+  .word 0x394018a7
+  .word 0x390018c7
+  .word 0x394014a7
+  .word 0x390014c7
+  .word 0x394010a7
+  .word 0x390010c7
+  .word 0x39400ca7
+  .word 0x39000cc7
+  .word 0x394008a7
+  .word 0x390008c7
+  .word 0x394004a7
+  .word 0x390004c7
+  .word 0x394000a7
+  .word 0x390000c7
+  .word 0x17ffffea
+  .word 0xd2800803
+  .word 0xd2800007
   .word 0xeb02007f
-  .word 0x540000a2
-  .word 0x8b030024
-  .word 0x39400086
-  .word 0x390000a6
-  .word 0x17fffff7
-  .word 0xd2800006
-  .word 0x390000a6
-  .word 0x17fffff4
+  .word 0x540000c0
+  .word 0xd1000463
+  .word 0x8b030006
+  .word 0xd2800007
+  .word 0x390000c7
+  .word 0x17fffffa
+  .word 0xf100007f
+  .word 0x540000e0
+  .word 0xd1000463
+  .word 0x8b030025
+  .word 0x394000a7
+  .word 0x8b030006
+  .word 0x390000c7
+  .word 0x17fffff9
   .word 0xd65f03c0
-LSYM(b3l_node_out_arm64):
-  .word 0xd10043ff
-  .word 0xf90003fe
-  .word 0x4c407820
-  .word 0x9100402a
-  .word 0x4c407941
-  .word 0x4c007800
-  .word 0x91004009
-  .word 0x4c007921
+.p2align 4
+LSYM(b3l_node_out_fast_arm64):
+  .word 0x3dc00020
+  .word 0x3dc00421
+  .word 0x3d800000
+  .word 0x3d800401
   .word 0xf9403824
   .word 0xaa020084
   .word 0xf9403422
   .word 0xf9403023
   .word 0x91008021
-  bl LSYM(blake3_servil_compress_in_place_arm64)
-  .word 0xf94003fe
-  .word 0x910043ff
-  .word 0xd65f03c0
-LSYM(b3l_chunk_node_arm64):
+  b LSYM(blake3_servil_compress_in_place_arm64)
+.p2align 4
+LSYM(b3l_chunk_node_fast_arm64):
+  .word 0xf101045f
+  .word 0x54000142
+  .word 0xf9003003
+  .word 0xf9003402
+  .word 0xd2800029
+  .word 0xaa090084
+  .word 0xd2800049
+  .word 0xaa090084
+  .word 0xf9003804
+  .word 0x91008000
+  b LSYM(b3l_pad_fast_arm64)
   .word 0xd10103ff
   .word 0xf90003fe
   .word 0xf90007f3
@@ -192,7 +229,7 @@ LSYM(b3l_chunk_node_arm64):
   .word 0x91008260
   .word 0xaa1403e1
   .word 0xaa1503e2
-  bl LSYM(b3l_pad_arm64)
+  bl LSYM(b3l_pad_fast_arm64)
   .word 0xf9003276
   .word 0xf9003675
   .word 0xaa1802e9
@@ -208,7 +245,8 @@ LSYM(b3l_chunk_node_arm64):
   .word 0xf94003fe
   .word 0x910103ff
   .word 0xd65f03c0
-LSYM(b3l_wide4_arm64):
+.p2align 4
+LSYM(b3l_wide4_fast_arm64):
   .word 0xd10883ff
   .word 0xf900fbfe
   .word 0xf900fff3
@@ -1645,17 +1683,15 @@ LSYM(b3l_wide4_arm64):
   .word 0xd2800089
   .word 0xaa0902e4
   bl LSYM(blake3_servil_compress_in_place_arm64)
-  .word 0x3dc002a0
-  .word 0x3dc006a1
+  .word 0x910003f1
+  .word 0x3dc06e20
+  .word 0x3dc07221
+  .word 0x3dc07622
+  .word 0x3dc07a23
   .word 0x3d800260
   .word 0x3d800661
-  .word 0xaa1303e0
-  .word 0x9106c3e1
-  .word 0xd2800802
-  .word 0xd2800003
-  .word 0xd2800089
-  .word 0xaa0902e4
-  bl LSYM(blake3_servil_compress_in_place_arm64)
+  .word 0x3d800a62
+  .word 0x3d800e63
   .word 0xf9410ff7
   .word 0xf9410bf6
   .word 0xf94107f5
@@ -1664,7 +1700,8 @@ LSYM(b3l_wide4_arm64):
   .word 0xf940fbfe
   .word 0x910883ff
   .word 0xd65f03c0
-LSYM(b3l_subtree_arm64):
+.p2align 4
+LSYM(b3l_subtree_fast_arm64):
   .word 0xd10443ff
   .word 0xf90063fe
   .word 0xf90067f3
@@ -1683,15 +1720,26 @@ LSYM(b3l_subtree_arm64):
   .word 0xf94012da
   .word 0xd2820009
   .word 0xeb0902bf
-  .word 0x540000e1
-  .word 0xaa1303e0
+  .word 0x54000241
+  .word 0x910203e0
   .word 0xaa1403e1
   .word 0xaa1603e2
   .word 0xaa1703e3
-  bl LSYM(b3l_wide4_arm64)
-  .word 0x1400003a
+  bl LSYM(b3l_wide4_fast_arm64)
+  .word 0x3dc002c0
+  .word 0x3dc006c1
+  .word 0x3d800260
+  .word 0x3d800661
+  .word 0xaa1303e0
+  .word 0x910203e1
+  .word 0xd2800802
+  .word 0xd2800003
+  .word 0xd2800089
+  .word 0xaa090344
+  bl LSYM(blake3_servil_compress_in_place_arm64)
+  .word 0x14000036
   .word 0xf11006bf
-  .word 0x540004e3
+  .word 0x540004a3
   .word 0xd10006a9
   .word 0xd34afd29
   .word 0x91000529
@@ -1708,20 +1756,18 @@ LSYM(b3l_subtree_arm64):
   .word 0xaa1903e2
   .word 0xaa1603e3
   .word 0xaa1703e4
-  bl LSYM(b3l_subtree_arm64)
+  bl LSYM(b3l_subtree_fast_arm64)
   .word 0x910203e0
   .word 0x91008000
   .word 0x8b190281
   .word 0xcb1902a2
   .word 0xaa1603e3
   .word 0x8b1802e4
-  bl LSYM(b3l_subtree_arm64)
-  .word 0x4c407ac0
-  .word 0x910042ca
-  .word 0x4c407941
-  .word 0x4c007a60
-  .word 0x91004269
-  .word 0x4c007921
+  bl LSYM(b3l_subtree_fast_arm64)
+  .word 0x3dc002c0
+  .word 0x3dc006c1
+  .word 0x3d800260
+  .word 0x3d800661
   .word 0xaa1303e0
   .word 0x910203e1
   .word 0xd2800802
@@ -1729,24 +1775,22 @@ LSYM(b3l_subtree_arm64):
   .word 0xd2800089
   .word 0xaa090344
   bl LSYM(blake3_servil_compress_in_place_arm64)
-  .word 0x14000012
+  .word 0x14000010
   .word 0x910003e9
-  .word 0x4c407ac0
-  .word 0x910042cb
-  .word 0x4c407961
-  .word 0x4c007920
-  .word 0x9100412a
-  .word 0x4c007941
+  .word 0x3dc002c0
+  .word 0x3dc006c1
+  .word 0x3d800120
+  .word 0x3d800521
   .word 0x910003e0
   .word 0xaa1403e1
   .word 0xaa1503e2
   .word 0xaa1703e3
   .word 0xaa1a03e4
-  bl LSYM(b3l_chunk_node_arm64)
+  bl LSYM(b3l_chunk_node_fast_arm64)
   .word 0xaa1303e0
   .word 0x910003e1
   .word 0xd2800002
-  bl LSYM(b3l_node_out_arm64)
+  bl LSYM(b3l_node_out_fast_arm64)
   .word 0xf94083fa
   .word 0xf9407ff9
   .word 0xf9407bf8
@@ -1758,15 +1802,8 @@ LSYM(b3l_subtree_arm64):
   .word 0xf94063fe
   .word 0x910443ff
   .word 0xd65f03c0
-.p2align 6
-#ifdef __APPLE__
-.globl _blake3_servil_ode_hashr_arm64
-_blake3_servil_ode_hashr_arm64:
-#else
-.globl blake3_servil_ode_hashr_arm64
-blake3_servil_ode_hashr_arm64:
-#endif
-LSYM(b3l_hashr_arm64):
+.p2align 4
+LSYM(b3l_hashr_long_arm64):
   .word 0xd104c3ff
   .word 0xf9007bfe
   .word 0xf9007ff3
@@ -1781,16 +1818,21 @@ LSYM(b3l_hashr_arm64):
   .word 0xaa0203f5
   .word 0xaa0303f6
   .word 0xaa0403f7
-  .word 0xf11006bf
-  .word 0x54000623
   .word 0x910003e9
-  .word 0x4c407ac0
-  .word 0x910042cb
-  .word 0x4c407961
-  .word 0x4c007920
-  .word 0x9100412a
-  .word 0x4c007941
+  .word 0x3dc002c0
+  .word 0x3dc006c1
+  .word 0x3d800120
+  .word 0x3d800521
   .word 0xf9001137
+  .word 0xd2820009
+  .word 0xeb0902bf
+  .word 0x540000e1
+  .word 0x9102c3e0
+  .word 0xaa1403e1
+  .word 0x910003e2
+  .word 0xd2800003
+  bl LSYM(b3l_wide4_fast_arm64)
+  .word 0x14000019
   .word 0xd10006a9
   .word 0xd34afd29
   .word 0x91000529
@@ -1807,20 +1849,18 @@ LSYM(b3l_hashr_arm64):
   .word 0xaa1903e2
   .word 0x910003e3
   .word 0xd2800004
-  bl LSYM(b3l_subtree_arm64)
+  bl LSYM(b3l_subtree_fast_arm64)
   .word 0x9102c3e0
   .word 0x91008000
   .word 0x8b190281
   .word 0xcb1902a2
   .word 0x910003e3
   .word 0xaa1803e4
-  bl LSYM(b3l_subtree_arm64)
-  .word 0x4c407ac0
-  .word 0x910042ca
-  .word 0x4c407941
-  .word 0x4c007a60
-  .word 0x91004269
-  .word 0x4c007921
+  bl LSYM(b3l_subtree_fast_arm64)
+  .word 0x3dc002c0
+  .word 0x3dc006c1
+  .word 0x3d800260
+  .word 0x3d800661
   .word 0xaa1303e0
   .word 0x9102c3e1
   .word 0xd2800802
@@ -1830,24 +1870,6 @@ LSYM(b3l_hashr_arm64):
   .word 0xd2800109
   .word 0xaa090084
   bl LSYM(blake3_servil_compress_in_place_arm64)
-  .word 0x14000012
-  .word 0x9100c3e9
-  .word 0x4c407ac0
-  .word 0x910042cb
-  .word 0x4c407961
-  .word 0x4c007920
-  .word 0x9100412a
-  .word 0x4c007941
-  .word 0x9100c3e0
-  .word 0xaa1403e1
-  .word 0xaa1503e2
-  .word 0xd2800003
-  .word 0xaa1703e4
-  bl LSYM(b3l_chunk_node_arm64)
-  .word 0xaa1303e0
-  .word 0x9100c3e1
-  .word 0xd2800102
-  bl LSYM(b3l_node_out_arm64)
   .word 0xf94097f9
   .word 0xf94093f8
   .word 0xf9408ff7
@@ -1858,7 +1880,42 @@ LSYM(b3l_hashr_arm64):
   .word 0xf9407bfe
   .word 0x9104c3ff
   .word 0xd65f03c0
-
-#if defined(__linux__) && defined(__ELF__)
-.section .note.GNU-stack,"",@progbits
-#endif
+.p2align 4
+.globl SYM(blake3_servil_ode_hashr_arm64)
+SYM(blake3_servil_ode_hashr_arm64):
+LSYM(b3l_hashr_arm64):
+  .word 0xf101005f
+  .word 0x540001a1
+  .word 0x3dc00060
+  .word 0x3dc00461
+  .word 0x3d800000
+  .word 0x3d800401
+  .word 0xd2800003
+  .word 0xd2800029
+  .word 0xaa090084
+  .word 0xd2800049
+  .word 0xaa090084
+  .word 0xd2800109
+  .word 0xaa090084
+  b LSYM(blake3_servil_compress_in_place_arm64)
+  .word 0xf110045f
+  .word 0x54000262
+  .word 0xd10243ff
+  .word 0xf90047fe
+  .word 0xf90043e0
+  .word 0x910003e9
+  .word 0x3dc00060
+  .word 0x3dc00461
+  .word 0x3d800120
+  .word 0x3d800521
+  .word 0x910003e0
+  .word 0xd2800003
+  bl LSYM(b3l_chunk_node_fast_arm64)
+  .word 0xf94043e0
+  .word 0x910003e1
+  .word 0xd2800102
+  bl LSYM(b3l_node_out_fast_arm64)
+  .word 0xf94047fe
+  .word 0x910243ff
+  .word 0xd65f03c0
+  b LSYM(b3l_hashr_long_arm64)
