@@ -17,6 +17,14 @@ unsafe extern "C" {
         flags: u8,
         plat: u64,
     );
+    fn blake3_servil_ode_cv_finalize_x86_64(
+        acc: *mut u8,
+        stack: *const u8,
+        n: u64,
+        top: u64,
+        kf: *const OdeKeyed,
+        budget: u64,
+    );
 }
 
 #[cfg(target_arch = "aarch64")]
@@ -28,6 +36,22 @@ unsafe extern "C" {
         key: *const u32,
         flags: u8,
     );
+    fn blake3_servil_ode_cv_finalize_aarch64(
+        acc: *mut u8,
+        stack: *const u8,
+        n: u64,
+        top: u64,
+        kf: *const OdeKeyed,
+        budget: u64,
+    );
+}
+
+/// Layout matching `b3.keyed` (40 bytes): 8 little-endian key words at offset 0
+/// and domain flags byte in the low byte of the 64-bit word at offset 32.
+#[repr(C)]
+struct OdeKeyed {
+    key: [u32; 8],
+    flags: u64,
 }
 
 static EMPTY_INPUT: [u8; 1] = [0];
@@ -70,6 +94,51 @@ pub(crate) fn hash(input: &[u8], key: &CVWords, flags: u8, platform: Platform) -
     Hash(out)
 }
 
+/// Fold a non-empty `CvStack` (`1 <= stack_cvs.len() <= 54`) together with
+/// `cur_cv` into the final root [`Hash`] using the Lean-4-verified Ode
+/// `cv_finalize` machine code (`avm3xn6iebmbbyfw5zhoxrykide7d4fsfr64ghjslzl4bypdoyia`).
+#[inline]
+pub(crate) fn finalize_cv_stack(
+    stack_cvs: &[[u8; OUT_LEN]],
+    mut cur_cv: [u8; OUT_LEN],
+    key: &CVWords,
+    flags: u8,
+) -> Hash {
+    let top = stack_cvs.len();
+    assert!((1..=54).contains(&top), "ode cv_finalize requires 1 <= top <= 54, got {top}");
+    let kf = OdeKeyed { key: *key, flags: flags as u64 };
+    // `budget >= 2` and `budget / 2` stays `>= 4` across all `top - 1` recursive
+    // merges so `cv_finalize` folds every level down to `stack_cvs[0]` with ROOT.
+    let budget: u64 = if top == 1 { 2 } else { 1u64 << (top as u32) };
+    let n_bytes = (top * OUT_LEN) as u64;
+
+    #[cfg(target_arch = "x86_64")]
+    unsafe {
+        blake3_servil_ode_cv_finalize_x86_64(
+            cur_cv.as_mut_ptr(),
+            stack_cvs.as_ptr().cast::<u8>(),
+            n_bytes,
+            top as u64,
+            &kf,
+            budget,
+        );
+    }
+
+    #[cfg(target_arch = "aarch64")]
+    unsafe {
+        blake3_servil_ode_cv_finalize_aarch64(
+            cur_cv.as_mut_ptr(),
+            stack_cvs.as_ptr().cast::<u8>(),
+            n_bytes,
+            top as u64,
+            &kf,
+            budget,
+        );
+    }
+
+    Hash(cur_cv)
+}
+
 #[cfg(all(test, feature = "std"))]
 mod test {
     use crate::{Mode, convenience};
@@ -103,6 +172,49 @@ mod test {
             let got_dk = convenience::hash_with(Mode::DeriveKey(ctx), slice);
             let want_dk = blake3::derive_key(ctx, slice);
             assert_eq!(got_dk.as_bytes(), &want_dk, "derive_key len={len}");
+        }
+    }
+
+    #[test]
+    fn ode_verified_incremental_cv_finalize_matches_official_blake3() {
+        crate::initialize();
+        let max_len = 512 * 1024 + 137;
+        let mut buf = vec![0u8; max_len];
+        for (i, b) in buf.iter_mut().enumerate() {
+            *b = ((i * 37 + 11) % 251) as u8;
+        }
+        let key = [0x99u8; 32];
+        let ctx = "ode-verified cv_finalize test 2026-11-26";
+        // Lengths and piece schedules exercising stack depths 1..=10, empty & non-empty chunks,
+        // deferred wide rows, and repeated non-destructive finalize() calls.
+        let schedules: &[&[usize]] = &[
+            &[16384],
+            &[16384, 16384],
+            &[16384, 16384, 16384],
+            &[16384, 1024],
+            &[16384, 16384, 17],
+            &[32768, 16384, 8192, 4096, 2048, 1024, 513],
+            &[65536, 32768, 16384, 16384, 16384, 777],
+            &[131072, 65536, 32768, 16384, 16384],
+            &[262144, 131072, 65536, 32768, 16384, 137],
+        ];
+        for sched in schedules {
+            for mode in [Mode::Plain, Mode::Keyed(&key), Mode::DeriveKey(ctx)] {
+                let mut h = convenience::Hasher::new(mode, None);
+                let mut ref_h = match mode {
+                    Mode::Plain => blake3::Hasher::new(),
+                    Mode::Keyed(k) => blake3::Hasher::new_keyed(k),
+                    Mode::DeriveKey(c) => blake3::Hasher::new_derive_key(c),
+                    _ => unreachable!(),
+                };
+                let mut off = 0usize;
+                for &sz in *sched {
+                    h.update(&buf[off..off + sz]);
+                    ref_h.update(&buf[off..off + sz]);
+                    off += sz;
+                    assert_eq!(h.finalize().as_bytes(), ref_h.finalize().as_bytes(), "sched={sched:?} off={off}");
+                }
+            }
         }
     }
 }

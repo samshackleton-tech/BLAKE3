@@ -708,6 +708,30 @@ impl Hasher {
             }
             return crate::hash_serial_from(self.core.chunk_state.platform(), self.stage.as_bytes(), self.fresh_key(), self.core.domain.flags(), false);
         }
+        #[cfg(feature = "ode-verified")]
+        if self.stage.is_empty() && self.core.cv_stack.len() > 0 {
+            let kernels = self.core.kernels();
+            let rows = self.core.cv_stack.rows_values(&kernels);
+            let mut n = self.core.cv_stack.len();
+            let cur_cv = if self.core.chunk_state.count() > 0 {
+                self.core.chunk_state.output().chaining_value()
+            } else {
+                n -= 1;
+                self.core.cv_stack.value(&rows, n)
+            };
+            if (1..=54).contains(&n) {
+                let mut flat = [[0u8; OUT_LEN]; 54];
+                for i in 0..n {
+                    flat[i] = self.core.cv_stack.value(&rows, i);
+                }
+                return crate::ffi_ode::finalize_cv_stack(
+                    &flat[..n],
+                    cur_cv,
+                    self.core.domain.key(),
+                    self.core.domain.flags(),
+                );
+            }
+        }
         self.root_output().root_hash()
     }
 

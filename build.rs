@@ -170,6 +170,7 @@ fn build_neon_hybrid_assembly() {
 
 const ODE_CONTRACT_X86_64: &str = "7jb2pyzuwz6tqd3qmjsra3mk36tl4547sfpy3at5scbk772lbila";
 const ODE_CONTRACT_AARCH64: &str = "ckdrhllybtjzr7vgscyhlgz6sxqaga347kozoepvqk3b54ohbfra";
+const ODE_CONTRACT_CV_FINALIZE: &str = "avm3xn6iebmbbyfw5zhoxrykide7d4fsfr64ghjslzl4bypdoyia";
 
 fn audit_ode_bundle(obj_path: &str, proof_path: &str, expect_contract: &str) {
     println!("cargo::rerun-if-changed={obj_path}");
@@ -281,8 +282,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "c/ode/blake3_ode_x86_64.proof",
                 ODE_CONTRACT_X86_64,
             );
+            audit_ode_bundle(
+                "c/ode/blake3_ode_cv_finalize_x86_64.o",
+                "c/ode/blake3_ode_cv_finalize_x86_64.proof",
+                ODE_CONTRACT_CV_FINALIZE,
+            );
             let mut build = new_build();
             build.file("c/blake3_ode_x86_64.S");
+            build.file("c/blake3_ode_cv_finalize_x86_64.S");
             build.compile("blake3_ode_x86_64_assembly");
         }
     }
@@ -297,8 +304,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "c/ode/blake3_ode_aarch64.proof",
                 ODE_CONTRACT_AARCH64,
             );
+            audit_ode_bundle(
+                "c/ode/blake3_ode_cv_finalize_aarch64.o",
+                "c/ode/blake3_ode_cv_finalize_aarch64.proof",
+                ODE_CONTRACT_CV_FINALIZE,
+            );
             let mut build = new_build();
             build.file("c/blake3_ode_aarch64.S");
+            build.file("c/blake3_ode_cv_finalize_aarch64.S");
             build.compile("blake3_ode_aarch64_assembly");
         }
 

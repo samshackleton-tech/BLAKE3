@@ -1881,8 +1881,13 @@ LSYM(b3l_hashr_long_arm64):
   .word 0x9104c3ff
   .word 0xd65f03c0
 .p2align 4
-.globl SYM(blake3_servil_ode_hashr_arm64)
-SYM(blake3_servil_ode_hashr_arm64):
+#ifdef __APPLE__
+.globl _blake3_servil_ode_hashr_arm64
+_blake3_servil_ode_hashr_arm64:
+#else
+.globl blake3_servil_ode_hashr_arm64
+blake3_servil_ode_hashr_arm64:
+#endif
 LSYM(b3l_hashr_arm64):
   .word 0xf101005f
   .word 0x540001a1
