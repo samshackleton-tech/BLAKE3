@@ -175,7 +175,14 @@ const ODE_CONTRACT_CV_FINALIZE: &str = "avm3xn6iebmbbyfw5zhoxrykide7d4fsfr64ghjs
 fn audit_ode_bundle(obj_path: &str, proof_path: &str, expect_contract: &str) {
     println!("cargo::rerun-if-changed={obj_path}");
     println!("cargo::rerun-if-changed={proof_path}");
-    for var in ["ODE_AUDIT_CMD", "ODE_REPO", "ODE_REQUIRE_AUDIT", "ODE_SKIP_AUDIT"] {
+    for var in [
+        "ODE_AUDIT_CMD",
+        "ODE_REPO",
+        "ODE_PYTHON",
+        "ODE_VERIFIER",
+        "ODE_REQUIRE_AUDIT",
+        "ODE_SKIP_AUDIT",
+    ] {
         println!("cargo::rerun-if-env-changed={var}");
     }
     if env::var("ODE_SKIP_AUDIT").ok().as_deref() == Some("1") {
@@ -183,10 +190,19 @@ fn audit_ode_bundle(obj_path: &str, proof_path: &str, expect_contract: &str) {
         return;
     }
 
+    let mut auto_verifier: Option<&'static str> = None;
     let mut cmd = if let Ok(explicit) = env::var("ODE_AUDIT_CMD") {
         std::process::Command::new(explicit)
     } else if let Ok(repo) = env::var("ODE_REPO") {
-        let tool = PathBuf::from(&repo).join("lang").join("ode_tool.py");
+        let repo_path = PathBuf::from(&repo);
+        let tool = repo_path.join("lang").join("ode_tool.py");
+        let lean_bin = repo_path
+            .join("proof-core")
+            .join(".lake")
+            .join("build")
+            .join("bin")
+            .join("odeverify");
+        auto_verifier = Some(if lean_bin.is_file() { "both" } else { "verify2" });
         let py = env::var("ODE_PYTHON").unwrap_or_else(|_| "python3".to_string());
         let mut c = std::process::Command::new(py);
         c.arg(tool);
@@ -208,6 +224,13 @@ fn audit_ode_bundle(obj_path: &str, proof_path: &str, expect_contract: &str) {
     };
 
     cmd.args(["audit", obj_path, "--proof", proof_path, "--expect-contract", expect_contract]);
+    let verifier = env::var("ODE_VERIFIER")
+        .ok()
+        .filter(|v| !v.is_empty())
+        .or_else(|| auto_verifier.map(String::from));
+    if let Some(v) = verifier {
+        cmd.args(["--verifier", &v]);
+    }
     let output = cmd.output().unwrap_or_else(|e| {
         panic!("ode-verified: failed to run `ode audit` on {obj_path}: {e}");
     });
